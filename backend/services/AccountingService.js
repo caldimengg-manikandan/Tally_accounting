@@ -110,19 +110,39 @@ class AccountingService {
 
     const grandTotal = totalTaxableValue + totalGstAmount;
 
-    // 2. Identify Target Ledgers (Tally Defaults)
-    const salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: 'Domestic Sales' }, ...options });
-    const igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: 'GST Output (IGST)' }, ...options });
+    // 2. Identify Target Ledgers for auto-posting
+    const { Group } = require('../models');
+    const { Op } = require('sequelize');
     
-    if (!salesLedger || !igstLedger) {
-      throw new Error('CONFIG ERROR: Required ledgers (Domestic Sales or GST Output) not found.');
+    const salesGroup = await Group.findOne({ where: { CompanyId: companyId, name: 'Sales Accounts' }, ...options });
+    let salesLedger = null;
+    if (salesGroup) {
+        salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, GroupId: salesGroup.id }, ...options });
+    }
+    if (!salesLedger) {
+        salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Sales%' } }, ...options });
+    }
+    
+    const cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
+    const sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
+    
+    const missing = [];
+    if (!salesLedger) missing.push('Sales Ledger');
+    if (!cgstLedger) missing.push('CGST Ledger');
+    if (!sgstLedger) missing.push('SGST Ledger');
+
+    if (missing.length > 0) {
+      throw new Error(`CONFIG ERROR: Missing ledgers -> ${missing.join(', ')}`);
     }
 
-    // 3. Construct Journal Entries
+    const halfTax = totalGstAmount / 2;
+
+    // 3. Construct Journal Entries (4 Lines perfectly)
     const journalEntries = [
       { ledgerId: customerLedgerId, debit: grandTotal, credit: 0 },
       { ledgerId: salesLedger.id, debit: 0, credit: totalTaxableValue },
-      { ledgerId: igstLedger.id, debit: 0, credit: totalGstAmount }
+      { ledgerId: cgstLedger.id, debit: 0, credit: halfTax },
+      { ledgerId: sgstLedger.id, debit: 0, credit: halfTax }
     ];
 
     // 4. Post to Universal Journal Engine (which handles Audit)

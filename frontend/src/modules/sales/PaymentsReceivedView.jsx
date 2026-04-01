@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CreditCard, PlusCircle, Search, Filter, MoreVertical, FileText, CheckCircle2, History } from 'lucide-react';
 import { voucherAPI } from '../../services/api';
 
@@ -6,6 +7,7 @@ const PaymentsReceivedView = () => {
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const companyId = localStorage.getItem('companyId');
+    const navigate = useNavigate();
 
     const fetchPayments = async () => {
         try {
@@ -30,8 +32,11 @@ const PaymentsReceivedView = () => {
                         <input type="text" placeholder="Search payments..." className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-100 rounded-xl text-sm font-semibold outline-none focus:border-primary-400 shadow-sm transition-all"/>
                     </div>
                 </div>
-                <button className="bg-primary-600 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-glow flex items-center gap-2">
-                    <PlusCircle size={18}/> New Payment Record
+                <button 
+                  onClick={() => navigate('/vouchers')}
+                  className="bg-primary-600 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-glow flex items-center gap-2 hover:bg-primary-700 transition"
+                >
+                    <PlusCircle size={18}/> Open Vouchers Engine
                 </button>
             </div>
 

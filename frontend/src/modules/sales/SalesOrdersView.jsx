@@ -6,7 +6,8 @@ const SalesOrdersView = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newOrder, setNewOrder] = useState({ orderNumber: '', customerId: '', totalAmount: '', notes: '', status: 'Draft' });
+    const [isEditing, setIsEditing] = useState(false);
+    const [newOrder, setNewOrder] = useState({ id: null, orderNumber: '', customerId: '', totalAmount: '', notes: '', status: 'Draft' });
     const companyId = localStorage.getItem('companyId');
 
     const [customers, setCustomers] = useState([]);
@@ -33,10 +34,33 @@ const SalesOrdersView = () => {
     const handleCreate = async (e) => {
         e.preventDefault();
         try {
-            await salesAPI.createOrder({ ...newOrder, companyId });
+            if (isEditing) {
+                await salesAPI.updateOrder(newOrder.id, { ...newOrder, companyId });
+            } else {
+                await salesAPI.createOrder({ ...newOrder, companyId });
+            }
             setShowCreateModal(false);
             fetchOrders();
         } catch (err) { alert(err.message); }
+    };
+
+    const openCreateModal = () => {
+        setIsEditing(false);
+        setNewOrder({ id: null, orderNumber: '', customerId: '', totalAmount: '', notes: '', status: 'Draft' });
+        setShowCreateModal(true);
+    };
+
+    const openEditModal = (order) => {
+        setIsEditing(true);
+        setNewOrder({
+            id: order.id,
+            orderNumber: order.orderNumber,
+            customerId: order.LedgerId || '',
+            totalAmount: order.totalAmount,
+            notes: order.notes || '',
+            status: order.status || 'Draft'
+        });
+        setShowCreateModal(true);
     };
 
     return (
@@ -52,7 +76,7 @@ const SalesOrdersView = () => {
                             <Download size={16} />
                         </button>
                         <button 
-                          onClick={() => setShowCreateModal(true)}
+                          onClick={openCreateModal}
                           className="bg-[#1e3a8a] text-white px-5 py-2 rounded-lg font-black text-xs shadow hover:bg-blue-900 flex items-center gap-2 transition-colors uppercase tracking-widest"
                         >
                             <Plus size={16} strokeWidth={3}/> CREATE NEW ORDER
@@ -112,7 +136,7 @@ const SalesOrdersView = () => {
                             <tr><td colSpan="6" className="py-20 text-center font-bold text-gray-400 italic">No records found.</td></tr>
                         ) : (
                             orders.map((order, i) => (
-                                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                                <tr key={order.id} onClick={() => openEditModal(order)} className="hover:bg-gray-50 transition-colors cursor-pointer">
                                     <td className="p-5 text-xs font-bold text-gray-600 text-center">{i + 1}</td>
                                     <td className="p-5 text-xs font-bold text-gray-900">{order.orderNumber}</td>
                                     <td className="p-5 text-xs font-semibold text-gray-600">{new Date(order.date).toLocaleDateString()}</td>
@@ -154,7 +178,7 @@ const SalesOrdersView = () => {
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#0f172a]/40 backdrop-blur-sm">
                     <div className="bg-white w-full max-w-xl rounded-2xl shadow-float p-8 animate-fade-scale border border-gray-100">
                         <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-                            <h3 className="text-lg font-black text-[#1e3a8a] uppercase tracking-widest">Create Order</h3>
+                            <h3 className="text-lg font-black text-[#1e3a8a] uppercase tracking-widest">{isEditing ? 'Edit Order' : 'Create Order'}</h3>
                             <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600"><Plus size={24} className="rotate-45"/></button>
                         </div>
                         <form onSubmit={handleCreate} className="space-y-4">

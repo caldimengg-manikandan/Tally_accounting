@@ -152,16 +152,33 @@ exports.getBalanceSheet = async (req, res) => {
 
     // 1. Map Ledgers to Assets/Liabilities
     ledgers.forEach(l => {
-      const opening = parseFloat(l.openingBalance || 0);
-      const closing = opening + parseFloat(l.totalDebit || 0) - parseFloat(l.totalCredit || 0);
-      const entry = { ledgerId: l.id, ledgerName: l.name, group: l.Group?.name, balance: Math.abs(closing) };
+      // Determine if opening balance is Debit or Credit
+      let opening = parseFloat(l.openingBalance || 0);
+      if (l.openingBalanceType === 'Cr') {
+        opening = -opening;
+      } else if (!l.openingBalanceType && l.Group?.nature === 'Liabilities') {
+        opening = -opening;
+      }
 
-      if (l.Group?.nature === 'Assets') {
+      // closing > 0 means Debit balance, closing < 0 means Credit balance
+      const closing = opening + parseFloat(l.totalDebit || 0) - parseFloat(l.totalCredit || 0);
+      const absBalance = Math.abs(closing);
+      
+      const entry = { ledgerId: l.id, ledgerName: l.name, group: l.Group?.name, balance: absBalance };
+
+      if (closing > 0.01) {
         assets.push(entry);
-        totalAssets += entry.balance;
-      } else {
+        totalAssets += absBalance;
+      } else if (closing < -0.01) {
         liabilities.push(entry);
-        totalLiabilities += entry.balance;
+        totalLiabilities += absBalance;
+      } else {
+        // For Exactly 0 balances, put them in their natural group for display
+        if (l.Group?.nature === 'Assets') {
+          assets.push(entry);
+        } else {
+          liabilities.push(entry);
+        }
       }
     });
 

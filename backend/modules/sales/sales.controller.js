@@ -44,26 +44,9 @@ exports.updateOrder = async (req, res) => {
     const previousStatus = order.status;
     await order.update({ status, totalAmount, notes });
 
-    // AI Core: Auto-Ledger Generation via Universal Journal Engine
-    if (status === 'Accepted' && previousStatus !== 'Accepted' && order.LedgerId && parseFloat(totalAmount) > 0) {
-      // Step 1: Locate the primary Sales Ledger for Credit action
-      const salesGroup = await Group.findOne({ where: { CompanyId: order.CompanyId, name: 'Sales Accounts' } });
-      if (salesGroup) {
-        let salesLedger = await Ledger.findOne({ where: { groupId: salesGroup.id, CompanyId: order.CompanyId } });
-        
-        // Step 2: Push transaction to the Double-Entry Brain
-        if (salesLedger) {
-           await AccountingService.recordSalesInvoice({
-              companyId: order.CompanyId,
-              customerLedgerId: order.LedgerId,
-              salesLedgerId: salesLedger.id,
-              amount: parseFloat(totalAmount),
-              invoiceNumber: order.orderNumber,
-              date: new Date()
-           });
-        }
-      }
-    }
+    // In a strict accounting system, Sales Orders do not generate Journal Vouchers.
+    // Financial entries are only created when the Sales Invoice is posted.
+    // Order status is now successfully updated.
 
     res.json(order);
   } catch (err) {

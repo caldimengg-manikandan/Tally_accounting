@@ -29,7 +29,7 @@ export default function PayrollView() {
     ledgerAPI.getByCompany(companyId).then(r => setLedgers(Array.isArray(r.data) ? r.data : [])).catch(() => {});
     voucherAPI.getByCompany(companyId).then(r => {
       const all = Array.isArray(r.data) ? r.data : [];
-      setPayrollHistory(all.filter(v => v.narration?.toLowerCase().includes('salary') || v.voucherType === 'Payment'));
+      setPayrollHistory(all.filter(v => v.narration?.toLowerCase().includes('salary')));
     }).catch(() => {});
   }, []);
 
@@ -56,7 +56,7 @@ export default function PayrollView() {
       // Refresh history
       voucherAPI.getByCompany(companyId).then(r => {
         const all = Array.isArray(r.data) ? r.data : [];
-        setPayrollHistory(all.filter(v => v.narration?.toLowerCase().includes('salary') || v.voucherType === 'Payment'));
+        setPayrollHistory(all.filter(v => v.narration?.toLowerCase().includes('salary')));
       }).catch(() => {});
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to post salary voucher');

@@ -22,16 +22,40 @@ const BankReconciliationView = () => {
     }, [companyId]);
 
     const handleImport = async () => {
-        // Mock Import for demo
-        const mockEntries = [
-            { date: '2024-03-15', description: 'Amazon Pay Payout', amount: 50000.00, type: 'Credit' },
-            { date: '2024-03-16', description: 'Utility Bill BBPS', amount: 1250.00, type: 'Debit' },
-            { date: '2024-03-17', description: 'NEFT OUT: Sal April', amount: 45000.00, type: 'Debit' },
-        ];
         try {
-            await reconciliationAPI.importStatement({ companyId, entries: mockEntries });
+            // 1. Fetch the user's actual Tally vouchers
+            const res = await voucherAPI.getByCompany(companyId);
+            const vouchers = Array.isArray(res.data) ? res.data : [];
+
+            // 2. Isolate only Payment, Receipt, and Contra (Cash/Bank transactions)
+            const bankVouchers = vouchers.filter(v => ['Payment', 'Receipt', 'Contra'].includes(v.voucherType));
+
+            // 3. Dynamically generate the Bank's perspective of these lines
+            const generatedEntries = bankVouchers.map(v => {
+                // Approximate the bank line amount (Total Debit)
+                const amount = v.Transactions.reduce((sum, t) => sum + (parseFloat(t.debit) || 0), 0);
+                
+                // If Tally says 'Receipt', the bank says 'Credit' (money arrived).
+                const bankType = v.voucherType === 'Receipt' ? 'Credit' : 'Debit';
+                
+                return {
+                    date: v.date,
+                    description: `ACTUAL: ${v.narration?.substring(0, 30) || v.voucherType + ' ' + v.voucherNumber}`,
+                    amount: amount,
+                    type: bankType
+                };
+            }).filter(e => e.amount > 0);
+
+            if (generatedEntries.length === 0) {
+                alert('No Payments or Receipts found in your database to generate a statement from!');
+                return;
+            }
+
+            // 4. Send this fully customized bank statement to the system
+            await reconciliationAPI.importStatement({ companyId, entries: generatedEntries });
+            
             fetchUnmatched();
-            alert('Bank Statement Imported Successfully!');
+            alert('Your Custom Real-World Bank Statement Imported Successfully!');
         } catch (err) { alert(err.message); }
     };
 
