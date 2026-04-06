@@ -11,6 +11,7 @@ const AuthPage = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState(''); // Only for signup
+  const [role, setRole] = useState('ADMIN'); // NEW: RBAC Support
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,7 +29,7 @@ const AuthPage = ({ onLogin }) => {
         }
         onLogin();
       } else {
-        await register(name, email, password);
+        await register(name, email, password, role);
         setError('Account created successfully. Please login.');
         setIsLogin(true);
       }
@@ -99,13 +100,30 @@ const AuthPage = ({ onLogin }) => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-10 bg-white lg:rounded-l-[3rem] relative z-20 shadow-[-40px_0_80px_-20px_rgba(0,0,0,0.1)]">
          <div className="w-full max-w-md space-y-10 py-10">
             
-            <header className="space-y-3">
-               <h2 className="text-3xl font-black text-slate-900 tracking-tighter">
-                  {isLogin ? 'Authenticate Terminal' : 'Onboard New Node'}
+            <header className="space-y-4">
+               <h2 className="text-4xl font-black text-slate-900 tracking-tighter leading-none">
+                  {isLogin ? 'Initialize Access' : 'Onboard Node'}
                </h2>
-               <p className="text-sm font-bold text-slate-400">
-                  {isLogin ? 'Enter credentials to access the enterprise core.' : 'Initialize your enterprise cluster identity.'}
-               </p>
+               
+               {/* ─── TAB SWITCHER ─────────────────────────────── */}
+               <div className="flex p-1.5 bg-slate-100 rounded-2xl w-fit">
+                  <button 
+                    type="button"
+                    onClick={() => setIsLogin(true)}
+                    className={`px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all
+                      ${isLogin ? 'bg-white text-slate-900 shadow-xl shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    SIGN IN
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setIsLogin(false)}
+                    className={`px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all
+                      ${!isLogin ? 'bg-white text-slate-900 shadow-xl shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    SIGN UP
+                  </button>
+               </div>
             </header>
 
             {error && (
@@ -120,37 +138,61 @@ const AuthPage = ({ onLogin }) => {
             )}
 
             {/* ══ GOOGLE AUTH TERMINAL ═════════════════════════════════ */}
-            <button 
-               type="button"
-               onClick={() => window.location.href = 'http://localhost:5050/api/auth/google'}
-               className="w-full flex items-center justify-center gap-3 py-4 border border-slate-100 rounded-2xl bg-white hover:bg-slate-50 transition-all font-black text-[11px] uppercase tracking-[0.2em] text-slate-900 shadow-sm"
-            >
-               <Globe size={16} className="text-blue-500" />
-               Sign In with Cloud Workspace
-            </button>
+            {isLogin && (
+               <>
+                  <button 
+                     type="button"
+                     onClick={() => window.location.href = 'http://localhost:5000/api/auth/google'}
+                     className="w-full flex items-center justify-center gap-3 py-4 border border-slate-100 rounded-2xl bg-white hover:bg-slate-50 transition-all font-black text-[11px] uppercase tracking-[0.2em] text-slate-900 shadow-sm"
+                  >
+                     <Globe size={16} className="text-blue-500" />
+                     Sign In with Cloud Workspace
+                  </button>
 
-            <div className="flex items-center gap-4 py-2">
-               <div className="flex-1 h-px bg-slate-50"></div>
-               <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest text-center">or direct entry</span>
-               <div className="flex-1 h-px bg-slate-50"></div>
-            </div>
+                  <div className="flex items-center gap-4 py-2">
+                     <div className="flex-1 h-px bg-slate-50"></div>
+                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest text-center">or direct entry</span>
+                     <div className="flex-1 h-px bg-slate-50"></div>
+                  </div>
+               </>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                <div className="space-y-5">
                   {!isLogin && (
-                     <div className="space-y-2 animate-fade-down">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                           <UserPlus size={12}/> Authorized Full Name
-                        </label>
-                        <input 
-                           type="text" 
-                           required 
-                           value={name}
-                           onChange={e => setName(e.target.value)}
-                           placeholder="Alexander Hamilton"
-                           className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold text-slate-900 text-sm outline-none focus:border-blue-500/30 focus:bg-white transition-all shadow-sm"
-                        />
-                     </div>
+                     <>
+                        <div className="space-y-2 animate-fade-down">
+                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                              <UserPlus size={12}/> Authorized Full Name
+                           </label>
+                           <input 
+                              type="text" 
+                              required 
+                              value={name}
+                              onChange={e => setName(e.target.value)}
+                              placeholder="Alexander Hamilton"
+                              className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold text-slate-900 text-sm outline-none focus:border-blue-500/30 focus:bg-white transition-all shadow-sm"
+                           />
+                        </div>
+
+                        <div className="space-y-2 animate-fade-down">
+                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                              <ShieldCheck size={12}/> Systematic Role
+                           </label>
+                           <select 
+                              value={role}
+                              onChange={e => setRole(e.target.value)}
+                              className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-bold text-slate-900 text-sm outline-none focus:border-blue-500/30 focus:bg-white transition-all shadow-sm appearance-none"
+                           >
+                              <option value="ADMIN">ADMIN (Full Access)</option>
+                              <option value="MANAGER">MANAGER (High Level)</option>
+                              <option value="ACCOUNTANT">ACCOUNTANT (Financials)</option>
+                              <option value="AUDITOR">AUDITOR (Read + Audit)</option>
+                              <option value="DATA_ENTRY">DATA ENTRY (Vouchers Only)</option>
+                              <option value="VIEWER">VIEWER (Read Only)</option>
+                           </select>
+                        </div>
+                     </>
                   )}
 
                   <div className="space-y-2">
@@ -190,20 +232,14 @@ const AuthPage = ({ onLogin }) => {
                  disabled={loading}
                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl shadow-slate-900/40 hover:-translate-y-1 transition-all active:translate-y-0 disabled:opacity-50"
                >
-                  {loading ? 'Validating...' : (isLogin ? <>Initialize Access <ArrowRight size={16}/></> : <>Register Identity <ArrowRight size={16}/></>)}
+                  {loading ? 'VALIDATING...' : (isLogin ? <>INITIALIZE TERMINAL ACCESS <ArrowRight size={16}/></> : <>REGISTER IDENTITY PORTFOLIO <ArrowRight size={16}/></>)}
                </button>
             </form>
 
-            <footer className="pt-10 border-t border-slate-100 text-center">
-               <p className="text-[11px] font-bold text-slate-400 mb-2">
-                  {isLogin ? "New to the platform?" : "Already have identity?"}
+            <footer className="pt-10 border-t border-slate-100 text-center animate-fade-in">
+               <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">
+                  Secure Enterprise Gateway v2.5.0
                </p>
-               <button 
-                  onClick={() => setIsLogin(!isLogin)}
-                  className="px-6 py-2 border-2 border-slate-100 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-900 hover:bg-slate-50 transition-all"
-               >
-                  {isLogin ? 'Request Enrollment' : 'Switch to Authentication'}
-               </button>
             </footer>
          </div>
       </div>

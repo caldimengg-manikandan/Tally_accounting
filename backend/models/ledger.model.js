@@ -3,7 +3,8 @@ module.exports = (sequelize, DataTypes) => {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
     name: {
       type: DataTypes.STRING,
@@ -26,6 +27,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    state: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'Maharashtra'
+    },
+    registrationType: {
+      type: DataTypes.ENUM('Registered', 'Unregistered', 'Consumer', 'Overseas'),
+      defaultValue: 'Registered'
+    },
     email: {
       type: DataTypes.STRING,
       allowNull: true
@@ -46,6 +56,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     }
+  }, {
+    paranoid: true
   });
 
   return Ledger;

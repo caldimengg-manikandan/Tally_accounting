@@ -3,13 +3,23 @@ module.exports = (sequelize, DataTypes) => {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
     name: {
       type: DataTypes.STRING,
       allowNull: false
     },
     gstNumber: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    state: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'Maharashtra' // Default for development
+    },
+    panNumber: {
       type: DataTypes.STRING,
       allowNull: true
     },

@@ -3,10 +3,12 @@ const router = express.Router();
 const authController = require('./auth.controller');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
+const { verifyToken } = require('../../middleware/auth.middleware');
 
 // ── Standard Authentication ──
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/switch-company', verifyToken, authController.switchCompany);
 
 // ── Google OAuth Strategy ──
 // Trigger: Client hits this to start Google Login
@@ -24,7 +26,7 @@ router.get('/callback',
   (req, res) => {
     // Generate our JWT token for the authenticated user
     const token = jwt.sign(
-      { id: req.user.id }, 
+      { id: req.user.id, role: req.user.role, companyId: req.user.activeCompanyId }, 
       process.env.JWT_SECRET, 
       { expiresIn: '1d' }
     );

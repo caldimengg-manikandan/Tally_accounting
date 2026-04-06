@@ -1,4 +1,5 @@
 const { Item } = require('../../models');
+const AuditService = require('../../services/AuditService');
 
 exports.createItem = async (req, res) => {
   try {
@@ -25,6 +26,17 @@ exports.createItem = async (req, res) => {
       imageUrl,
       CompanyId: companyId
     });
+
+    await AuditService.log({
+      action: 'CREATE_ITEM',
+      tableName: 'Items',
+      recordId: item.id,
+      newData: item,
+      companyId: item.CompanyId,
+      userId: req.user?.id,
+      req
+    });
+
     res.status(201).json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -48,11 +60,24 @@ exports.updateStock = async (req, res) => {
     const item = await Item.findByPk(itemId);
     if (!item) return res.status(404).json({ error: 'Item not found' });
 
+    const oldData = { id: item.id, currentStock: item.currentStock };
     const newStock = type === 'add' 
       ? parseFloat(item.currentStock) + parseFloat(quantity)
       : parseFloat(item.currentStock) - parseFloat(quantity);
     
     await item.update({ currentStock: newStock });
+
+    await AuditService.log({
+      action: 'UPDATE_STOCK',
+      tableName: 'Items',
+      recordId: item.id,
+      oldData,
+      newData: { id: item.id, currentStock: item.currentStock },
+      companyId: item.CompanyId,
+      userId: req.user?.id,
+      req
+    });
+
     res.json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });

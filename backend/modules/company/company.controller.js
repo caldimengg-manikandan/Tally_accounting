@@ -11,12 +11,21 @@ exports.createCompany = async (req, res) => {
       booksBeginningFrom
     });
     
-    if (userId) {
-      const user = await User.findByPk(userId);
-      if (user) await company.addUser(user);
+    const user = req.user || (userId ? await User.findByPk(userId) : null);
+    if (user) {
+      await company.addUser(user);
+      
+      // Auto-set as active company if user doesn't have one
+      if (!user.activeCompanyId) {
+        user.activeCompanyId = company.id;
+        await user.save();
+      }
     }
     
-    res.status(201).json(company);
+    res.status(201).json({
+      ...company.toJSON(),
+      message: 'Company created and set as active'
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -24,10 +33,16 @@ exports.createCompany = async (req, res) => {
 
 exports.getCompanies = async (req, res) => {
   try {
-    // Return all companies — for single-tenant setup, this always gives the seeded company
-    const companies = await Company.findAll({
-      order: [['createdAt', 'ASC']]
-    });
+    let companies;
+    if (req.user) {
+      companies = await req.user.getCompanies({
+        order: [['createdAt', 'ASC']]
+      });
+    } else {
+      companies = await Company.findAll({
+        order: [['createdAt', 'ASC']]
+      });
+    }
     // Attach counts
     const result = await Promise.all(companies.map(async (c) => ({
       ...c.toJSON(),

@@ -33,13 +33,18 @@ app.get('/api/auth/callback',
     failureRedirect: `${CLIENT_URL}/login?error=auth_failed` 
   }), 
   (req, res) => {
-    const token = jwt.sign({ id: req.user.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign(
+      { id: req.user.id, role: req.user.role, companyId: req.user.activeCompanyId },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
     res.redirect(`${CLIENT_URL}/auth-callback?token=${token}`);
   }
 );
 
 // 4. Modular Hub Routing
 app.use('/api/auth', require('./modules/auth/auth.routes'));
+app.use('/api/users', require('./modules/auth/users.routes'));          // User management (ADMIN)
 app.use('/api/companies', require('./modules/company/company.routes'));
 app.use('/api/groups', require('./modules/accounting/group.routes'));
 app.use('/api/ledgers', require('./modules/accounting/ledger.routes'));
@@ -50,13 +55,15 @@ app.use('/api/reports', require('./modules/reports/reports.routes'));
 app.use('/api/sales', require('./modules/sales/sales.routes'));
 app.use('/api/inventory', require('./modules/inventory/inventory.routes'));
 app.use('/api/reconciliation', require('./modules/reconciliation/reconciliation.routes'));
+app.use('/api/cost-centers', require('./modules/accounting/costCenter.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-const syncOptions = dialect === 'sqlite' ? {} : { alter: true };
+// Using alter:false for stability; use node debug_reset.js for schema changes
+const syncOptions = { alter: false };
 
 sequelize.sync(syncOptions).then(() => {
   console.log(`✅ Ledger Database Synced [${dialect}]`);
@@ -65,5 +72,10 @@ sequelize.sync(syncOptions).then(() => {
   });
 }).catch(err => {
   console.error('❌ Critical Hub Entry Failure:', err.message);
+  if (err.errors) {
+    err.errors.forEach(e => console.error(`  - Field: ${e.path}, Message: ${e.message}, Value: ${e.value}`));
+  } else {
+    console.error(err);
+  }
   process.exit(1);
 });
