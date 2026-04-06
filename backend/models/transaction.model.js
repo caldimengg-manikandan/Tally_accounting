@@ -3,7 +3,8 @@ module.exports = (sequelize, DataTypes) => {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
     debit: {
       type: DataTypes.DOUBLE, // SQLite preferred for decimals
@@ -37,10 +38,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       defaultValue: 'Nos'
     },
-    ItemId: {
+    createdBy: {
       type: DataTypes.UUID,
       allowNull: true
     }
+  }, {
+    paranoid: true
   });
 
   return Transaction;

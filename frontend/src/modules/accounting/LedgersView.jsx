@@ -26,6 +26,11 @@ const LedgersView = () => {
         name: '', nature: 'Assets', type: 'Ledger', parent_id: ''
     });
     const companyId = localStorage.getItem('companyId');
+    const user = React.useMemo(() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
+    const role = user.role || 'ADMIN';
+    const canCreate = !['VIEWER', 'AUDITOR', 'DATA_ENTRY'].includes(role);
+    const canDelete = !['VIEWER', 'AUDITOR', 'DATA_ENTRY'].includes(role); // Only Admins/Managers/Accountants can delete accounts
+
 
     const buildHierarchy = (flatGroups) => {
         const map = {};
@@ -314,16 +319,18 @@ const LedgersView = () => {
                                 </button>
                             )}
                             
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    isGroup ? handleDeleteGroup(e, node.id) : handleDeleteLedger(e, node.id);
-                                }}
-                                title={isGroup ? "Delete Group" : "Delete Ledger"}
-                                className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all border border-rose-100"
-                            >
-                                <Activity size={14} /> {/* Using Activity as a 'Delete' icon or we could use Trash if imported */}
-                            </button>
+                            {canDelete && (
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        isGroup ? handleDeleteGroup(e, node.id) : handleDeleteLedger(e, node.id);
+                                    }}
+                                    title={isGroup ? "Delete Group" : "Delete Ledger"}
+                                    className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all border border-rose-100"
+                                >
+                                    <Activity size={14} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -338,6 +345,8 @@ const LedgersView = () => {
             </div>
         );
     };
+
+    // role-based access is already defined at the top
 
     return (
         <div className="flex flex-col h-[calc(100vh-2rem)] bg-slate-50 p-6 font-sans">
@@ -356,12 +365,14 @@ const LedgersView = () => {
                    <button onClick={fetchData} className="px-4 py-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 text-slate-600 text-sm font-semibold shadow-sm transition-all flex items-center gap-2">
                        <RefreshCcw size={14}/> Sync
                    </button>
-                   <button 
-                      onClick={() => setShowDrawer(true)}
-                      className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold text-sm shadow-sm hover:bg-blue-700 transition-all flex items-center gap-2"
-                   >
-                      <Plus size={16}/> New Account
-                   </button>
+                   {canCreate && (
+                    <button 
+                       onClick={() => setShowDrawer(true)}
+                       className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold text-sm shadow-sm hover:bg-blue-700 transition-all flex items-center gap-2"
+                    >
+                       <Plus size={16}/> New Account
+                    </button>
+                   )}
                 </div>
             </div>
 

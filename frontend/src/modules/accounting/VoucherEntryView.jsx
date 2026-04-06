@@ -6,12 +6,12 @@ import {
   ChevronDown, Loader2, RefreshCw, TrendingUp, TrendingDown,
   Zap
 } from 'lucide-react';
-import { ledgerAPI, voucherAPI, groupAPI } from '../../services/api';
+import { ledgerAPI, voucherAPI, groupAPI, costCenterAPI, accountingAPI } from '../../services/api';
 
 const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra'];
 
 let _uid = 100;
-const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', type, amount, note: '' });
+const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', costCenterId: '', type, amount, note: '' });
 
 export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const navigate = useNavigate();
@@ -22,6 +22,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const [narration, setNarration] = useState('');
   const [rows,      setRows]      = useState([newRow('Dr'), newRow('Cr')]);
   const [ledgers,   setLedgers]   = useState([]);
+  const [costCenters, setCostCenters] = useState([]);
   const [saving,    setSaving]    = useState(false);
   const [saved,     setSaved]     = useState(false);
   const [postErr,   setPostErr]   = useState('');
@@ -47,6 +48,10 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
     ledgerAPI.getByCompany(cid)
       .then(r => setLedgers(Array.isArray(r.data) ? r.data : []))
       .catch(() => setLedgers([]));
+    
+    costCenterAPI.getByCompany(cid)
+      .then(r => setCostCenters(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setCostCenters([]));
   }, []);
 
   /* ── Totals ────────────────────────────────────────────────── */
@@ -86,6 +91,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
         narration: narration || `${vType} Entry`,
         entries: filledRows.map(r => ({
           ledgerId: r.ledgerId,
+          costCenterId: r.costCenterId || null,
           debit:  r.type === 'Dr' ? parseFloat(r.amount) : 0,
           credit: r.type === 'Cr' ? parseFloat(r.amount) : 0,
         })),
@@ -96,6 +102,40 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
       setPostErr(err.response?.data?.error || 'Server error — please check the backend.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /* ── SMART GST AUTOMATION ────────────────────────────────── */
+  const handleSmartGST = async () => {
+    const firstRow = rows.find(r => r.ledgerId && parseFloat(r.amount) > 0);
+    const cid = localStorage.getItem('companyId');
+    if (!firstRow || !cid) { alert('Select a ledger and amount first.'); return; }
+
+    try {
+      const res = await accountingAPI.calculateGST({
+        companyId: cid,
+        ledgerId: firstRow.ledgerId,
+        amount: parseFloat(firstRow.amount),
+        rate: 18 // Standard default
+      });
+
+      if (res.data?.taxItems) {
+        const newRows = res.data.taxItems.map(item => {
+          // Try to find matching CGST/SGST/IGST ledger in the list
+          const matchingLedger = ledgers.find(l => l.name.toUpperCase().includes(item.name));
+          return {
+            _id: _uid++,
+            ledgerId: matchingLedger ? matchingLedger.id : '',
+            type: firstRow.type === 'Dr' ? 'Dr' : 'Cr', // Same side as main entry
+            amount: item.amount.toFixed(2),
+            note: `Auto-GST: ${item.name} (${item.rate}%)`
+          };
+        });
+        setRows(p => [...p, ...newRows]);
+      }
+    } catch (err) {
+      console.error("GST Calc failed:", err);
+      alert('GST Calculation failed. Ensure CGST/SGST/IGST ledgers exist.');
     }
   };
 
@@ -126,6 +166,10 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
             </div>
           )}
           <button onClick={reset} style={btnOutline}><RefreshCw size={13}/> Reset</button>
+          <button onClick={handleSmartGST} disabled={saving||saved}
+            style={{ ...btnOutline, color:'#2563eb', border:'1px solid #bfdbfe', background:'#eff6ff' }}>
+            <Zap size={13}/> Smart GST
+          </button>
           <button onClick={handlePost} disabled={saving||saved||!isBalanced}
             style={{ ...btnPrimary, background: saved?'#059669': isBalanced?'#1e293b':'#e2e8f0', color: saved||isBalanced?'#fff':'#94a3b8', cursor: isBalanced&&!saving&&!saved?'pointer':'not-allowed', boxShadow: isBalanced&&!saved?'0 4px 14px rgba(30,41,59,.25)':'none' }}>
             {saving?<><Loader2 size={14} style={{animation:'spin 1s linear infinite'}}/> Posting…</>
@@ -197,9 +241,9 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
           </div>
 
           {/* Column headers */}
-          <div style={{ padding:'14px 24px 4px', display:'grid', gridTemplateColumns:'36px 1fr 120px 150px 1fr 36px', gap:10 }}>
-            {['#','Account / Ledger *','Dr / Cr','Amount (₹)','Line Note',''].map((h,i)=>(
-              <div key={i} style={{ fontSize:10, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.1em', textAlign: i===3?'right':'left' }}>{h}</div>
+          <div style={{ padding:'14px 24px 4px', display:'grid', gridTemplateColumns:'36px 1fr 150px 120px 150px 1fr 36px', gap:10 }}>
+            {['#','Account / Ledger *','Cost Center','Dr / Cr','Amount (₹)','Line Note',''].map((h,i)=>(
+              <div key={i} style={{ fontSize:10, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'.1em', textAlign: i===4?'right':'left' }}>{h}</div>
             ))}
           </div>
 
@@ -207,7 +251,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
           <div style={{ padding:'4px 24px 8px' }}>
             {rows.map((row, idx) => (
               <div key={row._id} style={{
-                display:'grid', gridTemplateColumns:'36px 1fr 120px 150px 1fr 36px',
+                display:'grid', gridTemplateColumns:'36px 1fr 150px 120px 150px 1fr 36px',
                 gap:10, alignItems:'center',
                 padding:'8px 10px', borderRadius:10, marginBottom:5,
                 background: row.type==='Dr' ? '#f0fdf4' : '#fff7ed',
@@ -221,10 +265,20 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
                 <div style={{ position:'relative' }}>
                   <select value={row.ledgerId} onChange={e=>updateRow(row._id,'ledgerId',e.target.value)}
                     style={{ ...rowInp, borderColor: row.ledgerId?'#e2e8f0':'#fca5a5', background: row.ledgerId?'#fff':'#fff7f7' }}>
-                    <option value="">← Select a ledger account</option>
+                    <option value="">← Select account</option>
                     {ledgers.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
                   <ChevronDown size={11} style={{ ...chevron }}/>
+                </div>
+
+                {/* Cost Center select */}
+                <div style={{ position:'relative' }}>
+                  <select value={row.costCenterId} onChange={e=>updateRow(row._id,'costCenterId',e.target.value)}
+                    style={{ ...rowInp, fontSize:11, color:'#64748b' }}>
+                    <option value="">— None —</option>
+                    {costCenters.map(cc=><option key={cc.id} value={cc.id}>{cc.name}</option>)}
+                  </select>
+                  <ChevronDown size={10} style={{ ...chevron }}/>
                 </div>
 
                 {/* Dr / Cr toggle */}

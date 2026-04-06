@@ -1,5 +1,6 @@
 const { Voucher, Transaction, Ledger, sequelize } = require('../../models');
 const AccountingService = require('../../services/AccountingService');
+const AuditService = require('../../services/AuditService');
 
 exports.createVoucher = async (req, res) => {
   const t = await sequelize.transaction();
@@ -25,6 +26,18 @@ exports.createVoucher = async (req, res) => {
     }, t);
 
     await t.commit();
+
+    // Log the successful creation
+    await AuditService.log({
+      action: 'CREATE_VOUCHER',
+      tableName: 'Vouchers',
+      recordId: voucher.id,
+      newData: voucher,
+      companyId: companyId,
+      userId: req.user?.id,
+      req
+    });
+
     res.status(201).json({ message: 'Voucher posted successfully.', voucher });
   } catch (err) {
     if (t) await t.rollback();
@@ -75,6 +88,18 @@ exports.deleteVoucher = async (req, res) => {
     await voucher.destroy({ transaction: t });
 
     await t.commit();
+
+    // Log the deletion
+    await AuditService.log({
+      action: 'DELETE_VOUCHER',
+      tableName: 'Vouchers',
+      recordId: voucher.id,
+      oldData: voucher,
+      companyId: voucher.CompanyId,
+      userId: req.user?.id,
+      req
+    });
+
     res.json({ message: 'Voucher deleted successfully.' });
   } catch (err) {
     if (t) await t.rollback();

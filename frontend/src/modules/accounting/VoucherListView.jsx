@@ -24,6 +24,11 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete }) => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const companyId = localStorage.getItem('companyId');
+  const user = useMemo(() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
+  const role = user.role || 'ADMIN';
+  const canEdit = !['VIEWER', 'AUDITOR'].includes(role);
+  const canCreate = !['VIEWER', 'AUDITOR', 'DATA_ENTRY'].includes(role) || role === 'DATA_ENTRY'; // Data entry can create but maybe not delete?
+
 
   const fetchVouchers = useCallback(async () => {
     if (!companyId) return;
@@ -82,14 +87,16 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete }) => {
            </div>
            <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Vouchers</h1>
         </div>
-        <div className="flex gap-3">
-           <button onClick={fetchVouchers} className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm"><RefreshCcw size={16}/></button>
-           <button onClick={exportCSV}     className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm"><Download size={16}/></button>
-           <button onClick={onCreateNew}
-              className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 hover:-translate-y-0.5 transition-all">
-              <Plus size={16}/> New Voucher
-           </button>
-        </div>
+         <div className="flex gap-3">
+            <button onClick={fetchVouchers} className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm"><RefreshCcw size={16}/></button>
+            <button onClick={exportCSV}     className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm"><Download size={16}/></button>
+            {canEdit && (
+               <button onClick={onCreateNew}
+                  className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 hover:-translate-y-0.5 transition-all">
+                  <Plus size={16}/> New Voucher
+               </button>
+            )}
+         </div>
       </div>
 
       {/* Filters */}
@@ -157,9 +164,9 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete }) => {
               <th className="px-8 py-5">Voucher No.</th>
               <th className="px-8 py-5">Date</th>
               <th className="px-8 py-5">Type</th>
-              <th className="px-8 py-5">Narration</th>
+               <th className="px-8 py-5">Narration</th>
               <th className="px-8 py-5 text-right">Amount (₹)</th>
-              <th className="px-8 py-5 text-center">Actions</th>
+              {canEdit && <th className="px-8 py-5 text-center">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 text-[13px] font-semibold text-slate-700">
@@ -187,19 +194,21 @@ const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete }) => {
                       </span>
                     </td>
                     <td className="px-8 py-4 text-slate-500 max-w-xs truncate">{v.narration || <span className="italic text-slate-300">No narration</span>}</td>
-                    <td className="px-8 py-4 text-right font-black text-slate-900">{fmt(amount)}</td>
-                    <td className="px-8 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => onEdit(v)} title="Edit"
-                          className="w-8 h-8 rounded-lg border border-slate-100 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all">
-                          <Edit2 size={13}/>
-                        </button>
-                        <button onClick={() => { if(window.confirm('Delete this voucher?')) onDelete(v.id); }} title="Delete"
-                          className="w-8 h-8 rounded-lg border border-slate-100 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all">
-                          <Trash2 size={13}/>
-                        </button>
-                      </div>
-                    </td>
+                     <td className="px-8 py-4 text-right font-black text-slate-900">{fmt(amount)}</td>
+                    {canEdit && (
+                      <td className="px-8 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button onClick={() => onEdit(v)} title="Edit"
+                            className="w-8 h-8 rounded-lg border border-slate-100 flex items-center justify-center text-amber-500 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all">
+                            <Edit2 size={13}/>
+                          </button>
+                          <button onClick={() => { if(window.confirm('Delete this voucher?')) onDelete(v.id); }} title="Delete"
+                            className="w-8 h-8 rounded-lg border border-slate-100 flex items-center justify-center text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all">
+                            <Trash2 size={13}/>
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })

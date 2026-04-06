@@ -2,10 +2,25 @@ const express = require('express');
 const router = express.Router();
 const accountingService = require('./accounting.service');
 
-router.post('/calculate-gst', (req, res) => {
-  const { amount, rate, isInterstate } = req.body;
-  const result = accountingService.calculateGST(amount, rate, isInterstate);
-  res.json(result);
+router.post('/calculate-gst', async (req, res) => {
+  try {
+    const { amount, rate, ledgerId, companyId } = req.body;
+    const { Company, Ledger } = require('../../models');
+    
+    const company = await Company.findByPk(companyId);
+    const ledger = await Ledger.findByPk(ledgerId);
+
+    if (!company || !ledger) {
+      return res.status(404).json({ error: 'Company or Ledger not found for GST calculation.' });
+    }
+
+    const isInterstate = company.state !== ledger.state;
+    const result = accountingService.calculateProfessionalGST(amount, rate, isInterstate);
+    
+    res.json({ ...result, isInterstate, companyState: company.state, ledgerState: ledger.state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/scan-receipt', async (req, res) => {

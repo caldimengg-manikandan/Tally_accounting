@@ -9,58 +9,85 @@ const Voucher = require('./voucher.model')(sequelize, DataTypes);
 const Transaction = require('./transaction.model')(sequelize, DataTypes);
 const Item = require('./item.model')(sequelize, DataTypes);
 const BankTransaction = require('./bankTransaction.model')(sequelize, DataTypes);
+const CostCenter = require('./costCenter.model')(sequelize, DataTypes);
 const SalesOrder = require('./salesOrder.model')(sequelize, DataTypes);
 const PurchaseOrder = require('./purchaseOrder.model')(sequelize, DataTypes);
 const AuditLog = require('./audit.model')(sequelize, DataTypes);
 
-// Associations
-User.belongsToMany(Company, { through: 'UserCompanies' });
-Company.belongsToMany(User, { through: 'UserCompanies' });
+// ─── Associations ────────────────────────────────────────────────────────────
 
-Company.hasMany(Group);
-Group.belongsTo(Company);
+// 1. User & Company (Multi-tenancy)
+// junction table for multi-company access
+User.belongsToMany(Company, { 
+  through: 'UserCompanies',
+  foreignKey: { name: 'userId', type: DataTypes.UUID },
+  otherKey: { name: 'companyId', type: DataTypes.UUID }
+});
+Company.belongsToMany(User, { 
+  through: 'UserCompanies',
+  foreignKey: { name: 'companyId', type: DataTypes.UUID },
+  otherKey: { name: 'userId', type: DataTypes.UUID }
+});
 
-Group.hasMany(Ledger);
-Ledger.belongsTo(Group);
+// 2. Structural Hierarchy
+Company.hasMany(Group, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+Group.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
-Group.hasMany(Group, { as: 'SubGroups', foreignKey: 'parent_id' });
-Group.belongsTo(Group, { as: 'ParentGroup', foreignKey: 'parent_id' });
+// Self-referential groups (Tally standard)
+Group.hasMany(Group, { as: 'SubGroups', foreignKey: { name: 'parent_id', type: DataTypes.UUID }, onDelete: 'SET NULL' });
+Group.belongsTo(Group, { as: 'ParentGroup', foreignKey: { name: 'parent_id', type: DataTypes.UUID }, onDelete: 'SET NULL' });
 
-Company.hasMany(Ledger);
-Ledger.belongsTo(Company);
+Group.hasMany(Ledger, { foreignKey: { name: 'GroupId', type: DataTypes.UUID } });
+Ledger.belongsTo(Group, { foreignKey: { name: 'GroupId', type: DataTypes.UUID } });
 
-Company.hasMany(Voucher);
-Voucher.belongsTo(Company);
+Company.hasMany(Ledger, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+Ledger.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
-Voucher.hasMany(Transaction);
-Transaction.belongsTo(Voucher);
+Company.hasMany(CostCenter, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+CostCenter.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
-Ledger.hasMany(Transaction);
-Transaction.belongsTo(Ledger);
+// 3. Transactions & Vouchers
+Company.hasMany(Voucher, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+Voucher.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
-Company.hasMany(Item);
-Item.belongsTo(Company);
+Voucher.hasMany(Transaction, { foreignKey: { name: 'VoucherId', type: DataTypes.UUID }, onDelete: 'CASCADE' });
+Transaction.belongsTo(Voucher, { foreignKey: { name: 'VoucherId', type: DataTypes.UUID } });
 
-Company.hasMany(BankTransaction);
-BankTransaction.belongsTo(Company);
+Ledger.hasMany(Transaction, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+Transaction.belongsTo(Ledger, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
 
-Ledger.hasMany(SalesOrder);
-SalesOrder.belongsTo(Ledger);
-Company.hasMany(SalesOrder);
-SalesOrder.belongsTo(Company);
+CostCenter.hasMany(Transaction, { foreignKey: { name: 'CostCenterId', type: DataTypes.UUID } });
+Transaction.belongsTo(CostCenter, { foreignKey: { name: 'CostCenterId', type: DataTypes.UUID } });
 
-Ledger.hasMany(PurchaseOrder);
-PurchaseOrder.belongsTo(Ledger);
-Company.hasMany(PurchaseOrder);
-PurchaseOrder.belongsTo(Company);
+// 4. Inventory & Logic
+Company.hasMany(Item, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+Item.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
-Company.hasMany(AuditLog);
-AuditLog.belongsTo(Company);
-User.hasMany(AuditLog);
-AuditLog.belongsTo(User);
+Item.hasMany(Transaction, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+Transaction.belongsTo(Item, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
 
-Item.hasMany(Transaction);
-Transaction.belongsTo(Item);
+// 5. Orders & Reconciliation
+Company.hasMany(SalesOrder, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+SalesOrder.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+Company.hasMany(PurchaseOrder, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+PurchaseOrder.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+Company.hasMany(BankTransaction, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+BankTransaction.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+// 6. Audit & Metadata
+Company.hasMany(AuditLog, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+AuditLog.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+User.hasMany(AuditLog, { foreignKey: { name: 'UserId', type: DataTypes.UUID } });
+AuditLog.belongsTo(User, { foreignKey: { name: 'UserId', type: DataTypes.UUID } });
+
+User.hasMany(Transaction, { foreignKey: { name: 'createdBy', type: DataTypes.UUID } });
+Transaction.belongsTo(User, { as: 'Creator', foreignKey: { name: 'createdBy', type: DataTypes.UUID } });
+
+Transaction.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+Company.hasMany(Transaction, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
 module.exports = {
   sequelize,
@@ -74,5 +101,6 @@ module.exports = {
   BankTransaction,
   SalesOrder,
   PurchaseOrder,
+  CostCenter,
   AuditLog
 };
