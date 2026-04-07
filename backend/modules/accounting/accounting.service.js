@@ -23,6 +23,27 @@ exports.calculateGST = (amount, rate, isInterstate = false) => {
   }
 };
 
+exports.calculateProfessionalGST = (amount, rate, isInterstate = false) => {
+  const totalTax = (parseFloat(amount) * parseFloat(rate)) / 100;
+  
+  if (isInterstate) {
+    return {
+      taxItems: [
+        { name: 'IGST', rate, amount: totalTax }
+      ],
+      totalTax
+    };
+  } else {
+    return {
+      taxItems: [
+        { name: 'CGST', rate: rate/2, amount: totalTax/2 },
+        { name: 'SGST', rate: rate/2, amount: totalTax/2 }
+      ],
+      totalTax
+    };
+  }
+};
+
 exports.simulateAIOCR = async (fileName) => {
   // In a real app, you would use Tesseract.js or OpenAI Vision API here
   console.log(`Scanning receipt: ${fileName}...`);

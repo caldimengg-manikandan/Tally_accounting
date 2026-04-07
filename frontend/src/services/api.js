@@ -15,7 +15,7 @@ api.interceptors.request.use(config => {
 });
 
 // ─── Auth ──────────────────────────────────────────
-export const register = (name, email, password) => api.post('/auth/register', { name, email, password });
+export const register = (name, email, password, role) => api.post('/auth/register', { name, email, password, role });
 export const login = (email, password) => api.post('/auth/login', { email, password });
 
 export const authAPI = { register, login };
@@ -95,6 +95,13 @@ export const salesAPI = {
   getOrders: (companyId) => api.get(`/sales/orders/${companyId}`),
   updateOrder: (id, data) => api.put(`/sales/orders/${id}`, data),
   createInvoice: (data) => api.post('/sales/invoices', data),
+};
+
+// ─── Cost Centers ──────────────────────────────────
+export const costCenterAPI = {
+  create: (data) => api.post('/cost-centers', data),
+  getByCompany: (companyId) => api.get(`/cost-centers/${companyId}`),
+  delete: (id) => api.delete(`/cost-centers/${id}`),
 };
 
 // ─── Accounting Utilities ──────────────────────────

@@ -1,4 +1,5 @@
 const { Ledger, Group, Transaction, sequelize } = require('../../models');
+const AuditService = require('../../services/AuditService');
 
 // Create a Ledger under a Group
 exports.createLedger = async (req, res) => {
@@ -25,6 +26,17 @@ exports.createLedger = async (req, res) => {
       GroupId: finalGroupId,
       CompanyId: companyId || CompanyId
     });
+
+    await AuditService.log({
+      action: 'CREATE_LEDGER',
+      tableName: 'Ledgers',
+      recordId: ledger.id,
+      newData: ledger,
+      companyId: ledger.CompanyId,
+      userId: req.user?.id,
+      req
+    });
+
     res.status(201).json(ledger);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -85,6 +97,7 @@ exports.updateLedger = async (req, res) => {
     const ledger = await Ledger.findByPk(req.params.id);
     if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
     
+    const oldData = ledger.toJSON();
     await ledger.update({ 
       name, 
       GroupId: groupId, 
@@ -95,6 +108,18 @@ exports.updateLedger = async (req, res) => {
       address,
       gstNumber
     });
+
+    await AuditService.log({
+      action: 'UPDATE_LEDGER',
+      tableName: 'Ledgers',
+      recordId: ledger.id,
+      oldData,
+      newData: ledger,
+      companyId: ledger.CompanyId,
+      userId: req.user?.id,
+      req
+    });
+
     res.json(ledger);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -122,7 +147,21 @@ exports.deleteLedger = async (req, res) => {
     if (txCount > 0) {
       return res.status(400).json({ error: 'Cannot delete ledger with existing transactions.' });
     }
+    const ledger = await Ledger.findByPk(req.params.id);
+    if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
+
     await Ledger.destroy({ where: { id: req.params.id } });
+
+    await AuditService.log({
+      action: 'DELETE_LEDGER',
+      tableName: 'Ledgers',
+      recordId: req.params.id,
+      oldData: ledger,
+      companyId: ledger.CompanyId,
+      userId: req.user?.id,
+      req
+    });
+
     res.json({ message: 'Ledger deleted.' });
   } catch (err) {
     res.status(500).json({ error: err.message });

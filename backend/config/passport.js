@@ -25,6 +25,7 @@ passport.use(new GoogleStrategy({
       console.log(`[Google Auth] Attempting login/sign-up for: ${email}`);
 
       let user = await User.findOne({ where: { email } });
+      console.log(`[Google Auth] User record from DB:`, user ? "Found" : "Not Found");
 
       if (!user) {
         console.log(`[Google Auth] Creating new user record for: ${email}`);
@@ -32,7 +33,6 @@ passport.use(new GoogleStrategy({
           email,
           name: profile.displayName,
           // Since password is required in the DB, we hash a dummy string.
-          // This user will likely only use Google to login.
           password: await bcrypt.hash('GOOGLE_OAUTH_DUMMY_PWD', 10)
         });
       }
@@ -43,4 +43,4 @@ passport.use(new GoogleStrategy({
       return done(err, null);
     }
   }
-));
+));

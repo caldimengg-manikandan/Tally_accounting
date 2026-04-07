@@ -46,7 +46,8 @@ class AccountingService {
         LedgerId: entry.ledgerId,
         debit: parseFloat(entry.debit || 0),
         credit: parseFloat(entry.credit || 0),
-        CompanyId: companyId
+        CompanyId: companyId,
+        CostCenterId: entry.costCenterId || null // Supported Professional Feature
       }, options);
 
       // Real-time Balance Update (Tally Standard)
@@ -110,9 +111,17 @@ class AccountingService {
 
     const grandTotal = totalTaxableValue + totalGstAmount;
 
-    // 2. Identify Target Ledgers for auto-posting
-    const { Group } = require('../models');
+    // 2. Identify States for GST Automation
+    const { Company, Group } = require('../models');
     const { Op } = require('sequelize');
+    
+    const company = await Company.findByPk(companyId, options);
+    const customer = await Ledger.findByPk(customerLedgerId, options);
+
+    if (!company) throw new Error('CONFIG ERROR: Company not found.');
+    if (!customer) throw new Error('CONFIG ERROR: Customer ledger not found.');
+
+    const isLocal = company.state === customer.state;
     
     const salesGroup = await Group.findOne({ where: { CompanyId: companyId, name: 'Sales Accounts' }, ...options });
     let salesLedger = null;
@@ -123,27 +132,39 @@ class AccountingService {
         salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Sales%' } }, ...options });
     }
     
-    const cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
-    const sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
-    
     const missing = [];
     if (!salesLedger) missing.push('Sales Ledger');
-    if (!cgstLedger) missing.push('CGST Ledger');
-    if (!sgstLedger) missing.push('SGST Ledger');
+    
+    const journalEntries = [
+      { ledgerId: customerLedgerId, debit: grandTotal, credit: 0 },
+      { ledgerId: salesLedger.id, debit: 0, credit: totalTaxableValue }
+    ];
+
+    if (isLocal) {
+      // Intra-state: CGST + SGST
+      const cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
+      const sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
+      
+      if (!cgstLedger) missing.push('CGST Ledger');
+      if (!sgstLedger) missing.push('SGST Ledger');
+      
+      if (missing.length === 0) {
+        journalEntries.push({ ledgerId: cgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
+        journalEntries.push({ ledgerId: sgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
+      }
+    } else {
+      // Inter-state: IGST
+      const igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%IGST%' } }, ...options });
+      if (!igstLedger) missing.push('IGST Ledger');
+      
+      if (missing.length === 0) {
+        journalEntries.push({ ledgerId: igstLedger.id, debit: 0, credit: totalGstAmount });
+      }
+    }
 
     if (missing.length > 0) {
       throw new Error(`CONFIG ERROR: Missing ledgers -> ${missing.join(', ')}`);
     }
-
-    const halfTax = totalGstAmount / 2;
-
-    // 3. Construct Journal Entries (4 Lines perfectly)
-    const journalEntries = [
-      { ledgerId: customerLedgerId, debit: grandTotal, credit: 0 },
-      { ledgerId: salesLedger.id, debit: 0, credit: totalTaxableValue },
-      { ledgerId: cgstLedger.id, debit: 0, credit: halfTax },
-      { ledgerId: sgstLedger.id, debit: 0, credit: halfTax }
-    ];
 
     // 4. Post to Universal Journal Engine (which handles Audit)
     const voucher = await this.recordJournalEntry({

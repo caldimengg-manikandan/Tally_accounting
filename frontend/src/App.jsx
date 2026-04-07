@@ -19,6 +19,7 @@ import DaybookView from './modules/reports/DaybookView';
 import AuditReportView from './modules/reports/AuditReportView';
 import InventoryView from './modules/inventory/InventoryView';
 import BankReconciliationView from './modules/reconciliation/BankReconciliationView';
+import CostCenterView from './modules/accounting/CostCenterView';
 import CustomersView from './modules/sales/CustomersView';
 import SalesOrdersView from './modules/sales/SalesOrdersView';
 import PaymentsReceivedView from './modules/sales/PaymentsReceivedView';
@@ -35,7 +36,7 @@ import {
   Receipt, Wallet, TrendingUp, Shield, LogOut,
   Bell, ChevronRight, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
-  PieChart, Landmark
+  PieChart, Landmark, Target
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -53,6 +54,7 @@ const NAV = [
     items: [
       { icon: FileText,        label: 'Vouchers',         path: '/vouchers' },
       { icon: BookOpen,        label: 'Ledgers',          path: '/ledgers' },
+      { icon: Target,          label: 'Cost Centers',     path: '/cost-centers' },
       { icon: ShoppingCart,    label: 'Purchase Orders',  path: '/purchase-orders' },
     ]
   },
@@ -163,7 +165,14 @@ const AppShell = ({ children, onLogout }) => {
 
         {/* Nav */}
         <nav className={`flex-1 overflow-y-auto py-6 space-y-6 ${collapsed ? 'px-1' : 'px-4'}`}>
-          {NAV.map(section => (
+          {NAV.filter(section => {
+            // RBAC FILTERING LOGIC
+            const role = user.role || 'VIEWER';
+            if (role === 'VIEWER') return ['Overview', 'Reports'].includes(section.group);
+            if (role === 'AUDITOR') return ['Overview', 'Reports', 'Setup'].includes(section.group);
+            if (role === 'DATA_ENTRY') return ['Overview', 'Accounting', 'Sales', 'Operations'].includes(section.group);
+            return true; // ADMIN, MANAGER, ACCOUNTANT see all
+          }).map(section => (
             <div key={section.group} className="space-y-1">
               {!collapsed && (
                 <div className="px-3 mb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
@@ -210,10 +219,10 @@ const AppShell = ({ children, onLogout }) => {
                {user.email?.substring(0, 1).toUpperCase() || 'A'}
             </div>
             {!collapsed && (
-              <div className="flex-1 min-w-0 text-left">
-                <div className="text-[13px] font-black text-slate-900 truncate tracking-tight">{user.email || 'Administrator'}</div>
-                <div className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] group-hover:text-red-700">Sign Out</div>
-              </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="text-[13px] font-black text-slate-900 truncate tracking-tight">{user.email || 'Administrator'}</div>
+                  <div className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] group-hover:text-red-700">Sign Out</div>
+                </div>
             )}
           </button>
         </div>
@@ -352,6 +361,7 @@ function AuthenticatedApp() {
       } />
       <Route path="/ledgers"              element={shell(LedgersView)} />
       <Route path="/ledger-statement/:id" element={shell(LedgerStatementView)} />
+      <Route path="/cost-centers"          element={shell(CostCenterView)} />
       <Route path="/purchase-orders"      element={shell(PurchaseOrderView)} />
 
       {/* Sales */}
