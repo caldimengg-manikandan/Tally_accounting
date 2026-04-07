@@ -1,20 +1,54 @@
-const { SalesOrder, Ledger, Group } = require('../../models');
+const { SalesOrder, SalesOrderItem, Ledger, Item, Group, sequelize } = require('../../models');
 const AccountingService = require('../../services/AccountingService');
 
 exports.createOrder = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const { orderNumber, date, status, totalAmount, notes, customerId, companyId } = req.body;
+    const { 
+      orderNumber, date, status, customerId, companyId,
+      referenceNumber, expectedShipmentDate, paymentTerms, 
+      deliveryMethod, salesperson, customerNotes, termsConditions,
+      subTotal, discount, tax, adjustment, totalAmount, items
+    } = req.body;
+
     const order = await SalesOrder.create({
       orderNumber,
       date: date || undefined,
-      status,
-      totalAmount,
-      notes,
+      status: status || 'Draft',
       LedgerId: customerId || null,
-      CompanyId: companyId
+      CompanyId: companyId,
+      referenceNumber,
+      expectedShipmentDate: expectedShipmentDate || null,
+      paymentTerms,
+      deliveryMethod,
+      salesperson,
+      customerNotes,
+      termsConditions,
+      subTotal,
+      discount,
+      tax,
+      adjustment,
+      totalAmount
+    }, { transaction: t });
+
+    if (items && items.length > 0) {
+      const orderItems = items.map(({ id, ...item }) => ({
+        ...item,
+        SalesOrderId: order.id
+      }));
+      await SalesOrderItem.bulkCreate(orderItems, { transaction: t });
+    }
+
+    await t.commit();
+    
+    // Fetch complete order with items
+    const completeOrder = await SalesOrder.findByPk(order.id, {
+      include: [{ model: SalesOrderItem, as: 'Items' }]
     });
-    res.status(201).json(order);
+
+    res.status(201).json(completeOrder);
   } catch (err) {
+    await t.rollback();
     res.status(500).json({ error: err.message });
   }
 };
@@ -24,7 +58,10 @@ exports.getOrders = async (req, res) => {
     const { companyId } = req.params;
     const orders = await SalesOrder.findAll({
       where: { CompanyId: companyId },
-      include: [{ model: Ledger, attributes: ['name'] }],
+      include: [
+        { model: Ledger, as: 'Customer', attributes: ['name'] },
+        { model: SalesOrderItem, as: 'Items' }
+      ],
       order: [['date', 'DESC']]
     });
     res.json(orders);
@@ -34,22 +71,62 @@ exports.getOrders = async (req, res) => {
 };
 
 exports.updateOrder = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { orderId } = req.params;
-    const { status, totalAmount, notes } = req.body;
+    const { 
+      orderNumber, date, status, customerId,
+      referenceNumber, expectedShipmentDate, paymentTerms, 
+      deliveryMethod, salesperson, customerNotes, termsConditions,
+      subTotal, discount, tax, adjustment, totalAmount, items
+    } = req.body;
     
     const order = await SalesOrder.findByPk(orderId);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Order not found' });
+    }
 
-    const previousStatus = order.status;
-    await order.update({ status, totalAmount, notes });
+    await order.update({
+      orderNumber,
+      date: date || null,
+      status,
+      LedgerId: customerId,
+      referenceNumber,
+      expectedShipmentDate: expectedShipmentDate || null,
+      paymentTerms,
+      deliveryMethod,
+      salesperson,
+      customerNotes,
+      termsConditions,
+      subTotal,
+      discount,
+      tax,
+      adjustment,
+      totalAmount
+    }, { transaction: t });
 
-    // In a strict accounting system, Sales Orders do not generate Journal Vouchers.
-    // Financial entries are only created when the Sales Invoice is posted.
-    // Order status is now successfully updated.
+    // Handle items: simple approach - delete all and recreate
+    if (items) {
+      await SalesOrderItem.destroy({ where: { SalesOrderId: orderId }, transaction: t });
+      if (items.length > 0) {
+        const orderItems = items.map(({ id, ...item }) => ({
+          ...item,
+          SalesOrderId: orderId
+        }));
+        await SalesOrderItem.bulkCreate(orderItems, { transaction: t });
+      }
+    }
 
-    res.json(order);
+    await t.commit();
+    
+    const updatedOrder = await SalesOrder.findByPk(orderId, {
+      include: [{ model: SalesOrderItem, as: 'Items' }]
+    });
+
+    res.json(updatedOrder);
   } catch (err) {
+    await t.rollback();
     res.status(500).json({ error: err.message });
   }
 };
@@ -74,10 +151,8 @@ exports.createInvoice = async (req, res) => {
       userId: req.user?.id
     });
 
-    console.log('✅ Invoice Posted Successfully:', result.voucher.voucherNumber);
     res.status(201).json(result);
   } catch (err) {
-    console.error('❌ INVOICE CONTROLLER ERROR:', err.message);
     res.status(500).json({ error: err.message });
   }
 };

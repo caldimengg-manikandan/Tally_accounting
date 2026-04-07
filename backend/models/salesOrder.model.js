@@ -18,13 +18,53 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('Draft', 'Sent', 'Accepted', 'Closed', 'Declined', 'Expired'),
       defaultValue: 'Draft'
     },
-    totalAmount: {
+    referenceNumber: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    expectedShipmentDate: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    paymentTerms: {
+      type: DataTypes.STRING,
+      defaultValue: 'Due on Receipt'
+    },
+    deliveryMethod: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    salesperson: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    customerNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    termsConditions: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    subTotal: {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0
     },
-    notes: {
-      type: DataTypes.TEXT,
-      allowNull: true
+    discount: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0
+    },
+    tax: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0
+    },
+    adjustment: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0
+    },
+    totalAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0
     }
   });
 

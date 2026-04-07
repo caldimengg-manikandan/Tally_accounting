@@ -2,13 +2,39 @@ const { Company, User, Group, Ledger } = require('../../models');
 
 exports.createCompany = async (req, res) => {
   try {
-    const { name, gstNumber, address, financialYearStart, booksBeginningFrom, userId } = req.body;
+    const { 
+      name, gstNumber, address, financialYearStart, booksBeginningFrom, userId,
+      industry, location, street1, street2, city, pincode, phone, faxNumber,
+      website, baseCurrency, fiscalYear, reportBasis, language, timezone,
+      dateFormat, organizationId, logoUrl, additionalFields, state, panNumber
+    } = req.body;
+
     const company = await Company.create({
       name,
       gstNumber,
       address,
       financialYearStart,
-      booksBeginningFrom
+      booksBeginningFrom,
+      industry,
+      location,
+      street1,
+      street2,
+      city,
+      pincode,
+      phone,
+      faxNumber,
+      website,
+      baseCurrency,
+      fiscalYear,
+      reportBasis,
+      language,
+      timezone,
+      dateFormat,
+      organizationId,
+      logoUrl,
+      additionalFields,
+      state,
+      panNumber
     });
     
     const user = req.user || (userId ? await User.findByPk(userId) : null);
@@ -78,16 +104,26 @@ exports.getCompanyById = async (req, res) => {
 
 exports.updateCompany = async (req, res) => {
   try {
-    const { name, gstNumber, address, features, financialYearStart, booksBeginningFrom } = req.body;
+    const fieldsToUpdate = [
+      'name', 'gstNumber', 'address', 'features', 'financialYearStart', 
+      'booksBeginningFrom', 'industry', 'location', 'street1', 'street2', 
+      'city', 'pincode', 'phone', 'faxNumber', 'website', 'baseCurrency', 
+      'fiscalYear', 'reportBasis', 'language', 'timezone', 'dateFormat', 
+      'organizationId', 'logoUrl', 'additionalFields', 'state', 'panNumber'
+    ];
+    
     const company = await Company.findByPk(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    if (name) company.name = name;
-    if (gstNumber) company.gstNumber = gstNumber;
-    if (address) company.address = address;
-    if (financialYearStart) company.financialYearStart = financialYearStart;
-    if (booksBeginningFrom) company.booksBeginningFrom = booksBeginningFrom;
-    if (features) company.features = { ...company.features, ...features };
+    fieldsToUpdate.forEach(field => {
+      if (req.body[field] !== undefined) {
+        if (field === 'features') {
+          company.features = { ...company.features, ...req.body.features };
+        } else {
+          company[field] = req.body[field];
+        }
+      }
+    });
 
     await company.save();
     res.json(company);
