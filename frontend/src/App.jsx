@@ -44,41 +44,44 @@ import {
 // ═══════════════════════════════════════════════════════════════════
 const NAV = [
   {
-    group: 'Overview',
+    group: 'Home',
     items: [
       { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
     ]
   },
   {
-    group: 'Accounting',
+    group: 'Items',
     items: [
-      { icon: FileText,        label: 'Vouchers',         path: '/vouchers' },
-      { icon: BookOpen,        label: 'Ledgers',          path: '/ledgers' },
-      { icon: Target,          label: 'Cost Centers',     path: '/cost-centers' },
-      { icon: ShoppingCart,    label: 'Purchase Orders',  path: '/purchase-orders' },
+      { icon: Package,         label: 'Inventory',        path: '/inventory' },
     ]
   },
   {
     group: 'Sales',
     items: [
       { icon: Users,           label: 'Customers',        path: '/customers' },
-      { icon: Receipt,         label: 'Sales Invoices',   path: '/sales/new-invoice' },
       { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders' },
+      { icon: Receipt,         label: 'Sales Invoices',   path: '/sales/new-invoice' },
       { icon: Wallet,          label: 'Payments',         path: '/payments' },
     ]
   },
   {
-    group: 'Operations',
+    group: 'Purchases',
     items: [
-      { icon: Package,         label: 'Inventory',        path: '/inventory' },
-      { icon: ArrowLeftRight,  label: 'Reconciliation',   path: '/reconciliation' },
-      { icon: UserCheck,       label: 'Payroll',          path: '/payroll' },
+      { icon: ShoppingCart,    label: 'Purchase Orders',  path: '/purchase-orders' },
     ]
   },
   {
-    group: 'Tax',
+    group: 'Banking',
     items: [
-      { icon: PieChart,        label: 'GST Returns',      path: '/reports/gst' },
+      { icon: Landmark,        label: 'Banking',          path: '/reconciliation' },
+    ]
+  },
+  {
+    group: 'Accountant',
+    items: [
+      { icon: FileText,        label: 'Vouchers',         path: '/vouchers' },
+      { icon: BookOpen,        label: 'Ledgers',          path: '/ledgers' },
+      { icon: Target,          label: 'Cost Centers',     path: '/cost-centers' },
     ]
   },
   {
@@ -88,6 +91,13 @@ const NAV = [
       { icon: TrendingUp,      label: 'Profit & Loss',    path: '/reports/pl' },
       { icon: Shield,          label: 'Balance Sheet',    path: '/reports/bs' },
       { icon: Activity,        label: 'Day Book',         path: '/reports/daybook' },
+      { icon: PieChart,        label: 'GST Returns',      path: '/reports/gst' },
+    ]
+  },
+  {
+    group: 'APPS',
+    items: [
+      { icon: UserCheck,       label: 'Payroll',          path: '/payroll' },
     ]
   },
   {
@@ -170,7 +180,7 @@ const AppShell = ({ children, onLogout }) => {
             const role = user.role || 'VIEWER';
             if (role === 'VIEWER') return ['Overview', 'Reports'].includes(section.group);
             if (role === 'AUDITOR') return ['Overview', 'Reports', 'Setup'].includes(section.group);
-            if (role === 'DATA_ENTRY') return ['Overview', 'Accounting', 'Sales', 'Operations'].includes(section.group);
+            if (role === 'DATA_ENTRY') return ['Overview', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Payroll'].includes(section.group);
             return true; // ADMIN, MANAGER, ACCOUNTANT see all
           }).map(section => (
             <div key={section.group} className="space-y-1">

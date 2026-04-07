@@ -5,7 +5,7 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const { sequelize } = require('./models');
 
-// 1. Initial Config
+// 1. Initial Config (Loaded from backend/.env)
 dotenv.config();
 
 const app = express();
@@ -13,7 +13,8 @@ const PORT = process.env.PORT || 5000;
 
 // 2. Middleware Strategy
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // 3. Authentication Engine (Passport)
 require('./config/passport');
@@ -62,8 +63,8 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-// Using alter:false for stability; use node debug_reset.js for schema changes
-const syncOptions = { alter: false };
+// Using alter:true to apply new company profile fields;
+const syncOptions = { alter: true };
 
 sequelize.sync(syncOptions).then(() => {
   console.log(`✅ Ledger Database Synced [${dialect}]`);

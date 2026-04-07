@@ -11,6 +11,7 @@ const Item = require('./item.model')(sequelize, DataTypes);
 const BankTransaction = require('./bankTransaction.model')(sequelize, DataTypes);
 const CostCenter = require('./costCenter.model')(sequelize, DataTypes);
 const SalesOrder = require('./salesOrder.model')(sequelize, DataTypes);
+const SalesOrderItem = require('./salesOrderItem.model')(sequelize, DataTypes);
 const PurchaseOrder = require('./purchaseOrder.model')(sequelize, DataTypes);
 const AuditLog = require('./audit.model')(sequelize, DataTypes);
 
@@ -70,6 +71,15 @@ Transaction.belongsTo(Item, { foreignKey: { name: 'ItemId', type: DataTypes.UUID
 Company.hasMany(SalesOrder, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 SalesOrder.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
+SalesOrder.belongsTo(Ledger, { as: 'Customer', foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+Ledger.hasMany(SalesOrder, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+
+SalesOrder.hasMany(SalesOrderItem, { as: 'Items', foreignKey: { name: 'SalesOrderId', type: DataTypes.UUID }, onDelete: 'CASCADE' });
+SalesOrderItem.belongsTo(SalesOrder, { foreignKey: { name: 'SalesOrderId', type: DataTypes.UUID } });
+
+SalesOrderItem.belongsTo(Item, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+Item.hasMany(SalesOrderItem, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+
 Company.hasMany(PurchaseOrder, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 PurchaseOrder.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
@@ -100,6 +110,7 @@ module.exports = {
   Item,
   BankTransaction,
   SalesOrder,
+  SalesOrderItem,
   PurchaseOrder,
   CostCenter,
   AuditLog

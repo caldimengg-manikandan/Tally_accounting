@@ -1,74 +1,109 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Building2, Save, ArrowLeft, Calendar, 
-  Phone, Mail, Hash, RefreshCcw, CheckCircle2, AlertCircle, Loader2
+  Building2, Save, ArrowLeft, Upload, 
+  CheckCircle2, AlertCircle, Loader2, HelpCircle, 
+  Globe, Mail, Phone, ExternalLink, Plus, Trash2, X, Maximize2
 } from 'lucide-react';
 import { companyAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
+
+const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder = "", required = false, help = false }) => (
+  <div className="flex flex-col gap-1.5 py-3 border-b border-gray-50 last:border-0 lg:flex-row lg:items-center">
+    <label className="text-[13px] text-gray-600 font-medium lg:w-48 shrink-0 flex items-center gap-1">
+      {label} {required && <span className="text-red-500 font-bold">*</span>}
+      {help && <HelpCircle size={14} className="text-gray-400 cursor-help" />}
+    </label>
+    <input 
+      type={type}
+      placeholder={placeholder}
+      value={value || ''}
+      onChange={(e) => onChange(keyName, e.target.value)}
+      className="flex-1 max-w-md h-9 border border-gray-300 rounded px-3 text-[13px] text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 transition-all placeholder:text-gray-300 font-sans"
+    />
+  </div>
+);
+
+const SelectRow = ({ label, keyName, value, onChange, options, required = false, help = false }) => (
+  <div className="flex flex-col gap-1.5 py-3 border-b border-gray-50 last:border-0 lg:flex-row lg:items-center">
+    <label className="text-[13px] text-gray-600 font-medium lg:w-48 shrink-0 flex items-center gap-1">
+      {label} {required && <span className="text-red-500 font-bold">*</span>}
+      {help && <HelpCircle size={14} className="text-gray-400 cursor-help" />}
+    </label>
+    <select 
+      value={value || ''}
+      onChange={(e) => onChange(keyName, e.target.value)}
+      className="flex-1 max-w-md h-9 border border-gray-300 rounded px-3 text-[13px] text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100 transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.5rem_center] bg-no-repeat font-sans"
+    >
+      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+    </select>
+  </div>
+);
 
 const CompanyInfoView = () => {
   const [loading, setLoading]   = useState(false);
   const [fetching, setFetching] = useState(true);
   const [status, setStatus]     = useState(null); // 'success' | 'error' | null
   const [errorMsg, setErrorMsg] = useState('');
-  const [existingId, setExistingId] = useState(null); // if a company already exists
-  
+  const [existingId, setExistingId] = useState(null);
+  const [isImageZoomed, setIsImageZoomed] = useState(false);
+
   const [formData, setFormData] = useState({
-    name: 'Indus Enterprises Private Limited',
-    address: 'Sector 12, HSR Layout, Bengaluru, KA - 560102',
-    phone: '+91 80 4422 9900',
-    email: 'admin@indus-ent.com',
-    gstNumber: '29AAAAA0000A1Z5',
-    financialYearStart: '2025-04-01',
-    financialYearEnd: '2026-03-31'
+    name: '',
+    industry: '',
+    location: 'India',
+    street1: '',
+    street2: '',
+    city: '',
+    pincode: '',
+    state: 'Tamil Nadu',
+    phone: '',
+    faxNumber: '',
+    website: '',
+    baseCurrency: 'INR',
+    fiscalYear: 'April - March',
+    reportBasis: 'Accrual',
+    language: 'English',
+    timezone: '(GMT 5:30) India Standard Time (Asia/Calcutta)',
+    dateFormat: 'dd/MM/yyyy',
+    organizationId: '',
+    financialYearStart: new Date().getFullYear() + '-04-01',
+    booksBeginningFrom: new Date().getFullYear() + '-04-01',
+    logoUrl: '',
+    additionalFields: [],
   });
 
-  // On mount, check if a company already exists
   useEffect(() => {
     const savedId = localStorage.getItem('companyId');
     const loadCompany = async () => {
       setFetching(true);
       try {
-        // Try loading from saved companyId first
         if (savedId) {
-          try {
-            const res = await companyAPI.getById(savedId);
-            if (res.data?.id) {
-              setExistingId(res.data.id);
-              setFormData(f => ({
-                ...f,
-                name: res.data.name || f.name,
-                address: res.data.address || f.address,
-                gstNumber: res.data.gstNumber || f.gstNumber,
-                financialYearStart: res.data.financialYearStart
-                  ? res.data.financialYearStart.split('T')[0]
-                  : f.financialYearStart,
-                financialYearEnd: res.data.booksBeginningFrom
-                  ? res.data.booksBeginningFrom.split('T')[0]
-                  : f.financialYearEnd,
-              }));
-              setFetching(false);
-              return;
-            }
-          } catch {}
+          const res = await companyAPI.getById(savedId);
+          if (res.data?.id) {
+            setExistingId(res.data.id);
+            const d = res.data;
+            setFormData(prev => ({
+              ...prev,
+              ...d,
+              financialYearStart: d.financialYearStart ? d.financialYearStart.split('T')[0] : prev.financialYearStart,
+              booksBeginningFrom: d.booksBeginningFrom ? d.booksBeginningFrom.split('T')[0] : prev.booksBeginningFrom,
+              additionalFields: Array.isArray(d.additionalFields) ? d.additionalFields : [],
+            }));
+            setFetching(false);
+            return;
+          }
         }
-        // Fallback: list all companies
         const all = await companyAPI.getAll();
         if (all.data?.length > 0) {
           const c = all.data[0];
           setExistingId(c.id);
           localStorage.setItem('companyId', c.id);
-          setFormData(f => ({
-            ...f,
-            name: c.name || f.name,
-            address: c.address || f.address,
-            gstNumber: c.gstNumber || f.gstNumber,
-            financialYearStart: c.financialYearStart
-              ? c.financialYearStart.split('T')[0]
-              : f.financialYearStart,
-            financialYearEnd: c.booksBeginningFrom
-              ? c.booksBeginningFrom.split('T')[0]
-              : f.financialYearEnd,
+          setFormData(prev => ({
+            ...prev,
+            ...c,
+            financialYearStart: c.financialYearStart ? c.financialYearStart.split('T')[0] : prev.financialYearStart,
+            booksBeginningFrom: c.booksBeginningFrom ? c.booksBeginningFrom.split('T')[0] : prev.booksBeginningFrom,
+            additionalFields: Array.isArray(c.additionalFields) ? c.additionalFields : [],
           }));
         }
       } catch (err) {
@@ -79,251 +114,373 @@ const CompanyInfoView = () => {
     loadCompany();
   }, []);
 
+  const handleUpdateField = (key, val) => {
+    setFormData(prev => ({ ...prev, [key]: val }));
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 1024 * 1024) {
+      setErrorMsg('Logo size should be less than 1MB');
+      setStatus('error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, logoUrl: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addAdditionalField = () => {
+    setFormData(prev => ({
+      ...prev,
+      additionalFields: [...prev.additionalFields, { label: '', value: '' }]
+    }));
+  };
+
+  const removeAdditionalField = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalFields: prev.additionalFields.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateAdditionalField = (index, field, value) => {
+    setFormData(prev => {
+      const newFields = [...prev.additionalFields];
+      newFields[index][field] = value;
+      return { ...prev, additionalFields: newFields };
+    });
+  };
+
   const handleSave = async () => {
-    if (!formData.name.trim()) { setErrorMsg('Company name is required.'); setStatus('error'); return; }
+    if (!formData.name.trim()) { 
+      setErrorMsg('Organization Name is required.'); 
+      setStatus('error'); 
+      return; 
+    }
     setLoading(true);
     setStatus(null);
     try {
-      const userStr = localStorage.getItem('user');
-      const user = userStr ? JSON.parse(userStr) : null;
-      
-      const payload = {
-        name: formData.name,
-        address: formData.address,
-        gstNumber: formData.gstNumber,
-        financialYearStart: formData.financialYearStart || '2025-04-01',
-        booksBeginningFrom: formData.financialYearEnd || '2026-03-31',
-        userId: user?.id
-      };
-
+      const payload = { ...formData };
       let res;
       if (existingId) {
-        try {
-          // Update existing company
-          res = await companyAPI.update(existingId, payload);
-          setStatus('success');
-        } catch (err) {
-          // If update fails because the ID no longer exists (404), fall back to create
-          if (err.response?.status === 404) {
-            console.warn('Existing company ID not found in database. Falling back to creation.');
-            res = await companyAPI.create(payload);
-            if (res.data?.id) {
-              localStorage.setItem('companyId', res.data.id);
-              setExistingId(res.data.id);
-              setStatus('success');
-            }
-          } else {
-            throw err;
-          }
-        }
+        res = await companyAPI.update(existingId, payload);
+        setStatus('success');
       } else {
-        // Create new company
         res = await companyAPI.create(payload);
         if (res.data?.id) {
           localStorage.setItem('companyId', res.data.id);
           setExistingId(res.data.id);
           setStatus('success');
-          setTimeout(() => window.location.href = '/ledgers', 1800);
-        } else {
-          throw new Error('Invalid response from server');
         }
       }
+      setTimeout(() => setStatus(null), 3000);
     } catch (err) {
       console.error(err);
       setStatus('error');
-      setErrorMsg(
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message ||
-        'Network error — make sure the backend server is running on port 5000.'
-      );
+      setErrorMsg(err.response?.data?.error || err.message || 'Failed to save settings.');
     }
     setLoading(false);
   };
 
-  const field = (label, key, type = 'text', icon = null, multiline = false) => (
-    <div>
-      <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">{label}</label>
-      {multiline ? (
-        <textarea
-          className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-900 outline-none transition-all min-h-[90px]"
-          value={formData[key] || ''}
-          onChange={e => setFormData({ ...formData, [key]: e.target.value })}
-        />
-      ) : (
-        <div className="relative">
-          {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300">{icon}</span>}
-          <input
-            type={type}
-            className={`w-full bg-slate-50 border border-slate-200 ${icon ? 'pl-9' : 'px-4'} pr-4 py-3 rounded text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-900 outline-none transition-all`}
-            value={formData[key] || ''}
-            onChange={e => setFormData({ ...formData, [key]: e.target.value })}
-          />
-        </div>
-      )}
+  if (fetching) return (
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 text-gray-400 font-sans">
+      <Loader2 size={32} className="animate-spin text-blue-600 mb-4" />
+      <span className="text-sm font-medium">Loading Organization Profile...</span>
     </div>
   );
 
   return (
-    <div className="w-full h-full bg-[#f8fafc] flex flex-col font-sans text-slate-900 overflow-hidden min-h-[calc(100vh-2rem)]">
-
-      {/* HEADER */}
-      <header className="h-16 border-b border-slate-200 px-8 flex items-center justify-between bg-white shrink-0 z-40">
-        <div className="flex items-center gap-6">
-          <button onClick={() => window.location.href='/dashboard'} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-black transition-all">
-            <ArrowLeft size={18} /> <span className="text-[10px] uppercase tracking-widest">Dashboard</span>
-          </button>
-          <div className="h-4 w-px bg-slate-200" />
-          <h1 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Company Setup</h1>
-          {existingId && (
-            <span className="px-2 py-1 bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded border border-emerald-100">
-              ✓ Saved
-            </span>
-          )}
+    <div className="min-h-screen bg-white font-sans text-gray-900 pb-32">
+      
+      {/* IMAGE ENLARGE MODAL */}
+      {isImageZoomed && formData.logoUrl && (
+        <div 
+          className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setIsImageZoomed(false)}
+        >
+          <div className="bg-white rounded-lg p-2 max-w-4xl max-h-[90vh] shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <img src={formData.logoUrl} alt="Logo Enlarged" className="w-full h-full object-contain rounded" />
+            <button 
+              className="absolute top-6 right-8 text-white hover:text-red-400 transition-colors"
+              onClick={() => setIsImageZoomed(false)}
+            >
+              <X size={32} />
+            </button>
+          </div>
         </div>
+      )}
 
+      {/* NAVBAR */}
+      <nav className="h-14 border-b border-gray-200 px-6 flex items-center justify-between sticky top-0 bg-white z-50 shadow-sm">
         <div className="flex items-center gap-4">
-          {status === 'success' && (
-            <div className="flex items-center gap-2 text-emerald-600">
-              <CheckCircle2 size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                {existingId ? 'Company Updated!' : 'Company Created!'}
+          <h1 className="text-lg font-semibold flex items-center gap-2">
+            Organization Profile 
+            {formData.organizationId && (
+              <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-[11px] font-medium border border-gray-200">
+                ID: {formData.organizationId}
               </span>
-            </div>
-          )}
-          {status === 'error' && (
-            <div className="flex items-center gap-2 text-rose-600 max-w-sm">
-              <AlertCircle size={16} className="shrink-0" />
-              <span className="text-[10px] font-black leading-tight">{errorMsg}</span>
-            </div>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={loading || fetching}
-            className="h-10 px-8 bg-slate-900 text-white rounded font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+            )}
+          </h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => window.location.href = '/dashboard'}
+            className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800 font-medium px-3 py-1.5 rounded transition-colors"
           >
-            {loading ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : <><Save size={14} /> Save Company</>}
+            Close Settings <X size={16} className="text-red-400" />
           </button>
         </div>
-      </header>
+      </nav>
 
-      {/* MAIN */}
-      <main className="flex-1 overflow-y-auto p-10 bg-[#f8fafc]">
-        {fetching ? (
-          <div className="flex items-center justify-center h-40 gap-3 text-slate-400">
-            <Loader2 size={24} className="animate-spin text-slate-900" />
-            <span className="text-sm font-bold uppercase tracking-widest">Loading company data…</span>
-          </div>
-        ) : (
-          <div className="max-w-[1100px] mx-auto grid grid-cols-12 gap-8">
+      {/* SUCCESS/ERROR TOASTS */}
+      {status && (
+        <div className={`fixed top-16 right-6 z-[100] px-6 py-3 rounded shadow-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${
+          status === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
+        }`}>
+          {status === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span className="text-sm font-medium">{status === 'success' ? 'Settings saved successfully!' : errorMsg}</span>
+        </div>
+      )}
 
-            {/* LEFT */}
-            <div className="col-span-12 lg:col-span-8 space-y-8">
-
-              {/* Business Identity */}
-              <section className="bg-white border border-slate-200 p-8 rounded-xl shadow-sm">
-                <div className="flex items-center gap-3 mb-7 border-b border-slate-100 pb-5">
-                  <Building2 size={18} className="text-slate-900" />
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Business Identity</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="col-span-2">{field('Legal Company Name *', 'name')}</div>
-                  <div className="col-span-2">{field('Mailing Address', 'address', 'text', null, true)}</div>
-                  <div>{field('Phone / Contact', 'phone', 'text', <Phone size={14}/>)}</div>
-                  <div>{field('Corporate Email', 'email', 'email', <Mail size={14}/>)}</div>
-                </div>
-              </section>
-
-              {/* Tax & Statutory */}
-              <section className="bg-white border border-slate-200 p-8 rounded-xl shadow-sm">
-                <div className="flex items-center gap-3 mb-7 border-b border-slate-100 pb-5">
-                  <Hash size={18} className="text-slate-900" />
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Tax & Statutory Data</h3>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div>{field('GSTIN / Tax ID', 'gstNumber')}</div>
-                  <div>
-                    <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">PAN Number</label>
-                    <input type="text" defaultValue="ABCDE1234F"
-                      className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-900 outline-none transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">State</label>
-                    <select 
-                      className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-900 outline-none appearance-none"
-                      value={formData.state || ''}
-                      onChange={e => setFormData({ ...formData, state: e.target.value })}
-                    >
-                      <option value="">Select State</option>
-                      {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">Company Type</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-900 outline-none appearance-none">
-                      <option>Proprietorship</option>
-                      <option>Partnership</option>
-                      <option>Private Limited</option>
-                      <option>Public Limited</option>
-                      <option>LLP</option>
-                      <option>NGO / Trust</option>
-                    </select>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            {/* RIGHT: Fiscal */}
-            <div className="col-span-12 lg:col-span-4">
-              <section className="bg-slate-900 text-white p-8 rounded-xl shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 -rotate-45 translate-x-12 -translate-y-12" />
-                <div className="flex items-center gap-3 mb-7 border-b border-white/10 pb-5">
-                  <Calendar size={18} className="opacity-40" />
-                  <h3 className="text-xs font-black uppercase tracking-widest opacity-60">Fiscal Settings</h3>
-                </div>
-                <div className="space-y-6 relative z-10">
-                  <div>
-                    <label className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-2">Financial Year Starts From</label>
-                    <input type="date" value={formData.financialYearStart}
-                      onChange={e => {
-                        const start = new Date(e.target.value);
-                        const end = new Date(start);
-                        end.setFullYear(start.getFullYear() + 1);
-                        end.setDate(start.getDate() - 1);
-                        setFormData({ 
-                          ...formData, 
-                          financialYearStart: e.target.value,
-                          financialYearEnd: end.toISOString().split('T')[0]
-                        });
-                      }}
-                      className="w-full bg-white/5 border border-white/10 px-4 py-3 rounded text-sm font-bold text-white outline-none focus:bg-white/10 transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-black uppercase text-white/30 tracking-widest mb-2">Financial Year End</label>
-                    <input type="date" value={formData.financialYearEnd}
-                      onChange={e => setFormData({ ...formData, financialYearEnd: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 px-4 py-3 rounded text-sm font-bold text-white outline-none focus:bg-white/10 transition-all" />
-                  </div>
-                  <div className="flex gap-3 pt-2">
-                    <div className="p-3 bg-white/5 rounded border border-white/10 flex-1 text-center">
-                      <span className="block text-[8px] font-black opacity-20 uppercase mb-1">Currency</span>
-                      <span className="font-black text-sm">INR (₹)</span>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded border border-white/10 flex-1 text-center">
-                      <span className="block text-[8px] font-black opacity-20 uppercase mb-1">Decimals</span>
-                      <span className="font-black text-sm">2</span>
+      {/* CONTENT AREA */}
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        
+        {/* LOGO SECTION */}
+        <section className="mb-10">
+          <h2 className="text-[15px] font-medium text-gray-400 mb-4 uppercase tracking-wider">Organization Logo</h2>
+          <div className="flex items-start gap-8 border-b border-gray-100 pb-10">
+            <div className="relative group shrink-0">
+              <input 
+                type="file" 
+                id="logo-upload" 
+                className="hidden" 
+                accept="image/*"
+                onChange={handleLogoUpload}
+              />
+              <div 
+                className={`w-40 h-40 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center transition-all bg-gray-50 p-1 relative overflow-hidden group/box
+                  ${!formData.logoUrl ? 'hover:bg-gray-100 hover:border-blue-300 cursor-pointer' : ''}`}
+              >
+                {formData.logoUrl ? (
+                  <div className="relative w-full h-full">
+                    <img 
+                      src={formData.logoUrl} 
+                      alt="Logo Preview" 
+                      className="w-full h-full object-contain rounded cursor-zoom-in" 
+                      onClick={() => setIsImageZoomed(true)}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover/box:bg-black/5 transition-colors pointer-events-none flex items-center justify-center">
+                      <Maximize2 className="text-white opacity-0 group-hover/box:opacity-100 transition-opacity" size={24} />
                     </div>
                   </div>
-                  <div className="pt-2 text-[10px] text-white/30 font-bold leading-relaxed">
-                    ℹ India standard: Financial year runs April 1 → March 31
-                  </div>
-                </div>
-              </section>
+                ) : (
+                  <label htmlFor="logo-upload" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                    <Upload size={24} className="text-gray-300 group-hover:text-blue-400 mb-2" />
+                    <span className="text-[11px] font-medium text-gray-400 text-center px-4 leading-relaxed">
+                      Upload Your Organization Logo
+                      <div className="mt-2 text-[10px] font-normal text-gray-300 leading-tight">
+                        Preferred: 240x240 pixels<br/>Max: 1MB
+                      </div>
+                    </span>
+                  </label>
+                )}
+              </div>
+              {formData.logoUrl && (
+                <>
+                  <button 
+                    onClick={() => setFormData(p => ({ ...p, logoUrl: '' }))}
+                    className="absolute -top-2 -right-2 bg-white border border-gray-200 rounded-full p-1 text-gray-400 hover:text-rose-500 shadow-sm z-10"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                  <label htmlFor="logo-upload" className="mt-2 flex items-center justify-center text-[11px] text-blue-600 font-bold hover:underline cursor-pointer">
+                    Change Logo
+                  </label>
+                </>
+              )}
             </div>
-
+            
+            {/* INSTRUCTIONS */}
+            {!formData.logoUrl && (
+              <div className="flex-1 text-[12px] text-gray-500 space-y-1.5 pt-2 leading-relaxed animate-in fade-in duration-500">
+                <p className="font-medium text-gray-700">This logo will be displayed in transaction PDFs and email notifications.</p>
+                <div className="bg-gray-50/50 p-4 rounded border border-gray-100 mt-4 space-y-1">
+                  <p>• Preferred Image Dimensions: 240 x 240 pixels @ 72 DPI</p>
+                  <p>• Supported Files: jpg, jpeg, png, gif, bmp</p>
+                  <p>• Maximum File Size: 1MB</p>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </main>
+        </section>
+
+        {/* PROFILE FIELDS */}
+        <div className="space-y-1">
+          
+          <InputRow label="Organization Name" keyName="name" value={formData.name} onChange={handleUpdateField} required={true} />
+          <SelectRow label="Industry" keyName="industry" value={formData.industry} onChange={handleUpdateField} help={true} options={["Computer Software", "Accounting", "Manufacturing", "Retail", "Services", "Construction", "Distribution"]} />
+          <SelectRow label="Organization Location" keyName="location" value={formData.location} onChange={handleUpdateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
+
+          {/* ADDRESS BLOCK */}
+          <div className="flex flex-col gap-1.5 py-4 border-b border-gray-50 lg:flex-row lg:items-start">
+            <label className="text-[13px] text-gray-600 font-medium lg:w-48 shrink-0 flex items-center gap-1 py-1">
+              Organization Address <HelpCircle size={14} className="text-gray-400 cursor-help" />
+            </label>
+            <div className="flex-1 max-w-md space-y-3 font-sans">
+              <input type="text" placeholder="Street 1" value={formData.street1 || ''} onChange={e => handleUpdateField('street1', e.target.value)} className="w-full h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 placeholder:text-gray-300" />
+              <input type="text" placeholder="Street 2" value={formData.street2 || ''} onChange={e => handleUpdateField('street2', e.target.value)} className="w-full h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 placeholder:text-gray-300" />
+              <div className="grid grid-cols-2 gap-3">
+                <input type="text" placeholder="City" value={formData.city || ''} onChange={e => handleUpdateField('city', e.target.value)} className="h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 placeholder:text-gray-300" />
+                <input type="text" placeholder="Pin Code" value={formData.pincode || ''} onChange={e => handleUpdateField('pincode', e.target.value)} className="h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 placeholder:text-gray-300" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <select value={formData.state || ''} onChange={e => handleUpdateField('state', e.target.value)} className="h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 bg-white">
+                  {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <input type="text" placeholder="Phone" value={formData.phone || ''} onChange={e => handleUpdateField('phone', e.target.value)} className="h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 placeholder:text-gray-300" />
+              </div>
+              <input type="text" placeholder="Fax Number" value={formData.faxNumber || ''} onChange={e => handleUpdateField('faxNumber', e.target.value)} className="w-full h-9 border border-gray-300 rounded px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 placeholder:text-gray-300" />
+              <button className="text-[12px] text-blue-600 font-medium hover:underline flex items-center gap-1">
+                Organization Address Format {' >'}
+              </button>
+            </div>
+          </div>
+
+          <InputRow label="Website URL" keyName="website" value={formData.website} onChange={handleUpdateField} placeholder="www.yourcompany.com" />
+
+          {/* FINANCIAL SETTINGS */}
+          <div className="pt-12 mb-6 border-b border-gray-100 pb-3 text-gray-400 font-bold text-[14px] uppercase tracking-widest">Regional Settings</div>
+          
+          <SelectRow label="Base Currency" keyName="baseCurrency" value={formData.baseCurrency} onChange={handleUpdateField} help={true} options={["INR", "USD", "EUR", "GBP", "AED"]} />
+          <SelectRow label="Fiscal Year" keyName="fiscalYear" value={formData.fiscalYear} onChange={handleUpdateField} options={["April - March", "January - December", "July - June", "October - September"]} />
+          
+          <div className="flex flex-col gap-1.5 py-4 border-b border-gray-50 lg:flex-row lg:items-center">
+            <label className="text-[13px] text-gray-600 font-medium lg:w-48 shrink-0">Report Basis</label>
+            <div className="flex items-center gap-8">
+              <label className="flex items-center gap-2.5 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="reportBasis" 
+                  checked={formData.reportBasis === 'Accrual'} 
+                  onChange={() => handleUpdateField('reportBasis', 'Accrual')}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 transition-all font-sans"
+                />
+                <span className="text-[13px] text-gray-700 font-medium">Accrual <span className="text-gray-400 font-normal text-[11px] ml-1.5">• You owe tax as of invoice date</span></span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer group">
+                <input 
+                  type="radio" 
+                  name="reportBasis" 
+                  checked={formData.reportBasis === 'Cash'} 
+                  onChange={() => handleUpdateField('reportBasis', 'Cash')}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 transition-all font-sans"
+                />
+                <span className="text-[13px] text-gray-700 font-medium">Cash <span className="text-gray-400 font-normal text-[11px] ml-1.5">• You owe tax upon payment receipt</span></span>
+              </label>
+            </div>
+          </div>
+
+          <SelectRow label="Organization Language" keyName="language" value={formData.language} onChange={handleUpdateField} help={true} options={["English", "Hindi", "Tamil", "Spanish", "French", "German"]} />
+          <SelectRow label="Time Zone" keyName="timezone" value={formData.timezone} onChange={handleUpdateField} options={["(GMT 5:30) India Standard Time (Asia/Calcutta)", "(UTC 00:00) Dublin, London", "(UTC -05:00) Eastern Time (US & Canada)", "(UTC +04:00) Abu Dhabi, Muscat"]} />
+          
+          <div className="flex flex-col gap-1.5 py-4 border-b border-gray-50 lg:flex-row lg:items-center">
+            <label className="text-[13px] text-gray-600 font-medium lg:w-48 shrink-0">Date Format</label>
+            <div className="flex items-center gap-3">
+              <select 
+                value={formData.dateFormat || 'dd/MM/yyyy'}
+                onChange={e => handleUpdateField('dateFormat', e.target.value)}
+                className="h-9 border border-gray-300 rounded px-3 text-[13px] text-gray-800 outline-none focus:border-blue-500 min-w-[120px] bg-white transition-all font-sans"
+              >
+                <option value="dd/MM/yyyy">dd/MM/yyyy</option>
+                <option value="MM/dd/yyyy">MM/dd/yyyy</option>
+                <option value="yyyy-MM-dd">yyyy-MM-dd</option>
+                <option value="dd-MMM-yyyy">dd-MMM-yyyy</option>
+              </select>
+            </div>
+          </div>
+
+          {/* ADDITIONAL FIELDS */}
+          <div className="pt-12 mb-6 border-b border-gray-100 pb-3 text-gray-400 font-bold text-[14px] uppercase tracking-widest">Additional Fields</div>
+          <div className="max-w-2xl border border-gray-200 rounded overflow-hidden shadow-sm bg-white">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left py-2.5 px-4 text-[11px] uppercase tracking-wider text-gray-500 font-bold border-r border-gray-200 w-[45%]">Label Name</th>
+                  <th className="text-left py-2.5 px-4 text-[11px] uppercase tracking-wider text-gray-500 font-bold">Value</th>
+                  <th className="w-12"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {formData.additionalFields.length === 0 ? (
+                  <tr>
+                    <td colSpan="3" className="py-8 text-center text-gray-400 text-[13px] italic">No additional fields added yet.</td>
+                  </tr>
+                ) : (
+                  formData.additionalFields.map((field, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50/50 transition-colors group">
+                      <td className="py-2 px-3 border-r border-gray-100">
+                        <input 
+                          type="text" 
+                          placeholder="Label (e.g. GSTIN)" 
+                          value={field.label}
+                          onChange={(e) => updateAdditionalField(idx, 'label', e.target.value)}
+                          className="w-full h-8 bg-transparent text-[13px] outline-none focus:bg-white px-2 rounded"
+                        />
+                      </td>
+                      <td className="py-2 px-3">
+                        <input 
+                          type="text" 
+                          placeholder="Value" 
+                          value={field.value}
+                          onChange={(e) => updateAdditionalField(idx, 'value', e.target.value)}
+                          className="w-full h-8 bg-transparent text-[13px] outline-none focus:bg-white px-2 rounded"
+                        />
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <button 
+                          onClick={() => removeAdditionalField(idx)}
+                          className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <button 
+            onClick={addAdditionalField}
+            className="mt-4 flex items-center gap-1.5 text-blue-600 font-bold text-[13px] hover:text-blue-700 transition-all hover:bg-blue-50 px-3 py-2 rounded-md -ml-3"
+          >
+            <Plus size={16} /> New Field
+          </button>
+        </div>
+      </div>
+
+      {/* FOOTER BAR */}
+      <footer className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 px-10 flex items-center gap-5 shadow-[0_-10px_25px_rgba(0,0,0,0.05)] z-50">
+        <button 
+          onClick={handleSave}
+          disabled={loading}
+          className="bg-blue-600 text-white px-8 py-2.5 rounded font-bold text-[13px] hover:bg-blue-700 flex items-center gap-2.5 shadow-lg shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50"
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save
+        </button>
+        <button 
+          onClick={() => window.location.href = '/dashboard'}
+          className="bg-white border border-gray-300 text-gray-700 px-8 py-2.5 rounded font-bold text-[13px] hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm active:scale-95"
+        >
+          Cancel
+        </button>
+      </footer>
     </div>
   );
 };
