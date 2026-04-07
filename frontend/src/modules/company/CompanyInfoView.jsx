@@ -4,6 +4,7 @@ import {
   Phone, Mail, Hash, RefreshCcw, CheckCircle2, AlertCircle, Loader2
 } from 'lucide-react';
 import { companyAPI } from '../../services/api';
+import { INDIAN_STATES } from '../../utils/indianStates';
 
 const CompanyInfoView = () => {
   const [loading, setLoading]   = useState(false);
@@ -248,18 +249,13 @@ const CompanyInfoView = () => {
                   </div>
                   <div>
                     <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">State</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-900 outline-none appearance-none">
-                      <option>Tamil Nadu (33)</option>
-                      <option>Karnataka (29)</option>
-                      <option>Maharashtra (27)</option>
-                      <option>Delhi (07)</option>
-                      <option>Andhra Pradesh (28)</option>
-                      <option>Telangana (36)</option>
-                      <option>Gujarat (24)</option>
-                      <option>Rajasthan (08)</option>
-                      <option>Uttar Pradesh (09)</option>
-                      <option>West Bengal (19)</option>
-                      <option>Kerala (32)</option>
+                    <select 
+                      className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-900 outline-none appearance-none"
+                      value={formData.state || ''}
+                      onChange={e => setFormData({ ...formData, state: e.target.value })}
+                    >
+                      <option value="">Select State</option>
+                      {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>

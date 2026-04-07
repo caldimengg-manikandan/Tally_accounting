@@ -23,6 +23,26 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0.00
     },
     // Customer/Vendor Specific Fields
+    customerType: {
+      type: DataTypes.ENUM('Business', 'Individual'),
+      defaultValue: 'Business'
+    },
+    salutation: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    companyName: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     gstNumber: {
       type: DataTypes.STRING,
       allowNull: true
@@ -40,7 +60,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
-    phone: {
+    workPhone: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    mobile: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    phone: { // Kept for legacy compatibility
       type: DataTypes.STRING,
       allowNull: true
     },
@@ -52,7 +80,48 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DOUBLE,
       defaultValue: 0.00
     },
+    language: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'English'
+    },
     description: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    billingAddressJson: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    shippingAddressJson: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    contactPersonsJson: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    pan: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    currency: {
+      type: DataTypes.STRING,
+      defaultValue: 'INR'
+    },
+    receivableAccount: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    paymentTerms: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    portalEnabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    documentsJson: {
       type: DataTypes.TEXT,
       allowNull: true
     }
