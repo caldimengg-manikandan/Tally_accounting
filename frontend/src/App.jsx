@@ -275,7 +275,7 @@ function AuthenticatedApp() {
   const navigate   = useNavigate();
   const [stats,    setStats]    = useState(null);
   const [vouchers, setVouchers] = useState([]);
-  const companyId = useMemo(() => localStorage.getItem('companyId'), []);
+  const [companyId, setCompanyId] = useState(localStorage.getItem('companyId'));
 
   const handleLogout = useCallback(() => {
     ['token', 'companyId', 'user'].forEach(k => localStorage.removeItem(k));
@@ -291,7 +291,9 @@ function AuthenticatedApp() {
           if (res.data && res.data.length > 0) {
             currentId = res.data[0].id;
             localStorage.setItem('companyId', currentId);
-            // Refreshing the page to ensure all hooks see the new ID
+            setCompanyId(currentId);
+            // We don't necessarily need to reload if we use state correctly, 
+            // but for safety with older components, we can keep it or just let the effect re-run.
             window.location.reload();
             return;
           }

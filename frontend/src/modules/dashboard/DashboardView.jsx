@@ -22,16 +22,21 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
   useEffect(() => { if (initialVouchers) setLiveVouchers(initialVouchers); }, [initialVouchers]);
 
   const refresh = async () => {
-    if (!companyId) return;
+    const freshId = localStorage.getItem('companyId');
+    if (!freshId) return;
     setRefreshing(true);
     try {
       const [s, v] = await Promise.allSettled([
-        reportsAPI.dashboard(companyId),
-        voucherAPI.getByCompany(companyId),
+        reportsAPI.dashboard(freshId),
+        voucherAPI.getByCompany(freshId),
       ]);
       if (s.status === 'fulfilled') setLiveStats(s.value.data);
-      if (v.status === 'fulfilled') setLiveVouchers(Array.isArray(v.value.data) ? v.value.data.slice(0, 6) : []);
-    } catch {}
+      if (v.status === 'fulfilled' && Array.isArray(v.value.data)) {
+         setLiveVouchers(v.value.data.slice(0, 6)); 
+      }
+    } catch (err) {
+      console.error("Dashboard refresh err:", err);
+    }
     setRefreshing(false);
   };
 

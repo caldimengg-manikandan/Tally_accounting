@@ -284,8 +284,8 @@ exports.getDashboardStats = async (req, res) => {
     };
 
     const [voucherCount, ledgerCount] = await Promise.all([
-      safeCount(Voucher, { CompanyId: companyId }),
-      safeCount(Ledger, { CompanyId: companyId }),
+      Voucher.count({ where: { CompanyId: companyId } }).catch(err => { console.error("Voucher count err:", err); return 0; }),
+      Ledger.count({ where: { CompanyId: companyId } }).catch(err => { console.error("Ledger count err:", err); return 0; }),
     ]);
 
     // Get all ledgers with their transaction sums
