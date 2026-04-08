@@ -3,8 +3,7 @@ import axios from 'axios';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
-  baseURL: API_BASE,
-  headers: { 'Content-Type': 'application/json' }
+  baseURL: API_BASE
 });
 
 // Attach JWT token to every request
@@ -13,6 +12,21 @@ api.interceptors.request.use(config => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// Handle 401 Unauthorized globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear local storage and force login if token is invalid/expired
+      ['token', 'user', 'companyId'].forEach(k => localStorage.removeItem(k));
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // ─── Auth ──────────────────────────────────────────
 export const register = (name, email, password, role) => api.post('/auth/register', { name, email, password, role });
@@ -79,7 +93,19 @@ export const reportsAPI = {
 export const inventoryAPI = {
   createItem: (data) => api.post('/inventory', data),
   getByCompany: (companyId) => api.get(`/inventory/${companyId}`),
+  updateItem: (itemId, data) => api.put(`/inventory/${itemId}`, data),
   updateStock: (itemId, data) => api.post(`/inventory/stock/${itemId}`, data),
+  uploadImage: (formData) => api.post('/inventory/upload', formData),
+  getItemHistory: (id) => api.get(`/inventory/${id}/history`),
+};
+
+// ─── Price Lists ─────────────────────────────────────
+export const priceListAPI = {
+  create: (data) => api.post('/pricelists', data),
+  getByCompany: (companyId) => api.get(`/pricelists/${companyId}`),
+  getById: (id) => api.get(`/pricelists/detail/${id}`),
+  update: (id, data) => api.put(`/pricelists/${id}`, data),
+  delete: (id) => api.delete(`/pricelists/${id}`),
 };
 
 // ─── Bank Reconciliation ──────────────────────────────

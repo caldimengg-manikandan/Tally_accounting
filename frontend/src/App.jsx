@@ -18,6 +18,9 @@ import BalanceSheetView from './modules/reports/BalanceSheetView';
 import DaybookView from './modules/reports/DaybookView';
 import AuditReportView from './modules/reports/AuditReportView';
 import InventoryView from './modules/inventory/InventoryView';
+import ItemEntryView from './modules/inventory/ItemEntryView';
+import PriceListView from './modules/inventory/PriceListView';
+import PriceListEntryView from './modules/inventory/PriceListEntryView';
 import BankReconciliationView from './modules/reconciliation/BankReconciliationView';
 import CostCenterView from './modules/accounting/CostCenterView';
 import CustomersView from './modules/sales/CustomersView';
@@ -51,14 +54,17 @@ import {
 const NAV = [
   {
     group: 'Home',
+    icon: LayoutDashboard,
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
+      { label: 'Dashboard',        path: '/dashboard' },
     ]
   },
   {
     group: 'Items',
+    icon: ShoppingBag,
     items: [
-      { icon: Package,         label: 'Inventory',        path: '/inventory' },
+      { label: 'Items',        path: '/inventory', showPlus: true, plusPath: '/inventory/new' },
+      { label: 'Price Lists',  path: '/price-lists', showPlus: true, plusPath: '/price-lists/new' },
     ]
   },
   {
@@ -78,45 +84,51 @@ const NAV = [
   },
   {
     group: 'Purchases',
+    icon: ShoppingCart,
     items: [
-      { icon: ShoppingCart,    label: 'Purchase Orders',  path: '/purchase-orders' },
+      { label: 'Purchase Orders',  path: '/purchase-orders' },
     ]
   },
   {
     group: 'Banking',
+    icon: Landmark,
     items: [
-      { icon: Landmark,        label: 'Banking',          path: '/reconciliation' },
+      { label: 'Banking',          path: '/reconciliation' },
     ]
   },
   {
     group: 'Accountant',
+    icon: BookOpen,
     items: [
-      { icon: FileText,        label: 'Vouchers',         path: '/vouchers' },
-      { icon: BookOpen,        label: 'Ledgers',          path: '/ledgers' },
-      { icon: Target,          label: 'Cost Centers',     path: '/cost-centers' },
+      { label: 'Vouchers',         path: '/vouchers' },
+      { label: 'Ledgers',          path: '/ledgers' },
+      { label: 'Cost Centers',     path: '/cost-centers' },
     ]
   },
   {
     group: 'Reports',
+    icon: BarChart2,
     items: [
-      { icon: BarChart2,       label: 'Trial Balance',    path: '/reports/trial-balance' },
-      { icon: TrendingUp,      label: 'Profit & Loss',    path: '/reports/pl' },
-      { icon: Shield,          label: 'Balance Sheet',    path: '/reports/bs' },
-      { icon: Activity,        label: 'Day Book',         path: '/reports/daybook' },
-      { icon: PieChart,        label: 'GST Returns',      path: '/reports/gst' },
+      { label: 'Trial Balance',    path: '/reports/trial-balance' },
+      { label: 'Profit & Loss',    path: '/reports/pl' },
+      { label: 'Balance Sheet',    path: '/reports/bs' },
+      { label: 'Day Book',         path: '/reports/daybook' },
+      { label: 'GST Returns',      path: '/reports/gst' },
     ]
   },
   {
     group: 'APPS',
+    icon: UserCheck,
     items: [
-      { icon: UserCheck,       label: 'Payroll',          path: '/payroll' },
+      { label: 'Payroll',          path: '/payroll' },
     ]
   },
   {
     group: 'Setup',
+    icon: Settings,
     items: [
-      { icon: Settings,        label: 'Company',          path: '/settings/company' },
-      { icon: Shield,          label: 'Audit Trail',      path: '/reports/audit' },
+      { label: 'Company',          path: '/settings/company' },
+      { label: 'Audit Trail',      path: '/reports/audit' },
     ]
   },
 ];
@@ -196,21 +208,31 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
 // ═══════════════════════════════════════════════════════════════════
 // SIDEBAR ITEM
 // ═══════════════════════════════════════════════════════════════════
-const NavItem = ({ icon: Icon, label, active, onClick, collapsed }) => (
+const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, showPlus }) => (
   <button
     onClick={onClick}
     data-label={label}
     className={`flex items-center gap-3 w-full transition-all duration-300 group relative
-      ${active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'}
+      ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}
       ${collapsed 
         ? 'justify-center h-12 w-12 mx-auto rounded-2xl p-0 nav-tooltip' 
         : 'px-4 py-3 rounded-2xl'}`}
   >
-    <Icon size={20} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
-    {!collapsed && <span className="text-[13px] font-black tracking-tight">{label}</span>}
-    {active && !collapsed && <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>}
+    {Icon && <Icon size={20} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />}
+    {!collapsed && <span className={`text-[13px] font-black tracking-tight ${active ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{label}</span>}
+    {active && !collapsed && !showPlus && <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white/50 animate-pulse"></div>}
+    {showPlus && !collapsed && (
+      <div 
+        onClick={(e) => { e.stopPropagation(); onPlusClick && onPlusClick(); }}
+        className="ml-auto opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-white/20 rounded-md"
+      >
+        <Plus size={14} strokeWidth={3} className={active ? 'text-white' : 'group-hover:text-[#1e61f0]'} />
+      </div>
+    )}
   </button>
 );
+
+
 
 // ═══════════════════════════════════════════════════════════════════
 // APP SHELL
@@ -526,6 +548,12 @@ function AuthenticatedApp() {
 
       {/* Operations */}
       <Route path="/inventory"          element={shell(InventoryView)} />
+      <Route path="/inventory/new"      element={shell(ItemEntryView, {
+        onSaveSuccess: () => navigate('/inventory'),
+        onCancel: () => navigate('/inventory')
+      })} />
+      <Route path="/price-lists"        element={shell(PriceListView)} />
+      <Route path="/price-lists/new"    element={shell(PriceListEntryView)} />
       <Route path="/reconciliation"     element={shell(BankReconciliationView)} />
       <Route path="/payroll"            element={shell(PayrollView)} />
 
