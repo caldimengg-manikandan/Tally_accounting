@@ -13,6 +13,7 @@ const CostCenter = require('./costCenter.model')(sequelize, DataTypes);
 const SalesOrder = require('./salesOrder.model')(sequelize, DataTypes);
 const SalesOrderItem = require('./salesOrderItem.model')(sequelize, DataTypes);
 const PurchaseOrder = require('./purchaseOrder.model')(sequelize, DataTypes);
+const PriceList = require('./pricelist.model')(sequelize, DataTypes);
 const AuditLog = require('./audit.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
@@ -86,6 +87,9 @@ PurchaseOrder.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTy
 Company.hasMany(BankTransaction, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 BankTransaction.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
+Company.hasMany(PriceList, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+PriceList.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
 // 6. Audit & Metadata
 Company.hasMany(AuditLog, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 AuditLog.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -112,6 +116,7 @@ module.exports = {
   SalesOrder,
   SalesOrderItem,
   PurchaseOrder,
+  PriceList,
   CostCenter,
   AuditLog
 };

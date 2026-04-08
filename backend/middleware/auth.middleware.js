@@ -8,16 +8,20 @@ exports.verifyToken = async (req, res, next) => {
     token = req.headers.authorization.split(' ')[1];
   }
 
+  console.log('[DEBUG] Token received:', token ? 'YES (length: ' + token.length + ')' : 'NO');
+
   if (!token) {
     return res.status(401).json({ error: 'Not authorized, token missing' });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET?.trim() || 'tally_replica_secret_key_123';
+    const decoded = jwt.verify(token, secret);
     
     // We fetch the latest user to ensure they still exist and might fetch updated role
     const user = await User.findByPk(decoded.id);
     if (!user) {
+      console.log('[DEBUG] Auth Fail: User not found in DB for ID:', decoded.id);
       return res.status(401).json({ error: 'Not authorized, user no longer exists' });
     }
 
@@ -25,11 +29,11 @@ exports.verifyToken = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
+    console.error('[verifyToken] Auth Error:', err.name, err.message);
     // Distinguish JWT errors from unexpected server errors
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError' || err.name === 'NotBeforeError') {
       return res.status(401).json({ error: 'Not authorized, invalid or expired token. Please log in again.' });
     }
-    console.error('[verifyToken] Unexpected error:', err.message);
     res.status(500).json({ error: 'Server error during authentication' });
   }
 };

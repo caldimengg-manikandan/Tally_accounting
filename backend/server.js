@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const { sequelize } = require('./models');
+const path = require('path');
 
 // 1. Initial Config (Loaded from backend/.env)
 dotenv.config();
@@ -15,6 +16,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 3. Authentication Engine (Passport)
 require('./config/passport');
@@ -57,6 +59,7 @@ app.use('/api/sales', require('./modules/sales/sales.routes'));
 app.use('/api/inventory', require('./modules/inventory/inventory.routes'));
 app.use('/api/reconciliation', require('./modules/reconciliation/reconciliation.routes'));
 app.use('/api/cost-centers', require('./modules/accounting/costCenter.routes'));
+app.use('/api/pricelists', require('./modules/inventory/pricelist.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));

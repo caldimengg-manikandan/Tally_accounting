@@ -18,6 +18,9 @@ import BalanceSheetView from './modules/reports/BalanceSheetView';
 import DaybookView from './modules/reports/DaybookView';
 import AuditReportView from './modules/reports/AuditReportView';
 import InventoryView from './modules/inventory/InventoryView';
+import ItemEntryView from './modules/inventory/ItemEntryView';
+import PriceListView from './modules/inventory/PriceListView';
+import PriceListEntryView from './modules/inventory/PriceListEntryView';
 import BankReconciliationView from './modules/reconciliation/BankReconciliationView';
 import CostCenterView from './modules/accounting/CostCenterView';
 import CustomersView from './modules/sales/CustomersView';
@@ -34,7 +37,7 @@ import {
   LayoutDashboard, FileText, BookOpen, BarChart2,
   Package, ArrowLeftRight, Settings, Users, ShoppingBag,
   Receipt, Wallet, TrendingUp, Shield, LogOut,
-  Bell, ChevronRight, ChevronsLeft, ChevronsRight,
+  Bell, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown, Plus,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
   PieChart, Landmark, Target
 } from 'lucide-react';
@@ -45,66 +48,76 @@ import {
 const NAV = [
   {
     group: 'Home',
+    icon: LayoutDashboard,
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard',        path: '/dashboard' },
+      { label: 'Dashboard',        path: '/dashboard' },
     ]
   },
   {
     group: 'Items',
+    icon: ShoppingBag,
     items: [
-      { icon: Package,         label: 'Inventory',        path: '/inventory' },
+      { label: 'Items',        path: '/inventory', showPlus: true, plusPath: '/inventory/new' },
+      { label: 'Price Lists',  path: '/price-lists', showPlus: true, plusPath: '/price-lists/new' },
     ]
   },
   {
     group: 'Sales',
+    icon: Users,
     items: [
-      { icon: Users,           label: 'Customers',        path: '/customers' },
-      { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders' },
-      { icon: Receipt,         label: 'Sales Invoices',   path: '/sales/new-invoice' },
-      { icon: Wallet,          label: 'Payments',         path: '/payments' },
+      { label: 'Customers',        path: '/customers' },
+      { label: 'Sales Orders',     path: '/sales-orders' },
+      { label: 'Sales Invoices',   path: '/sales/new-invoice' },
+      { label: 'Payments',         path: '/payments' },
     ]
   },
   {
     group: 'Purchases',
+    icon: ShoppingCart,
     items: [
-      { icon: ShoppingCart,    label: 'Purchase Orders',  path: '/purchase-orders' },
+      { label: 'Purchase Orders',  path: '/purchase-orders' },
     ]
   },
   {
     group: 'Banking',
+    icon: Landmark,
     items: [
-      { icon: Landmark,        label: 'Banking',          path: '/reconciliation' },
+      { label: 'Banking',          path: '/reconciliation' },
     ]
   },
   {
     group: 'Accountant',
+    icon: BookOpen,
     items: [
-      { icon: FileText,        label: 'Vouchers',         path: '/vouchers' },
-      { icon: BookOpen,        label: 'Ledgers',          path: '/ledgers' },
-      { icon: Target,          label: 'Cost Centers',     path: '/cost-centers' },
+      { label: 'Vouchers',         path: '/vouchers' },
+      { label: 'Ledgers',          path: '/ledgers' },
+      { label: 'Cost Centers',     path: '/cost-centers' },
     ]
   },
   {
     group: 'Reports',
+    icon: BarChart2,
     items: [
-      { icon: BarChart2,       label: 'Trial Balance',    path: '/reports/trial-balance' },
-      { icon: TrendingUp,      label: 'Profit & Loss',    path: '/reports/pl' },
-      { icon: Shield,          label: 'Balance Sheet',    path: '/reports/bs' },
-      { icon: Activity,        label: 'Day Book',         path: '/reports/daybook' },
-      { icon: PieChart,        label: 'GST Returns',      path: '/reports/gst' },
+      { label: 'Trial Balance',    path: '/reports/trial-balance' },
+      { label: 'Profit & Loss',    path: '/reports/pl' },
+      { label: 'Balance Sheet',    path: '/reports/bs' },
+      { label: 'Day Book',         path: '/reports/daybook' },
+      { label: 'GST Returns',      path: '/reports/gst' },
     ]
   },
   {
     group: 'APPS',
+    icon: UserCheck,
     items: [
-      { icon: UserCheck,       label: 'Payroll',          path: '/payroll' },
+      { label: 'Payroll',          path: '/payroll' },
     ]
   },
   {
     group: 'Setup',
+    icon: Settings,
     items: [
-      { icon: Settings,        label: 'Company',          path: '/settings/company' },
-      { icon: Shield,          label: 'Audit Trail',      path: '/reports/audit' },
+      { label: 'Company',          path: '/settings/company' },
+      { label: 'Audit Trail',      path: '/reports/audit' },
     ]
   },
 ];
@@ -112,21 +125,89 @@ const NAV = [
 // ═══════════════════════════════════════════════════════════════════
 // SIDEBAR ITEM
 // ═══════════════════════════════════════════════════════════════════
-const NavItem = ({ icon: Icon, label, active, onClick, collapsed }) => (
+const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, showPlus }) => (
   <button
     onClick={onClick}
     data-label={label}
     className={`flex items-center gap-3 w-full transition-all duration-300 group relative
-      ${active ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'}
+      ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}
       ${collapsed 
         ? 'justify-center h-12 w-12 mx-auto rounded-2xl p-0 nav-tooltip' 
         : 'px-4 py-3 rounded-2xl'}`}
   >
-    <Icon size={20} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
-    {!collapsed && <span className="text-[13px] font-black tracking-tight">{label}</span>}
-    {active && !collapsed && <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div>}
+    {Icon && <Icon size={20} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />}
+    {!collapsed && <span className={`text-[13px] font-black tracking-tight ${active ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{label}</span>}
+    {active && !collapsed && !showPlus && <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white/50 animate-pulse"></div>}
+    {showPlus && !collapsed && (
+      <div 
+        onClick={(e) => { e.stopPropagation(); onPlusClick && onPlusClick(); }}
+        className="ml-auto opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-white/20 rounded-md"
+      >
+        <Plus size={14} strokeWidth={3} className={active ? 'text-white' : 'group-hover:text-[#1e61f0]'} />
+      </div>
+    )}
   </button>
 );
+
+const NavGroup = ({ group, icon: Icon, items, pathname, navigate, collapsed, userRole }) => {
+  const [isOpen, setIsOpen] = useState(true);
+  
+  // Auto-expand if an item is active
+  const hasActiveItem = items.some(item => pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path)));
+  
+  if (collapsed) {
+    return (
+      <div className="space-y-2">
+        {items.map(item => (
+          <NavItem
+            key={item.path}
+            icon={item.icon || Icon}
+            label={item.label}
+            active={pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path))}
+            onClick={() => navigate(item.path)}
+            onPlusClick={item.plusPath ? () => navigate(item.plusPath) : null}
+            collapsed={collapsed}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-slate-900 transition-colors group"
+      >
+        <div className="flex items-center gap-3 flex-1">
+           {Icon && <Icon size={18} className="group-hover:scale-110 transition-transform"/>}
+           <span className="text-[11px] font-black uppercase tracking-[0.2em]">{group}</span>
+        </div>
+        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? '' : '-rotate-90'}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="space-y-1 ml-2 pl-2 border-l border-slate-50">
+          {items.map(item => {
+            const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+            return (
+              <NavItem
+                key={item.path}
+                icon={item.icon}
+                label={item.label}
+                active={active}
+                onClick={() => navigate(item.path)}
+                onPlusClick={item.plusPath ? () => navigate(item.plusPath) : null}
+                collapsed={collapsed}
+                showPlus={item.showPlus}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // APP SHELL
@@ -183,29 +264,15 @@ const AppShell = ({ children, onLogout }) => {
             if (role === 'DATA_ENTRY') return ['Overview', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Payroll'].includes(section.group);
             return true; // ADMIN, MANAGER, ACCOUNTANT see all
           }).map(section => (
-            <div key={section.group} className="space-y-1">
-              {!collapsed && (
-                <div className="px-3 mb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
-                  {section.group}
-                </div>
-              )}
-              {collapsed && <div className="mx-4 h-px bg-slate-50 mb-3 mt-1"></div>}
-              <div className="space-y-1">
-                {section.items.map(item => {
-                  const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
-                  return (
-                    <NavItem
-                      key={item.path}
-                      icon={item.icon}
-                      label={item.label}
-                      active={active}
-                      onClick={() => navigate(item.path)}
-                      collapsed={collapsed}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+            <NavGroup
+              key={section.group}
+              group={section.group}
+              icon={section.icon}
+              items={section.items}
+              pathname={pathname}
+              navigate={navigate}
+              collapsed={collapsed}
+            />
           ))}
         </nav>
 
@@ -383,6 +450,12 @@ function AuthenticatedApp() {
 
       {/* Operations */}
       <Route path="/inventory"          element={shell(InventoryView)} />
+      <Route path="/inventory/new"      element={shell(ItemEntryView, {
+        onSaveSuccess: () => navigate('/inventory'),
+        onCancel: () => navigate('/inventory')
+      })} />
+      <Route path="/price-lists"        element={shell(PriceListView)} />
+      <Route path="/price-lists/new"    element={shell(PriceListEntryView)} />
       <Route path="/reconciliation"     element={shell(BankReconciliationView)} />
       <Route path="/payroll"            element={shell(PayrollView)} />
 
