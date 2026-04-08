@@ -1,5 +1,12 @@
-const { Item } = require('../../models');
+const { Item, AuditLog, User } = require('../../models');
 const AuditService = require('../../services/AuditService');
+const fs = require('fs');
+const path = require('path');
+
+const logToFile = (msg) => {
+  const logPath = path.join(__dirname, '../../debug.log');
+  fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
+};
 
 exports.createItem = async (req, res) => {
   try {
@@ -80,6 +87,72 @@ exports.updateStock = async (req, res) => {
 
     res.json(item);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateItem = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const item = await Item.findByPk(itemId);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+
+    const oldData = { ...item.dataValues };
+    const {
+      name, unit, type, sellingPrice, salesAccount, salesDescription,
+      costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl
+    } = req.body;
+
+    await item.update({
+      name, unit, type,
+      sellingPrice: sellingPrice || 0,
+      salesAccount: salesAccount || 'Sales',
+      salesDescription,
+      costPrice: costPrice || 0,
+      purchaseAccount: purchaseAccount || 'Cost of Goods Sold',
+      purchaseDescription,
+      preferredVendor,
+      imageUrl
+    });
+
+    await AuditService.log({
+      action: 'UPDATE_ITEM',
+      tableName: 'Items',
+      recordId: item.id,
+      oldData,
+      newData: item,
+      companyId: item.CompanyId,
+      userId: req.user?.id,
+      req
+    });
+
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getItemHistory = async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    logToFile(`Fetching history for item: ${itemId}`);
+    
+    const logs = await AuditLog.findAll({
+      where: {
+        tableName: 'Items',
+        recordId: itemId
+      },
+      include: [{
+        model: User,
+        attributes: ['name']
+      }],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    logToFile(`Found ${logs.length} history records.`);
+    res.json(logs);
+  } catch (err) {
+    logToFile(`[CRITICAL] History error: ${err.message}\n${err.stack}`);
     res.status(500).json({ error: err.message });
   }
 };
