@@ -2,14 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { 
   Info, Mail, Phone, MapPin, Building, ShieldCheck, 
   AlertCircle, Loader2, Plus, Save, X, Activity, CheckCircle2,
-  ChevronRight, ArrowRight, Copy, Trash2, MoreVertical,
+  ChevronRight, ChevronDown, ArrowRight, ArrowLeft, Copy, Trash2, MoreVertical,
   Upload, FileText, Globe, CreditCard, Clock, Download, Search
 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ledgerAPI, groupAPI } from '../../services/api';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
 import { INDIAN_STATES } from '../../utils/indianStates';
 
 const CustomersView = () => {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
   // Main Form State
   const [customerType, setCustomerType] = useState('Business');
   const [salutation, setSalutation] = useState('');
@@ -29,6 +33,13 @@ const CustomersView = () => {
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
   const [portalEnabled, setPortalEnabled] = useState(false);
   const [documents, setDocuments] = useState([]);
+  const [website, setWebsite] = useState('');
+  const [department, setDepartment] = useState('');
+  const [designation, setDesignation] = useState('');
+  const [twitter, setTwitter] = useState('');
+  const [skype, setSkype] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [showExtraDetails, setShowExtraDetails] = useState(false);
 
   // Prefill Modal State
   const [isPrefillOpen, setIsPrefillOpen] = useState(false);
@@ -133,12 +144,64 @@ const CustomersView = () => {
   const addressInputStyle = "w-full px-3 py-2 bg-white border border-[#d1d5db] rounded-md text-[14px] text-slate-700 focus:border-[#1e61f0] outline-none transition-all placeholder:text-[#9ca3af]";
 
   useEffect(() => {
-    if (!companyId) return;
-    groupAPI.getByCompany(companyId).then(res => {
-      const debtorGroup = res.data.find(g => g.name.toLowerCase().includes('debtor'));
-      if (debtorGroup) setGroupId(debtorGroup.id);
-    });
-  }, [companyId]);
+    const activeCompanyId = companyId || localStorage.getItem('companyId');
+    if (!activeCompanyId) return;
+    
+    const resolveGroups = async () => {
+       try {
+          let res = await groupAPI.getByCompany(activeCompanyId);
+          // Auto-seed if empty to ensure 'Sundry Debtors' exists
+          if (!res.data || res.data.length === 0) {
+             await groupAPI.seedStandard(activeCompanyId);
+             res = await groupAPI.getByCompany(activeCompanyId);
+          }
+          const debtorGroup = res.data.find(g => g.name.toLowerCase().includes('debtor'));
+          if (debtorGroup) setGroupId(debtorGroup.id);
+       } catch(e) {
+          console.error("Group resolution failed:", e);
+       }
+    };
+    resolveGroups();
+
+    if (isEditMode) {
+      ledgerAPI.getByCompany(activeCompanyId).then(res => {
+        const found = res.data.find(c => c.id === id || String(c.id) === String(id));
+        if (found) {
+          setCustomerType(found.customerType || 'Business');
+          setSalutation(found.salutation || '');
+          setFirstName(found.firstName || '');
+          setLastName(found.lastName || '');
+          setCompanyName(found.companyName || '');
+          setEmail(found.email || '');
+          setWorkPhone(found.workPhone || '');
+          setMobile(found.mobile || '');
+          setLanguage(found.language || 'English');
+          setPan(found.pan || '');
+          setCurrency(found.currency || 'INR- Indian Rupee');
+          setReceivableAccount(found.receivableAccount || '');
+          setOpeningBalance(found.openingBalance || '0');
+          setPaymentTerms(found.paymentTerms || 'Due on Receipt');
+          setPortalEnabled(found.portalEnabled || false);
+          setWebsite(found.website || '');
+          setDepartment(found.department || '');
+          setDesignation(found.designation || '');
+          setTwitter(found.twitter || '');
+          setSkype(found.skype || '');
+          setFacebook(found.facebook || '');
+          
+          if (found.billingAddressJson) {
+             try { setBillingAddress(JSON.parse(found.billingAddressJson)); } catch(e){}
+          }
+          if (found.shippingAddressJson) {
+             try { setShippingAddress(JSON.parse(found.shippingAddressJson)); } catch(e){}
+          }
+          if (found.contactPersonsJson) {
+             try { setContactPersons(JSON.parse(found.contactPersonsJson)); } catch(e){}
+          }
+        }
+      });
+    }
+  }, [companyId, id, isEditMode]);
 
   // Handlers
   const copyBillingToShipping = () => setShippingAddress({ ...billingAddress });
@@ -166,16 +229,33 @@ const CustomersView = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!groupId) { setError("Accounting configuration required."); return; }
     setLoading(true); setError(''); setSuccess(false);
 
-    const ledgerName = customerType === 'Business' ? companyName : `${salutation} ${firstName} ${lastName}`.trim();
+    // Step 1: Resolve the ledger name with robust fallbacks
+    let ledgerName = '';
+    if (customerType === 'Business') {
+       ledgerName = companyName?.trim() || `${salutation} ${firstName} ${lastName}`.trim();
+    } else {
+       ledgerName = `${salutation} ${firstName} ${lastName}`.trim() || companyName?.trim();
+    }
+    
+    // Final check - we CANNOT save without a name
+    if (!ledgerName) {
+       setError("Validation Error: Please provide either a Company Name or a Primary Contact Name.");
+       setLoading(false);
+       return;
+    }
+
+    const activeCompanyId = companyId || localStorage.getItem('companyId');
 
     const data = {
       name: ledgerName,
       customerType, salutation, firstName, lastName, companyName,
       workPhone, mobile, language,
-      companyId, groupId,
+      companyId: activeCompanyId,
+      CompanyId: activeCompanyId,
+      groupId, 
+      groupName: 'Sundry Debtors', // Fallback for backend resolution
       openingBalance: parseFloat(openingBalance || 0),
       email, phone: mobile,
       currentBalance: parseFloat(openingBalance || 0),
@@ -183,16 +263,26 @@ const CustomersView = () => {
       shippingAddressJson: JSON.stringify(shippingAddress),
       contactPersonsJson: JSON.stringify(contactPersons),
       pan, currency, receivableAccount, paymentTerms, portalEnabled,
+      website, department, designation, twitter, skype, facebook,
       documentsJson: JSON.stringify(documents),
       address: billingAddress.street1
     };
 
     try {
-      await ledgerAPI.create(data);
-      setSuccess(true); window.scrollTo({ top: 0, behavior: 'smooth' });
-      setTimeout(() => setSuccess(false), 5000);
+      if (isEditMode) {
+        // Assume ledgerAPI.update takes (id, data) exactly
+        await ledgerAPI.update(id, data);
+      } else {
+        await ledgerAPI.create(data);
+      }
+      setSuccess(true); 
+      // Redirect to list view after a short delay to show success
+      setTimeout(() => {
+        navigate('/customers');
+      }, 700);
     } catch (err) {
-      setError(err.response?.data?.error || 'Submission failed.');
+      const serverError = err.response?.data?.error || err.response?.data?.message || 'Submission failed.';
+      setError(`Server Error: ${serverError}`);
     } finally {
       setLoading(false);
     }
@@ -239,8 +329,18 @@ const CustomersView = () => {
       <div className="max-w-[1240px] mx-auto px-10 bg-white border border-slate-100 shadow-sm rounded-lg py-12 mb-48">
         
         {/* ── HEADER ────────────────────────────────────────────────── */}
-        <div className="mb-6 px-1">
-           <h1 className="text-[24px] font-normal text-[#1a202c]">New Customer</h1>
+        <div className="mb-6 px-1 flex items-center gap-3">
+           <button 
+             type="button"
+             onClick={() => navigate('/customers')} 
+             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors group"
+             title="Back to Customers"
+           >
+              <ArrowLeft size={22} className="text-slate-400 group-hover:text-slate-700" />
+           </button>
+           <h1 className="text-[24px] font-normal text-[#1a202c]">
+              {isEditMode ? 'Edit Customer' : 'New Customer'}
+           </h1>
         </div>
 
         {/* ── GST BANNER ───────────────────────────────────────────── */}
@@ -284,7 +384,7 @@ const CustomersView = () => {
            </div>
 
            <div className={rowStyle}>
-              <div className={labelColStyle}>Primary Contact <Info size={14} className="text-[#9ca3af] cursor-pointer"/></div>
+              <div className={labelColStyle}>Primary Contact {customerType === 'Individual' && <span className="text-red-500 ml-1">*</span>} <Info size={14} className="text-[#9ca3af] cursor-pointer ml-1"/></div>
               <div className={inputColStyle}>
                  <div className="flex gap-2">
                     <select value={salutation} onChange={e => setSalutation(e.target.value)} className={selectStyle + " w-[220px] font-medium"}>
@@ -301,7 +401,7 @@ const CustomersView = () => {
               </div>
            </div>
 
-           <div className={rowStyle}><div className={labelColStyle}>Company Name</div><div className={inputColStyle}><input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className={inputStyle} /></div></div>
+           <div className={rowStyle}><div className={labelColStyle}>Company Name {customerType === 'Business' && <span className="text-red-500 ml-1">*</span>}</div><div className={inputColStyle}><input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} className={inputStyle} /></div></div>
            
 
            <div className={rowStyle}>
@@ -392,21 +492,110 @@ const CustomersView = () => {
 
            {/* ── TAB CONTENT: OTHER DETAILS ─────────────────────────────── */}
            {activeTab === 'Other Details' && (
-             <div className="animate-fade-in space-y-6">
-                <div className={rowStyle}><div className={labelColStyle}>PAN <Info size={14} className="text-[#9ca3af] cursor-pointer"/></div><div className={inputColStyle}><input type="text" value={pan} onChange={e => setPan(e.target.value.toUpperCase())} className={inputStyle} /></div></div>
-                <div className={rowStyle}><div className={labelColStyle}>Currency</div><div className={inputColStyle}><select value={currency} onChange={handleCurrencyChange} className={selectStyle}><option value="INR- Indian Rupee">INR- Indian Rupee</option><option value="AUD- Australian Dollar">AUD- Australian Dollar</option><option value="BND- Brunei Dollar">BND- Brunei Dollar</option><option value="CAD- Canadian Dollar">CAD- Canadian Dollar</option><option value="CNY- Yuan Renminbi">CNY- Yuan Renminbi</option><option value="EUR- Euro">EUR- Euro</option><option value="GBP- Pound Sterling">GBP- Pound Sterling</option><option value="JPY- Japanese Yen">JPY- Japanese Yen</option><option value="SAR- Saudi Riyal">SAR- Saudi Riyal</option><option value="USD- United States Dollar">USD- United States Dollar</option><option value="ZAR- South African Rand">ZAR- South African Rand</option>{customCurrencies.map(c => <option key={c.value} value={c.value}>{c.value}</option>)}<option disabled>──────────────</option><option value="add_new" className="text-[#1e61f0] font-medium font-bold">+ Add new currency</option></select></div></div>
-                <div className={rowStyle}><div className={labelColStyle}>Accounts Receivable <Info size={14} className="text-[#9ca3af] cursor-pointer"/></div><div className={inputColStyle}><select value={receivableAccount} onChange={e => setReceivableAccount(e.target.value)} className={selectStyle}><option>Select an account</option></select></div></div>
-                <div className={rowStyle}>
-                   <div className={labelColStyle}>Opening Balance</div>
-                   <div className={inputColStyle}>
-                      <div className="flex border border-[#d1d5db] rounded-md overflow-hidden focus-within:border-[#1e61f0]">
-                         <div className="px-3 py-2 bg-slate-50 border-r border-[#d1d5db] text-[13px] text-[#4a5568]">INR</div>
-                         <input type="number" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="flex-1 px-3 py-2 text-[14px] outline-none" />
-                      </div>
-                   </div>
-                </div>
-                <div className={rowStyle}><div className={labelColStyle}>Payment Terms</div><div className={inputColStyle}><select value={paymentTerms} onChange={handlePaymentTermsChange} className={selectStyle}>{paymentTermsList.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}<option disabled>──────────────</option><option value="configure_terms" className="text-[#1e61f0] font-medium font-bold">⚙ Configure Terms</option></select></div></div>
-             </div>
+              <div className="animate-fade-in space-y-6">
+                 <div className={rowStyle}><div className={labelColStyle}>PAN <Info size={14} className="text-[#9ca3af] cursor-pointer"/></div><div className={inputColStyle}><input type="text" value={pan} onChange={e => setPan(e.target.value.toUpperCase())} className={inputStyle} /></div></div>
+                 <div className={rowStyle}><div className={labelColStyle}>Currency <span className="text-red-500 ml-1">*</span></div><div className={inputColStyle}><select value={currency} onChange={handleCurrencyChange} className={selectStyle}><option value="INR- Indian Rupee">INR- Indian Rupee</option><option value="AUD- Australian Dollar">AUD- Australian Dollar</option><option value="BND- Brunei Dollar">BND- Brunei Dollar</option><option value="CAD- Canadian Dollar">CAD- Canadian Dollar</option><option value="CNY- Yuan Renminbi">CNY- Yuan Renminbi</option><option value="EUR- Euro">EUR- Euro</option><option value="GBP- Pound Sterling">GBP- Pound Sterling</option><option value="JPY- Japanese Yen">JPY- Japanese Yen</option><option value="SAR- Saudi Riyal">SAR- Saudi Riyal</option><option value="USD- United States Dollar">USD- United States Dollar</option><option value="ZAR- South African Rand">ZAR- South African Rand</option>{customCurrencies.map(c => <option key={c.value} value={c.value}>{c.value}</option>)}<option disabled>──────────────</option><option value="add_new" className="text-[#1e61f0] font-medium font-bold">+ Add new currency</option></select></div></div>
+                 <div className={rowStyle}><div className={labelColStyle}>Accounts Receivable <Info size={14} className="text-[#9ca3af] cursor-pointer"/></div><div className={inputColStyle}><select value={receivableAccount} onChange={e => setReceivableAccount(e.target.value)} className={selectStyle}><option>Select an account</option></select></div></div>
+                 <div className={rowStyle}>
+                    <div className={labelColStyle}>Opening Balance</div>
+                    <div className={inputColStyle}>
+                       <div className="flex border border-[#d1d5db] rounded-md overflow-hidden focus-within:border-[#1e61f0]">
+                          <div className="px-3 py-2 bg-slate-50 border-r border-[#d1d5db] text-[13px] text-[#4a5568]">INR</div>
+                          <input type="number" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="flex-1 px-3 py-2 text-[14px] outline-none" />
+                       </div>
+                    </div>
+                 </div>
+                 <div className={rowStyle}><div className={labelColStyle}>Payment Terms</div><div className={inputColStyle}><select value={paymentTerms} onChange={handlePaymentTermsChange} className={selectStyle}>{paymentTermsList.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}<option disabled>──────────────</option><option value="configure_terms" className="text-[#1e61f0] font-medium font-bold">⚙ Configure Terms</option></select></div></div>
+                 
+                 <div className={rowStyle}>
+                    <div className={labelColStyle}>Enable Portal? <Info size={14} className="text-[#9ca3af] cursor-pointer"/></div>
+                    <div className={inputColStyle}>
+                       <label className="flex items-center gap-2 cursor-pointer mt-2">
+                          <input type="checkbox" checked={portalEnabled} onChange={e => setPortalEnabled(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                          <span className="text-[14px] text-slate-600">Allow portal access for this customer</span>
+                       </label>
+                    </div>
+                 </div>
+
+                 <div className={rowStyle}>
+                    <div className={labelColStyle}>Documents</div>
+                    <div className={inputColStyle}>
+                       <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                             <button type="button" className="px-4 py-2 bg-white border border-slate-200 rounded-md text-[13px] font-medium text-slate-700 flex items-center gap-2 hover:bg-slate-50">
+                                <Upload size={14} /> Upload File
+                                <ChevronDown size={14} className="text-slate-400" />
+                             </button>
+                          </div>
+                          <span className="text-[11px] text-slate-400">You can upload a maximum of 10 files, 10MB each</span>
+                       </div>
+                    </div>
+                 </div>
+
+                 {!showExtraDetails ? (
+                    <button 
+                      type="button" 
+                      onClick={() => setShowExtraDetails(true)}
+                      className="text-blue-600 text-[14px] font-medium hover:underline mt-4 block"
+                    >
+                       Add more details
+                    </button>
+                 ) : (
+                    <div className="animate-fade-down space-y-6 pt-6 border-t border-slate-100">
+                       <div className={rowStyle}>
+                          <div className={labelColStyle}>Website URL</div>
+                          <div className={inputColStyle}>
+                             <div className="relative">
+                                <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+                                <input type="text" value={website} onChange={e => setWebsite(e.target.value)} placeholder="ex: www.zylker.com" className={inputStyle + " pl-10"} />
+                             </div>
+                          </div>
+                       </div>
+                       <div className={rowStyle}><div className={labelColStyle}>Department</div><div className={inputColStyle}><input type="text" value={department} onChange={e => setDepartment(e.target.value)} className={inputStyle} /></div></div>
+                       <div className={rowStyle}><div className={labelColStyle}>Designation</div><div className={inputColStyle}><input type="text" value={designation} onChange={e => setDesignation(e.target.value)} className={inputStyle} /></div></div>
+                       
+                       <div className={rowStyle}>
+                          <div className={labelColStyle}>X</div>
+                          <div className={inputColStyle}>
+                             <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 bg-slate-50 border border-slate-200 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 font-serif italic">X</div>
+                                <input type="text" value={twitter} onChange={e => setTwitter(e.target.value)} className={inputStyle + " pl-10"} />
+                             </div>
+                             <span className="text-[11px] text-slate-400 mt-1 block">https://x.com/</span>
+                          </div>
+                       </div>
+
+                       <div className={rowStyle}>
+                          <div className={labelColStyle}>Skype Name/Number</div>
+                          <div className={inputColStyle}>
+                             <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-400 flex items-center justify-center text-[10px] text-white font-bold">S</div>
+                                <input type="text" value={skype} onChange={e => setSkype(e.target.value)} className={inputStyle + " pl-10"} />
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className={rowStyle}>
+                          <div className={labelColStyle}>Facebook</div>
+                          <div className={inputColStyle}>
+                             <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold">f</div>
+                                <input type="text" value={facebook} onChange={e => setFacebook(e.target.value)} className={inputStyle + " pl-10"} />
+                             </div>
+                             <span className="text-[11px] text-slate-400 mt-1 block">http://www.facebook.com/</span>
+                          </div>
+                       </div>
+
+                       <button 
+                         type="button" 
+                         onClick={() => setShowExtraDetails(false)}
+                         className="text-slate-400 text-[14px] font-medium hover:text-slate-600 mt-4 block"
+                       >
+                          Show less details
+                       </button>
+                    </div>
+                 )}
+              </div>
            )}
 
            {/* ── TAB CONTENT: CONTACT PERSONS ───────────────────────────── */}

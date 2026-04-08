@@ -16,6 +16,7 @@ exports.createLedger = async (req, res) => {
     }
 
     const ledger = await Ledger.create({
+      ...req.body,
       name,
       openingBalance: openingBalance || 0,
       openingBalanceType: openingBalanceType || 'Dr',
@@ -99,14 +100,15 @@ exports.updateLedger = async (req, res) => {
     
     const oldData = ledger.toJSON();
     await ledger.update({ 
-      name, 
-      GroupId: groupId, 
-      openingBalance: openingBalance || 0,
-      openingBalanceType: openingBalanceType || 'Dr',
-      currentBalance: openingBalance || 0,
-      description,
-      address,
-      gstNumber
+      ...req.body,
+      name: name || ledger.name, 
+      GroupId: groupId || ledger.GroupId, 
+      openingBalance: openingBalance !== undefined ? openingBalance : ledger.openingBalance,
+      openingBalanceType: openingBalanceType || ledger.openingBalanceType,
+      currentBalance: openingBalance !== undefined ? openingBalance : ledger.currentBalance,
+      description: description !== undefined ? description : ledger.description,
+      address: address !== undefined ? address : ledger.address,
+      gstNumber: gstNumber !== undefined ? gstNumber : ledger.gstNumber
     });
 
     await AuditService.log({

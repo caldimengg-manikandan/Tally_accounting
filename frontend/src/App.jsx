@@ -21,9 +21,15 @@ import InventoryView from './modules/inventory/InventoryView';
 import BankReconciliationView from './modules/reconciliation/BankReconciliationView';
 import CostCenterView from './modules/accounting/CostCenterView';
 import CustomersView from './modules/sales/CustomersView';
+import CustomersListView from './modules/sales/CustomersListView';
 import SalesOrdersView from './modules/sales/SalesOrdersView';
 import PaymentsReceivedView from './modules/sales/PaymentsReceivedView';
 import ProfessionalInvoiceView from './modules/sales/ProfessionalInvoiceView';
+import QuotesView from './modules/sales/QuotesView';
+import RetainerInvoicesView from './modules/sales/RetainerInvoicesView';
+import RecurringInvoicesView from './modules/sales/RecurringInvoicesView';
+import DeliveryChallansView from './modules/sales/DeliveryChallansView';
+import CreditNotesView from './modules/sales/CreditNotesView';
 import PayrollView from './modules/payroll/PayrollView';
 
 // ── APIs ─────────────────────────────────────────────────────────
@@ -34,9 +40,9 @@ import {
   LayoutDashboard, FileText, BookOpen, BarChart2,
   Package, ArrowLeftRight, Settings, Users, ShoppingBag,
   Receipt, Wallet, TrendingUp, Shield, LogOut,
-  Bell, ChevronRight, ChevronsLeft, ChevronsRight,
+  Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
-  PieChart, Landmark, Target
+  PieChart, Landmark, Target, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -57,11 +63,17 @@ const NAV = [
   },
   {
     group: 'Sales',
+    icon: ShoppingCart,
     items: [
-      { icon: Users,           label: 'Customers',        path: '/customers' },
-      { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders' },
-      { icon: Receipt,         label: 'Sales Invoices',   path: '/sales/new-invoice' },
-      { icon: Wallet,          label: 'Payments',         path: '/payments' },
+      { icon: Users,           label: 'Customers',        path: '/customers', addPath: '/customers/new' },
+      { icon: ClipboardList,   label: 'Quotes',           path: '/quotes', addPath: '/quotes/new' },
+      { icon: FileStack,       label: 'Retainer Invoices', path: '/retainer-invoices', addPath: '/retainer-invoices/new' },
+      { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders', addPath: '/sales-orders/new' },
+      { icon: Receipt,         label: 'Invoices',         path: '/sales/new-invoice', addPath: '/sales/new-invoice' },
+      { icon: Repeat,          label: 'Recurring Invoices', path: '/recurring-invoices', addPath: '/recurring-invoices/new' },
+      { icon: Truck,           label: 'Delivery Challans', path: '/delivery-challans', addPath: '/delivery-challans/new' },
+      { icon: Wallet,          label: 'Payments Received', path: '/payments', addPath: '/payments/new' },
+      { icon: Undo2,           label: 'Credit Notes',      path: '/credit-notes', addPath: '/credit-notes/new' },
     ]
   },
   {
@@ -110,6 +122,78 @@ const NAV = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════
+// SIDEBAR GROUP
+// ═══════════════════════════════════════════════════════════════════
+const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) => {
+  const [expanded, setExpanded] = useState(pathname.startsWith('/customers') || pathname.startsWith('/quotes') || pathname.startsWith('/sales') || pathname.startsWith('/retainer') || pathname.startsWith('/recurring') || pathname.startsWith('/delivery') || pathname.startsWith('/payments') || pathname.startsWith('/credit'));
+
+  const isActive = items.some(item => pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path)));
+
+  if (collapsed) {
+    return (
+      <div className="space-y-1">
+        <div className="mx-4 h-px bg-slate-50 mb-3 mt-1"></div>
+        {items.map(item => (
+          <NavItem
+            key={item.path}
+            icon={item.icon}
+            label={item.label}
+            active={pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path))}
+            onClick={() => navigate(item.path)}
+            collapsed={collapsed}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={`flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all duration-300 group
+          ${isActive ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}
+      >
+        <div className="flex items-center gap-3 flex-1">
+          <div className="transition-transform duration-300 group-hover:scale-110">
+            {expanded ? <ChevronDown size={18}/> : <ChevronRight size={18}/>}
+          </div>
+          {Icon && <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />}
+          <span className="text-[13px] font-black tracking-tight">{group}</span>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="ml-9 space-y-1 mt-1 animate-fade-down">
+          {items.map(item => {
+            const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+            return (
+              <div key={item.path} className="group/item flex items-center justify-between px-4 py-2 rounded-xl transition-all duration-200 hover:bg-slate-50">
+                <button
+                  onClick={() => navigate(item.path)}
+                  className={`flex-1 text-left text-[12px] font-medium tracking-tight
+                    ${active ? 'text-blue-600 font-bold' : 'text-slate-400 group-hover/item:text-slate-900'}`}
+                >
+                  {item.label}
+                </button>
+                {item.addPath && (
+                   <button 
+                     onClick={(e) => { e.stopPropagation(); navigate(item.addPath); }}
+                     className="hidden group-hover/item:flex items-center justify-center w-5 h-5 rounded-md bg-blue-500 text-white shrink-0 shadow-sm transition-all hover:bg-blue-600"
+                   >
+                     <Plus size={12} strokeWidth={3} />
+                   </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════
 // SIDEBAR ITEM
 // ═══════════════════════════════════════════════════════════════════
 const NavItem = ({ icon: Icon, label, active, onClick, collapsed }) => (
@@ -131,7 +215,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, collapsed }) => (
 // ═══════════════════════════════════════════════════════════════════
 // APP SHELL
 // ═══════════════════════════════════════════════════════════════════
-const AppShell = ({ children, onLogout }) => {
+const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onCompanyChange }) => {
   const navigate   = useNavigate();
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -142,7 +226,11 @@ const AppShell = ({ children, onLogout }) => {
   // Breadcrumb
   const crumb = useMemo(() => {
     const parts = pathname.split('/').filter(Boolean);
-    return parts.map(p => p.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())).join(' › ') || 'Dashboard';
+    return parts.map(p => {
+      // If it looks like a long ID (UUID or 20+ chars hex), call it 'Details'
+      if (p.length > 20 || /^[0-9a-fA-F-]{24,36}$/.test(p)) return 'Details';
+      return p.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }).join(' › ') || 'Dashboard';
   }, [pathname]);
 
   return (
@@ -178,35 +266,51 @@ const AppShell = ({ children, onLogout }) => {
           {NAV.filter(section => {
             // RBAC FILTERING LOGIC
             const role = user.role || 'VIEWER';
-            if (role === 'VIEWER') return ['Overview', 'Reports'].includes(section.group);
-            if (role === 'AUDITOR') return ['Overview', 'Reports', 'Setup'].includes(section.group);
-            if (role === 'DATA_ENTRY') return ['Overview', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Payroll'].includes(section.group);
+            if (role === 'VIEWER') return ['Home', 'Reports'].includes(section.group);
+            if (role === 'AUDITOR') return ['Home', 'Reports', 'Setup'].includes(section.group);
+            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accountant', 'Payroll'].includes(section.group);
             return true; // ADMIN, MANAGER, ACCOUNTANT see all
-          }).map(section => (
-            <div key={section.group} className="space-y-1">
-              {!collapsed && (
-                <div className="px-3 mb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
-                  {section.group}
+          }).map(section => {
+            if (section.group === 'Sales' && !collapsed) {
+              return (
+                <NavGroup
+                  key={section.group}
+                  group={section.group}
+                  icon={section.icon}
+                  items={section.items}
+                  collapsed={collapsed}
+                  pathname={pathname}
+                  navigate={navigate}
+                />
+              );
+            }
+
+            return (
+              <div key={section.group} className="space-y-1">
+                {!collapsed && (
+                  <div className="px-3 mb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                    {section.group}
+                  </div>
+                )}
+                {collapsed && <div className="mx-4 h-px bg-slate-50 mb-3 mt-1"></div>}
+                <div className="space-y-1">
+                  {section.items.map(item => {
+                    const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+                    return (
+                      <NavItem
+                        key={item.path}
+                        icon={item.icon}
+                        label={item.label}
+                        active={active}
+                        onClick={() => navigate(item.path)}
+                        collapsed={collapsed}
+                      />
+                    );
+                  })}
                 </div>
-              )}
-              {collapsed && <div className="mx-4 h-px bg-slate-50 mb-3 mt-1"></div>}
-              <div className="space-y-1">
-                {section.items.map(item => {
-                  const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
-                  return (
-                    <NavItem
-                      key={item.path}
-                      icon={item.icon}
-                      label={item.label}
-                      active={active}
-                      onClick={() => navigate(item.path)}
-                      collapsed={collapsed}
-                    />
-                  );
-                })}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Collapse toggle */}
@@ -247,7 +351,18 @@ const AppShell = ({ children, onLogout }) => {
             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Workspace</span>
                <ChevronRight size={12} className="text-slate-300" />
-               <span className="text-[11px] font-black text-slate-900 uppercase tracking-widest">{crumb}</span>
+               <select 
+                 className="bg-transparent text-[11px] font-black text-slate-900 uppercase tracking-widest outline-none cursor-pointer"
+                 value={currentCompanyId}
+                 onChange={(e) => {
+                   const selected = companies.find(c => c.id === e.target.value);
+                   if (selected) onCompanyChange(selected.id, selected.name);
+                 }}
+               >
+                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+               </select>
+               <ChevronRight size={12} className="text-slate-300" />
+               <span className="text-[11px] font-black text-[#1e61f0] uppercase tracking-widest">{crumb}</span>
             </div>
           </div>
 
@@ -285,49 +400,60 @@ function AuthenticatedApp() {
   const navigate   = useNavigate();
   const [stats,    setStats]    = useState(null);
   const [vouchers, setVouchers] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [companyId, setCompanyId] = useState(localStorage.getItem('companyId'));
 
   const handleLogout = useCallback(() => {
-    ['token', 'companyId', 'user'].forEach(k => localStorage.removeItem(k));
+    ['token', 'companyId', 'companyName', 'user'].forEach(k => localStorage.removeItem(k));
     window.location.reload();
   }, []);
 
+  const handleCompanyChange = (id, name) => {
+     localStorage.setItem('companyId', id);
+     localStorage.setItem('companyName', name);
+     setCompanyId(id);
+     window.location.reload();
+  };
+
   useEffect(() => {
     const fetchContext = async () => {
-      let currentId = companyId;
-      if (!currentId) {
-        try {
-          const res = await companyAPI.getAll();
-          if (res.data && res.data.length > 0) {
-            currentId = res.data[0].id;
-            localStorage.setItem('companyId', currentId);
-            setCompanyId(currentId);
-            // We don't necessarily need to reload if we use state correctly, 
-            // but for safety with older components, we can keep it or just let the effect re-run.
-            window.location.reload();
-            return;
-          }
-        } catch (err) {
-          console.error("Failed to auto-resolve company:", err);
+      try {
+        const res = await companyAPI.getAll();
+        const allCos = res.data || [];
+        setCompanies(allCos);
+        
+        let currentId = companyId;
+        if (!currentId && allCos.length > 0) {
+          currentId = allCos[0].id;
+          localStorage.setItem('companyId', currentId);
+          localStorage.setItem('companyName', allCos[0].name);
+          setCompanyId(currentId);
+          window.location.reload();
+          return;
         }
+
+        if (currentId) {
+          const activeCo = allCos.find(c => c.id === currentId);
+          if (activeCo) localStorage.setItem('companyName', activeCo.name);
+          
+          Promise.allSettled([
+            reportsAPI.dashboard(currentId),
+            voucherAPI.getByCompany(currentId),
+          ]).then(([s, v]) => {
+            if (s.status === 'fulfilled') setStats(s.value.data);
+            if (v.status === 'fulfilled') setVouchers(Array.isArray(v.value.data) ? v.value.data.slice(0, 5) : []);
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch context:", err);
       }
-
-      if (!currentId) return;
-
-      Promise.allSettled([
-        reportsAPI.dashboard(currentId),
-        voucherAPI.getByCompany(currentId),
-      ]).then(([s, v]) => {
-        if (s.status === 'fulfilled') setStats(s.value.data);
-        if (v.status === 'fulfilled') setVouchers(Array.isArray(v.value.data) ? v.value.data.slice(0, 5) : []);
-      });
     };
 
     fetchContext();
   }, [companyId]);
 
   const shell = (Component, props = {}) => (
-    <AppShell onLogout={handleLogout}>
+    <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId}>
       <Component companyId={companyId} {...props} />
     </AppShell>
   );
@@ -375,11 +501,28 @@ function AuthenticatedApp() {
       <Route path="/purchase-orders"      element={shell(PurchaseOrderView)} />
 
       {/* Sales */}
-      <Route path="/customers"          element={shell(CustomersView)} />
-      <Route path="/sales/new-invoice"  element={shell(ProfessionalInvoiceView)} />
+      <Route path="/customers"          element={shell(CustomersListView)} />
+      <Route path="/customers/new"      element={shell(CustomersView)} />
+      <Route path="/customers/:id"      element={shell(CustomersView)} />
+      <Route path="/quotes"             element={shell(QuotesView)} />
+      <Route path="/quotes/new"         element={shell(QuotesView)} />
+      <Route path="/quotes/edit/:id"    element={shell(QuotesView)} />
+      <Route path="/retainer-invoices"  element={shell(RetainerInvoicesView)} />
+      <Route path="/retainer-invoices/new" element={shell(RetainerInvoicesView)} />
+      <Route path="/retainer-invoices/view/:id" element={shell(RetainerInvoicesView)} />
+      <Route path="/retainer-invoices/edit/:id" element={shell(RetainerInvoicesView)} />
       <Route path="/sales-orders"       element={shell(SalesOrdersView)} />
-      <Route path="/tax-invoices"       element={shell(GSTInvoiceView)} />
+      <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
+      <Route path="/sales/new-invoice"  element={shell(ProfessionalInvoiceView)} />
+      <Route path="/recurring-invoices" element={shell(RecurringInvoicesView)} />
+      <Route path="/recurring-invoices/new" element={shell(RecurringInvoicesView)} />
+      <Route path="/delivery-challans"  element={shell(DeliveryChallansView)} />
+      <Route path="/delivery-challans/new" element={shell(DeliveryChallansView)} />
       <Route path="/payments"           element={shell(PaymentsReceivedView)} />
+      <Route path="/payments/new"       element={shell(PaymentsReceivedView)} />
+      <Route path="/credit-notes"       element={shell(CreditNotesView)} />
+      <Route path="/credit-notes/new"   element={shell(CreditNotesView)} />
+      <Route path="/tax-invoices"       element={shell(GSTInvoiceView)} />
 
       {/* Operations */}
       <Route path="/inventory"          element={shell(InventoryView)} />

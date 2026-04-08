@@ -97,6 +97,24 @@ export const salesAPI = {
   createInvoice: (data) => api.post('/sales/invoices', data),
 };
 
+// ─── Quotes ────────────────────────────────────────
+export const quoteAPI = {
+  create: (data) => api.post('/quotes', data),
+  getByCompany: (companyId) => api.get(`/quotes/${companyId}`),
+  getById: (id) => api.get(`/quotes/detail/${id}`),
+  update: (id, data) => api.put(`/quotes/${id}`, data),
+  updateStatus: (id, status) => api.patch(`/quotes/${id}/status`, { status }),
+  delete: (id) => api.delete(`/quotes/${id}`),
+};
+export const retainerInvoiceAPI = {
+  create: (data) => api.post('/retainer-invoices', data),
+  getByCompany: (companyId) => api.get(`/retainer-invoices/company/${companyId}`),
+  getById: (id) => api.get(`/retainer-invoices/view/${id}`),
+  update: (id, data) => api.put(`/retainer-invoices/${id}`, data),
+  delete: (id) => api.delete(`/retainer-invoices/${id}`),
+  sendEmail: (id, data) => api.post(`/retainer-invoices/send-email/${id}`, data)
+};
+
 // ─── Cost Centers ──────────────────────────────────
 export const costCenterAPI = {
   create: (data) => api.post('/cost-centers', data),

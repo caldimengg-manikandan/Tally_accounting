@@ -11,7 +11,7 @@ router.get('/:companyId', groupController.getGroups);
 
 // Write — ACCOUNTANT and above
 router.post('/', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), groupController.createGroup);
-router.post('/seed/:companyId', authorizeRoles('ADMIN', 'SUPER_ADMIN'), groupController.seedGroups);
+router.post('/seed/:companyId', groupController.seedGroups);
 router.put('/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), groupController.updateGroup);
 router.delete('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), groupController.deleteGroup);
 
