@@ -5,7 +5,7 @@ import {
   Search, Package, Users, Calculator, Info,
   CheckCircle2, Loader2, AlertCircle, TrendingUp
 } from 'lucide-react';
-import { ledgerAPI, inventoryAPI, salesAPI, companyAPI } from '../../services/api';
+import { ledgerAPI, inventoryAPI, salesAPI, companyAPI, retainerInvoiceAPI } from '../../services/api';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -33,6 +33,11 @@ export default function ProfessionalInvoiceView() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'success', 'error'
 
+  // Retainer Selection
+  const [availableRetainers, setAvailableRetainers] = useState([]);
+  const [appliedRetainerId,  setAppliedRetainerId]  = useState('');
+  const [retainerAmountToApply, setRetainerAmountToApply] = useState(0);
+
   // ─── Load Data ──────────────────────────────────────────────────
   useEffect(() => {
     if (!companyId) return;
@@ -52,6 +57,26 @@ export default function ProfessionalInvoiceView() {
       setLoading(false);
     });
   }, [companyId]);
+
+  // Fetch available retainers when customer changes
+  useEffect(() => {
+     if (customerId) {
+        retainerInvoiceAPI.getByCompany(companyId)
+          .then(res => {
+             // Filter by customerName and status (Paid or PartiallyApplied)
+             const customer = customers.find(c => c.id === customerId);
+             const list = (res.data || []).filter(r => 
+                r.customerName === customer?.name && 
+                ['Paid', 'PartiallyApplied'].includes(r.status)
+             );
+             setAvailableRetainers(list);
+          })
+          .catch(console.error);
+     } else {
+        setAvailableRetainers([]);
+        setAppliedRetainerId('');
+     }
+  }, [customerId, customers, companyId]);
 
   // ─── Calculation Logic ──────────────────────────────────────────
   const totals = useMemo(() => {
@@ -112,7 +137,18 @@ export default function ProfessionalInvoiceView() {
         }))
       };
 
-      await salesAPI.createInvoice(payload);
+      const response = await salesAPI.createInvoice(payload);
+      const createdInvoice = response.data.voucher || response.data; // Depending on what recordTaxInvoice returns
+
+      // APPLY RETAINER IF SELECTED
+      if (appliedRetainerId && retainerAmountToApply > 0) {
+          await retainerInvoiceAPI.applyToInvoice(appliedRetainerId, {
+              invoiceId: createdInvoice.id,
+              amountToAdjust: parseFloat(retainerAmountToApply),
+              CompanyId: companyId
+          });
+      }
+
       setSaveStatus('success');
       setTimeout(() => navigate('/vouchers'), 2000);
     } catch (err) {
@@ -361,11 +397,47 @@ export default function ProfessionalInvoiceView() {
                    </div>
                    <span className="font-black text-blue-400 tracking-tight">+ ₹ {totals.tax.toLocaleString('en-IN')}</span>
                 </div>
+
+                {availableRetainers.length > 0 && (
+                   <div className="pt-4 border-t border-slate-800 space-y-4">
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Adjust Retainers (Advance Paid)</p>
+                      <select 
+                        value={appliedRetainerId}
+                        onChange={e => {
+                           setAppliedRetainerId(e.target.value);
+                           const ret = availableRetainers.find(al => al.id === e.target.value);
+                           if (ret) setRetainerAmountToApply(parseFloat(ret.amountReceived) - parseFloat(ret.amountUsed));
+                        }}
+                        className="w-full bg-slate-800 border-none text-xs text-white rounded-lg p-3 outline-none focus:ring-1 focus:ring-emerald-500"
+                      >
+                         <option value="">Select Retainer to Apply...</option>
+                         {availableRetainers.map(r => (
+                            <option key={r.id} value={r.id}>
+                               {r.invoiceNumber} (Bal: ₹{(parseFloat(r.amountReceived) - parseFloat(r.amountUsed)).toLocaleString()})
+                            </option>
+                         ))}
+                      </select>
+                      {appliedRetainerId && (
+                         <div className="flex justify-between items-center bg-emerald-900/40 p-3 rounded-lg border border-emerald-800/50 animate-fade-in">
+                            <span className="text-[11px] font-bold text-emerald-100">Apply Amount</span>
+                            <div className="flex items-center gap-2">
+                               <span className="text-emerald-500 text-[10px]">- ₹</span>
+                               <input 
+                                 type="number" 
+                                 value={retainerAmountToApply}
+                                 onChange={e => setRetainerAmountToApply(e.target.value)}
+                                 className="w-24 bg-transparent border-b border-emerald-500 text-right text-xs text-white font-black outline-none"
+                               />
+                            </div>
+                         </div>
+                      )}
+                   </div>
+                )}
                 
                 <div className="pt-6 border-t border-slate-800 mt-2">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 text-center">Grand Total Due</span>
-                    <span className="text-5xl font-black tracking-tighter text-center">₹{totals.total.toLocaleString('en-IN')}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 text-center">Final Balance Due</span>
+                    <span className="text-5xl font-black tracking-tighter text-center">₹{(totals.total - (appliedRetainerId ? parseFloat(retainerAmountToApply || 0) : 0)).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>

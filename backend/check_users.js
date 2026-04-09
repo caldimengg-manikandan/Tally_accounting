@@ -1,13 +1,19 @@
-const { User } = require('./models');
+const { User, Company } = require('./models');
+const fs = require('fs');
+
 async function checkUsers() {
   try {
-    const users = await User.findAll({ attributes: ['id', 'email', 'role'] });
-    console.log('--- Current Users in Database ---');
-    console.log(JSON.stringify(users, null, 2));
-    process.exit(0);
+    const allUsers = await User.findAll({ include: [Company] });
+    let output = `TOTAL USERS: ${allUsers.length}\n`;
+    allUsers.forEach(u => {
+      output += `- User: ${u.email}, Role: ${u.role}, ActiveCompany: ${u.Company?.name} (${u.activeCompanyId})\n`;
+    });
+    fs.writeFileSync('user_check_results.txt', output);
   } catch (err) {
-    console.error(err);
-    process.exit(1);
+    fs.writeFileSync('user_check_results.txt', err.stack);
+  } finally {
+    process.exit();
   }
 }
+
 checkUsers();

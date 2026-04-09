@@ -9,8 +9,42 @@ import {
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────
-// MAIN ROUTER
+// CONFIRMATION MODAL
 // ─────────────────────────────────────────────────
+const DeleteConfirmModal = ({ isOpen, onConfirm, onCancel, title, message }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 transition-all duration-300" style={{ paddingLeft: 'var(--sidebar-width, 0px)' }}>
+            <div className="absolute inset-x-0 inset-y-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" style={{ left: 'var(--sidebar-width, 0px)' }} onClick={onCancel} />
+            <div className="relative bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] w-full max-w-md overflow-hidden animate-scale-up">
+                <div className="p-8">
+                    <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-6">
+                        <Trash2 className="text-red-600" size={28} />
+                    </div>
+                    <h3 className="text-xl font-black text-slate-900 mb-2 tracking-tight">{title}</h3>
+                    <p className="text-slate-500 text-[14px] leading-relaxed font-medium">
+                        {message}
+                    </p>
+                </div>
+                <div className="p-4 bg-slate-50 flex flex-col sm:flex-row gap-3">
+                    <button 
+                        onClick={onCancel}
+                        className="flex-1 py-3 px-6 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest"
+                    >
+                        CANCEL
+                    </button>
+                    <button 
+                        onClick={onConfirm}
+                        className="flex-1 py-3 px-6 bg-red-600 text-white rounded-xl text-[13px] font-black hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all uppercase tracking-widest"
+                    >
+                        DELETE NOW
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const RetainerInvoicesView = ({ companyId }) => {
     const { id } = useParams();
     const location = useLocation();
@@ -23,6 +57,7 @@ const RetainerInvoicesView = ({ companyId }) => {
     const [activeRetainer, setActiveRetainer] = useState(null);
     const [retainers, setRetainers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [deleteId, setDeleteId] = useState(null);
 
     const fetchRetainers = () => {
         if (!companyId) return;
@@ -45,22 +80,37 @@ const RetainerInvoicesView = ({ companyId }) => {
         }
     }, [companyId, isNew, isEdit, isView]);
 
-    const handleDelete = async (retainerId) => {
-        if (window.confirm('Are you sure you want to delete this retainer invoice?')) {
-            try {
-                await retainerInvoiceAPI.delete(retainerId);
-                fetchRetainers();
-            } catch (err) {
-                alert('Failed to delete retainer invoice');
-            }
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        try {
+            await retainerInvoiceAPI.delete(deleteId);
+            setDeleteId(null);
+            fetchRetainers();
+        } catch (err) {
+            alert('Failed to delete retainer invoice');
+            setDeleteId(null);
         }
     };
 
     if (view === 'email') return <EmailSendView retainer={activeRetainer} onCancel={() => navigate('/retainer-invoices')} onSend={() => navigate('/retainer-invoices')} />;
     if (view === 'detail') return <RetainerDetailView retainerId={id} companyId={companyId} navigate={navigate} onSaved={(ret) => { setActiveRetainer(ret); setView('email'); }} />;
-    if (isNew || isEdit || view === 'form') return <NewRetainerForm companyId={companyId} navigate={navigate} editId={id} onSaved={(ret, isSent) => { if (isSent) { setActiveRetainer(ret); setView('email'); } else { navigate('/retainer-invoices'); } }} />;
-
-    return <RetainerList retainers={retainers} loading={loading} navigate={navigate} onDelete={handleDelete} onRefresh={fetchRetainers} />;
+    
+    return (
+        <>
+            <DeleteConfirmModal 
+                isOpen={!!deleteId}
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteId(null)}
+                title="Confirm Deletion"
+                message="Are you sure you want to permanently delete this retainer invoice? This action cannot be undone."
+            />
+            { (isNew || isEdit || view === 'form') ? (
+                <NewRetainerForm companyId={companyId} navigate={navigate} editId={id} onSaved={(ret) => { navigate(`/retainer-invoices/view/${ret.id || id}`); }} />
+            ) : (
+                <RetainerList retainers={retainers} loading={loading} navigate={navigate} onDelete={setDeleteId} onRefresh={fetchRetainers} />
+            )}
+        </>
+    );
 };
 
 // ─────────────────────────────────────────────────
@@ -204,12 +254,12 @@ const RetainerList = ({ retainers, loading, navigate, onDelete, onRefresh }) => 
                                         <td className="px-6 py-4 text-[14px] font-medium text-slate-900">{r.invoiceNumber}</td>
                                         <td className="px-6 py-4 text-[14px] text-slate-700 font-semibold">{r.customerName}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 rounded text-[11px] font-bold uppercase tracking-wider ${
-                                                r.status === 'Sent' ? 'bg-blue-50 text-blue-600' : 
-                                                r.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' :
-                                                r.status === 'Void' ? 'bg-rose-50 text-rose-600' :
-                                                'bg-slate-100 text-slate-600'
-                                            }`}>
+                                            <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-tight shrink-0
+                                                ${r.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 
+                                                  r.status === 'FullyApplied' ? 'bg-purple-100 text-purple-700' :
+                                                  r.status === 'PartiallyApplied' ? 'bg-blue-100 text-blue-700' :
+                                                  r.status === 'Sent' ? 'bg-amber-100 text-amber-700' : 
+                                                  r.status === 'Draft' ? 'bg-slate-100 text-slate-500' : 'bg-slate-100 text-slate-700'}`}>
                                                 {r.status || 'Draft'}
                                             </span>
                                         </td>
@@ -271,6 +321,9 @@ const RetainerList = ({ retainers, loading, navigate, onDelete, onRefresh }) => 
 const NewRetainerForm = ({ companyId, navigate, editId, onSaved }) => {
     const [customerName, setCustomerName] = useState('');
     const [customers, setCustomers] = useState([]);
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+    const customerDropdownRef = useRef(null);
     const [invoiceNo, setInvoiceNo] = useState('RET-00001');
     const [refNo, setRefNo] = useState('');
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -279,6 +332,21 @@ const NewRetainerForm = ({ companyId, navigate, editId, onSaved }) => {
     const [customerNotes, setCustomerNotes] = useState('');
     const [terms, setTerms] = useState('');
     const [loading, setLoading] = useState(false);
+
+    const filteredCustomers = customers.filter(c => 
+        c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        (c.email && c.email.toLowerCase().includes(customerSearch.toLowerCase()))
+    );
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+                setShowCustomerDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         if (!companyId) return;
@@ -383,37 +451,134 @@ const NewRetainerForm = ({ companyId, navigate, editId, onSaved }) => {
     }
 
     return (
-        <div className="bg-[#f8fafc] min-h-screen">
-            <div className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 text-center tracking-widest uppercase">
-                Production Engine v2.0 - Optimized Routing Active
-            </div>
-
-            <div className="p-8">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 sticky top-0 bg-white z-10 mb-8 rounded-lg">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => navigate('/retainer-invoices')} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ArrowLeft size={18}/></button>
-                        <h2 className="text-[18px] font-medium text-slate-800 flex items-center gap-2">
-                            <FileStack size={18} className="text-slate-400"/> {editId ? 'Edit' : 'New'} Retainer Invoice
+        <div className="flex flex-col min-h-full">
+            {/* STICKY HEADER */}
+            <header className="sticky top-0 bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between z-40 shadow-sm shrink-0">
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => navigate('/retainer-invoices')}
+                        className="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all border border-transparent hover:border-slate-100"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-widest">Sales Module</span>
+                            <span className="text-slate-300">/</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Retainer Invoices</span>
+                        </div>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                            {editId ? 'Edit Retainer' : 'Create New Retainer'}
+                            <span className="bg-slate-100 text-slate-500 text-[12px] px-3 py-1 rounded-full font-bold">{invoiceNo}</span>
                         </h2>
                     </div>
-                    <button onClick={() => navigate('/retainer-invoices')} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
                 </div>
 
-                <div className="p-8 max-w-[1000px] bg-white rounded-lg shadow-sm border border-slate-200 mx-auto">
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => handleSave('Draft')}
+                        className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        SAVE AS DRAFT
+                    </button>
+                    <button 
+                        onClick={() => handleSave('Sent')}
+                        className="px-8 py-2.5 bg-blue-600 text-white rounded-xl text-[13px] font-black hover:bg-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.2)] transition-all flex items-center gap-2"
+                    >
+                        SAVE & SEND <ChevronRight size={16} />
+                    </button>
+                </div>
+            </header>
+
+            <div className="flex-1 py-10 px-12 max-w-[1200px] w-full mx-auto animate-fade-up">
+                <div className="bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-100 p-12 mb-8">
                     <div className="grid grid-cols-12 gap-y-5 gap-x-8 mb-10">
-                        <div className="col-span-3 text-[13px] font-medium text-red-500 flex items-center">Customer Name*</div>
-                        <div className="col-span-9 relative">
-                             <input 
-                                list="cust-list"
-                                value={customerName} 
-                                onChange={e => setCustomerName(e.target.value)}
-                                placeholder="Select or add a customer"
-                                className="w-full max-w-[500px] border border-slate-300 rounded-[4px] px-3 py-1.5 text-[14px] focus:border-blue-500 outline-none pr-10"
-                             />
-                             <datalist id="cust-list">
-                                {customers.map(c => <option key={c.id} value={c.name} />)}
-                             </datalist>
-                             <Search size={14} className="absolute left-[475px] top-1/2 -translate-y-1/2 text-slate-400" />
+                        <div className="col-span-3 text-[13px] font-black text-slate-400 uppercase tracking-widest flex items-center">Customer Name*</div>
+                        <div className="col-span-9 relative" ref={customerDropdownRef}>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <User size={18} className="text-slate-300" />
+                                    </div>
+                                    <input 
+                                        type="text"
+                                        name={`user_search_${Math.random().toString(36).substring(7)}`}
+                                        value={customerName || customerSearch}
+                                        onChange={e => {
+                                            setCustomerSearch(e.target.value);
+                                            setCustomerName(''); 
+                                            setShowCustomerDropdown(true);
+                                        }}
+                                        onFocus={() => setShowCustomerDropdown(true)}
+                                        placeholder="Select or add a customer"
+                                        className="w-full pl-12 pr-12 py-3 bg-white border border-slate-200 rounded-lg text-[15px] font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 shadow-sm transition-all placeholder:text-slate-300 placeholder:font-medium"
+                                        autoComplete="off"
+                                        data-lpignore="true"
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <ChevronDown size={14} className="text-slate-400" />
+                                    </div>
+                                </div>
+
+                                {showCustomerDropdown && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-xl z-50 max-h-[400px] overflow-hidden flex flex-col animate-fade-in">
+                                        {/* Search Header */}
+                                        <div className="p-3 border-b border-slate-50 sticky top-0 bg-white">
+                                            <div className="relative">
+                                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                <input 
+                                                    type="text"
+                                                    autoFocus
+                                                    placeholder="Search customers..."
+                                                    value={customerSearch}
+                                                    onChange={e => setCustomerSearch(e.target.value)}
+                                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border-none rounded-lg text-[13px] outline-none focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-400 font-medium"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="overflow-y-auto flex-1 no-scrollbar py-1">
+                                            {filteredCustomers.length > 0 ? (
+                                                filteredCustomers.map(c => (
+                                                    <div 
+                                                        key={c.id} 
+                                                        onClick={() => {
+                                                            setCustomerName(c.name);
+                                                            setCustomerSearch(c.name);
+                                                            setShowCustomerDropdown(false);
+                                                        }}
+                                                        className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer flex items-center gap-3 transition-colors group mx-1 rounded-lg"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[11px] group-hover:bg-blue-600 group-hover:text-white transition-all uppercase">
+                                                            {c.name.substring(0, 2)}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="text-[14px] font-bold text-slate-700 tracking-tight">{c.name}</div>
+                                                            <div className="text-[10px] text-slate-400 font-medium tracking-wide text-ellipsis overflow-hidden whitespace-nowrap">{c.email || 'No email attached'}</div>
+                                                        </div>
+                                                        <ChevronRight size={14} className="text-slate-200 group-hover:text-blue-500 transition-colors" />
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="px-5 py-10 text-center flex flex-col items-center gap-2">
+                                                    <div className="p-3 bg-slate-50 rounded-full">
+                                                        <Search size={24} className="text-slate-300" />
+                                                    </div>
+                                                    <div className="text-[13px] font-medium text-slate-500">No customers match "{customerSearch}"</div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Add New Footer */}
+                                        <div className="p-2 bg-slate-50/50 border-t border-slate-100">
+                                            <button 
+                                                onClick={() => navigate('/customers')}
+                                                className="w-full py-2.5 px-4 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg text-[12px] font-black text-slate-600 hover:text-blue-600 flex items-center justify-center gap-2 transition-all shadow-sm"
+                                            >
+                                                <Plus size={14} strokeWidth={3} /> ADD NEW CUSTOMER
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                         </div>
 
                         <div className="col-span-3 text-[13px] font-medium text-red-500 flex items-center">Retainer Invoice Number*</div>
@@ -434,13 +599,17 @@ const NewRetainerForm = ({ companyId, navigate, editId, onSaved }) => {
                             <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-[200px] border border-slate-300 rounded-[4px] px-3 py-1.5 text-[14px] outline-none focus:border-blue-500" />
                         </div>
 
-                        <div className="col-span-3 text-[13px] font-medium text-slate-700 flex items-center">Project Name</div>
+                        <div className="col-span-3 text-[13px] font-black text-slate-400 uppercase tracking-widest flex items-center">Project Name</div>
                         <div className="col-span-9">
-                            <div className="w-[300px]">
-                                <select value={projectName} onChange={e => setProjectName(e.target.value)} className="w-full border border-slate-300 rounded-[4px] px-3 py-1.5 text-[14px] outline-none focus:border-blue-500 bg-white">
+                            <div className="w-[400px]">
+                                <select 
+                                    value={projectName} 
+                                    onChange={e => setProjectName(e.target.value)} 
+                                    className="w-full border border-slate-200 rounded-lg px-4 py-3 text-[14px] font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 bg-white shadow-sm transition-all cursor-pointer"
+                                >
                                     <option value="">Select a project</option>
                                 </select>
-                                <p className="text-[11px] text-slate-400 mt-1">Select a customer to associate a project.</p>
+                                <p className="text-[11px] text-slate-400 mt-2 font-medium italic">Associated projects will appear here after selecting a customer.</p>
                             </div>
                         </div>
                     </div>
@@ -497,24 +666,6 @@ const NewRetainerForm = ({ companyId, navigate, editId, onSaved }) => {
                             <label className="text-[13px] font-medium text-slate-700 mb-1 block">Terms & Conditions</label>
                             <textarea value={terms} onChange={e => setTerms(e.target.value)} placeholder="Enter the terms and conditions" rows="3" className="w-full border border-slate-300 rounded-[4px] p-2 text-[13px] outline-none focus:border-blue-500" />
                         </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 border-t border-slate-100 pt-8 pb-12">
-                         <button 
-                            onClick={() => handleSave('Draft')} 
-                            disabled={loading}
-                            className="px-6 py-2 bg-white border border-slate-300 text-slate-700 rounded-[4px] text-[13px] font-medium hover:bg-slate-50 transition-colors"
-                         >
-                            Save as Draft
-                         </button>
-                         <button 
-                            onClick={() => handleSave('Sent')} 
-                            disabled={loading}
-                            className={`px-6 py-2 bg-blue-600 text-white rounded-[4px] text-[13px] font-medium hover:bg-blue-700 shadow-lg transition-colors ${loading ? 'opacity-50' : ''}`}
-                         >
-                            Save and Send
-                         </button>
-                         <button onClick={() => navigate('/retainer-invoices')} className="px-4 py-2 text-slate-500 hover:text-slate-800 text-[13px] font-medium">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -600,6 +751,21 @@ const RetainerDetailView = ({ retainerId, companyId, navigate, onSaved }) => {
         }).finally(() => setLoading(false));
     }, [retainerId, companyId]);
 
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [paymentAmount, setPaymentAmount] = useState(0);
+
+    const handleRecordPayment = async () => {
+        try {
+            await retainerInvoiceAPI.recordPayment(retainerId, paymentAmount);
+            setIsPaymentModalOpen(false);
+            // Refresh
+            const res = await retainerInvoiceAPI.getById(retainerId);
+            setRetainer(res.data);
+        } catch (err) {
+            alert('Payment failed: ' + (err.response?.data?.error || err.message));
+        }
+    };
+
     const handlePrint = () => { window.print(); };
 
     if (loading || !retainer) return <div className="p-20 text-center">Loading details...</div>;
@@ -632,6 +798,9 @@ const RetainerDetailView = ({ retainerId, companyId, navigate, onSaved }) => {
                         </button>
                         <button onClick={() => onSaved(retainer)} className="px-3 py-1.5 border rounded text-sm hover:bg-slate-50 flex items-center gap-1.5">
                             <PaperclipIcon size={14}/> Send
+                        </button>
+                        <button onClick={() => { setPaymentAmount(parseFloat(retainer.totalAmount) - parseFloat(retainer.amountReceived || 0)); setIsPaymentModalOpen(true); }} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center gap-1.5">
+                            <Landmark size={14}/> Record Payment
                         </button>
                         <button onClick={handlePrint} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1.5">
                             <DownloadIcon size={14}/> Print
@@ -677,7 +846,14 @@ const RetainerDetailView = ({ retainerId, companyId, navigate, onSaved }) => {
                         <div className="flex justify-end mb-20 text-right">
                             <div className="w-64 space-y-2">
                                 <div className="flex justify-between text-slate-500"><span>Sub Total</span><span>₹{parseFloat(retainer.totalAmount).toLocaleString()}</span></div>
+                                <div className="flex justify-between text-slate-500"><span>Sub Total</span><span>₹{parseFloat(retainer.totalAmount).toLocaleString()}</span></div>
                                 <div className="flex justify-between font-bold text-lg border-t pt-2"><span>Total</span><span>₹{parseFloat(retainer.totalAmount).toLocaleString()}</span></div>
+                                <div className="flex justify-between text-green-600 font-bold"><span>Amount Received</span><span>₹{parseFloat(retainer.amountReceived || 0).toLocaleString()}</span></div>
+                                <div className="flex justify-between text-blue-600 font-bold"><span>Used in Invoices</span><span>₹{parseFloat(retainer.amountUsed || 0).toLocaleString()}</span></div>
+                                <div className="flex justify-between text-slate-900 font-black border-t-2 border-slate-900 pt-2 bg-slate-50 px-2 rounded">
+                                    <span>Available Balance</span>
+                                    <span>₹{(parseFloat(retainer.amountReceived || 0) - parseFloat(retainer.amountUsed || 0)).toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
 
@@ -687,6 +863,39 @@ const RetainerDetailView = ({ retainerId, companyId, navigate, onSaved }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Payment Modal */}
+            {isPaymentModalOpen && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsPaymentModalOpen(false)} />
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scale-up">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="font-black text-slate-900">RECORD PAYMENT</h3>
+                            <button onClick={() => setIsPaymentModalOpen(false)}><X size={18}/></button>
+                        </div>
+                        <div className="p-6">
+                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">AMOUNT RECEIVED (₹)</label>
+                            <input 
+                                type="number" 
+                                value={paymentAmount}
+                                onChange={e => setPaymentAmount(e.target.value)}
+                                className="w-full text-2xl font-black text-slate-900 border-b-2 border-slate-200 outline-none focus:border-blue-500 py-2"
+                                autoFocus
+                            />
+                            <p className="text-[11px] text-slate-400 mt-2 italic">Outstanding: ₹{(parseFloat(retainer.totalAmount) - parseFloat(retainer.amountReceived || 0)).toLocaleString()}</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 flex gap-2">
+                            <button onClick={() => setIsPaymentModalOpen(false)} className="flex-1 py-3 text-[12px] font-black text-slate-500">CANCEL</button>
+                            <button 
+                                onClick={handleRecordPayment}
+                                className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[12px] font-black shadow-lg shadow-blue-600/20"
+                            >
+                                SAVE PAYMENT
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1,0 +1,10 @@
+TOTAL USERS: 9
+- User: alen@gmail.com, Role: MANAGER, ActiveCompany: undefined (b03b1ec3-5f34-4460-9ef5-bda22fb4d360)
+- User: alex@gmail.com, Role: ADMIN, ActiveCompany: undefined (5f6dd28a-bbc3-4664-8ce5-1a469ea6f82c)
+- User: thejathangavel05@gmail.com, Role: ADMIN, ActiveCompany: undefined (3208c42b-f600-43d3-bf21-f608abd22a8a)
+- User: test@example.com, Role: MANAGER, ActiveCompany: undefined (null)
+- User: surya02@gmail.com, Role: ADMIN, ActiveCompany: undefined (null)
+- User: naveenswathi98@gmail.com, Role: ADMIN, ActiveCompany: undefined (null)
+- User: thejathangavel5@gmail.com, Role: ADMIN, ActiveCompany: undefined (5f028981-8de4-4c19-9a90-54257dd87f70)
+- User: thejaathangavel5@gmail.com, Role: ADMIN, ActiveCompany: undefined (null)
+- User: thejathangavel@gmail.com, Role: ADMIN, ActiveCompany: undefined (null)
