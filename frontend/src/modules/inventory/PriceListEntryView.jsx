@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { X, ChevronDown, Check, Search, Database, Upload, RefreshCw, Layers } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ChevronDown, Check, Search, Database, Upload, RefreshCw, Layers, Plus, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { priceListAPI, inventoryAPI } from '../../services/api';
+import * as XLSX from 'xlsx';
 
 const PriceListEntryView = () => {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
     transactionType: 'Sales',
@@ -13,10 +15,16 @@ const PriceListEntryView = () => {
     markupType: 'Markup',
     percentage: '',
     roundOffTo: 'Never mind',
-    pricingScheme: 'Unit Pricing',
+    pricingScheme: 'Volume Pricing',
     currency: 'INR - Indian Rupee',
     includeDiscount: false,
-    itemRates: {} // { itemId: customRate }
+    itemRates: {}, // { itemId: customRate } for Unit Pricing
+    volumeRates: {}, // { itemId: [{ start: 1, end: '', rate: '' }] } for Volume Pricing
+    showImportSection: false,
+    selectedItemIds: [],
+    isBulkUpdateMode: false,
+    showBulkOptions: false,
+    bulkAction: { type: 'Markup', value: '', mode: 'Percentage' } // mode: 'Percentage' or 'Fixed'
   });
 
   const [items, setItems] = useState([]);
@@ -97,6 +105,247 @@ const PriceListEntryView = () => {
     });
   };
 
+  const addVolumeRange = (itemId) => {
+    const currentRanges = formData.volumeRates[itemId] || [{ start: 1, end: '', rate: '' }];
+    const lastRange = currentRanges[currentRanges.length - 1];
+    const newStart = lastRange.end ? parseInt(lastRange.end) + 1 : '';
+
+    setFormData({
+      ...formData,
+      volumeRates: {
+        ...formData.volumeRates,
+        [itemId]: [...currentRanges, { start: newStart, end: '', rate: '' }]
+      }
+    });
+  };
+
+  const updateVolumeRange = (itemId, index, field, value) => {
+    const currentRanges = [...(formData.volumeRates[itemId] || [{ start: 1, end: '', rate: '' }])];
+    currentRanges[index] = { ...currentRanges[index], [field]: value };
+    
+    setFormData({
+      ...formData,
+      volumeRates: {
+        ...formData.volumeRates,
+        [itemId]: currentRanges
+      }
+    });
+  };
+
+  const removeVolumeRange = (itemId, index) => {
+    const currentRanges = [...(formData.volumeRates[itemId] || [])];
+    if (currentRanges.length <= 1) return;
+    currentRanges.splice(index, 1);
+    
+    setFormData({
+      ...formData,
+      volumeRates: {
+        ...formData.volumeRates,
+        [itemId]: currentRanges
+      }
+    });
+  };
+
+  const handleExportAll = () => {
+    try {
+      if (items.length === 0) {
+        alert('No items available to export.');
+        return;
+      }
+
+      // Format data for Excel
+      const excelData = items.map(item => ({
+        'Item Name': item.name,
+        'Start Quantity': 1,
+        'End Quantity': '',
+        'PriceList Rate': item.sellingPrice || 0
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Price List Items');
+
+      // Add column widths
+      worksheet['!cols'] = [
+        { wch: 30 }, // Item Name
+        { wch: 15 }, // Start Qty
+        { wch: 15 }, // End Qty
+        { wch: 15 }  // Rate
+      ];
+
+      XLSX.writeFile(workbook, `PriceList_Template_${new Date().toLocaleDateString()}.xlsx`);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Failed to export items. Please try again.');
+    }
+  };
+
+  const handleExportFiltered = () => {
+    try {
+      if (filteredItems.length === 0) {
+        alert('No filtered items to export.');
+        return;
+      }
+
+      const excelData = filteredItems.map(item => ({
+        'Item Name': item.name,
+        'Start Quantity': 1,
+        'End Quantity': '',
+        'PriceList Rate': item.sellingPrice || 0
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Items');
+
+      worksheet['!cols'] = [
+        { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+      ];
+
+      XLSX.writeFile(workbook, `Filtered_PriceList_${new Date().toLocaleDateString()}.xlsx`);
+    } catch (err) {
+      console.error('Filtered export failed:', err);
+      alert('Failed to export filtered items.');
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        if (jsonData.length === 0) {
+          alert('The uploaded file is empty.');
+          return;
+        }
+
+        const newItemRates = { ...formData.itemRates };
+        const newVolumeRates = { ...formData.volumeRates };
+
+        // Process data
+        jsonData.forEach(row => {
+          const itemName = row['Item Name'];
+          const matchedItem = items.find(it => it.name.toLowerCase() === itemName?.toString().toLowerCase());
+          
+          if (matchedItem) {
+            if (formData.pricingScheme === 'Unit Pricing') {
+              newItemRates[matchedItem.id] = row['PriceList Rate'] || 0;
+            } else {
+              // Volume Pricing - Grouping by item
+              if (!newVolumeRates[matchedItem.id]) {
+                newVolumeRates[matchedItem.id] = [];
+              }
+              newVolumeRates[matchedItem.id].push({
+                start: row['Start Quantity'] || 1,
+                end: row['End Quantity'] || '',
+                rate: row['PriceList Rate'] || 0
+              });
+            }
+          }
+        });
+
+        setFormData({
+          ...formData,
+          itemRates: newItemRates,
+          volumeRates: newVolumeRates,
+          showImportSection: false // Switch back to see the results
+        });
+
+        alert('Data imported successfully! Check the customization table.');
+      } catch (err) {
+        console.error('Import failed:', err);
+        alert('Failed to parse the file. Please ensure it matches the template.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    // Reset input
+    e.target.value = '';
+  };
+
+  const toggleItemSelection = (itemId) => {
+    const selected = [...formData.selectedItemIds];
+    const index = selected.indexOf(itemId);
+    if (index > -1) {
+      selected.splice(index, 1);
+    } else {
+      selected.push(itemId);
+    }
+    setFormData({ ...formData, selectedItemIds: selected });
+  };
+
+  const toggleSelectAll = () => {
+    if (formData.selectedItemIds.length === filteredItems.length) {
+      setFormData({ ...formData, selectedItemIds: [] });
+    } else {
+      setFormData({ ...formData, selectedItemIds: filteredItems.map(it => it.id) });
+    }
+  };
+
+  const applyBulkUpdate = () => {
+    const { type, value, mode } = formData.bulkAction;
+    const numValue = parseFloat(value);
+    
+    if (isNaN(numValue)) {
+      alert('Please enter a valid number.');
+      return;
+    }
+
+    const newItemRates = { ...formData.itemRates };
+    const newVolumeRates = { ...formData.volumeRates };
+
+    formData.selectedItemIds.forEach(itemId => {
+      const item = items.find(it => it.id === itemId);
+      if (!item) return;
+
+      const basePrice = parseFloat(item.sellingPrice || 0);
+
+      if (formData.pricingScheme === 'Unit Pricing') {
+        if (mode === 'Fixed') {
+          newItemRates[itemId] = numValue;
+        } else {
+          const change = (basePrice * numValue) / 100;
+          newItemRates[itemId] = type === 'Markup' ? basePrice + change : basePrice - change;
+        }
+      } else {
+        // Volume Pricing - Update all ranges
+        const currentRanges = [...(newVolumeRates[itemId] || [{ start: 1, end: '', rate: basePrice }])];
+        newVolumeRates[itemId] = currentRanges.map(range => {
+          const currentRate = parseFloat(range.rate || basePrice);
+          let newRate = currentRate;
+          if (mode === 'Fixed') {
+            newRate = numValue;
+          } else {
+            const change = (currentRate * numValue) / 100;
+            newRate = type === 'Markup' ? currentRate + change : currentRate - change;
+          }
+          return { ...range, rate: newRate };
+        });
+      }
+    });
+
+    setFormData({
+      ...formData,
+      itemRates: newItemRates,
+      volumeRates: newVolumeRates,
+      selectedItemIds: [],
+      showBulkOptions: false
+    });
+
+    alert('Bulk update applied successfully!');
+  };
+
   const handleSave = async () => {
     try {
       // Validation
@@ -152,7 +401,7 @@ const PriceListEntryView = () => {
           <div className="grid grid-cols-1 gap-5">
             {/* Name Field */}
             <div className="flex items-start">
-              <label className="text-[12px] font-medium text-rose-500 w-[160px] pt-1.5 uppercase tracking-wider">Name*</label>
+              <label className="text-[13px] font-medium text-rose-500 w-[160px] pt-1.5 focus-within:text-[#1e61f0] transition-colors">Name*</label>
               <input 
                 type="text"
                 value={formData.name}
@@ -164,7 +413,7 @@ const PriceListEntryView = () => {
 
             {/* Transaction Type */}
             <div className="flex items-center">
-              <label className="text-[12px] font-medium text-slate-700 w-[160px] uppercase tracking-wider">Transaction Type</label>
+              <label className="text-[13px] font-medium text-slate-700 w-[160px]">Transaction Type</label>
               <div className="flex items-center gap-6">
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${formData.transactionType === 'Sales' ? 'border-[#1e61f0] bg-[#1e61f0]' : 'border-slate-300 bg-white group-hover:border-slate-400'}`}>
@@ -195,19 +444,19 @@ const PriceListEntryView = () => {
 
             {/* Price List Type */}
             <div className="flex items-start">
-              <label className="text-[12px] font-medium text-slate-700 w-[160px] pt-4 uppercase tracking-wider">Price List Type</label>
+              <label className="text-[13px] font-medium text-slate-700 w-[160px] pt-4">Price List Type</label>
               <div className="flex gap-4">
                 <div 
                   onClick={() => setFormData({...formData, priceListType: 'All Items'})}
                   className={`w-[240px] p-3 rounded-lg border-2 transition-all cursor-pointer ${formData.priceListType === 'All Items' ? 'border-blue-200 bg-blue-50/40' : 'border-slate-50 hover:border-slate-100 bg-slate-50/30'}`}
                 >
                   <div className="flex items-start gap-2.5">
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center mt-0.5 ${formData.priceListType === 'All Items' ? 'bg-[#1e61f0] border-[#1e61f0]' : 'border-slate-300 bg-white'}`}>
-                      {formData.priceListType === 'All Items' && <Check size={10} color="white" strokeWidth={4} />}
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 ${formData.priceListType === 'All Items' ? 'bg-[#1e61f0] border-[#1e61f0]' : 'border-slate-300 bg-white'}`}>
+                      {formData.priceListType === 'All Items' && <div className="w-1.5 h-1.5 rounded-full bg-white transition-all transform scale-110" />}
                     </div>
                     <div>
-                      <div className="text-[12px] font-bold text-slate-800 uppercase tracking-tight">All Items</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">Mark up or mark down the rates of all items</div>
+                      <div className="text-[12px] font-bold text-slate-800">All Items</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5 leading-tight">Mark up or mark down the rates of all items</div>
                     </div>
                   </div>
                 </div>
@@ -217,12 +466,12 @@ const PriceListEntryView = () => {
                   className={`w-[240px] p-3 rounded-lg border-2 transition-all cursor-pointer ${formData.priceListType === 'Individual Items' ? 'border-blue-200 bg-blue-50/40' : 'border-slate-50 hover:border-slate-100 bg-slate-50/30'}`}
                 >
                   <div className="flex items-start gap-2.5">
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center mt-0.5 ${formData.priceListType === 'Individual Items' ? 'bg-[#1e61f0] border-[#1e61f0]' : 'border-slate-300 bg-white'}`}>
-                      {formData.priceListType === 'Individual Items' && <Check size={10} color="white" strokeWidth={4} />}
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 ${formData.priceListType === 'Individual Items' ? 'bg-[#1e61f0] border-[#1e61f0]' : 'border-slate-300 bg-white'}`}>
+                      {formData.priceListType === 'Individual Items' && <div className="w-1.5 h-1.5 rounded-full bg-white transition-all transform scale-110" />}
                     </div>
                     <div>
-                      <div className="text-[12px] font-bold text-slate-800 uppercase tracking-tight">Individual Items</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">Customize the rate of each item</div>
+                      <div className="text-[12px] font-bold text-slate-800">Individual Items</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5 leading-tight">Customize the rate of each item</div>
                     </div>
                   </div>
                 </div>
@@ -231,7 +480,7 @@ const PriceListEntryView = () => {
 
             {/* Description */}
             <div className="flex items-start">
-              <label className="text-[12px] font-medium text-slate-700 w-[160px] pt-1.5 uppercase tracking-wider">Description</label>
+              <label className="text-[13px] font-medium text-slate-700 w-[160px] pt-1.5">Description</label>
               <textarea 
                 placeholder="Enter the description"
                 value={formData.description}
@@ -403,40 +652,41 @@ const PriceListEntryView = () => {
               <div className="space-y-6 animate-slide-left">
                 {/* Pricing Scheme (Individual Items Mode) */}
                 <div className="flex items-center">
-                  <label className="text-[12px] font-medium text-slate-600 w-[160px] uppercase tracking-wider">Pricing Scheme</label>
-                  <div className="flex items-center gap-4">
-                    <label className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${formData.pricingScheme === 'Unit Pricing' ? 'bg-blue-50 border-blue-200 text-[#1e61f0]' : 'bg-slate-50/50 border-slate-100 text-slate-500'}`}>
+                  <label className="text-[13px] font-medium text-slate-700 w-[160px]">Pricing Scheme</label>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${formData.pricingScheme === 'Unit Pricing' ? 'border-[#1e61f0] bg-[#1e61f0]' : 'border-slate-300 bg-white group-hover:border-slate-400'}`}>
+                        {formData.pricingScheme === 'Unit Pricing' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
                       <input 
                         type="radio" 
-                        name="pricingScheme" 
                         className="hidden" 
-                        checked={formData.pricingScheme === 'Unit Pricing'} 
+                        checked={formData.pricingScheme === 'Unit Pricing'}
                         onChange={() => setFormData({...formData, pricingScheme: 'Unit Pricing'})}
                       />
-                      <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${formData.pricingScheme === 'Unit Pricing' ? 'border-[#1e61f0]' : 'border-slate-300'}`}>
-                        {formData.pricingScheme === 'Unit Pricing' && <div className="w-1.5 h-1.5 rounded-full bg-[#1e61f0]" />}
-                      </div>
-                      <span className="text-[12px] font-bold">Unit Pricing</span>
+                      <span className="text-[13px] text-slate-600 font-medium">Unit Pricing</span>
                     </label>
-                    <label className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${formData.pricingScheme === 'Volume Pricing' ? 'bg-blue-50 border-blue-200 text-[#1e61f0]' : 'bg-slate-50/50 border-slate-100 text-slate-500'}`}>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${formData.pricingScheme === 'Volume Pricing' ? 'border-[#1e61f0] bg-[#1e61f0]' : 'border-slate-300 bg-white group-hover:border-slate-400'}`}>
+                        {formData.pricingScheme === 'Volume Pricing' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
                       <input 
                         type="radio" 
-                        name="pricingScheme" 
                         className="hidden" 
-                        checked={formData.pricingScheme === 'Volume Pricing'} 
+                        checked={formData.pricingScheme === 'Volume Pricing'}
                         onChange={() => setFormData({...formData, pricingScheme: 'Volume Pricing'})}
                       />
-                      <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${formData.pricingScheme === 'Volume Pricing' ? 'border-[#1e61f0]' : 'border-slate-300'}`}>
-                        {formData.pricingScheme === 'Volume Pricing' && <div className="w-1.5 h-1.5 rounded-full bg-[#1e61f0]" />}
-                      </div>
-                      <span className="text-[12px] font-bold">Volume Pricing</span>
+                      <span className="text-[13px] text-slate-600 font-medium">Volume Pricing</span>
                     </label>
+                    <div className="group relative">
+                      <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 cursor-help hover:border-[#1e61f0] hover:text-[#1e61f0] transition-colors font-black">?</div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Currency */}
                 <div className="flex items-center">
-                  <label className="text-[12px] font-bold text-slate-700 w-[160px] uppercase tracking-wider">Currency</label>
+                  <label className="text-[13px] font-medium text-slate-700 w-[160px]">Currency</label>
                   <div className="w-[320px] relative">
                     <div 
                       onClick={(e) => { e.stopPropagation(); setIsCurrencyOpen(!isCurrencyOpen); setIsMarkupOpen(false); setIsRoundOffOpen(false); }}
@@ -481,7 +731,7 @@ const PriceListEntryView = () => {
 
                 {/* Discount Percentage */}
                 <div className="flex items-center">
-                  <label className="text-[12px] font-bold text-slate-700 w-[160px] uppercase tracking-wider">Discount</label>
+                  <label className="text-[13px] font-medium text-slate-700 w-[160px]">Discount</label>
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${formData.includeDiscount ? 'bg-[#1e61f0] border-[#1e61f0]' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}>
                       {formData.includeDiscount && <Check size={12} color="white" strokeWidth={4} />}
@@ -497,74 +747,282 @@ const PriceListEntryView = () => {
                 </div>
 
                 {/* Full-Width Separator Line */}
-                <div className="h-8 w-full mb-4">
-                  <div className="absolute left-0 right-0 border-t border-slate-900" />
-                </div>
+                <div className="h-px bg-slate-100 w-[1000px] my-6" />
 
                 {/* Bulk Customization Table */}
                 <div className="pt-2">
-                  <div className="flex items-center justify-between mb-4 pb-2">
-                    <div className="flex items-center gap-2 text-slate-800 font-bold">
-                      <Layers size={18} className="text-[#1e61f0]" />
-                      <span className="text-[13px] uppercase tracking-wider">Customise Rates in Bulk</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2 text-slate-900 font-bold">
+                      <span className="text-[14px]">Customise Rates in Bulk</span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <button className="flex items-center gap-1 text-[11px] font-bold text-[#1e61f0] hover:underline uppercase tracking-wider">
-                        <RefreshCw size={12} />
-                        Update Rates in Bulk
-                      </button>
+                      {!formData.isBulkUpdateMode && (
+                        <button 
+                          onClick={() => setFormData({...formData, isBulkUpdateMode: true})}
+                          className="flex items-center gap-1 text-[11px] font-bold text-[#1e61f0] hover:underline uppercase tracking-wider"
+                        >
+                          Update Rates in Bulk
+                        </button>
+                      )}
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-slate-500 font-medium uppercase tracking-tighter">Import Price List for Items</span>
-                        <div className="w-8 h-4 bg-slate-200 rounded-full relative cursor-pointer">
-                          <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full shadow-sm" />
+                        <div 
+                          onClick={() => setFormData({...formData, showImportSection: !formData.showImportSection})}
+                          className={`w-8 h-4 rounded-full relative cursor-pointer transition-colors ${formData.showImportSection ? 'bg-[#1e61f0]' : 'bg-slate-200'}`}
+                        >
+                          <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-all ${formData.showImportSection ? 'left-4.5' : 'left-0.5'}`} />
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* The Table */}
-                  <div className="border border-slate-100 rounded-lg overflow-hidden bg-white shadow-sm">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50/80 border-b border-slate-100">
-                          <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                            <div className="flex items-center gap-1.5">
-                              ITEM DETAILS
-                              <Search size={12} className="text-slate-900/60" />
+                  {/* Bulk Update Bar */}
+                  {formData.isBulkUpdateMode && (
+                    <div className="mb-4 bg-[#f0f5ff] rounded-md px-4 py-2 flex items-center justify-between animate-fade-in relative shadow-sm">
+                      <div className="flex items-center">
+                        <div className="relative">
+                          <div className="px-4 py-1.5 bg-white border border-slate-200 rounded text-[12px] text-slate-600 font-medium">
+                            Update Rates in Bulk
+                          </div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setFormData({...formData, isBulkUpdateMode: false, selectedItemIds: []})}
+                        className="text-[#1e61f0] hover:text-blue-600 p-1 rounded-full transition-all"
+                      >
+                        <X size={16} strokeWidth={2} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Conditional Content: Table or Import Section */}
+                  {!formData.showImportSection ? (
+                    <div className="border border-slate-100 rounded-lg bg-white shadow-sm overflow-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/80 border-b border-slate-100">
+                            {formData.isBulkUpdateMode && (
+                              <th className="px-4 py-2.5 w-10">
+                                {/* Empty checkbox area as per design in bulk update mode */}
+                              </th>
+                            )}
+                            <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                              <div className="flex items-center gap-1.5">
+                                ITEM DETAILS
+                                <Search size={12} className="text-[#1e61f0]" />
+                              </div>
+                            </th>
+                            <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">SALES RATE</th>
+                            {formData.pricingScheme === 'Volume Pricing' && (
+                              <>
+                                <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-center">START QUANTITY</th>
+                                <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-center">END QUANTITY</th>
+                              </>
+                            )}
+                            <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">CUSTOM RATE</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 max-h-[300px] overflow-y-auto">
+                          {loadingItems ? (
+                            <tr><td colSpan={formData.pricingScheme === 'Volume Pricing' ? 6 : 4} className="px-4 py-8 text-center text-[12px] text-slate-400 italic">Loading inventory items...</td></tr>
+                          ) : filteredItems.length > 0 ? (
+                            filteredItems.map(item => {
+                              const ranges = formData.volumeRates[item.id] || [{ start: 1, end: '', rate: '' }];
+                              const isSelected = formData.selectedItemIds.includes(item.id);
+                              
+                              return (
+                                <React.Fragment key={item.id}>
+                                  {formData.pricingScheme === 'Unit Pricing' ? (
+                                    <tr className={`hover:bg-slate-50 transition-colors border-b border-slate-50 ${isSelected ? 'bg-blue-50/30' : ''}`}>
+                                      {formData.isBulkUpdateMode && (
+                                        <td className="px-4 py-3">
+                                          <label className="flex items-center cursor-pointer group">
+                                            <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-all ${isSelected ? 'bg-[#1e61f0] border-[#1e61f0]' : 'bg-white border-slate-300'}`}>
+                                              {isSelected && <Check size={10} color="white" strokeWidth={4} />}
+                                            </div>
+                                            <input 
+                                              type="checkbox" 
+                                              className="hidden" 
+                                              checked={isSelected} 
+                                              onChange={() => toggleItemSelection(item.id)} 
+                                            />
+                                          </label>
+                                        </td>
+                                      )}
+                                      <td className="px-4 py-3 text-[13px] font-bold text-slate-900">{item.name}</td>
+                                      <td className="px-4 py-3 text-[13px] text-slate-900 text-right font-medium">₹{parseFloat(item.sellingPrice || 0).toLocaleString()}</td>
+                                      <td className="px-4 py-3 text-right">
+                                        <div className="flex items-center justify-end gap-1.5 ml-auto w-[120px]">
+                                          <span className="text-slate-900 text-[12px]">₹</span>
+                                          <input 
+                                            type="number"
+                                            placeholder="0.00"
+                                            value={formData.itemRates[item.id] || ''}
+                                            onChange={(e) => handleRateChange(item.id, e.target.value)}
+                                            className="w-full px-2 py-1 text-right text-[13px] font-bold text-slate-900 border-b border-slate-100 focus:border-[#1e61f0] outline-none transition-colors"
+                                          />
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ) : (
+                                    <>
+                                      {ranges.map((range, idx) => (
+                                        <tr key={`${item.id}-${idx}`} className={`hover:bg-slate-50 transition-colors border-b border-slate-50 ${isSelected ? 'bg-blue-50/30' : ''}`}>
+                                          {idx === 0 && formData.isBulkUpdateMode && (
+                                            <td rowSpan={ranges.length + 1} className="px-4 py-3 border-r border-slate-50/50 align-top pt-4">
+                                              <label className="flex items-center cursor-pointer group">
+                                                <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-all ${isSelected ? 'bg-[#1e61f0] border-[#1e61f0]' : 'bg-white border-slate-300'}`}>
+                                                  {isSelected && <Check size={10} color="white" strokeWidth={4} />}
+                                                </div>
+                                                <input 
+                                                  type="checkbox" 
+                                                  className="hidden" 
+                                                  checked={isSelected} 
+                                                  onChange={() => toggleItemSelection(item.id)} 
+                                                />
+                                              </label>
+                                            </td>
+                                          )}
+                                          {idx === 0 && (
+                                            <td rowSpan={ranges.length + 1} className={`px-4 py-3 text-[13px] font-bold text-slate-900 border-r border-slate-50 align-top pt-4 ${formData.isBulkUpdateMode ? '' : 'pl-4'}`}>{item.name}</td>
+                                          )}
+                                          {idx === 0 && (
+                                            <td rowSpan={ranges.length + 1} className="px-4 py-3 text-[13px] text-slate-900 text-right font-medium border-r border-slate-50 align-top pt-4">₹{parseFloat(item.sellingPrice || 0).toLocaleString()}</td>
+                                          )}
+                                          <td className="px-4 py-2">
+                                            <input 
+                                              type="number"
+                                              value={range.start}
+                                              onChange={(e) => updateVolumeRange(item.id, idx, 'start', e.target.value)}
+                                              className="w-full bg-transparent text-center text-[13px] outline-none focus:bg-blue-50 py-1 rounded"
+                                            />
+                                          </td>
+                                          <td className="px-4 py-2">
+                                            <input 
+                                              type="number"
+                                              placeholder="& up"
+                                              value={range.end}
+                                              onChange={(e) => updateVolumeRange(item.id, idx, 'end', e.target.value)}
+                                              className="w-full bg-transparent text-center text-[13px] outline-none focus:bg-blue-50 py-1 rounded"
+                                            />
+                                          </td>
+                                          <td className="px-4 py-2 text-right">
+                                            <div className="flex items-center justify-end gap-1.5 ml-auto w-[120px]">
+                                              <span className="text-slate-900 text-[12px]">₹</span>
+                                              <input 
+                                                type="number"
+                                                placeholder="0.00"
+                                                value={range.rate}
+                                                onChange={(e) => updateVolumeRange(item.id, idx, 'rate', e.target.value)}
+                                                className="w-full px-2 py-1 text-right text-[13px] font-bold text-slate-900 border-b border-slate-100 focus:border-[#1e61f0] outline-none transition-colors"
+                                              />
+                                              {ranges.length > 1 && (
+                                                <button 
+                                                  onClick={() => removeVolumeRange(item.id, idx)}
+                                                  className="text-slate-300 hover:text-rose-500 ml-1 transition-colors"
+                                                >
+                                                  <X size={14} />
+                                                </button>
+                                              )}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      <tr className={isSelected ? 'bg-blue-50/30' : ''}>
+                                        <td colSpan={formData.isBulkUpdateMode ? "4" : "3"} className="px-4 py-2">
+                                          <button 
+                                            onClick={() => addVolumeRange(item.id)}
+                                            className="flex items-center gap-1.5 text-[#1e61f0] font-bold text-[11px] tracking-wider hover:opacity-80 transition-all ml-8"
+                                          >
+                                            <Plus size={12} strokeWidth={3} className="bg-[#1e61f0] text-white rounded-full p-0.5" />
+                                            Add New Range
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    </>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })
+                          ) : (
+                            <tr><td colSpan={formData.pricingScheme === 'Volume Pricing' ? 6 : 4} className="px-4 py-8 text-center text-[12px] text-slate-400">No items found in your inventory.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="space-y-8 p-1 animate-fade-in">
+                      {/* Export Section */}
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <h4 className="text-[13px] font-black text-slate-900 tracking-tight">1. Export items as XLS file</h4>
+                          <p className="text-[12px] text-slate-500 font-medium">Export all items or filter specific items, export them to an XLS file, update the rates, and import the file back to update the price list in Zoho Books.</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={handleExportAll}
+                            className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all bg-white shadow-sm"
+                          >
+                            <Download size={14} className="text-[#1e61f0]" />
+                            Export All Items
+                          </button>
+                          <button 
+                            onClick={handleExportFiltered}
+                            className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all bg-white shadow-sm"
+                          >
+                            <Download size={14} className="text-[#1e61f0]" />
+                            Export Filtered Items
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Import Section */}
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <h4 className="text-[13px] font-black text-slate-900 tracking-tight">2. Import items as XLS file</h4>
+                          <p className="text-[12px] text-slate-500 font-medium">Import the CSV or XLS file that you've exported and updated with the customised rates to update the price list.</p>
+                        </div>
+                        
+                        <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                          <div className="space-y-2">
+                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">NOTE:</span>
+                            <div className="space-y-3">
+                              <div className="flex gap-2">
+                                <span className="text-[12px] text-slate-600">1.</span>
+                                <p className="text-[12px] text-slate-600">Before you import, ensure that the following column names are in English as given below:</p>
+                              </div>
+                              <ul className="pl-6 space-y-1 list-disc text-slate-500 text-[11px] font-medium leading-relaxed">
+                                <li>Item Name</li>
+                                <li>Start Quantity</li>
+                                <li>End Quantity</li>
+                                <li>PriceList Rate</li>
+                              </ul>
+                              <div className="flex gap-2 pt-1">
+                                <span className="text-[12px] text-slate-600">2.</span>
+                                <p className="text-[12px] text-slate-600">Once you import the file, the existing items and its rates in this price list will be replaced with the data in the import file.</p>
+                              </div>
                             </div>
-                          </th>
-                          <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">SALES RATE</th>
-                          <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">CUSTOM RATE</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50 max-h-[300px] overflow-y-auto">
-                        {loadingItems ? (
-                          <tr><td colSpan="3" className="px-4 py-8 text-center text-[12px] text-slate-400 italic">Loading inventory items...</td></tr>
-                        ) : filteredItems.length > 0 ? (
-                          filteredItems.map(item => (
-                            <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-4 py-3 text-[13px] font-bold text-slate-900">{item.name}</td>
-                              <td className="px-4 py-3 text-[13px] text-slate-900 text-right font-medium">₹{parseFloat(item.sellingPrice || 0).toLocaleString()}</td>
-                              <td className="px-4 py-3 text-right">
-                                <div className="flex items-center justify-end gap-1.5 ml-auto w-[120px]">
-                                  <span className="text-slate-900 text-[12px]">₹</span>
-                                  <input 
-                                    type="number"
-                                    placeholder="0.00"
-                                    value={formData.itemRates[item.id] || ''}
-                                    onChange={(e) => handleRateChange(item.id, e.target.value)}
-                                    className="w-full px-2 py-1 text-right text-[13px] font-bold text-slate-900 border-b border-slate-100 focus:border-[#1e61f0] outline-none transition-colors"
-                                  />
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr><td colSpan="3" className="px-4 py-8 text-center text-[12px] text-slate-400">No items found in your inventory.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={handleImportClick}
+                          className="flex items-center gap-2 px-6 py-2.5 border border-slate-200 rounded-xl text-[12px] font-black text-slate-700 hover:bg-slate-50 transition-all bg-white shadow-sm"
+                        >
+                          <Upload size={16} className="text-[#1e61f0]" />
+                          Import Items
+                        </button>
+                        
+                        <input 
+                          type="file"
+                          ref={fileInputRef}
+                          className="hidden"
+                          accept=".xlsx, .xls, .csv"
+                          onChange={handleFileChange}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

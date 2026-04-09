@@ -34,6 +34,13 @@ import RecurringInvoicesView from './modules/sales/RecurringInvoicesView';
 import DeliveryChallansView from './modules/sales/DeliveryChallansView';
 import CreditNotesView from './modules/sales/CreditNotesView';
 import PayrollView from './modules/payroll/PayrollView';
+import VendorsListView from './modules/purchases/VendorsListView';
+import VendorsView from './modules/purchases/VendorsView';
+import BillsView from './modules/purchases/BillsView';
+import ExpensesView from './modules/purchases/ExpensesView';
+import PurchaseOrdersView from './modules/purchases/PurchaseOrdersView';
+import ExpenseEntryView from './modules/purchases/ExpenseEntryView';
+import { RecurringExpensesView, RecurringBillsView, PaymentsMadeView, VendorCreditsView } from './modules/purchases/PurchasePlaceholders';
 
 // ── APIs ─────────────────────────────────────────────────────────
 import { companyAPI, reportsAPI, voucherAPI } from './services/api';
@@ -84,9 +91,16 @@ const NAV = [
   },
   {
     group: 'Purchases',
-    icon: ShoppingCart,
+    icon: ShoppingBag,
     items: [
-      { label: 'Purchase Orders',  path: '/purchase-orders' },
+      { label: 'Vendors',            path: '/vendors', showPlus: true, plusPath: '/vendors/new' },
+      { label: 'Expenses',           path: '/expenses', showPlus: true, plusPath: '/expenses/new' },
+      { label: 'Recurring Expenses', path: '/recurring-expenses', showPlus: true, plusPath: '/recurring-expenses/new' },
+      { label: 'Purchase Orders',    path: '/purchase-orders', showPlus: true, plusPath: '/purchase-orders/new' },
+      { label: 'Bills',              path: '/bills', showPlus: true, plusPath: '/bills/new' },
+      { label: 'Recurring Bills',    path: '/recurring-bills', showPlus: true, plusPath: '/recurring-bills/new' },
+      { label: 'Payments Made',      path: '/payments-made', showPlus: true, plusPath: '/payments-made/new' },
+      { label: 'Vendor Credits',     path: '/vendor-credits', showPlus: true, plusPath: '/vendor-credits/new' },
     ]
   },
   {
@@ -137,7 +151,7 @@ const NAV = [
 // SIDEBAR GROUP
 // ═══════════════════════════════════════════════════════════════════
 const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) => {
-  const [expanded, setExpanded] = useState(pathname.startsWith('/customers') || pathname.startsWith('/quotes') || pathname.startsWith('/sales') || pathname.startsWith('/retainer') || pathname.startsWith('/recurring') || pathname.startsWith('/delivery') || pathname.startsWith('/payments') || pathname.startsWith('/credit') || pathname.startsWith('/inventory') || pathname.startsWith('/price-lists'));
+  const [expanded, setExpanded] = useState(pathname.startsWith('/customers') || pathname.startsWith('/quotes') || pathname.startsWith('/sales') || pathname.startsWith('/retainer') || pathname.startsWith('/recurring') || pathname.startsWith('/delivery') || pathname.startsWith('/payments') || pathname.startsWith('/credit') || pathname.startsWith('/inventory') || pathname.startsWith('/price-lists') || pathname.startsWith('/vendors') || pathname.startsWith('/expenses') || pathname.startsWith('/bills') || pathname.startsWith('/purchase-orders') || pathname.startsWith('/payments-made') || pathname.startsWith('/vendor-credits'));
 
   const isActive = items.some(item => pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path)));
 
@@ -522,7 +536,19 @@ function AuthenticatedApp() {
       <Route path="/ledgers"              element={shell(LedgersView)} />
       <Route path="/ledger-statement/:id" element={shell(LedgerStatementView)} />
       <Route path="/cost-centers"          element={shell(CostCenterView)} />
-      <Route path="/purchase-orders"      element={shell(PurchaseOrderView)} />
+      
+      {/* Purchases */}
+      <Route path="/vendors"             element={shell(VendorsListView)} />
+      <Route path="/vendors/new"         element={shell(VendorsView)} />
+      <Route path="/vendors/:id"         element={shell(VendorsView)} />
+      <Route path="/expenses"            element={shell(ExpensesView)} />
+      <Route path="/expenses/new"        element={shell(ExpenseEntryView)} />
+      <Route path="/recurring-expenses"  element={shell(RecurringExpensesView)} />
+      <Route path="/bills"               element={shell(BillsView)} />
+      <Route path="/recurring-bills"     element={shell(RecurringBillsView)} />
+      <Route path="/purchase-orders"     element={shell(PurchaseOrdersView)} />
+      <Route path="/payments-made"       element={shell(PaymentsMadeView)} />
+      <Route path="/vendor-credits"      element={shell(VendorCreditsView)} />
 
       {/* Sales */}
       <Route path="/customers"          element={shell(CustomersListView)} />

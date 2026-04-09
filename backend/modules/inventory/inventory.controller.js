@@ -156,3 +156,39 @@ exports.getItemHistory = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.deleteItem = async (req, res) => {
+  const { itemId } = req.params;
+  try {
+    const item = await Item.findByPk(itemId);
+    
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const oldData = item.get({ plain: true });
+    const companyId = item.CompanyId;
+
+    await item.destroy();
+
+    // Send response immediately to avoid connection issues
+    res.json({ message: 'Item deleted successfully' });
+
+    // Handle audit log asynchronously after response
+    AuditService.log({
+      action: 'DELETE_ITEM',
+      tableName: 'Items',
+      recordId: itemId,
+      oldData,
+      companyId,
+      userId: req.user?.id,
+      req
+    }).catch(err => console.error('[Audit Error]:', err.message));
+
+  } catch (err) {
+    console.error('[INVENTORY DELETE ERROR]:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to delete item' });
+    }
+  }
+};

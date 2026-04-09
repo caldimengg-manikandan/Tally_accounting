@@ -33,7 +33,8 @@ router.get('/:companyId', inventoryController.getItems);
 // Create item — all authenticated users for testing
 router.post('/', inventoryController.createItem);
 router.put('/:itemId', inventoryController.updateItem);
-router.post('/stock/:itemId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), inventoryController.updateStock);
+router.post('/stock/:itemId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), inventoryController.updateStock);
 router.get('/:itemId/history', inventoryController.getItemHistory);
+router.delete('/:itemId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), inventoryController.deleteItem);
 
 module.exports = router;
