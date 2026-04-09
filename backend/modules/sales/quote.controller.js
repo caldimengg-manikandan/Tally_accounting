@@ -1,4 +1,6 @@
 const { Quote, Company } = require('../../models');
+const PDFService = require('../../services/PDFService');
+const nodemailer = require('nodemailer');
 
 // GET /quotes/:companyId
 exports.getQuotes = async (req, res) => {
@@ -113,5 +115,42 @@ exports.deleteQuote = async (req, res) => {
     res.json({ message: 'Quote deleted.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// POST /quotes/send-email/:id
+exports.sendEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subject, body, toEmail } = req.body;
+
+    const quote = await Quote.findByPk(id);
+    if (!quote) return res.status(404).json({ error: 'Quote not found' });
+
+    const items = JSON.parse(quote.itemsJson || '[]');
+    const pdfBuffer = await PDFService.generateQuote(quote, items);
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: 'naveenswathi1811@gmail.com',
+        pass: 'your-app-password' 
+      }
+    });
+
+    const mailOptions = {
+      from: `"Indus CAI" <naveenswathi1811@gmail.com>`,
+      to: toEmail || 'thejathangavel05@gmail.com',
+      subject: subject || `Quote ${quote.quoteNumber} from Indus CAI`,
+      text: body,
+      attachments: [{ filename: `${quote.quoteNumber}.pdf`, content: pdfBuffer }]
+    };
+
+    await transporter.sendMail(mailOptions);
+    await quote.update({ status: 'Sent' });
+    res.json({ message: 'Email sent successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to send email: ' + err.message });
   }
 };

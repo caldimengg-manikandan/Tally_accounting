@@ -17,6 +17,8 @@ const PriceList = require('./pricelist.model')(sequelize, DataTypes);
 const AuditLog = require('./audit.model')(sequelize, DataTypes);
 const Quote = require('./quote.model')(sequelize, DataTypes);
 const RetainerInvoice = require('./retainerInvoice.model')(sequelize, DataTypes);
+const RecurringInvoice = require('./recurringInvoice.model')(sequelize, DataTypes);
+const RetainerAdjustment = require('./retainerAdjustment.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -104,6 +106,17 @@ Quote.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID
 Company.hasMany(RetainerInvoice, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 RetainerInvoice.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
+// 9. Recurring Invoices
+Company.hasMany(RecurringInvoice, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+RecurringInvoice.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+// 10. Retainer Adjustments
+Company.hasMany(RetainerAdjustment, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+RetainerAdjustment.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+RetainerInvoice.hasMany(RetainerAdjustment, { foreignKey: { name: 'RetainerInvoiceId', type: DataTypes.UUID } });
+RetainerAdjustment.belongsTo(RetainerInvoice, { foreignKey: { name: 'RetainerInvoiceId', type: DataTypes.UUID } });
+
 User.hasMany(AuditLog, { foreignKey: { name: 'UserId', type: DataTypes.UUID } });
 AuditLog.belongsTo(User, { foreignKey: { name: 'UserId', type: DataTypes.UUID } });
 
@@ -130,5 +143,7 @@ module.exports = {
   CostCenter,
   AuditLog,
   Quote,
-  RetainerInvoice
+  RetainerInvoice,
+  RecurringInvoice,
+  RetainerAdjustment
 };

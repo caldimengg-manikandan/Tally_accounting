@@ -246,7 +246,7 @@ const CustomersListView = ({ companyId }) => {
                    sortedCustomers.map(c => (
                      <tr 
                        key={c.id} 
-                       onClick={() => navigate(`/customers/${c.id}`)}
+                       onClick={() => navigate(`/customers/view/${c.id}`)}
                        className="hover:bg-slate-50 transition-colors cursor-pointer group"
                      >
                         <td className="px-6 py-4 text-[14px] font-medium text-blue-600 group-hover:underline">{c.name}</td>

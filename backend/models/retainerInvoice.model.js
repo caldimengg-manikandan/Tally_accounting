@@ -33,8 +33,16 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0,
       allowNull: false
     },
+    amountReceived: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0
+    },
+    amountUsed: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0
+    },
     status: {
-      type: DataTypes.ENUM('Draft', 'Sent', 'Partial', 'Paid', 'Void'),
+      type: DataTypes.ENUM('Draft', 'Sent', 'Partial', 'Paid', 'FullyApplied', 'PartiallyApplied', 'Void'),
       defaultValue: 'Draft'
     },
     customerNotes: {

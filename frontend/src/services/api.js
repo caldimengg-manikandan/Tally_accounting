@@ -138,6 +138,7 @@ export const quoteAPI = {
   update: (id, data) => api.put(`/quotes/${id}`, data),
   updateStatus: (id, status) => api.patch(`/quotes/${id}/status`, { status }),
   delete: (id) => api.delete(`/quotes/${id}`),
+  sendEmail: (id, data) => api.post(`/quotes/send-email/${id}`, data)
 };
 export const retainerInvoiceAPI = {
   create: (data) => api.post('/retainer-invoices', data),
@@ -145,7 +146,17 @@ export const retainerInvoiceAPI = {
   getById: (id) => api.get(`/retainer-invoices/view/${id}`),
   update: (id, data) => api.put(`/retainer-invoices/${id}`, data),
   delete: (id) => api.delete(`/retainer-invoices/${id}`),
-  sendEmail: (id, data) => api.post(`/retainer-invoices/send-email/${id}`, data)
+  sendEmail: (id, data) => api.post(`/retainer-invoices/send-email/${id}`, data),
+  recordPayment: (id, amount) => api.post(`/retainer-invoices/record-payment/${id}`, { amountReceived: amount }),
+  applyToInvoice: (id, data) => api.post(`/retainer-invoices/apply-to-invoice/${id}`, data) // { invoiceId, amountToAdjust, CompanyId }
+};
+
+export const recurringInvoiceAPI = {
+  create: (data) => api.post('/recurring-invoices', data),
+  getByCompany: (companyId) => api.get(`/recurring-invoices/company/${companyId}`),
+  update: (id, data) => api.put(`/recurring-invoices/${id}`, data),
+  delete: (id) => api.delete(`/recurring-invoices/${id}`),
+  processDue: () => api.post('/recurring-invoices/process-due')
 };
 
 // ─── Cost Centers ──────────────────────────────────

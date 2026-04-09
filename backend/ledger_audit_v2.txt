@@ -1,0 +1,22 @@
+--- LEDGER AUDIT ---
+
+TOTAL COMPANIES: 4
+- [b03b1ec3-5f34-4460-9ef5-bda22fb4d360] Indus Enterprises Private Limited: 0 ledgers
+- [5f6dd28a-bbc3-4664-8ce5-1a469ea6f82c] Indus Enterprises Private Limited: 0 ledgers
+- [3208c42b-f600-43d3-bf21-f608abd22a8a] Sundry: 2 ledgers
+  * acme | Group: Sundry Debtors
+  * acme | Group: Sundry Debtors
+- [5f028981-8de4-4c19-9a90-54257dd87f70] The MOON Enterprises: 2 ledgers
+  * sundry | Group: Sundry Debtors
+  * debit pvt ltd | Group: Sundry Debtors
+
+USERS:
+  - alen@gmail.com [Active: b03b1ec3-5f34-4460-9ef5-bda22fb4d360]
+  - alex@gmail.com [Active: 5f6dd28a-bbc3-4664-8ce5-1a469ea6f82c]
+  - thejathangavel05@gmail.com [Active: 3208c42b-f600-43d3-bf21-f608abd22a8a]
+  - test@example.com [Active: null]
+  - surya02@gmail.com [Active: null]
+  - naveenswathi98@gmail.com [Active: null]
+  - thejathangavel5@gmail.com [Active: 5f028981-8de4-4c19-9a90-54257dd87f70]
+  - thejaathangavel5@gmail.com [Active: null]
+  - thejathangavel@gmail.com [Active: null]

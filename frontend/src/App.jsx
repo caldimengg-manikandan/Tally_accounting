@@ -25,6 +25,7 @@ import BankReconciliationView from './modules/reconciliation/BankReconciliationV
 import CostCenterView from './modules/accounting/CostCenterView';
 import CustomersView from './modules/sales/CustomersView';
 import CustomersListView from './modules/sales/CustomersListView';
+import CustomerDetailView from './modules/sales/CustomerDetailView';
 import SalesOrdersView from './modules/sales/SalesOrdersView';
 import PaymentsReceivedView from './modules/sales/PaymentsReceivedView';
 import ProfessionalInvoiceView from './modules/sales/ProfessionalInvoiceView';
@@ -260,17 +261,32 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
   const sidebarW = collapsed ? 68 : 230;
 
   // Breadcrumb
-  const crumb = useMemo(() => {
+  const breadcrumbs = useMemo(() => {
     const parts = pathname.split('/').filter(Boolean);
-    return parts.map(p => {
-      // If it looks like a long ID (UUID or 20+ chars hex), call it 'Details'
-      if (p.length > 20 || /^[0-9a-fA-F-]{24,36}$/.test(p)) return 'Details';
-      return p.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    }).join(' › ') || 'Dashboard';
+    const crumbs = [];
+    let currentPath = '';
+
+    parts.forEach((p, idx) => {
+      currentPath += `/${p}`;
+      let label = p.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      if (p.length > 20 || /^[0-9a-fA-F-]{24,36}$/.test(p)) label = 'Details';
+      
+      crumbs.push({ label, path: currentPath, isLast: idx === parts.length - 1 });
+    });
+
+    return crumbs.length > 0 ? crumbs : [{ label: 'Dashboard', path: '/dashboard', isLast: true }];
   }, [pathname]);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc' }}>
+    <div 
+      style={{ 
+        display: 'flex', 
+        height: '100vh', 
+        overflow: 'hidden', 
+        background: '#f8fafc',
+        '--sidebar-width': `${sidebarW}px`
+      }}
+    >
 
       {/* ─── SIDEBAR ─────────────────────────────────────────── */}
       <aside style={{
@@ -298,7 +314,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         </div>
 
         {/* Nav */}
-        <nav className={`flex-1 overflow-y-auto py-6 space-y-6 ${collapsed ? 'px-1' : 'px-4'}`}>
+        <nav className={`flex-1 py-6 space-y-6 ${collapsed ? 'px-1 overflow-y-visible' : 'px-4 overflow-y-auto'}`}>
           {NAV.filter(section => {
             // RBAC FILTERING LOGIC
             const role = user.role || 'VIEWER';
@@ -399,8 +415,17 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
                >
                  {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                </select>
-               <ChevronRight size={12} className="text-slate-300" />
-               <span className="text-[11px] font-black text-[#1e61f0] uppercase tracking-widest">{crumb}</span>
+                {breadcrumbs.map((crumb, i) => (
+                  <React.Fragment key={crumb.path}>
+                    {i > 0 && <ChevronRight size={12} className="text-slate-300" />}
+                    <span 
+                      onClick={() => navigate(crumb.path)}
+                      className={`text-[11px] font-black uppercase tracking-widest cursor-pointer transition-colors ${crumb.isLast ? 'text-[#1e61f0]' : 'text-slate-400 hover:text-slate-900'}`}
+                    >
+                      {crumb.label}
+                    </span>
+                  </React.Fragment>
+                ))}
             </div>
           </div>
 
@@ -521,18 +546,14 @@ function AuthenticatedApp() {
           />
         </AppShell>
       } />
-      <Route path="/vouchers/new" element={
-        <VoucherEntryView
-          onSaveSuccess={() => navigate('/vouchers')}
-          onCancel={() => navigate('/vouchers')}
-        />
-      } />
-      <Route path="/vouchers/edit/:id" element={
-        <VoucherEntryView
-          onSaveSuccess={() => navigate('/vouchers')}
-          onCancel={() => navigate('/vouchers')}
-        />
-      } />
+      <Route path="/vouchers/new" element={shell(VoucherEntryView, {
+        onSaveSuccess: () => navigate('/vouchers'),
+        onCancel: () => navigate('/vouchers')
+      })} />
+      <Route path="/vouchers/edit/:id" element={shell(VoucherEntryView, {
+        onSaveSuccess: () => navigate('/vouchers'),
+        onCancel: () => navigate('/vouchers')
+      })} />
       <Route path="/ledgers"              element={shell(LedgersView)} />
       <Route path="/ledger-statement/:id" element={shell(LedgerStatementView)} />
       <Route path="/cost-centers"          element={shell(CostCenterView)} />
@@ -551,12 +572,14 @@ function AuthenticatedApp() {
       <Route path="/vendor-credits"      element={shell(VendorCreditsView)} />
 
       {/* Sales */}
-      <Route path="/customers"          element={shell(CustomersListView)} />
+      <Route path="/customers"          element={shell(CustomerDetailView)} />
       <Route path="/customers/new"      element={shell(CustomersView)} />
+      <Route path="/customers/view/:id" element={shell(CustomerDetailView)} />
       <Route path="/customers/:id"      element={shell(CustomersView)} />
       <Route path="/quotes"             element={shell(QuotesView)} />
       <Route path="/quotes/new"         element={shell(QuotesView)} />
       <Route path="/quotes/edit/:id"    element={shell(QuotesView)} />
+      <Route path="/quotes/view/:id"    element={shell(QuotesView)} />
       <Route path="/retainer-invoices"  element={shell(RetainerInvoicesView)} />
       <Route path="/retainer-invoices/new" element={shell(RetainerInvoicesView)} />
       <Route path="/retainer-invoices/view/:id" element={shell(RetainerInvoicesView)} />

@@ -61,6 +61,7 @@ app.use('/api/inventory', require('./modules/inventory/inventory.routes'));
 app.use('/api/reconciliation', require('./modules/reconciliation/reconciliation.routes'));
 app.use('/api/cost-centers', require('./modules/accounting/costCenter.routes'));
 app.use('/api/retainer-invoices', require('./modules/sales/retainerInvoice.routes'));
+app.use('/api/recurring-invoices', require('./modules/sales/recurringInvoice.routes'));
 app.use('/api/pricelists', require('./modules/inventory/pricelist.routes'));
 app.use('/api/purchases', require('./modules/purchases/purchases.routes'));
 
@@ -71,6 +72,15 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 const dialect = process.env.DB_DIALECT || 'sqlite';
 // Using alter:true to apply new company profile fields;
 const syncOptions = { alter: true };
+
+const cron = require('node-cron');
+const recurringController = require('./modules/sales/recurringInvoice.controller');
+
+// Run everyday at midnight
+cron.schedule('0 0 * * *', async () => {
+  console.log('--- RUNNING RECURRING INVOICE AUTOMATION ---');
+  await recurringController.processDueInvoices({}, { json: (r) => console.log('Cron Result:', r), status: () => ({ json: (r) => console.error('Cron Error:', r) }) });
+});
 
 sequelize.sync(syncOptions).then(() => {
   console.log(`✅ Ledger Database Synced [${dialect}]`);

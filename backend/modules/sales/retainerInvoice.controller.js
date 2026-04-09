@@ -113,3 +113,59 @@ exports.delete = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+exports.recordPayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amountReceived } = req.body;
+    
+    const retainer = await RetainerInvoice.findByPk(id);
+    if (!retainer) return res.status(404).json({ error: 'Retainer not found' });
+
+    const newReceived = parseFloat(retainer.amountReceived || 0) + parseFloat(amountReceived);
+    let status = 'Partial';
+    if (newReceived >= parseFloat(retainer.totalAmount)) status = 'Paid';
+
+    await retainer.update({ amountReceived: newReceived, status });
+    res.json(retainer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.applyToInvoice = async (req, res) => {
+  try {
+    const { id } = req.params; // Retainer ID
+    const { invoiceId, amountToAdjust, CompanyId } = req.body;
+    const { RetainerAdjustment } = require('../../models');
+
+    const retainer = await RetainerInvoice.findByPk(id);
+    if (!retainer) return res.status(404).json({ error: 'Retainer not found' });
+
+    const available = parseFloat(retainer.amountReceived || 0) - parseFloat(retainer.amountUsed || 0);
+    if (available < amountToAdjust) {
+      return res.status(400).json({ error: 'Insufficient available retainer balance' });
+    }
+
+    // Create adjustment record
+    await RetainerAdjustment.create({
+      RetainerInvoiceId: id,
+      InvoiceId: invoiceId,
+      amountToAdjust,
+      CompanyId
+    });
+
+    // Update retainer
+    const newUsed = parseFloat(retainer.amountUsed || 0) + parseFloat(amountToAdjust);
+    let status = retainer.status;
+    if (newUsed >= parseFloat(retainer.totalAmount)) {
+      status = 'FullyApplied';
+    } else if (newUsed > 0) {
+      status = 'PartiallyApplied';
+    }
+
+    await retainer.update({ amountUsed: newUsed, status });
+    res.json({ message: 'Retainer applied successfully', retainer });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

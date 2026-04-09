@@ -1,97 +1,821 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Edit, Trash, MoreHorizontal } from 'lucide-react';
-import { ledgerAPI } from '../../services/api';
+import { 
+  ChevronLeft, Edit, Trash2, MoreHorizontal, Plus, Search, 
+  Settings, Paperclip, Mail, Phone, MapPin, Globe, 
+  Info, CreditCard, Clock, Activity, ArrowRight,
+  ChevronDown, MessageSquare, History, FileText, Send, HelpCircle,
+  Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
+  Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2,
+  ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline
+} from 'lucide-react';
+import { 
+  ledgerAPI, salesAPI, quoteAPI, retainerInvoiceAPI, 
+  voucherAPI, reportsAPI, companyAPI 
+} from '../../services/api';
 
-const CustomerDetailView = () => {
+const CustomerDetailView = ({ companyId }) => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [customer, setCustomer] = useState(null);
+  const [customers, setCustomers] = useState([]);
+  const [selectedId, setSelectedId] = useState(id);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('Overview');
+  
+  // Data for tabs
+  const [transactions, setTransactions] = useState({
+    invoices: [],
+    payments: [],
+    quotes: [],
+    retainerInvoices: [],
+    salesOrders: []
+  });
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [statementData, setStatementData] = useState(null);
+  const [currentCompany, setCurrentCompany] = useState(null);
 
+  // UI state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isEditingPaymentTerms, setIsEditingPaymentTerms] = useState(false);
+  const [paymentTerms, setPaymentTerms] = useState('');
+  const [isEditingBalance, setIsEditingBalance] = useState(false);
+  const [openingBalance, setOpeningBalance] = useState('0');
+  const [openSections, setOpenSections] = useState(['Invoices', 'Customer Payments', 'Quotes', 'Retainer Invoices', 'Sales Orders']);
+
+  const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
+  const [addressType, setAddressType] = useState('billing'); // 'billing' or 'shipping'
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
+  const [addressForm, setAddressForm] = useState({
+    attention: '',
+    country: 'India',
+    address1: '',
+    address2: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
+    fax: ''
+  });
+  
+  const fileInputRef = useRef(null);
+  const settingsRef = useRef(null);
+
+  const activeCompanyId = companyId || localStorage.getItem('companyId');
+
+  // Click outside to close settings
   useEffect(() => {
-    const fetchCustomer = async () => {
+    const handleClickOutside = (event) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+        setIsSettingsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // ─── EFFECTS ───────────────────────────────────────────────────────────────
+
+  // 1. Fetch Company & Customers
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        // Technically vouchers/detail gets ledger details? Or we can just use the ledger APIs if there is a getById.
-        // Assuming there isn't one immediately exposed perfectly for this, we can list all and find, or just show a nice placeholder.
-        // Let's see if ledgerAPI has getById. If not, we'll gracefully fallback.
-        const res = await ledgerAPI.getByCompany(localStorage.getItem('companyId'));
-        const found = res.data.find(c => c.id === id || c.id === parseInt(id));
-        if (found) {
-          setCustomer(found);
-        }
+        setLoading(true);
+        const [ledgersRes, companyRes] = await Promise.all([
+          ledgerAPI.getByCompany(activeCompanyId),
+          companyAPI.getById(activeCompanyId)
+        ]);
+        
+        const allLedgers = ledgersRes.data || [];
+        const customerLedgers = allLedgers.filter(l => 
+          l.Group?.name?.toLowerCase().includes('debtor') || 
+          l.groupName?.toLowerCase().includes('debtor')
+        );
+        setCustomers(customerLedgers);
+        setCurrentCompany(companyRes.data);
       } catch (err) {
-        console.error("Failed to fetch customer", err);
+        console.error("Failed to fetch data", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchCustomer();
+    fetchData();
+  }, [activeCompanyId]);
+
+  useEffect(() => {
+    if (id) setSelectedId(id);
   }, [id]);
 
-  if (loading) {
-    return <div className="p-8 text-slate-500">Loading customer profile...</div>;
-  }
+  // 2. Data Fetching per Tab
+  useEffect(() => {
+    if (!selectedId || !activeCompanyId) return;
 
-  if (!customer) {
-    return <div className="p-8 text-slate-500">Customer not found.</div>;
+    const fetchTabData = async () => {
+      try {
+         if (activeTab === 'Transactions') {
+           const [ordersRes, quotesRes, retainerRes, vouchersRes] = await Promise.all([
+             salesAPI.getOrders(activeCompanyId),
+             quoteAPI.getByCompany(activeCompanyId),
+             retainerInvoiceAPI.getByCompany(activeCompanyId),
+             voucherAPI.getByCompany(activeCompanyId)
+           ]);
+
+           setTransactions({
+             invoices: (vouchersRes.data || []).filter(v => v.type === 'Sales' && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
+             payments: (vouchersRes.data || []).filter(v => v.type === 'Receipt' && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
+             quotes: (quotesRes.data || []).filter(q => String(q.LedgerId) === String(selectedId)),
+             retainerInvoices: (retainerRes.data || []).filter(r => String(r.LedgerId) === String(selectedId)),
+             salesOrders: (ordersRes.data || []).filter(o => String(o.LedgerId) === String(selectedId))
+           });
+         } else if (activeTab === 'Statement') {
+           const fromDate = new Date();
+           fromDate.setDate(1); // Start of month
+           const res = await reportsAPI.ledgerStatement(selectedId, fromDate.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+           setStatementData(res.data);
+         } else if (activeTab === 'Comments') {
+            // Simulated comments fetch
+            const stored = localStorage.getItem(`comments_${selectedId}`);
+            setComments(stored ? JSON.parse(stored) : []);
+         }
+      } catch (err) {
+        console.error("Tab data fetch failed", err);
+      }
+    };
+    fetchTabData();
+  }, [activeTab, selectedId, activeCompanyId]);
+
+  // ─── HELPERS ──────────────────────────────────────────────────────────────
+
+  const customer = useMemo(() => {
+    const found = customers.find(c => String(c.id) === String(selectedId));
+    if (found) {
+      setPaymentTerms(found.paymentTerms || 'Due on Receipt');
+      setOpeningBalance(String(found.openingBalance || 0));
+    }
+    return found;
+  }, [customers, selectedId]);
+
+  const handleUpdateField = async (field, value) => {
+    try {
+       const data = { ...customer, [field]: value };
+       if (field === 'openingBalance') data.currentBalance = parseFloat(value);
+       await ledgerAPI.update(customer.id, data);
+       if (field === 'paymentTerms') setIsEditingPaymentTerms(false);
+       if (field === 'openingBalance') setIsEditingBalance(false);
+       setCustomers(prev => prev.map(c => c.id === customer.id ? { ...c, [field]: value } : c));
+    } catch (err) {
+       alert(`Failed to update ${field}`);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setLoading(true);
+    try {
+      await ledgerAPI.update(customer.id, customer);
+      alert('Customer profile saved successfully!');
+    } catch (err) {
+      alert('Failed to save profile changes.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCustomerSelect = (customerId) => {
+    setSelectedId(String(customerId));
+    navigate(`/customers/view/${customerId}`);
+  };
+
+  const handleQuickAdd = async () => {
+    if (!quickAddForm.name) return;
+    setLoading(true);
+    try {
+        const payload = {
+            ...quickAddForm,
+            companyId: activeCompanyId,
+            groupName: 'Sundry Debtors',
+            openingBalance: 0,
+            currentBalance: 0
+        };
+        const res = await ledgerAPI.create(payload);
+        const newCustomer = res.data.ledger || res.data;
+        setCustomers(prev => [...prev, newCustomer]);
+        setSelectedId(String(newCustomer.id));
+        navigate(`/customers/view/${newCustomer.id}`);
+        setIsQuickAddOpen(false);
+        setQuickAddForm({ name: '', email: '', mobile: '', salutation: 'Mr.' });
+    } catch (err) {
+        alert('Failed to register customer');
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    const comment = {
+       id: Date.now(),
+       text: newComment,
+       author: 'Antigravity User',
+       date: new Date().toLocaleString()
+    };
+    const updated = [...comments, comment];
+    setComments(updated);
+    localStorage.setItem(`comments_${selectedId}`, JSON.stringify(updated));
+    setNewComment('');
+  };
+
+  const handleDeleteCustomer = async () => {
+    if (window.confirm('WARNING: Are you sure you want to delete this customer? This action cannot be undone.')) {
+        try {
+            await ledgerAPI.delete(customer.id);
+            setCustomers(prev => prev.filter(c => c.id !== customer.id));
+            navigate('/customers');
+        } catch (err) {
+            alert('Failed to delete customer. Ensure no transactions are linked.');
+        }
+    }
+  };
+
+  const toggleSection = (name) => {
+    setOpenSections(prev => prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const base64 = evt.target.result;
+      try {
+        await handleUpdateField('image', base64);
+      } catch (err) {
+        alert("Failed to save image");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (loading && customers.length === 0) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   }
 
   return (
-    <div className="bg-white min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/customers')} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-colors">
-            <ChevronLeft size={20} />
-          </button>
-          <div className="flex flex-col">
-            <h1 className="text-[20px] font-bold text-slate-900">{customer.name}</h1>
-            <span className="text-[12px] text-slate-500 font-medium tracking-wide uppercase">{customer.customerType || 'Business'} Customer</span>
+    <div className="flex h-[calc(100vh-80px)] bg-[#fbfcff] overflow-hidden">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
+      {/* ─── SIDEBAR ─────────────────────────────────────── */}
+      <div className={`${id ? 'w-[350px]' : 'w-full'} border-r border-slate-200 bg-white flex flex-col shrink-0 transition-all duration-300`}>
+        <div className="p-4 border-b border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className={`${id ? 'text-[14px]' : 'text-[24px]'} font-bold text-slate-900 transition-all`}>Active Customers</h2>
+            <button onClick={() => setIsQuickAddOpen(true)} className={`${id ? 'w-7 h-7' : 'px-4 py-2'} flex items-center justify-center rounded bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95`}>
+              <Plus size={id ? 16 : 18} className={id ? '' : 'mr-2'}/> {!id && 'New Customer'}
+            </button>
+          </div>
+          <div className="relative">
+             <Search size={id ? 14 : 18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+             <input type="text" placeholder="Search Customers" className={`w-full ${id ? 'pl-9 pr-3 py-1.5 text-[13px]' : 'pl-12 pr-4 py-3 text-[16px]'} bg-white border border-slate-200 rounded outline-none transition-all focus:border-blue-600`} />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 rounded-md transition-colors">
-            <Edit size={16} />
-          </button>
-          <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-md transition-colors">
-            <Trash size={16} />
-          </button>
-          <button className="p-2 text-slate-400 hover:text-slate-600 border border-slate-200 rounded-md">
-            <MoreHorizontal size={16} />
-          </button>
+        <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+          {customers.length === 0 ? (
+            <div className="p-10 text-center text-[12px] text-slate-400 font-bold uppercase tracking-widest opacity-30 mt-20">NO CUSTOMERS FOUND</div>
+          ) : customers.map(c => (
+            <div key={c.id} onClick={() => handleCustomerSelect(c.id)} className={`px-5 py-4 cursor-pointer border-b border-slate-50 transition-all border-l-[4px] ${String(c.id) === String(selectedId) ? 'bg-[#f0f5ff] border-l-blue-600' : 'hover:bg-slate-50 border-l-transparent'}`}>
+              <div className="flex justify-between items-start mb-2">
+                <span className={`text-[13px] font-black truncate max-w-[140px] ${String(c.id) === String(selectedId) ? 'text-blue-600' : 'text-slate-700'}`}>{c.name}</span>
+                <span className="text-[14px] font-black text-slate-900 tracking-tighter italic">₹{parseFloat(c.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                 <div className={`w-2 h-2 rounded-full ${parseFloat(c.currentBalance || 0) > 0 ? 'bg-orange-400' : 'bg-green-400'}`}></div>
+                 <div className="text-[11px] text-slate-400 font-bold tracking-widest truncate">{c.email || 'NO_EMAIL_ID'}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Main Content Placeholder */}
-      <div className="p-8 flex gap-8">
-        <div className="w-1/3 bg-slate-50/50 border border-slate-100 rounded-xl p-6">
-          <h3 className="text-[14px] font-bold text-slate-800 tracking-tight mb-4">Contact Details</h3>
-          <div className="space-y-4 text-[13px] text-slate-600">
-            <div>
-               <p className="text-slate-400 font-medium mb-1">Company</p>
-               <p className="text-slate-900">{customer.companyName || '-'}</p>
-            </div>
-            <div>
-               <p className="text-slate-400 font-medium mb-1">Email</p>
-               <p className="text-slate-900">{customer.email || '-'}</p>
-            </div>
-            <div>
-               <p className="text-slate-400 font-medium mb-1">Phone</p>
-               <p className="text-slate-900">{customer.workPhone || customer.mobile || '-'}</p>
-            </div>
-          </div>
-        </div>
+      {/* ─── MAIN CONTENT ─────────────────────────────────── */}
+      <div className="flex-1 flex flex-col bg-white overflow-hidden shadow-2xl">
+        {customer ? (
+          <>
+            <header className="px-8 py-5 flex items-center justify-between border-b border-slate-50 bg-[#fbfcff]">
+               <div className="flex items-center gap-4">
+                  <button onClick={() => navigate('/customers')} className="p-1.5 rounded hover:bg-slate-100"><ChevronLeft size={18}/></button>
+                  <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{customer.name}</h1>
+               </div>
+               <div className="flex items-center gap-2.5">
+                  <button onClick={handleSaveProfile} disabled={loading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all flex items-center gap-2 disabled:opacity-50">
+                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16}/>}
+                     {loading ? 'Saving...' : 'Save Profile'}
+                  </button>
+                  <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                  <button onClick={() => navigate(`/customers/${customer.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-white shadow-sm">Edit</button>
+                  <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600"><Paperclip size={16}/></button>
+                  <div className="bg-blue-600 text-white rounded-md flex items-center shadow-lg shadow-blue-100 overflow-hidden">
+                     <button className="px-5 py-2 text-[13px] font-bold border-r border-blue-500/30 hover:bg-blue-700">New Transaction</button>
+                     <button className="px-2 py-2 hover:bg-blue-700"><ChevronDown size={16}/></button>
+                  </div>
+                  <button className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 flex items-center gap-1.5 hover:bg-white shadow-sm">
+                     More <ChevronDown size={14}/>
+                  </button>
+                  <button className="p-1.5 text-slate-300 hover:text-slate-500" onClick={() => navigate('/customers')}><X size={20}/></button>
+               </div>
+            </header>
 
-        <div className="flex-1 space-y-6">
-           <div className="bg-white border border-slate-100 rounded-xl p-8 flex flex-col items-center justify-center text-center h-48">
-              <h2 className="text-[16px] font-semibold text-slate-800 mb-2">Overview</h2>
-              <p className="text-slate-500 text-[14px] max-w-sm">This is a placeholder for the detailed Customer Overview. Providing the required details structure when the design is ready.</p>
+            <div className="px-8 border-b border-slate-100 flex gap-10">
+               {['Overview', 'Comments', 'Transactions', 'Mails', 'Statement'].map(tab => (
+                 <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 text-[14px] font-bold tracking-tight relative transition-all ${activeTab === tab ? 'text-blue-600' : 'text-slate-400 hover:text-slate-700'}`}>
+                   {tab} {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[3px] bg-blue-600 rounded-t-full"></div>}
+                 </button>
+               ))}
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
+              {activeTab === 'Comments' && (
+                <div className="p-10 space-y-8 animate-fade-in max-w-4xl">
+                   <div className="border border-slate-200 rounded-lg bg-slate-50/50 overflow-hidden shadow-sm">
+                      <div className="p-3 border-b border-slate-200 flex gap-4 text-slate-400">
+                         <Bold size={16} className="cursor-pointer hover:text-slate-900" />
+                         <Italic size={16} className="cursor-pointer hover:text-slate-900" />
+                         <Underline size={16} className="cursor-pointer hover:text-slate-900" />
+                      </div>
+                      <textarea 
+                        value={newComment} onChange={e => setNewComment(e.target.value)}
+                        placeholder="Add a comment..." 
+                        className="w-full p-4 min-h-[120px] bg-transparent outline-none text-[15px] text-slate-700"
+                      />
+                      <div className="p-3 bg-white border-t border-slate-100">
+                        <button onClick={handleAddComment} className="px-4 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-600 hover:bg-slate-50">Add Comment</button>
+                      </div>
+                   </div>
+
+                   <div className="space-y-6">
+                      <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">ALL COMMENTS</h3>
+                      {comments.length > 0 ? (
+                        <div className="space-y-6">
+                           {comments.map(c => (
+                             <div key={c.id} className="flex gap-4 group">
+                                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100 uppercase">{c.author[0]}</div>
+                                <div className="flex-1 space-y-1">
+                                   <div className="flex items-center gap-2">
+                                      <span className="text-[13px] font-bold text-slate-800">{c.author}</span>
+                                      <span className="text-[11px] text-slate-400 font-medium">{c.date}</span>
+                                   </div>
+                                   <p className="text-[14px] text-slate-600 leading-relaxed">{c.text}</p>
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-20 bg-slate-50/30 rounded-xl border border-dashed border-slate-100">
+                           <MessageSquare size={32} className="mx-auto text-slate-200 mb-3" strokeWidth={1}/>
+                           <p className="text-[14px] text-slate-400 italic">No comments yet.</p>
+                        </div>
+                      )}
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'Transactions' && (
+                <div className="p-10 space-y-6 animate-fade-in">
+                   <div className="flex items-center gap-2 text-blue-600 text-[13px] font-bold cursor-pointer hover:underline mb-2">Go to transactions <ChevronDown size={14}/></div>
+                   
+                   {[
+                     { name: 'Invoices', data: transactions.invoices, cols: ['DATE', 'INVOICE NUMBER', 'ORDER NUMBER', 'AMOUNT', 'BALANCE DUE', 'STATUS'] },
+                     { name: 'Customer Payments', data: transactions.payments, cols: ['DATE', 'PAYMENT N...', 'REFERENCE ...', 'PAYMENT M...', 'AMOUNT', 'UNUSED AM...', 'STATUS'] },
+                     { name: 'Quotes', data: transactions.quotes, cols: ['DATE', 'QUOTE NUMBER', 'REFERENCE', 'AMOUNT', 'EXPIRY DATE', 'STATUS'] },
+                     { name: 'Retainer Invoices', data: transactions.retainerInvoices, cols: ['DATE', 'RETAINER NUMBER', 'REFERENCE', 'AMOUNT', 'STATUS'] },
+                     { name: 'Sales Orders', data: transactions.salesOrders, cols: ['DATE', 'ORDER NUMBER', 'REFERENCE', 'AMOUNT', 'STATUS'] }
+                   ].map(sec => (
+                     <div key={sec.name} className="border border-slate-100 rounded-xl overflow-hidden shadow-[0_2px_15px_rgb(0,0,0,0.03)] bg-white">
+                        <div 
+                          className="px-6 py-4 bg-slate-50/50 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
+                          onClick={() => toggleSection(sec.name)}
+                        >
+                           <div className="flex items-center gap-3">
+                              <ChevronRight size={16} className={`text-slate-400 transition-transform ${openSections.includes(sec.name) ? 'rotate-90' : ''}`} />
+                              <h3 className="text-[15px] font-black text-slate-800 tracking-tight">{sec.name}</h3>
+                           </div>
+                           <button className="flex items-center gap-1.5 text-[12px] font-black text-blue-600 hover:text-blue-800 bg-white px-2.5 py-1 rounded-full border border-blue-50 shadow-sm">
+                              <Plus size={14} strokeWidth={3}/> NEW
+                           </button>
+                        </div>
+                        {openSections.includes(sec.name) && (
+                          <div className="overflow-x-auto">
+                             <table className="w-full text-left">
+                                <thead>
+                                   <tr className="bg-white border-b border-slate-50">
+                                      {sec.cols.map(c => <th key={c} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{c}</th>)}
+                                   </tr>
+                                </thead>
+                                <tbody>
+                                   {sec.data.length > 0 ? (
+                                     sec.data.map((row, i) => (
+                                       <tr key={i} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 text-[13px] text-slate-600">
+                                          <td className="px-6 py-4">{row.date || 'N/A'}</td>
+                                          <td className="px-6 py-4 font-bold text-blue-600">{row.number || row.orderNumber || row.quoteNumber || '---'}</td>
+                                          <td className="px-6 py-4">{row.reference || row.referenceNumber || '---'}</td>
+                                          <td className="px-6 py-4 font-bold text-slate-900">₹{parseFloat(row.totalAmount || row.amount || 0).toLocaleString()}</td>
+                                          {sec.name === 'Invoices' && <td className="px-6 py-4">₹{row.balanceDue || '0.00'}</td>}
+                                          <td className="px-6 py-4">
+                                             <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-black ${row.status === 'Sent' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
+                                                {row.status || 'Draft'}
+                                             </span>
+                                          </td>
+                                       </tr>
+                                     ))
+                                   ) : (
+                                     <tr>
+                                        <td colSpan={sec.cols.length} className="px-6 py-20 text-center text-slate-400">
+                                           <div className="text-[14px]">There are no {sec.name.toLowerCase()} - <span className="text-blue-600 font-bold hover:underline cursor-pointer">Add New</span></div>
+                                        </td>
+                                     </tr>
+                                   )}
+                                </tbody>
+                             </table>
+                          </div>
+                        )}
+                     </div>
+                   ))}
+                </div>
+              )}
+
+              {activeTab === 'Mails' && (
+                <div className="p-10 space-y-6 animate-fade-in max-w-4xl">
+                   <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white">
+                      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                         <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-tighter">System Mails</h3>
+                         <div className="flex items-center gap-1 text-[13px] text-blue-600 font-bold cursor-pointer px-3 py-1 bg-blue-50 rounded hover:bg-blue-100 transition-colors">
+                            <Mail size={14} className="mr-1.5"/> Link Email account <ChevronDown size={14}/>
+                         </div>
+                      </div>
+                      <div className="p-20 text-center space-y-4">
+                         <div className="flex justify-center"><Mail size={48} className="text-orange-300 opacity-50" strokeWidth={1}/></div>
+                         <p className="text-[14px] text-slate-500 font-medium flex items-center justify-center gap-2">
+                            <Info size={16} className="text-orange-400"/> No emails sent.
+                         </p>
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'Statement' && (
+                <div className="p-8 bg-[#f8fbff] min-h-full animate-fade-in">
+                   <div className="max-w-4xl mx-auto space-y-6">
+                      <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                         <div className="flex gap-3">
+                           <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700">
+                              <Calendar size={14} className="text-slate-400"/> This Month <ChevronDown size={14}/>
+                           </div>
+                           <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700">
+                              Filter By: All <ChevronDown size={14}/>
+                           </div>
+                         </div>
+                         <div className="flex items-center gap-2">
+                            <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50"><Printer size={18}/></button>
+                            <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50"><FileText size={18}/></button>
+                            <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50 font-black">₹</button>
+                            <button className="px-5 py-2 bg-blue-600 text-white rounded text-[13px] font-bold shadow-md shadow-blue-100 flex items-center gap-2 hover:bg-blue-700">
+                               <Send size={14}/> Send Email
+                            </button>
+                         </div>
+                      </div>
+
+                      <div className="bg-white rounded shadow-2xl overflow-hidden aspect-[1/1.4] p-16 border border-slate-200 print:shadow-none font-serif relative">
+                         <div className="absolute top-0 right-0 p-8 text-[12px] text-right space-y-0.5 not-italic font-sans">
+                            <p className="font-bold text-[16px] text-slate-900">{currentCompany?.name || 'Indus CAI private Ltd'}</p>
+                            <p className="text-slate-500">{currentCompany?.state || 'Tamil Nadu'}</p>
+                            <p className="text-slate-500">{currentCompany?.country || 'India'}</p>
+                            <p className="text-blue-600">{currentCompany?.email || 'naveenswathi1811@gmail.com'}</p>
+                         </div>
+
+                         <div className="mt-2 text-[12px] font-sans">
+                            <p className="text-slate-400 mb-1">To</p>
+                            <p className="text-blue-600 font-bold text-[14px]">{customer.name}</p>
+                         </div>
+
+                         <div className="mt-16 text-center space-y-1">
+                            <h2 className="text-[26px] font-black text-slate-900 border-b-2 border-slate-900 inline-block pb-1">Statement of Accounts</h2>
+                            <p className="text-[13px] font-bold text-slate-500 font-sans mt-2">01/04/2026 To 30/04/2026</p>
+                         </div>
+
+                         <div className="mt-16 flex justify-end">
+                            <div className="w-80 space-y-0 text-[13px] font-sans">
+                               <div className="bg-slate-100/50 p-2 font-black text-slate-700 border-b border-slate-200 uppercase tracking-tighter">Account Summary</div>
+                               <div className="flex justify-between p-2 border-b border-slate-50"><span>Opening Balance</span><span className="font-bold">₹0.00</span></div>
+                               <div className="flex justify-between p-2 border-b border-slate-50"><span>Invoiced Amount</span><span className="font-bold">₹0.00</span></div>
+                               <div className="flex justify-between p-2 border-b border-slate-50"><span>Amount Received</span><span className="font-bold">₹0.00</span></div>
+                               <div className="flex justify-between p-3 border-b border-slate-200 bg-slate-50/20"><span className="font-black">Balance Due</span><span className="font-black text-[15px]">₹0.00</span></div>
+                            </div>
+                         </div>
+
+                         <table className="w-full mt-20 text-[12px] font-sans border-t border-slate-200">
+                            <thead className="bg-slate-800 text-white font-black text-[10px] uppercase tracking-widest">
+                               <tr>
+                                  <th className="px-3 py-2 text-left">Date</th>
+                                  <th className="px-3 py-2 text-left">Transactions</th>
+                                  <th className="px-3 py-2 text-left">Details</th>
+                                  <th className="px-3 py-2 text-right">Amount</th>
+                                  <th className="px-3 py-2 text-right">Payments</th>
+                                  <th className="px-3 py-2 text-right">Balance</th>
+                               </tr>
+                            </thead>
+                            <tbody className="text-slate-600 border-b border-slate-100">
+                               <tr className="border-b border-slate-50">
+                                  <td className="px-3 py-4">01/04/2026</td>
+                                  <td className="px-3 py-4 font-bold text-slate-900">***Opening Balance***</td>
+                                  <td className="px-3 py-4"></td>
+                                  <td className="px-3 py-4 text-right">0.00</td>
+                                  <td className="px-3 py-4 text-right"></td>
+                                  <td className="px-3 py-4 text-right font-medium">0.00</td>
+                               </tr>
+                            </tbody>
+                            <tfoot>
+                               <tr className="font-black text-slate-900 text-[14px]">
+                                  <td colSpan={5} className="px-3 py-6 text-right uppercase tracking-tighter">Balance Due</td>
+                                  <td className="px-3 py-6 text-right">₹0.00</td>
+                               </tr>
+                            </tfoot>
+                         </table>
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'Overview' && (
+                <div className="p-8 flex gap-10 animate-fade-in group">
+                  {/* Left Column Profile */}
+                  <div className="w-[420px] shrink-0 space-y-12">
+                    <div className="flex gap-6 relative">
+                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+                       <div className="relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
+                          <div className="w-24 h-24 rounded-2xl bg-slate-900 flex items-center justify-center text-white overflow-hidden shadow-2xl border-4 border-white transition-transform hover:scale-105">
+                             {customer.image ? <img src={customer.image} className="w-full h-full object-cover" /> : <ImageIcon size={48} strokeWidth={1} className="opacity-40"/>}
+                             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Plus size={24} className="text-white" strokeWidth={3} />
+                             </div>
+                          </div>
+                       </div>
+                       
+                       <div className="space-y-1.5 pt-1">
+                          <h3 className="text-[17px] font-black text-slate-900 leading-tight">{customer.salutation} {customer.firstName} {customer.lastName}</h3>
+                          <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{customer.email}</span></div>
+                          <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{customer.mobile || 'No contact'}</span></div>
+                          <button className="text-[12px] font-bold text-blue-600 hover:text-blue-800 underline decoration-blue-200 underline-offset-4 mt-2">Invite to Portal</button>
+                       </div>
+
+                       <div className="ml-auto absolute top-0 right-0" ref={settingsRef}>
+                          <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`p-2 rounded-full transition-colors ${isSettingsOpen ? 'bg-slate-100 text-blue-600' : 'hover:bg-slate-100 text-slate-400'}`}><Settings size={20}/></button>
+                          
+                          {isSettingsOpen && (
+                             <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-2 animate-fade-down overflow-hidden">
+                                <div className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Record Actions</div>
+                                <button onClick={() => { setIsSettingsOpen(false); navigate(`/customers/${customer.id}`); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3"><Edit size={16} className="text-blue-500" /> Edit Profile</button>
+                                <button onClick={() => { setIsSettingsOpen(false); handleDeleteCustomer(); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3"><Trash2 size={16} /> Delete Customer</button>
+                             </div>
+                          )}
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center"><span>ADDRESS</span> <ChevronDown size={14}/></h4>
+                       <div className="grid grid-cols-2 gap-10 pt-2">
+                          <div className="space-y-3">
+                             <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
+                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => { setAddressType('billing'); setIsAddressDrawerOpen(true); }}>New Address</span></p>
+                          </div>
+                          <div className="space-y-3">
+                             <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
+                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => { setAddressType('shipping'); setIsAddressDrawerOpen(true); }}>New Address</span></p>
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center"><span>OTHER DETAILS</span> <ChevronDown size={14}/></h4>
+                       <div className="space-y-6 pt-2">
+                          <DetailRow label="Customer Type" value={customer.customerType || 'Business'} />
+                          <DetailRow label="Default Currency" value={customer.currency || 'INR'} />
+                          <DetailRow label="Portal Status" value={<div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> <span className="text-red-500 font-black text-[13px]">Disabled</span></div>} />
+                          <DetailRow label="Customer Language" value={customer.language || 'English'} />
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center">
+                          <span>CONTACT PERSONS</span>
+                          <div className="flex items-center gap-3">
+                             <button onClick={() => navigate(`/customers/${customer.id}`)} className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100 hover:scale-110 transition-transform"><Plus size={14}/></button>
+                             <ChevronDown size={14}/>
+                          </div>
+                       </h4>
+                       <div className="py-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100"><p className="text-[13px] text-slate-400 font-medium italic">No contact persons found.</p></div>
+                    </div>
+                  </div>
+
+                  {/* Right Column Financials */}
+                  <div className="flex-1 space-y-12 border-l border-slate-50 pl-10 pb-20">
+                     <div className="p-8 bg-blue-600 rounded-2xl text-white relative overflow-hidden shadow-2xl shadow-blue-100 group/banner">
+                        <div className="absolute top-[-30px] right-[-30px] w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover/banner:scale-150 transition-transform duration-1000"></div>
+                        <div className="relative z-10 flex items-start justify-between gap-10">
+                           <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-[14px] font-black italic tracking-widest text-blue-100 uppercase"><Sparkles size={16} className="fill-blue-200/50" /> WHAT'S NEXT?</div>
+                              <p className="text-[16px] text-white/90 font-medium leading-relaxed">Create an <span className="font-black text-white underline decoration-white/40 underline-offset-4">invoice</span> or a <span className="font-black text-white underline decoration-white/40 underline-offset-4">quote</span> and send it to your customer.</p>
+                           </div>
+                           <div className="flex flex-col gap-2 shrink-0">
+                              <button onClick={() => navigate('/sales/new-invoice')} className="px-6 py-2 bg-white text-blue-600 rounded-lg text-[13px] font-black hover:bg-blue-50 transition-all shadow-xl shadow-blue-900/10">New Invoice</button>
+                              <button onClick={() => navigate('/quotes/new')} className="px-6 py-2 bg-blue-500/30 text-white border border-white/20 rounded-lg text-[13px] font-black hover:bg-blue-500/50 transition-all">New Quote</button>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="space-y-2 group cursor-pointer max-w-fit" onClick={() => setIsEditingPaymentTerms(true)}>
+                        <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em]">Payment due period</p>
+                        {!isEditingPaymentTerms ? <p className="text-[18px] text-slate-900 font-black tracking-tight flex items-center gap-3">{customer.paymentTerms || 'Due on Receipt'} <Edit size={14} className="opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity"/></p> : (
+                          <div className="flex items-center gap-2 pt-1 animate-fade-in">
+                            <input autoFocus type="text" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="px-4 py-2 border-2 border-blue-100 rounded-lg outline-none focus:border-blue-500 shadow-sm font-bold" />
+                            <button onClick={() => handleUpdateField('paymentTerms', paymentTerms)} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
+                            <button onClick={() => setIsEditingPaymentTerms(false)} className="p-2.5 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200"><X size={18}/></button>
+                          </div>
+                        )}
+                     </div>
+
+                     <div className="space-y-6">
+                        <h4 className="text-[20px] font-black text-slate-900 tracking-tight flex items-center gap-3">Receivables <div className="h-0.5 flex-1 bg-slate-50"></div></h4>
+                        <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100 bg-white">
+                           <table className="w-full text-left">
+                              <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-black text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">CREDITS</th></tr></thead>
+                              <tbody><tr><td className="px-8 py-8 font-black text-slate-700">{customer.currency || 'INR'}</td><td className="px-8 py-8 text-right font-black text-[24px] text-slate-900">₹{parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">₹0.00</td></tr></tbody>
+                           </table>
+                        </div>
+                        <div className="flex items-center gap-3">
+                           {!isEditingBalance ? <button onClick={() => setIsEditingBalance(true)} className="text-[14px] font-black text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2">Enter Opening Balance <Plus size={16} strokeWidth={3}/></button> : (
+                             <div className="flex items-center gap-2 animate-fade-in">
+                                <input autoFocus type="number" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="px-4 py-2 border-2 border-blue-100 rounded-lg outline-none w-48 font-bold" />
+                                <button onClick={() => handleUpdateField('openingBalance', openingBalance)} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
+                                <button onClick={() => setIsEditingBalance(false)} className="p-2.5 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200"><X size={18}/></button>
+                             </div>
+                           )}
+                        </div>
+                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+           <div className="flex-1 flex flex-col items-center justify-center p-20 animate-fade-in text-center opacity-40">
+              <div className="w-32 h-32 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100 shadow-inner rotate-6"><Users size={64} strokeWidth={1}/></div>
+              <h3 className="text-[24px] font-black text-slate-900 mb-3 tracking-tighter">Select a Customer</h3>
+              <p className="text-[15px] text-slate-500 max-w-sm mx-auto font-medium">Click on a name in the list to reveal their hidden details.</p>
            </div>
-        </div>
+         )}
       </div>
+
+      {/* ─── ADDRESS DRAWER ───────────────────────────────── */}
+      {isAddressDrawerOpen && (
+        <div className="fixed inset-0 z-[100] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddressDrawerOpen(false)} />
+          <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
+            <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">{addressType} Address</h3>
+                <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">FOR {customer.name}</p>
+              </div>
+              <button onClick={() => setIsAddressDrawerOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
+            </header>
+            
+            <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Attention</label>
+                  <input type="text" value={addressForm.attention} onChange={e => setAddressForm({...addressForm, attention: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Street Address 1</label>
+                  <input type="text" value={addressForm.address1} onChange={e => setAddressForm({...addressForm, address1: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Street Address 2</label>
+                  <input type="text" value={addressForm.address2} onChange={e => setAddressForm({...addressForm, address2: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+               </div>
+
+               <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">City</label>
+                    <input type="text" value={addressForm.city} onChange={e => setAddressForm({...addressForm, city: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">State</label>
+                    <input type="text" value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Zip Code</label>
+                    <input type="text" value={addressForm.zip} onChange={e => setAddressForm({...addressForm, zip: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Phone</label>
+                    <input type="text" value={addressForm.phone} onChange={e => setAddressForm({...addressForm, phone: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                  </div>
+               </div>
+            </div>
+
+            <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
+               <button onClick={() => setIsAddressDrawerOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Discard</button>
+               <button 
+                  onClick={() => {
+                    handleUpdateField(addressType === 'billing' ? 'billingAddress' : 'shippingAddress', JSON.stringify(addressForm));
+                    setIsAddressDrawerOpen(false);
+                  }}
+                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[13px] font-black hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all uppercase tracking-widest"
+               >
+                 Save Address
+               </button>
+            </footer>
+          </div>
+        </div>
+      )}
+      {/* ─── QUICK ADD DRAWER ──────────────────────────────── */}
+      {isQuickAddOpen && (
+        <div className="fixed inset-0 z-[200] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsQuickAddOpen(false)} />
+          <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
+            <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">Register New Customer</h3>
+                <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">QUICK ONBOARDING</p>
+              </div>
+              <button onClick={() => setIsQuickAddOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
+            </header>
+            
+            <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+               <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-1 space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Salutation</label>
+                     <select value={quickAddForm.salutation} onChange={e => setQuickAddForm({...quickAddForm, salutation: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all">
+                        <option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Dr.</option>
+                     </select>
+                  </div>
+                  <div className="col-span-3 space-y-3">
+                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Primary Name*</label>
+                     <input type="text" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="Enter full name or business name" />
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Customer Email</label>
+                  <div className="relative">
+                     <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                     <input type="email" value={quickAddForm.email} onChange={e => setQuickAddForm({...quickAddForm, email: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="example@business.com" />
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking_widest block">Mobile Number</label>
+                  <div className="relative">
+                     <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                     <input type="text" value={quickAddForm.mobile} onChange={e => setQuickAddForm({...quickAddForm, mobile: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="+91 XXXXX XXXXX" />
+                  </div>
+               </div>
+
+               <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-start gap-4">
+                  <Info size={18} className="text-blue-500 mt-0.5" />
+                  <p className="text-[12px] text-blue-600 font-medium leading-relaxed">You can always update additional information like GSTIN, Billing Address, and Payment Terms later.</p>
+               </div>
+            </div>
+
+            <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
+               <button onClick={() => setIsQuickAddOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Cancel</button>
+               <button 
+                  onClick={handleQuickAdd}
+                  disabled={loading || !quickAddForm.name}
+                  className="flex-1 py-4 bg-slate-900 text-white rounded-xl text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all uppercase tracking-widest disabled:opacity-50"
+               >
+                  {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'REGISTER CUSTOMER'}
+               </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const DetailRow = ({ label, value }) => (
+  <div className="flex justify-between items-start text-[14px] group/row">
+    <span className="text-slate-300 font-black tracking-widest text-[11px] uppercase w-1/3 pt-1">{label}</span>
+    <span className="text-slate-800 font-black w-2/3 text-left leading-tight group-hover/row:text-blue-600 transition-colors">{value}</span>
+  </div>
+);
 
 export default CustomerDetailView;
