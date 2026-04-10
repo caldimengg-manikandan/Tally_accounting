@@ -1,7 +1,0 @@
-Error
-    at Query.run (C:\Users\Arshad Ibrahim\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
-    at C:\Users\Arshad Ibrahim\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async PostgresQueryInterface.select (C:\Users\Arshad Ibrahim\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
-    at async RetainerInvoice.findAll (C:\Users\Arshad Ibrahim\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1140:21)
-    at async checkInvoices (C:\Users\Arshad Ibrahim\Tally_accounting\backend\check_invoices.js:17:21)

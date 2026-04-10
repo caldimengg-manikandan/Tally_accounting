@@ -63,6 +63,7 @@ app.use('/api/cost-centers', require('./modules/accounting/costCenter.routes'));
 app.use('/api/retainer-invoices', require('./modules/sales/retainerInvoice.routes'));
 app.use('/api/recurring-invoices', require('./modules/sales/recurringInvoice.routes'));
 app.use('/api/pricelists', require('./modules/inventory/pricelist.routes'));
+app.use('/api/purchases', require('./modules/purchases/purchases.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));

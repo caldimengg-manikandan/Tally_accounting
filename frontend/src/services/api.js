@@ -70,12 +70,18 @@ export const voucherAPI = {
   delete: (id) => api.delete(`/vouchers/${id}`),
 };
 
-// ─── Purchase Orders ───────────────────────────────
+// ─── Purchase Module ───────────────────────────────
 export const purchaseAPI = {
-  getByCompany: (companyId) => api.get(`/purchase/${companyId}`),
-  create: (data) => api.post('/purchase', data),
-  update: (id, data) => api.put(`/purchase/${id}`, data),
-  delete: (id) => api.delete(`/purchase/${id}`),
+  getVendors: (companyId) => api.get(`/purchases/vendors/${companyId}`),
+  getOrders: (companyId) => api.get(`/purchases/orders/${companyId}`),
+  createOrder: (data) => api.post('/purchases/orders', data),
+  updateOrder: (id, data) => api.put(`/purchases/orders/${id}`, data),
+  deleteOrder: (id) => api.delete(`/purchases/orders/${id}`),
+  getBills: (companyId) => api.get(`/purchases/bills/${companyId}`),
+  getExpenses: (companyId) => api.get(`/purchases/expenses/${companyId}`),
+  // Legacy support
+  getByCompany: (companyId) => api.get(`/purchases/orders/${companyId}`),
+  delete: (id) => api.delete(`/purchases/orders/${id}`),
 };
 
 // ─── Reports ───────────────────────────────────────
@@ -97,6 +103,7 @@ export const inventoryAPI = {
   updateStock: (itemId, data) => api.post(`/inventory/stock/${itemId}`, data),
   uploadImage: (formData) => api.post('/inventory/upload', formData),
   getItemHistory: (id) => api.get(`/inventory/${id}/history`),
+  deleteItem: (id) => api.delete(`/inventory/${id}`),
 };
 
 // ─── Price Lists ─────────────────────────────────────

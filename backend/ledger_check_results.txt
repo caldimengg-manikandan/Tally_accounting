@@ -1,9 +1,0 @@
-TOTAL COMPANIES: 4
-- Indus Enterprises Private Limited (b03b1ec3-5f34-4460-9ef5-bda22fb4d360): 0 ledgers
-- Indus Enterprises Private Limited (5f6dd28a-bbc3-4664-8ce5-1a469ea6f82c): 0 ledgers
-- Sundry (3208c42b-f600-43d3-bf21-f608abd22a8a): 2 ledgers
-  * [902e3a9e-f153-491e-bf7b-b78722ad6635] acme | Group: Sundry Debtors
-  * [1a66c07c-6c14-4ab4-b822-624c1df445e5] acme | Group: Sundry Debtors
-- The MOON Enterprises (5f028981-8de4-4c19-9a90-54257dd87f70): 2 ledgers
-  * [799f10ae-e0c3-4407-b161-70e380ab8c7b] sundry | Group: Sundry Debtors
-  * [51043a59-06f9-4583-8636-c8be875949dd] debit pvt ltd | Group: Sundry Debtors
