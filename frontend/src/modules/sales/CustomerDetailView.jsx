@@ -13,6 +13,8 @@ import {
   ledgerAPI, salesAPI, quoteAPI, retainerInvoiceAPI, 
   voucherAPI, reportsAPI, companyAPI 
 } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const CustomerDetailView = ({ companyId }) => {
   const { id } = useParams();
@@ -21,6 +23,7 @@ const CustomerDetailView = ({ companyId }) => {
   const [selectedId, setSelectedId] = useState(id);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Overview');
+  const { addNotification } = useNotificationStore();
   
   // Data for tabs
   const [transactions, setTransactions] = useState({
@@ -58,6 +61,8 @@ const CustomerDetailView = ({ companyId }) => {
     phone: '',
     fax: ''
   });
+  
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
@@ -165,7 +170,7 @@ const CustomerDetailView = ({ companyId }) => {
        if (field === 'openingBalance') setIsEditingBalance(false);
        setCustomers(prev => prev.map(c => c.id === customer.id ? { ...c, [field]: value } : c));
     } catch (err) {
-       alert(`Failed to update ${field}`);
+      addNotification(`Failed to update ${field}`, 'error');
     }
   };
 
@@ -173,9 +178,9 @@ const CustomerDetailView = ({ companyId }) => {
     setLoading(true);
     try {
       await ledgerAPI.update(customer.id, customer);
-      alert('Customer profile saved successfully!');
+      addNotification('Customer profile saved successfully!', 'success');
     } catch (err) {
-      alert('Failed to save profile changes.');
+      addNotification('Failed to save profile changes.', 'error');
     } finally {
       setLoading(false);
     }
@@ -205,7 +210,7 @@ const CustomerDetailView = ({ companyId }) => {
         setIsQuickAddOpen(false);
         setQuickAddForm({ name: '', email: '', mobile: '', salutation: 'Mr.' });
     } catch (err) {
-        alert('Failed to register customer');
+        addNotification('Failed to register customer', 'error');
     } finally {
         setLoading(false);
     }
@@ -225,15 +230,19 @@ const CustomerDetailView = ({ companyId }) => {
     setNewComment('');
   };
 
-  const handleDeleteCustomer = async () => {
-    if (window.confirm('WARNING: Are you sure you want to delete this customer? This action cannot be undone.')) {
-        try {
-            await ledgerAPI.delete(customer.id);
-            setCustomers(prev => prev.filter(c => c.id !== customer.id));
-            navigate('/customers');
-        } catch (err) {
-            alert('Failed to delete customer. Ensure no transactions are linked.');
-        }
+  const handleDeleteCustomer = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await ledgerAPI.delete(customer.id);
+      addNotification('Customer deleted successfully', 'success');
+      navigate('/customers');
+    } catch (err) {
+      addNotification('Failed to delete customer', 'error');
+    } finally {
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -251,7 +260,7 @@ const CustomerDetailView = ({ companyId }) => {
       try {
         await handleUpdateField('image', base64);
       } catch (err) {
-        alert("Failed to save image");
+        addNotification("Failed to save image", "error");
       }
     };
     reader.readAsDataURL(file);
@@ -306,7 +315,7 @@ const CustomerDetailView = ({ companyId }) => {
           <>
             <header className="px-8 py-5 flex items-center justify-between border-b border-slate-50 bg-[#fbfcff]">
                <div className="flex items-center gap-4">
-                  <button onClick={() => navigate('/customers')} className="p-1.5 rounded hover:bg-slate-100"><ChevronLeft size={18}/></button>
+                  <button onClick={() => navigate(-1)} className="p-1.5 rounded hover:bg-slate-100"><ChevronLeft size={18}/></button>
                   <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{customer.name}</h1>
                </div>
                <div className="flex items-center gap-2.5">
@@ -324,7 +333,7 @@ const CustomerDetailView = ({ companyId }) => {
                   <button className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 flex items-center gap-1.5 hover:bg-white shadow-sm">
                      More <ChevronDown size={14}/>
                   </button>
-                  <button className="p-1.5 text-slate-300 hover:text-slate-500" onClick={() => navigate('/customers')}><X size={20}/></button>
+                  <button className="p-1.5 text-slate-300 hover:text-slate-500" onClick={() => navigate(-1)}><X size={20}/></button>
                </div>
             </header>
 
@@ -341,14 +350,34 @@ const CustomerDetailView = ({ companyId }) => {
                 <div className="p-10 space-y-8 animate-fade-in max-w-4xl">
                    <div className="border border-slate-200 rounded-lg bg-slate-50/50 overflow-hidden shadow-sm">
                       <div className="p-3 border-b border-slate-200 flex gap-4 text-slate-400">
-                         <Bold size={16} className="cursor-pointer hover:text-slate-900" />
-                         <Italic size={16} className="cursor-pointer hover:text-slate-900" />
-                         <Underline size={16} className="cursor-pointer hover:text-slate-900" />
+                         <Bold 
+                           size={16} 
+                           className="cursor-pointer hover:text-slate-900 transition-colors" 
+                           onClick={() => { document.execCommand('bold', false, null); }}
+                         />
+                         <Italic 
+                           size={16} 
+                           className="cursor-pointer hover:text-slate-900 transition-colors" 
+                           onClick={() => { document.execCommand('italic', false, null); }}
+                         />
+                         <Underline 
+                           size={16} 
+                           className="cursor-pointer hover:text-slate-900 transition-colors" 
+                           onClick={() => { document.execCommand('underline', false, null); }}
+                         />
                       </div>
-                      <textarea 
-                        value={newComment} onChange={e => setNewComment(e.target.value)}
+                      <div 
+                        contentEditable
+                        onInput={e => setNewComment(e.currentTarget.innerHTML)}
+                        onBlur={e => setNewComment(e.currentTarget.innerHTML)}
                         placeholder="Add a comment..." 
-                        className="w-full p-4 min-h-[120px] bg-transparent outline-none text-[15px] text-slate-700"
+                        className="w-full p-4 min-h-[120px] bg-transparent outline-none text-[15px] text-slate-700 font-sans"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && e.ctrlKey) handleAddComment();
+                        }}
+                        ref={(el) => {
+                          if (el && newComment === '') el.innerHTML = '';
+                        }}
                       />
                       <div className="p-3 bg-white border-t border-slate-100">
                         <button onClick={handleAddComment} className="px-4 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-600 hover:bg-slate-50">Add Comment</button>
@@ -367,7 +396,10 @@ const CustomerDetailView = ({ companyId }) => {
                                       <span className="text-[13px] font-bold text-slate-800">{c.author}</span>
                                       <span className="text-[11px] text-slate-400 font-medium">{c.date}</span>
                                    </div>
-                                   <p className="text-[14px] text-slate-600 leading-relaxed">{c.text}</p>
+                                   <div 
+                                     className="text-[14px] text-slate-600 leading-relaxed rich-text-comment"
+                                     dangerouslySetInnerHTML={{ __html: c.text }}
+                                   />
                                 </div>
                              </div>
                            ))}
@@ -558,7 +590,6 @@ const CustomerDetailView = ({ companyId }) => {
                           <div className="w-24 h-24 rounded-2xl bg-slate-900 flex items-center justify-center text-white overflow-hidden shadow-2xl border-4 border-white transition-transform hover:scale-105">
                              {customer.image ? <img src={customer.image} className="w-full h-full object-cover" /> : <ImageIcon size={48} strokeWidth={1} className="opacity-40"/>}
                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <Plus size={24} className="text-white" strokeWidth={3} />
                              </div>
                           </div>
                        </div>
@@ -807,6 +838,13 @@ const CustomerDetailView = ({ companyId }) => {
           </div>
         </div>
       )}
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Customer"
+        message="Are you sure you want to permanently delete this customer? This action will remove all transaction history and profile details."
+      />
     </div>
   );
 };

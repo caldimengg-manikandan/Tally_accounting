@@ -101,6 +101,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    billingAddress: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    shippingAddress: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     website: {
       type: DataTypes.STRING,
       allowNull: true
@@ -146,6 +154,10 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: false
     },
     documentsJson: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    image: {
       type: DataTypes.TEXT,
       allowNull: true
     }

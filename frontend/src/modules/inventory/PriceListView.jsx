@@ -2,6 +2,8 @@ import React from 'react';
 import { ChevronDown, Plus, MoreHorizontal, Database, Trash2, Edit2, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { priceListAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const PriceListView = () => {
   const navigate = useNavigate();
@@ -9,6 +11,9 @@ const PriceListView = () => {
   const [loading, setLoading] = React.useState(true);
   const [filterType, setFilterType] = React.useState('All');
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [deleteId, setDeleteId] = React.useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const { addNotification } = useNotificationStore();
 
   React.useEffect(() => {
     const fetchPriceLists = async () => {
@@ -27,13 +32,22 @@ const PriceListView = () => {
     fetchPriceLists();
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this price list?')) return;
+  const handleDelete = (id) => {
+    setDeleteId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await priceListAPI.delete(id);
-      setPricelists(prev => prev.filter(p => p.id !== id));
+      await priceListAPI.delete(deleteId);
+      setPricelists(prev => prev.filter(p => p.id !== deleteId));
+      addNotification('Price list deleted successfully', 'success');
     } catch (err) {
-      alert('Delete failed');
+      addNotification('Failed to delete price list', 'error');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteId(null);
     }
   };
 
@@ -172,6 +186,14 @@ const PriceListView = () => {
           </div>
         )}
       </div>
+
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Price List"
+        message="Are you sure you want to delete this price list? This action cannot be undone and may affect items using this scheme."
+      />
     </div>
   );
 };

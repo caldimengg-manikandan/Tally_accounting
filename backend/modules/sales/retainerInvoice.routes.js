@@ -9,5 +9,6 @@ router.get('/company/:companyId', controller.getByCompany); // Added /company/ p
 router.put('/:id', controller.update);
 router.post('/record-payment/:id', controller.recordPayment);
 router.post('/apply-to-invoice/:id', controller.applyToInvoice);
+router.delete('/:id', controller.delete);
 
 module.exports = router;

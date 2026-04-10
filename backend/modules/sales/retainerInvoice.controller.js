@@ -105,11 +105,17 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
+    const { RetainerAdjustment } = require('../../models');
     const retainer = await RetainerInvoice.findByPk(req.params.id);
     if (!retainer) return res.status(404).json({ error: 'Retainer Invoice not found' });
+    
+    // Safety: Delete related adjustments first if they exist
+    await RetainerAdjustment.destroy({ where: { RetainerInvoiceId: req.params.id } });
+    
     await retainer.destroy();
     res.json({ message: 'Retainer Invoice deleted' });
   } catch (error) {
+    console.error('Delete Retainer Error:', error);
     res.status(500).json({ error: error.message });
   }
 };

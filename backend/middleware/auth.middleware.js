@@ -8,7 +8,7 @@ exports.verifyToken = async (req, res, next) => {
     token = req.headers.authorization.split(' ')[1];
   }
 
-  console.log('[DEBUG] Token received:', token ? 'YES (length: ' + token.length + ')' : 'NO');
+  // console.log('[DEBUG] Token received:', token ? 'YES (length: ' + token.length + ')' : 'NO');
 
   if (!token) {
     return res.status(401).json({ error: 'Not authorized, token missing' });
@@ -21,7 +21,6 @@ exports.verifyToken = async (req, res, next) => {
     // We fetch the latest user to ensure they still exist and might fetch updated role
     const user = await User.findByPk(decoded.id);
     if (!user) {
-      console.log('[DEBUG] Auth Fail: User not found in DB for ID:', decoded.id);
       return res.status(401).json({ error: 'Not authorized, user no longer exists' });
     }
 

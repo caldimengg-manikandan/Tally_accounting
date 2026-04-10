@@ -128,6 +128,11 @@ export const salesAPI = {
   getOrders: (companyId) => api.get(`/sales/orders/${companyId}`),
   updateOrder: (id, data) => api.put(`/sales/orders/${id}`, data),
   createInvoice: (data) => api.post('/sales/invoices', data),
+  getInvoicesByCompany: (companyId) => api.get(`/sales/invoices/company/${companyId}`),
+  getById: (id) => api.get(`/sales/invoices/detail/${id}`),
+  updateInvoice: (id, data) => api.put(`/sales/invoices/${id}`, data),
+  deleteOrder: (id) => api.delete(`/sales/orders/${id}`),
+  deleteInvoice: (id) => api.delete(`/sales/invoices/${id}`),
 };
 
 // ─── Quotes ────────────────────────────────────────

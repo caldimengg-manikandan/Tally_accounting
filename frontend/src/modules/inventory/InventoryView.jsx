@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Edit2, ChevronRight, ChevronDown, Plus, MoreVertical, Search, Package, RefreshCcw, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { inventoryAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 import ItemDetailView from './ItemDetailView';
 import ItemEntryView from './ItemEntryView';
 
@@ -13,8 +15,10 @@ const InventoryView = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'split'
   const [showNewModal, setShowNewModal] = useState(false);
-  const [deleteModalItem, setDeleteModalItem] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteName, setDeleteName] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const { addNotification } = useNotificationStore();
   
   const companyId = localStorage.getItem('companyId');
 
@@ -54,65 +58,41 @@ const InventoryView = () => {
   };
 
   const handleDeleteItem = (item) => {
-    setDeleteModalItem(item);
+    setDeleteId(item.id);
+    setDeleteName(item.name);
+    setIsDeleteModalOpen(true);
   };
 
   const confirmDelete = async () => {
-    if (!deleteModalItem) return;
-    setIsDeleting(true);
+    if (!deleteId) return;
     try {
-      await inventoryAPI.deleteItem(deleteModalItem.id);
+      await inventoryAPI.deleteItem(deleteId);
+      addNotification('Item deleted successfully', 'success');
       fetchData();
-      if (selectedItem?.id === deleteModalItem.id) {
+      if (selectedItem?.id === deleteId) {
         setSelectedItem(null);
         setViewMode('table');
       }
-      setDeleteModalItem(null);
     } catch (err) {
-      alert("Error deleting item: " + (err.response?.data?.error || err.message));
+      addNotification(err.response?.data?.error || 'Failed to delete item', 'error');
     } finally {
-      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+      setDeleteId(null);
+      setDeleteName('');
     }
   };
 
   return (
     <div className="relative bg-[#F9FAFB] font-sans min-h-screen">
       
-      {/* ── CUSTOM DELETE MODAL ───────────────────────── */}
-      {deleteModalItem && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up ring-1 ring-slate-100">
-            <div className="p-6 sm:p-8">
-              <div className="flex items-center gap-4 mb-6">
-                 <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
-                    <AlertTriangle size={24} className="text-rose-500" strokeWidth={2.5}/>
-                 </div>
-                 <div>
-                    <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Delete Item</h3>
-                    <p className="text-sm text-slate-500 mt-1">Are you sure you want to delete <span className="font-bold text-slate-800">"{deleteModalItem.name}"</span>? This action cannot be undone.</p>
-                 </div>
-              </div>
-              <div className="flex items-center justify-end gap-3 mt-8">
-                <button 
-                  onClick={() => setDeleteModalItem(null)}
-                  disabled={isDeleting}
-                  className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-slate-800 transition-all disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={confirmDelete}
-                  disabled={isDeleting}
-                  className="px-6 py-2.5 text-sm font-bold text-white bg-rose-500 rounded-xl hover:bg-rose-600 shadow-sm shadow-rose-500/20 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:scale-100"
-                >
-                  {isDeleting ? <RefreshCcw size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                  {isDeleting ? 'Deleting...' : 'Delete Permanently'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ConfirmModal replaces the inline modal */}
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Item"
+        message={`Are you sure you want to delete "${deleteName}"? This action cannot be undone.`}
+      />
       
       {/* ── VIEW MODE: TABLE (IMAGE 2) ───────────────────────────── */}
       {viewMode === 'table' && (

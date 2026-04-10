@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ledgerAPI, quoteAPI, companyAPI } from '../../services/api';
+import { ledgerAPI, quoteAPI, companyAPI, priceListAPI } from '../../services/api';
 import { 
   Plus, MoreHorizontal, ChevronDown, Settings, 
   X, Info, Upload as UploadIcon, Search, Tag, Paperclip, RefreshCw,
   Edit2, Trash2, ChevronRight, ArrowDownUp, Download, RotateCcw,
-  ArrowUp, ArrowDown, ArrowLeft, FileText, Building, Package, Check
+  ArrowUp, ArrowDown, ArrowLeft, FileText, Building, Package, Check,
+  Mail, Phone, Send, HelpCircle
 } from 'lucide-react';
 import { inventoryAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
+import ConfirmModal from '../../components/ConfirmModal';
 
 // ─────────────────────────────────────────────────
 // ITEM SEARCH SELECTOR (FOR TABLE CELLS)
@@ -331,7 +334,7 @@ const QuotesList = ({ quotes, loading, navigate, onDelete, onRefresh, selectedId
     };
 
     return (
-        <div className="flex flex-col h-full bg-white">
+        <div className="flex flex-col h-full bg-white relative">
             <div className={`p-4 flex items-center justify-between border-b border-slate-100 ${isSplit ? 'px-4' : 'px-8'}`}>
                 <div className="flex items-center gap-3">
                     <h1 className={`${isSplit ? 'text-[18px]' : 'text-[24px]'} font-bold text-slate-900`}>Quotes</h1>
@@ -362,38 +365,79 @@ const QuotesList = ({ quotes, loading, navigate, onDelete, onRefresh, selectedId
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="flex-1 overflow-y-auto no-scrollbar relative">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center h-60 opacity-50">
                         <RefreshCw className="animate-spin text-[#1e61f0] mb-2" size={24} />
-                        <span className="text-[12px] font-medium">Syncing...</span>
-                    </div>
-                ) : sortedQuotes.length === 0 ? (
-                    <div className="p-20 text-center opacity-40">
-                         <Tag size={48} className="mx-auto mb-4" />
-                         <p className="text-sm font-medium">No quotes found.</p>
-                         <button onClick={() => navigate('/quotes/new')} className="mt-4 text-[#1e61f0] font-bold text-[13px] hover:underline">Create One Now</button>
+                        <span className="text-[12px] font-medium tracking-widest uppercase font-black">Syncing...</span>
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-50">
-                        {sortedQuotes.map(q => (
-                            <div 
-                                key={q.id} 
-                                onClick={() => onSelect(q.id)}
-                                className={`px-5 py-4 cursor-pointer transition-all border-l-[4px]
-                                  ${String(q.id) === String(selectedId) ? 'bg-[#f0f5ff] border-l-[#1e61f0]' : 'hover:bg-slate-50 border-l-transparent'}`}
-                            >
-                                <div className="flex justify-between items-start mb-1.5">
-                                    <span className={`text-[13px] font-bold ${String(q.id) === String(selectedId) ? 'text-[#1e61f0]' : 'text-slate-700'}`}>{q.customerName}</span>
-                                    <span className="text-[14px] font-black text-slate-900 tracking-tight">₹{parseFloat(q.totalAmount || 0).toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-[11px]">
-                                    <span className="text-slate-400 font-bold uppercase tracking-wider">#{q.quoteNumber} • {new Date(q.quoteDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
-                                    <span className={`px-2 py-0.5 rounded uppercase text-[9px] font-black ${q.status === 'Accepted' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{q.status || 'Draft'}</span>
-                                </div>
+                    <>
+                        <div className="bg-slate-50 border-b border-slate-100 flex items-center px-6 py-3 sticky top-0 z-10">
+                            <div className="w-24 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</div>
+                            <div className="flex-1 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-4">Customer Details</div>
+                            <div className="w-24 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</div>
+                            <div className="w-24 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</div>
+                            <div className="w-20 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actions</div>
+                        </div>
+
+                        {sortedQuotes.length === 0 ? (
+                            <div className="p-20 text-center opacity-40">
+                                 <Tag size={48} className="mx-auto mb-4" />
+                                 <p className="text-sm font-medium">No quotes found.</p>
+                                 <button onClick={() => navigate('/quotes/new')} className="mt-4 text-[#1e61f0] font-bold text-[13px] hover:underline">Create One Now</button>
                             </div>
-                        ))}
-                    </div>
+                        ) : (
+                            <div className="divide-y divide-slate-50">
+                                {sortedQuotes.map(q => (
+                                    <div 
+                                        key={q.id} 
+                                        onClick={() => onSelect(q.id)}
+                                        className={`px-6 py-4 cursor-pointer transition-all border-l-[4px] flex items-center group
+                                            ${String(q.id) === String(selectedId) ? 'bg-[#f0f5ff] border-l-[#1e61f0]' : 'hover:bg-slate-50 border-l-transparent'}`}
+                                    >
+                                        <div className="w-24 text-[12px] font-bold text-slate-400">
+                                             {new Date(q.quoteDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                        </div>
+
+                                        <div className="flex-1 pl-4">
+                                            <div className={`text-[13px] font-black ${String(q.id) === String(selectedId) ? 'text-[#1e61f0]' : 'text-slate-800'} transition-colors`}>
+                                                {q.customerName}
+                                            </div>
+                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">#{q.quoteNumber}</div>
+                                        </div>
+
+                                        <div className="w-24 text-right pr-2">
+                                             <div className="text-[14px] font-black text-slate-900 tracking-tight">₹{parseFloat(q.totalAmount || 0).toLocaleString()}</div>
+                                        </div>
+
+                                        <div className="w-24 flex justify-center">
+                                            <span className={`px-2 py-0.5 rounded uppercase text-[8px] font-black tracking-widest border ${q.status === 'Accepted' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                                {q.status || 'Draft'}
+                                            </span>
+                                        </div>
+
+                                        <div className="w-20 flex justify-center gap-1">
+                                             <button 
+                                                onClick={(e) => { e.stopPropagation(); navigate(`/quotes/edit/${q.id}`); }} 
+                                                className="p-1.5 hover:bg-white rounded text-slate-400 hover:text-blue-600 transition-all border border-transparent hover:border-slate-100"
+                                                title="Edit"
+                                            >
+                                                <Edit2 size={13} />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); onDelete(q.id); }} 
+                                                className="p-1.5 hover:bg-white rounded text-slate-400 hover:text-red-500 transition-all border border-transparent hover:border-slate-100"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
@@ -556,7 +600,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                                     <th className="px-8 py-5 text-right">Total</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-50">
                                 {items.map((it, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50 transition-colors group">
                                         <td className="px-8 py-6 text-slate-300 font-black text-[14px]">{String(idx + 1).padStart(2, '0')}</td>
@@ -637,6 +681,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
 // EMAIL SEND VIEW
 // ─────────────────────────────────────────────────
 const EmailSendView = ({ quote, onCancel, onSend }) => {
+    const addNotification = useNotificationStore(state => state.addNotification);
     const [customerEmail, setCustomerEmail] = useState(quote.customerEmail || "thejathangavel5@gmail.com"); 
     const userEmail = "thejathangal5@gmail.com"; 
     const userName = "Administrator";
@@ -654,11 +699,11 @@ const EmailSendView = ({ quote, onCancel, onSend }) => {
                 body,
                 toEmail: customerEmail
             });
-            alert('Email sent successfully!');
+            addNotification('Email sent successfully!', 'success');
             onSend();
         } catch (err) {
             console.error(err);
-            alert('Failed to send email: ' + (err.response?.data?.error || err.message));
+            addNotification('Failed to send email: ' + (err.response?.data?.error || err.message), 'error');
         } finally {
             setIsSending(false);
         }
@@ -737,6 +782,7 @@ const EmailSendView = ({ quote, onCancel, onSend }) => {
 // NEW QUOTE FORM
 // ─────────────────────────────────────────────────
 const NewQuoteForm = ({ companyId, navigate, editId }) => {
+    const addNotification = useNotificationStore(state => state.addNotification);
     // Form State
     const [customerName, setCustomerName] = useState('');
     const [customers, setCustomers] = useState([]);
@@ -752,6 +798,8 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split('T')[0]);
     const [expiryDate, setExpiryDate] = useState('');
     const [salesperson, setSalesperson] = useState('');
+    const [project, setProject] = useState('');
+    const [priceList, setPriceList] = useState('');
     const [subject, setSubject] = useState('');
     const [selectedTax, setSelectedTax] = useState('');
     const [attachedFiles, setAttachedFiles] = useState([]);
@@ -765,7 +813,11 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [loading, setLoading] = useState(false);
 
     const [inventoryItems, setInventoryItems] = useState([]);
+    const [priceLists, setPriceLists] = useState([]);
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+    const [isPriceListDropdownOpen, setIsPriceListDropdownOpen] = useState(false);
+    const [priceListSearch, setPriceListSearch] = useState('');
+    const priceListRef = useRef(null);
 
     const bulkFileRef = useRef(null);
 
@@ -802,6 +854,69 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
         reader.readAsBinaryString(file);
     };
 
+    const handleBulkAdd = (selectedItems) => {
+        const mapped = selectedItems.map(it => ({
+            id: Date.now() + Math.random(),
+            itemDetails: it.name,
+            quantity: 1,
+            rate: it.sellingPrice || 0,
+            amount: it.sellingPrice || 0
+        }));
+        setItems(prev => {
+            // Remove the empty row if it's the only one
+            const filtered = prev.filter(item => item.itemDetails.trim() !== '' || item.rate > 0);
+            return [...filtered, ...mapped];
+        });
+    };
+
+    const addItem = () => {
+        setItems([...items, { id: Date.now(), itemDetails: '', quantity: 1, rate: 0, amount: 0 }]);
+    };
+
+    const removeItem = (index) => {
+        if (items.length <= 1) {
+            setItems([{ id: Date.now(), itemDetails: '', quantity: 1, rate: 0, amount: 0 }]);
+            return;
+        }
+        setItems(items.filter((_, i) => i !== index));
+    };
+
+    const updateItem = (index, field, value) => {
+        const newItems = [...items];
+        newItems[index][field] = value;
+        if (field === 'quantity' || field === 'rate') {
+            newItems[index].amount = (parseFloat(newItems[index].quantity) || 0) * (parseFloat(newItems[index].rate) || 0);
+        }
+        setItems(newItems);
+    };
+
+    const handleQuickAdd = async () => {
+        if (!quickAddForm.name) return;
+        setIsSavingCustomer(true);
+        try {
+            const activeCoId = companyId || localStorage.getItem('companyId');
+            const res = await ledgerAPI.create({
+                companyId: activeCoId,
+                name: quickAddForm.name,
+                email: quickAddForm.email,
+                phone: quickAddForm.mobile,
+                salutation: quickAddForm.salutation,
+                groupName: 'Sundry Debtors' 
+            });
+            setCustomers(prev => [...prev, res.data]);
+            setCustomerName(res.data.name);
+            setCustomerSearch(res.data.name);
+            setIsQuickAddOpen(false);
+            setQuickAddForm({ name: '', email: '', mobile: '', salutation: 'Mr.' });
+            addNotification('Customer added successfully!', 'success');
+        } catch (err) {
+            console.error(err);
+            addNotification('Failed to register customer', 'error');
+        } finally {
+            setIsSavingCustomer(false);
+        }
+    };
+
     // Calculations
     const TAX_OPTIONS = [
         { label: 'GST @ 5%', value: 'GST5', rate: 5 },
@@ -818,24 +933,19 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     // Fetch real customers & items
     useEffect(() => {
         const activeCoId = companyId || localStorage.getItem('companyId');
-        if (!activeCoId) {
-            console.warn("NO COMPANY ID FOUND FOR QUOTE FORM");
-            return;
-        }
-        
-        console.log("HYDRATING QUOTE FORM FOR CO:", activeCoId);
+        if (!activeCoId) return;
         
         Promise.all([
             ledgerAPI.getByCompany(activeCoId),
-            inventoryAPI.getByCompany(activeCoId)
+            inventoryAPI.getByCompany(activeCoId),
+            priceListAPI.getByCompany(activeCoId)
         ])
-            .then(([ledgersRes, invRes]) => {
-                setCustomers(ledgersRes.data || []);
-                setInventoryItems(invRes.data || []);
-            })
-            .catch(err => {
-                console.error("DATA HYDRATION FAILED:", err);
-            });
+        .then(([ledgersRes, invRes, priceRes]) => {
+            setCustomers(ledgersRes.data || []);
+            setInventoryItems(invRes.data || []);
+            setPriceLists(priceRes.data || []);
+        })
+        .catch(err => console.error("DATA HYDRATION FAILED:", err));
     }, [companyId]);
 
     // Fetch existing quote if editing
@@ -864,11 +974,45 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
         }
     }, [editId]);
 
-    // Close dropdown on click outside
+    // Apply Price List to Items
+    useEffect(() => {
+        if (!priceList || items.length === 0) return;
+        const selectedList = priceLists.find(p => p.id === priceList);
+        if (!selectedList) return;
+
+        const percentage = parseFloat(selectedList.percentage) || 0;
+        const isMarkup = selectedList.markupType === 'Markup';
+
+        const updatedItems = items.map(item => {
+            // Find base rate from inventory if itemDetails matches
+            const invItem = inventoryItems.find(i => i.name === item.itemDetails);
+            const baseRate = invItem ? parseFloat(invItem.sellingPrice || 0) : parseFloat(item.rate || 0);
+            
+            let newRate = baseRate;
+            if (isMarkup) {
+                newRate = baseRate + (baseRate * percentage / 100);
+            } else {
+                newRate = baseRate - (baseRate * percentage / 100);
+            }
+
+            return {
+                ...item,
+                rate: newRate,
+                amount: newRate * (parseFloat(item.quantity) || 0)
+            };
+        });
+
+        setItems(updatedItems);
+    }, [priceList]);
+
+    // Close dropdowns on click outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
                 setShowCustomerDropdown(false);
+            }
+            if (priceListRef.current && !priceListRef.current.contains(event.target)) {
+                setIsPriceListDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -880,7 +1024,24 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     );
 
     const handleSave = async () => {
-        if (!customerName) { alert('Please select a customer.'); return; }
+        // Validation logic
+        const missingFields = [];
+        if (!customerName) missingFields.push('Customer Name');
+        if (!quoteNo) missingFields.push('Quote Number');
+        if (!quoteDate) missingFields.push('Quote Date');
+        
+        // Ensure at least one item has content
+        const validItems = items.filter(it => it.itemDetails.trim() !== '' && it.rate > 0);
+        if (validItems.length === 0) {
+            addNotification('Please add at least one item with a valid rate.', 'error');
+            return;
+        }
+
+        if (missingFields.length > 0) {
+            addNotification(`Required fields missing: ${missingFields.join(', ')}`, 'error');
+            return;
+        }
+
         setLoading(true);
         try {
             const payload = {
@@ -911,413 +1072,462 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
             }
             navigate('/quotes');
         } catch (err) {
-            alert('Failed to save quote');
+            console.error(err);
+            addNotification('Failed to save quote', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const updateItem = (idx, field, val) => {
-        const newItems = [...items];
-        newItems[idx][field] = val;
-        if (field === 'quantity' || field === 'rate') {
-            newItems[idx].amount = parseFloat(newItems[idx].quantity || 0) * parseFloat(newItems[idx].rate || 0);
-        }
-        setItems(newItems);
-    };
-
-    const addItem = () => setItems([...items, { id: Date.now(), itemDetails: '', quantity: 1, rate: 0, amount: 0 }]);
-    const removeItem = (idx) => setItems(items.filter((_, i) => i !== idx));
-
-    const handleQuickAdd = async () => {
-        if (!quickAddForm.name) return;
-        setIsSavingCustomer(true);
-        try {
-            const payload = {
-                ...quickAddForm,
-                companyId,
-                groupName: 'Sundry Debtors',
-                openingBalance: 0,
-                currentBalance: 0
-            };
-            const res = await ledgerAPI.create(payload);
-            const newCustomer = res.data.ledger || res.data;
-            setCustomers([...customers, newCustomer]);
-            setCustomerName(newCustomer.name);
-            setCustomerSearch(newCustomer.name);
-            setIsQuickAddOpen(false);
-            setQuickAddForm({ name: '', email: '', mobile: '', salutation: 'Mr.' });
-        } catch (err) {
-            alert('Failed to register customer');
-        } finally {
-            setIsSavingCustomer(false);
-        }
-    };
-
     return (
-        <div className="flex flex-col min-h-full">
+        <div className="flex flex-col min-h-screen bg-[#f8f9fa]">
             <BulkItemSelectorModal 
                 isOpen={isBulkModalOpen}
                 onClose={() => setIsBulkModalOpen(false)}
                 onAdd={handleBulkAdd}
                 items={inventoryItems}
             />
-            {/* Header / Sidebar Alignment */}
-            <header className="sticky top-0 bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between z-40 shadow-sm shrink-0">
-                <div className="flex items-center gap-6">
-                    <button 
-                        onClick={() => navigate('/quotes')}
-                        className="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all border border-transparent hover:border-slate-100"
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase tracking-widest">Business Proposals</span>
-                            <span className="text-slate-300">/</span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Quotes</span>
-                        </div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            {editId ? 'Reshape Quote' : 'Forge New Quote'}
-                            <span className="bg-slate-100 text-slate-500 text-[12px] px-3 py-1 rounded-full font-bold">{quoteNo}</span>
-                        </h2>
-                    </div>
-                </div>
+
+            {/* Header */}
+            <header className="px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-white z-50">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/quotes')} className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-50 transition-all shadow-sm">DISCARD</button>
+                    <div className="p-1.5 bg-slate-100 rounded text-slate-600">
+                        <FileText size={18} />
+                    </div>
+                    <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">{editId ? 'Edit Quote' : 'New Quote'}</h2>
+                </div>
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('/quotes')} className="text-[13px] font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest">Discard</button>
                     <button 
                         onClick={handleSave} 
                         disabled={loading}
-                        className="px-10 py-3 bg-blue-600 text-white rounded-xl text-[13px] font-black hover:bg-blue-700 shadow-[0_4px_12px_rgba(37,99,235,0.2)] transition-all uppercase tracking-widest disabled:opacity-50"
+                        className="px-8 py-2 bg-[#1e61f0] text-white text-[13px] font-black rounded shadow-lg shadow-blue-100 hover:bg-[#1a56d9] transition-all uppercase tracking-widest"
                     >
-                        {loading ? 'Processing...' : 'SAVE & PUBLISH'}
+                        {loading ? 'Saving...' : 'Confirm Quote'}
                     </button>
                 </div>
             </header>
 
-            <div className="pt-28 pb-20 px-12 max-w-[1200px] mx-auto animate-fade-up">
-                <div className="bg-white rounded shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-100 p-12 mb-8">
-                    {/* Customer Selection */}
-                    <div className="grid grid-cols-12 gap-10 mb-16">
-                         <div className="col-span-8">
-                            <label className="text-[11px] font-black text-[#1e61f0] uppercase tracking-[0.3em] mb-3 block">Customer Profile*</label>
-                            <div className="relative group" ref={customerDropdownRef}>
-                                <div className="absolute inset-y-0 left-0 w-12 flex items-center justify-center pointer-events-none z-10">
-                                    <Building size={18} className="text-slate-300 group-focus-within:text-[#1e61f0] transition-colors" />
+            <div className="flex-1 overflow-y-auto p-8 max-w-[1200px] w-full mx-auto">
+                <div className="bg-white rounded-lg border border-slate-200 p-10 space-y-10 shadow-sm animate-fade-in">
+                    
+                    {/* Top Section: Labels on Left, Inputs on Right */}
+                    <div className="space-y-6 max-w-3xl">
+                        
+                        {/* Customer Name */}
+                        <div className="flex items-center gap-8">
+                            <label className="w-40 text-[13px] font-bold text-red-500">Customer Name*</label>
+                            <div className="flex-1 relative group" ref={customerDropdownRef}>
+                                <div className="flex shadow-sm">
+                                    <input 
+                                        type="text"
+                                        value={customerSearch}
+                                        onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true); }}
+                                        onFocus={() => setShowCustomerDropdown(true)}
+                                        placeholder="Select or add a customer"
+                                        className="flex-1 h-9 px-3 bg-white border border-slate-300 rounded-l text-[14px] outline-none focus:border-blue-500 transition-all font-medium"
+                                    />
+                                    <button className="px-3 bg-[#1e61f0] text-white rounded-r flex items-center justify-center">
+                                        <Search size={14} />
+                                    </button>
                                 </div>
-                                <input 
-                                    type="text"
-                                    name={`user_search_${Math.random().toString(36).substring(7)}`}
-                                    value={customerName || customerSearch}
-                                    onChange={e => {
-                                        setCustomerSearch(e.target.value);
-                                        setCustomerName(''); 
-                                        setShowCustomerDropdown(true);
-                                    }}
-                                    onFocus={() => setShowCustomerDropdown(true)}
-                                    placeholder="Select or add a customer"
-                                    className="w-full pl-12 pr-12 py-3 bg-white border border-slate-200 rounded-lg text-[15px] font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 shadow-sm transition-all placeholder:text-slate-300 placeholder:font-medium"
-                                    autoComplete="off"
-                                    data-lpignore="true"
-                                    data-form-type="other"
-                                />
-                                <div className="absolute inset-y-0 right-0 w-24 flex items-center justify-end px-4 gap-3 pointer-events-none">
-                                    <ChevronDown size={14} className="text-slate-900" />
-                                    <Search size={14} className="text-slate-300" />
-                                </div>
-
+                                
                                 {showCustomerDropdown && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-[0_10px_40px_rgba(0,0,0,0.1)] rounded-xl z-50 max-h-[400px] overflow-hidden flex flex-col animate-fade-in">
-                                        {/* Search Header */}
-                                        <div className="p-3 border-b border-slate-50 sticky top-0 bg-white">
-                                            <div className="relative">
-                                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                <input 
-                                                    type="text"
-                                                    autoFocus
-                                                    placeholder="Search customers..."
-                                                    value={customerSearch}
-                                                    onChange={e => setCustomerSearch(e.target.value)}
-                                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border-none rounded-lg text-[13px] outline-none focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-400 font-medium"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="overflow-y-auto flex-1 no-scrollbar py-1">
-                                            {filteredCustomers.length > 0 ? (
-                                                filteredCustomers.map(c => (
-                                                    <div 
-                                                        key={c.id} 
-                                                        onClick={() => {
-                                                            setCustomerName(c.name);
-                                                            setCustomerSearch(c.name);
-                                                            setShowCustomerDropdown(false);
-                                                        }}
-                                                        className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer flex items-center gap-3 transition-colors group mx-1 rounded-lg"
-                                                    >
-                                                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[11px] group-hover:bg-blue-600 group-hover:text-white transition-all uppercase">
-                                                            {c.name.substring(0, 2)}
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className="text-[14px] font-bold text-slate-700 tracking-tight">{c.name}</div>
-                                                            <div className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">{c.email || 'No email attached'}</div>
-                                                        </div>
-                                                        <ChevronRight size={14} className="text-slate-200 group-hover:text-blue-500 transition-colors" />
-                                                    </div>
-                                                ))
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded z-50 overflow-hidden">
+                                        <div className="max-h-60 overflow-y-auto">
+                                            {filteredCustomers.length === 0 ? (
+                                                <div className="p-4 text-center">
+                                                    <p className="text-[12px] text-slate-400 mb-2">No customers found</p>
+                                                    <button onClick={() => setIsQuickAddOpen(true)} className="text-[11px] text-blue-600 font-bold uppercase tracking-widest hover:underline">+ Add New</button>
+                                                </div>
                                             ) : (
-                                                <div className="px-5 py-10 text-center flex flex-col items-center gap-2">
-                                                    <div className="p-3 bg-slate-50 rounded-full">
-                                                        <Search size={24} className="text-slate-300" />
-                                                    </div>
-                                                    <div className="text-[13px] font-medium text-slate-500">No customers match "{customerSearch}"</div>
+                                                <div className="py-1">
+                                                    {filteredCustomers.map(c => (
+                                                        <div 
+                                                            key={c.id}
+                                                            onClick={() => { setCustomerName(c.name); setCustomerSearch(c.name); setShowCustomerDropdown(false); }}
+                                                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] text-slate-700 font-medium"
+                                                        >
+                                                            {c.name}
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             )}
-                                        </div>
-
-                                        {/* Add New Footer */}
-                                        <div className="p-2 bg-slate-50/50 border-t border-slate-100">
-                                            <button 
-                                                onClick={() => { setShowCustomerDropdown(false); setIsQuickAddOpen(true); }}
-                                                className="w-full py-2.5 px-4 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg text-[12px] font-black text-slate-600 hover:text-blue-600 flex items-center justify-center gap-2 transition-all shadow-sm"
-                                            >
-                                                <Plus size={14} strokeWidth={3} /> REGISTER NEW CUSTOMER
-                                            </button>
                                         </div>
                                     </div>
                                 )}
                             </div>
-                         </div>
-                         <div className="col-span-4">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 block">Quote Sequence*</label>
-                            <div 
-                                onClick={() => setShowQuoteSettings(true)}
-                                className="flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-200 rounded cursor-pointer hover:border-[#1e61f0] transition-colors"
-                            >
-                                <span className="font-black text-slate-900 tracking-tight italic">{quoteNo}</span>
-                                <Settings size={16} className="text-slate-400" />
+                        </div>
+
+                        {/* Quote# */}
+                        <div className="flex items-center gap-8">
+                            <label className="w-40 text-[13px] font-bold text-slate-600">Quote#*</label>
+                            <div className="flex-1 relative max-w-sm">
+                                <input 
+                                    value={quoteNo}
+                                    readOnly
+                                    className="w-full h-9 px-3 bg-white border border-slate-300 rounded text-[14px] font-medium outline-none shadow-sm"
+                                />
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer hover:text-blue-500" onClick={() => setShowQuoteSettings(true)}>
+                                    <Settings size={14} />
+                                </div>
                             </div>
-                         </div>
+                        </div>
+
+                        {/* Reference# */}
+                        <div className="flex items-center gap-8">
+                            <label className="w-40 text-[13px] font-bold text-slate-600">Reference#</label>
+                            <input 
+                                value={refNo}
+                                onChange={(e) => setRefNo(e.target.value)}
+                                className="flex-1 h-9 px-3 border border-slate-300 rounded text-[14px] outline-none focus:border-blue-500 font-medium shadow-sm max-w-md"
+                            />
+                        </div>
+
+                        {/* Quote Date & Expiry Date */}
+                        <div className="flex items-center gap-8">
+                            <label className="w-40 text-[13px] font-bold text-red-500">Quote Date*</label>
+                            <div className="flex-1 flex items-center gap-8 max-w-2xl">
+                                <input 
+                                    type="date"
+                                    value={quoteDate}
+                                    onChange={(e) => setQuoteDate(e.target.value)}
+                                    className="flex-1 h-9 px-3 border border-slate-300 rounded text-[14px] font-medium shadow-sm"
+                                />
+                                <label className="text-[13px] font-bold text-slate-600 w-24">Expiry Date</label>
+                                <input 
+                                    type="date"
+                                    value={expiryDate}
+                                    onChange={(e) => setExpiryDate(e.target.value)}
+                                    className="flex-1 h-9 px-3 border border-slate-300 rounded text-[14px] font-medium shadow-sm"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Salesperson */}
+                        <div className="flex items-center gap-8">
+                            <label className="w-40 text-[13px] font-bold text-slate-600">Salesperson</label>
+                            <select 
+                                value={salesperson}
+                                onChange={(e) => {
+                                    if (e.target.value === 'ADD_NEW') {
+                                        navigate('/customers/new');
+                                    } else {
+                                        setSalesperson(e.target.value);
+                                    }
+                                }}
+                                className="flex-1 h-9 px-3 border border-slate-300 rounded text-[14px] bg-white font-medium italic text-slate-400 shadow-sm max-w-md"
+                            >
+                                <option value="">Select or Add Salesperson</option>
+                                <option value="ADD_NEW">+ Add New Salesperson</option>
+                                <option value="Internal Team">Internal Team</option>
+                                <option value="Direct Sales">Direct Sales</option>
+                            </select>
+                        </div>
+
+                        {/* Project Name */}
+                        <div className="flex items-center gap-8">
+                            <label className="w-40 text-[13px] font-bold text-slate-600">Project Name</label>
+                            <div className="flex-1 max-w-md">
+                                <select 
+                                    value={project}
+                                    onChange={(e) => setProject(e.target.value)}
+                                    className="w-full h-9 px-3 border border-slate-300 rounded text-[14px] bg-white font-medium italic text-slate-400 shadow-sm"
+                                >
+                                    <option value="">Select a project</option>
+                                </select>
+                                <p className="text-[11px] text-slate-400 mt-1">Select a customer to associate a project.</p>
+                            </div>
+                        </div>
+
+                        {/* Subject */}
+                        <div className="flex items-start gap-8 pt-4">
+                            <label className="w-40 text-[13px] font-bold text-slate-600 flex items-center gap-2 mt-2">Subject <Info size={14} className="text-slate-400" /></label>
+                            <div className="flex-1 relative max-w-2xl">
+                                <textarea 
+                                    value={subject}
+                                    onChange={(e) => setSubject(e.target.value)}
+                                    placeholder="Let your customer know what this Quote is for"
+                                    className="w-full p-3 border border-slate-300 rounded text-[14px] font-medium outline-none focus:border-blue-500 resize-none h-16 shadow-sm"
+                                />
+                                <div className="absolute right-3 bottom-2 text-slate-400">
+                                    <div className="p-1.5 hover:bg-slate-50 rounded cursor-pointer"><Edit2 size={12} /></div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
-                    <div className="grid grid-cols-4 gap-8 mb-16 border-t border-slate-50 pt-10">
-                        <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Reference#</label>
-                            <input value={refNo} onChange={e => setRefNo(e.target.value)} className="w-full border-b-2 border-slate-100 px-1 py-1 text-[14px] font-bold outline-none focus:border-[#1e61f0] transition-all" placeholder="PO-XXXX" />
+                    {/* Price List Selection */}
+                    <div className="relative" ref={priceListRef}>
+                        <div 
+                            onClick={() => setIsPriceListDropdownOpen(!isPriceListDropdownOpen)}
+                            className="flex items-center gap-3 text-[13px] font-bold text-slate-500 pt-6 border-t border-slate-100 italic cursor-pointer hover:text-blue-600 transition-all select-none"
+                        >
+                            <FileText size={14} />
+                            <span>{priceList ? priceLists.find(p => p.id === priceList)?.name || 'Select Price List' : 'Select Price List'}</span>
+                            <ChevronDown size={14} className={`transition-transform duration-300 ${isPriceListDropdownOpen ? 'rotate-180' : ''}`} />
                         </div>
-                        <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Quote Date*</label>
-                            <input type="date" value={quoteDate} onChange={e => setQuoteDate(e.target.value)} className="w-full border-b-2 border-slate-100 px-1 py-1 text-[14px] font-bold outline-none focus:border-[#1e61f0] transition-all" />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Validity Date</label>
-                            <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="w-full border-b-2 border-slate-100 px-1 py-1 text-[14px] font-bold outline-none focus:border-[#1e61f0] transition-all" />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Sales Officer</label>
-                            <input value={salesperson} onChange={e => setSalesperson(e.target.value)} className="w-full border-b-2 border-slate-100 px-1 py-1 text-[14px] font-bold outline-none focus:border-[#1e61f0] transition-all" placeholder="Officer Name" />
-                        </div>
+
+                        {isPriceListDropdownOpen && (
+                            <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-100 shadow-2xl rounded-2xl z-[100] overflow-hidden animate-scale-up">
+                                <div className="p-3 border-b border-slate-50">
+                                    <div className="relative">
+                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input 
+                                            type="text"
+                                            value={priceListSearch}
+                                            onChange={e => setPriceListSearch(e.target.value)}
+                                            placeholder="Search price lists..."
+                                            className="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-xl text-[12px] font-bold outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto">
+                                    {priceLists.filter(p => !priceListSearch || p.name.toLowerCase().includes(priceListSearch.toLowerCase())).length > 0 ? (
+                                        priceLists.filter(p => !priceListSearch || p.name.toLowerCase().includes(priceListSearch.toLowerCase())).map(p => (
+                                            <div 
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setPriceList(p.id);
+                                                    setIsPriceListDropdownOpen(false);
+                                                }}
+                                                className={`px-4 py-3 cursor-pointer transition-all border-b border-slate-50/50 last:border-0 hover:bg-blue-50 ${priceList === p.id ? 'bg-blue-600 text-white' : 'text-slate-600'}`}
+                                            >
+                                                <p className="text-[13px] font-black">{p.name}</p>
+                                                <p className={`text-[10px] uppercase font-bold tracking-widest mt-0.5 ${priceList === p.id ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                    {p.percentage ? `${p.percentage}% ${p.type === 'Markup' ? 'Markup' : 'Markdown'}` : 'Standard Pricing'}
+                                                </p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="p-8 text-center">
+                                            <FileText size={24} className="mx-auto text-slate-200 mb-2" />
+                                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No lists found</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="mb-16">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Business Subject</label>
-                        <input value={subject} onChange={e => setSubject(e.target.value)} className="w-full border border-slate-200 rounded px-4 py-3 text-[14px] font-bold outline-none focus:border-[#1e61f0] bg-slate-50/20" placeholder="e.g. Annual Maintenance Contract Proposal for 2024" />
+                    {/* Item Table Header */}
+                    <div className="bg-[#f8f9fa] border border-slate-200 rounded-t px-6 py-2.5 flex items-center justify-between">
+                        <h3 className="text-[13px] font-black uppercase text-slate-700 tracking-tight">Item Table</h3>
+                        <button className="text-[11px] font-bold text-blue-600 flex items-center gap-1.5 hover:bg-blue-50 px-3 py-1 rounded transition-all">
+                            <Settings size={14} /> Bulk Actions
+                        </button>
                     </div>
 
-                    {/* ITEMS TABLE */}
-                    <div className="mb-10 overflow-hidden border border-slate-100 rounded-2xl shadow-sm bg-white">
-                        <table className="w-full">
-                            <thead className="bg-slate-50 border-b border-slate-100">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Item Details</th>
-                                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest w-32">Qty</th>
-                                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest w-40">Rate</th>
-                                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest w-40">Amount</th>
-                                    <th className="px-6 py-4 w-12"></th>
+                    {/* Table Section */}
+                    <div className="border-x border-b border-slate-200 rounded-b overflow-hidden shadow-sm">
+                        <table className="w-full border-collapse bg-white">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">
+                                    <th className="px-6 py-3 text-left w-1/2">Item Details</th>
+                                    <th className="px-6 py-3 text-right">Quantity</th>
+                                    <th className="px-6 py-3 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">Rate <Settings size={12} className="text-slate-300"/></div>
+                                    </th>
+                                    <th className="px-6 py-3 text-right">Amount</th>
+                                    <th className="w-10"></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {items.map((it, idx) => (
-                                    <tr key={it.id} className="group hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-6 py-5">
-                                            <ItemSearchSelector 
-                                                value={it.itemDetails}
-                                                items={inventoryItems}
-                                                placeholder="Type or click to select an Item."
-                                                onChange={(selectedItem) => {
-                                                    const newItems = [...items];
-                                                    newItems[idx].itemDetails = selectedItem.name;
-                                                    newItems[idx].rate = selectedItem.sellingPrice || 0;
-                                                    newItems[idx].amount = (newItems[idx].quantity || 0) * (selectedItem.sellingPrice || 0);
-                                                    setItems(newItems);
-                                                }}
-                                            />
-                                            <textarea 
-                                                value={it.itemDetails} 
-                                                onChange={e => updateItem(idx, 'itemDetails', e.target.value)}
-                                                placeholder="Add description..." 
-                                                rows="1"
-                                                className="w-full bg-transparent outline-none text-[12px] font-medium text-slate-400 mt-1 resize-none no-scrollbar placeholder:text-slate-300 italic" 
+                            <tbody className="divide-y divide-slate-100">
+                                {items.map((item, index) => (
+                                    <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <input 
+                                                value={item.itemDetails}
+                                                onChange={(e) => updateItem(index, 'itemDetails', e.target.value)}
+                                                placeholder="Type or click to select an item."
+                                                className="w-full bg-transparent border-none outline-none text-[14px] font-medium text-slate-700 placeholder:text-slate-400"
                                             />
                                         </td>
-                                        <td className="px-6 py-5 align-top">
-                                            <input type="number" value={it.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} className="w-full text-right bg-transparent outline-none text-[14px] font-bold text-slate-600 focus:text-blue-600 transition-colors" />
+                                        <td className="px-6 py-4">
+                                            <input 
+                                                type="number"
+                                                value={item.quantity}
+                                                onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                                className="w-full text-right bg-transparent border-none outline-none text-[14px] font-medium text-slate-600"
+                                            />
                                         </td>
-                                        <td className="px-6 py-5 align-top">
-                                            <div className="flex items-center justify-end font-bold text-slate-600 text-[14px]">
-                                                <span className="mr-1 text-slate-300 font-normal">₹</span>
-                                                <input type="number" value={it.rate} onChange={e => updateItem(idx, 'rate', e.target.value)} className="w-full text-right bg-transparent outline-none focus:text-blue-600 transition-colors" />
-                                            </div>
+                                        <td className="px-6 py-4">
+                                            <input 
+                                                type="number"
+                                                value={item.rate}
+                                                onChange={(e) => updateItem(index, 'rate', e.target.value)}
+                                                className="w-full text-right bg-transparent border-none outline-none text-[14px] font-medium text-slate-600 font-mono"
+                                            />
                                         </td>
-                                        <td className="px-6 py-5 align-top font-black text-right text-[14px] text-slate-900">
-                                            ₹ {parseFloat(it.amount).toLocaleString()}
+                                        <td className="px-6 py-4 text-right">
+                                            <span className="text-[14px] font-bold text-slate-900 font-mono">{parseFloat(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </td>
-                                        <td className="px-6 py-5 align-top text-center">
-                                            <button onClick={() => removeItem(idx)} className="text-slate-200 hover:text-red-500 transition-colors p-1 hover:bg-red-50 rounded"><X size={16}/></button>
+                                        <td className="px-4 py-4 text-center">
+                                            <button onClick={() => removeItem(index)} className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                                <X size={16} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                        <div className="p-4 bg-slate-50/30 flex items-center justify-between border-t border-slate-100">
-                             <div className="flex items-center gap-2">
-                                <button onClick={addItem} className="flex items-center gap-2 text-[#1e61f0] text-[13px] font-black hover:bg-blue-50 px-5 py-2.5 rounded-xl transition-all shadow-sm border border-transparent hover:border-blue-100">
-                                    <Plus size={18} strokeWidth={3}/> ADD NEW ROW
-                                </button>
-                                <button 
-                                    onClick={() => setIsBulkModalOpen(true)}
-                                    className="flex items-center gap-2 text-slate-500 text-[13px] font-bold hover:bg-slate-100 px-5 py-2.5 rounded-xl transition-all"
-                                >
-                                    <Package size={16}/> ADD ITEMS IN BULK
-                                </button>
-                             </div>
-                             
-                             <div className="flex items-center gap-4">
-                                 <input type="file" ref={bulkFileRef} onChange={handleBulkImport} className="hidden" accept=".xlsx,.xls"/>
-                                 <button onClick={() => bulkFileRef.current.click()} className="flex items-center gap-2 text-slate-400 text-[11px] font-bold hover:text-slate-800 transition-colors uppercase tracking-widest">
-                                    <UploadIcon size={14}/> BULK UPLOAD EXCEL
-                                 </button>
-                             </div>
+                    </div>
+
+                    {/* Table Actions */}
+                    <div className="flex items-center gap-3 pt-4">
+                        <button onClick={addItem} className="flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 text-blue-600 text-[12px] font-bold rounded shadow-sm hover:bg-slate-50 transition-all">
+                            <Plus size={14} strokeWidth={3}/> Add New Row
+                        </button>
+                        <button onClick={() => setIsBulkModalOpen(true)} className="flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 text-blue-600 text-[12px] font-bold rounded shadow-sm hover:bg-slate-50 transition-all">
+                            <Package size={14}/> Add Items in Bulk
+                        </button>
+                        <div className="ml-auto flex items-center gap-4 text-slate-400 font-bold text-[11px] uppercase tracking-widest pl-8 border-l border-slate-100">
+                            <input type="file" ref={bulkFileRef} onChange={handleBulkImport} className="hidden" accept=".xlsx,.xls"/>
+                            <button onClick={() => bulkFileRef.current.click()} className="hover:text-blue-600 transition-colors">Import Excel</button>
                         </div>
                     </div>
 
-                    {/* Summary & Totals */}
-                    <div className="flex justify-between items-start pt-10 border-t border-slate-100 mt-10">
-                        <div className="w-[450px] space-y-8">
-                            <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Terms & Conditions</label>
-                                <textarea value={terms} onChange={e => setTerms(e.target.value)} placeholder="Terms of business..." rows="4" className="w-full border border-slate-200 rounded p-4 text-[13px] font-medium text-slate-600 outline-none focus:border-[#1e61f0] bg-slate-50/30 italic" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Private Notes</label>
-                                <textarea value={customerNotes} onChange={e => setCustomerNotes(e.target.value)} placeholder="Internal remarks..." rows="2" className="w-full border border-slate-200 rounded p-4 text-[13px] font-medium text-slate-600 outline-none focus:border-slate-400 bg-slate-50/30" />
+                    {/* Bottom Section: Notes and Totals */}
+                    <div className="flex justify-between items-start pt-12 border-t border-slate-100 gap-20">
+                        
+                        {/* Customer Notes */}
+                        <div className="flex-1 max-w-md">
+                            <label className="text-[12px] font-bold text-slate-500 mb-3 block tracking-tight">Customer Notes</label>
+                            <div className="relative">
+                                <textarea 
+                                    value={customerNotes}
+                                    onChange={(e) => setCustomerNotes(e.target.value)}
+                                    placeholder="Looking forward for your business."
+                                    className="w-full h-24 p-4 border border-slate-200 rounded text-[13px] font-medium text-slate-600 outline-none focus:border-blue-500 transition-all resize-none shadow-sm"
+                                />
+                                <div className="absolute right-3 bottom-3 text-slate-300">
+                                    <Edit2 size={12} />
+                                </div>
                             </div>
                         </div>
 
-                        <div className="w-[400px] bg-slate-900 rounded p-10 text-white shadow-2xl">
-                             <div className="flex justify-between items-center mb-6 text-slate-400">
-                                 <span className="text-[11px] font-bold uppercase tracking-[0.2em]">Subtotal</span>
-                                 <span className="font-black text-[16px]">₹ {subTotal.toLocaleString()}</span>
-                             </div>
-                             
-                             <div className="flex justify-between items-center mb-6">
-                                 <div className="flex items-center gap-3">
-                                     <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-rose-400">Offer Discount</span>
-                                     <div className="flex border border-slate-700 rounded overflow-hidden w-20">
-                                         <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} className="w-full bg-slate-800 px-2 py-1 text-[12px] font-black outline-none" />
-                                         <span className="px-1 py-1 bg-slate-700 text-[10px] font-black">%</span>
-                                     </div>
-                                 </div>
-                                 <span className="text-rose-400 font-black text-[15px]">- ₹ {discountAmt.toLocaleString()}</span>
-                             </div>
+                        {/* Totals Section */}
+                        <div className="w-[450px] bg-slate-50/30 rounded-2xl p-8 space-y-6 border border-slate-100">
+                            
+                            <div className="flex justify-between text-[14px]">
+                                <span className="font-bold text-slate-600">Sub Total</span>
+                                <span className="font-bold text-slate-900 font-mono">{subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
 
-                             <div className="flex justify-between items-center mb-10 pt-6 border-t border-slate-800">
-                                 <div className="space-y-3 w-full">
-                                     <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-400 block mb-2">Government Levies</span>
-                                     <select value={selectedTax} onChange={e => setSelectedTax(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-2 text-[12px] font-black outline-none focus:border-[#1e61f0]">
-                                         <option value="">No Tax Applied</option>
-                                         {TAX_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                            <div className="flex justify-between items-center text-[13px]">
+                                <label className="text-slate-500 font-bold">Discount</label>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex border border-slate-200 rounded overflow-hidden bg-white">
+                                        <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} className="w-12 h-8 text-center bg-transparent outline-none border-r border-slate-200 font-bold" />
+                                        <span className="px-2 py-1 text-slate-400 font-bold">%</span>
+                                    </div>
+                                    <span className="font-bold text-slate-900 font-mono">{discountAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[13px]">
+                                <label className="text-slate-500 font-bold">Tax / GST</label>
+                                <div className="flex items-center gap-4">
+                                     <select value={selectedTax} onChange={e => setSelectedTax(e.target.value)} className="w-[180px] h-8 px-3 border border-slate-200 rounded bg-white text-[12px] font-bold text-slate-700 outline-none shadow-sm">
+                                        <option value="">Select a Tax</option>
+                                        {TAX_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                                      </select>
-                                 </div>
-                             </div>
+                                     <span className="font-bold text-slate-900 font-mono">+ {taxAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
 
-                             <div className="flex justify-between items-center text-blue-400 font-black mb-10">
-                                 <span className="text-[11px] uppercase tracking-widest">Calculated Tax</span>
-                                 <span className="text-[18px]">+ ₹ {taxAmt.toLocaleString()}</span>
-                             </div>
+                            <div className="flex justify-between items-center text-[13px]">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-32 px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-400 italic font-bold flex items-center justify-between shadow-sm cursor-help">
+                                        Adjustment <HelpCircle size={14} className="text-slate-300"/>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <input type="number" value={adjustment} onChange={(e) => setAdjustment(e.target.value)} className="w-24 h-8 px-3 border border-slate-200 rounded text-right font-bold outline-none shadow-sm" />
+                                    <span className="font-bold text-slate-900 font-mono">{parseFloat(adjustment || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
 
-                             <div className="pt-8 border-t-2 border-slate-700 flex justify-between items-center">
-                                 <span className="text-[16px] font-black italic tracking-tighter scale-y-110 origin-left uppercase">Final Quote</span>
-                                 <span className="text-3xl font-black tracking-tighter text-[#ffce00] italic">₹ {total.toLocaleString()}</span>
-                             </div>
+                            <div className="pt-6 border-t border-slate-200 flex justify-between items-center">
+                                <span className="text-[15px] font-black text-slate-900 uppercase tracking-tight italic">Total ( ₹ )</span>
+                                <span className="text-[22px] font-black text-slate-900 tracking-tighter italic font-mono">{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+
                         </div>
                     </div>
                 </div>
             </div>
 
-            {showQuoteSettings && <QuoteNoSettingsModal onClose={() => setShowQuoteSettings(false)} onSave={setQuoteNo} />}
-
             {/* Quick Add Customer Drawer */}
             {isQuickAddOpen && (
                 <div className="fixed inset-0 z-[500] flex justify-end">
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsQuickAddOpen(false)} />
-                    <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
-                        <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
+                    <div className="relative w-[500px] bg-white h-full shadow-2xl flex flex-col">
+                        <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div>
-                                <h3 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Register New Customer</h3>
-                                <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">QUICK ONBOARDING</p>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight italic uppercase">Register New Customer</h3>
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Unified Infrastructure Onboarding</p>
                             </div>
-                            <button onClick={() => setIsQuickAddOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
+                            <button onClick={() => setIsQuickAddOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 shadow-sm border border-slate-100"><X size={24}/></button>
                         </header>
                         
-                        <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
-                           <div className="grid grid-cols-4 gap-4">
-                              <div className="col-span-1 space-y-3">
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Salutation</label>
-                                 <select value={quickAddForm.salutation} onChange={e => setQuickAddForm({...quickAddForm, salutation: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all">
-                                    <option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Dr.</option>
-                                 </select>
+                        <div className="flex-1 overflow-y-auto p-10 space-y-8 bg-white no-scrollbar">
+                           <div className="space-y-6">
+                              <div className="grid grid-cols-4 gap-4">
+                                 <div className="col-span-1 space-y-2">
+                                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Salutation</label>
+                                    <select value={quickAddForm.salutation} onChange={e => setQuickAddForm({...quickAddForm, salutation: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 outline-none focus:border-blue-500">
+                                       <option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Dr.</option>
+                                    </select>
+                                 </div>
+                                 <div className="col-span-3 space-y-2">
+                                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Primary Name*</label>
+                                    <input type="text" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 outline-none focus:border-blue-500" placeholder="Full Legal Name" />
+                                 </div>
                               </div>
-                              <div className="col-span-3 space-y-3">
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Primary Name*</label>
-                                 <input type="text" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="Enter full name or business name" />
+                              <div className="space-y-2">
+                                 <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Client Email</label>
+                                 <div className="relative">
+                                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                    <input type="email" value={quickAddForm.email} onChange={e => setQuickAddForm({...quickAddForm, email: e.target.value})} className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 outline-none focus:border-blue-500" placeholder="contact@business.com" />
+                                 </div>
+                              </div>
+                              <div className="space-y-2">
+                                 <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Mobile Contact</label>
+                                 <div className="relative">
+                                    <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                                    <input type="text" value={quickAddForm.mobile} onChange={e => setQuickAddForm({...quickAddForm, mobile: e.target.value})} className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 outline-none focus:border-blue-500" placeholder="+91 XXXXX XXXXX" />
+                                 </div>
                               </div>
                            </div>
 
-                           <div className="space-y-3">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Customer Email</label>
-                              <div className="relative">
-                                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                 <input type="email" value={quickAddForm.email} onChange={e => setQuickAddForm({...quickAddForm, email: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="example@business.com" />
-                              </div>
-                           </div>
-
-                           <div className="space-y-3">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Mobile Number</label>
-                              <div className="relative">
-                                 <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                 <input type="text" value={quickAddForm.mobile} onChange={e => setQuickAddForm({...quickAddForm, mobile: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="+91 XXXXX XXXXX" />
-                              </div>
-                           </div>
-
-                           <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 flex items-start gap-4">
+                           <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-start gap-4">
                               <Info size={18} className="text-blue-500 mt-0.5" />
-                              <p className="text-[12px] text-blue-600 font-medium leading-relaxed">You can always update additional information like GSTIN, Billing Address, and Payment Terms later from the Customer Detail view.</p>
+                              <p className="text-[12px] text-blue-600 font-medium italic">You can always update detailed information like GSTIN and Billing Address later from the contact detail view.</p>
                            </div>
                         </div>
 
-                        <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
-                           <button onClick={() => setIsQuickAddOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Cancel</button>
+                        <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/50">
+                           <button onClick={() => setIsQuickAddOpen(false)} className="flex-1 py-3 text-slate-500 font-black text-[11px] uppercase tracking-widest hover:bg-white transition-all">Cancel</button>
                            <button 
-                              onClick={handleQuickAdd}
-                              disabled={isSavingCustomer || !quickAddForm.name}
-                              className="flex-1 py-4 bg-slate-900 text-white rounded-xl text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all uppercase tracking-widest disabled:opacity-50"
+                               onClick={handleQuickAdd}
+                               disabled={isSavingCustomer || !quickAddForm.name}
+                               className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-black shadow-xl shadow-slate-200 transition-all"
                            >
-                              {isSavingCustomer ? <RefreshCw size={18} className="animate-spin mx-auto" /> : 'REGISTER CUSTOMER'}
+                               {isSavingCustomer ? <RefreshCw size={18} className="animate-spin mx-auto" /> : 'REGISTER CUSTOMER'}
                            </button>
                         </footer>
                     </div>
                 </div>
+            )}
+
+            {showQuoteSettings && (
+                <QuoteNoSettingsModal 
+                    quoteNo={quoteNo}
+                    onClose={() => setShowQuoteSettings(false)}
+                    onSave={(newVal) => setQuoteNo(newVal)}
+                />
             )}
         </div>
     );
@@ -1327,6 +1537,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
 // MAIN ROUTER
 // ─────────────────────────────────────────────────
 const QuotesView = ({ companyId }) => {
+    const addNotification = useNotificationStore(state => state.addNotification);
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -1354,7 +1565,9 @@ const QuotesView = ({ companyId }) => {
     }, [companyId]);
 
     useEffect(() => {
-        if (id && !isNew && !isEdit) setSelectedId(id);
+        if (!isNew && !isEdit) {
+            setSelectedId(id || null);
+        }
     }, [id, isNew, isEdit]);
 
     const handleDelete = async () => {
@@ -1365,7 +1578,7 @@ const QuotesView = ({ companyId }) => {
             setDeleteId(null);
             fetchQuotes();
         } catch (err) {
-            alert('Failed to delete quote');
+            addNotification('Failed to delete quote', 'error');
             setDeleteId(null);
         }
     };
@@ -1374,10 +1587,10 @@ const QuotesView = ({ companyId }) => {
 
     return (
         <>
-            <DeleteConfirmModal 
+            <ConfirmModal 
                 isOpen={!!deleteId}
                 onConfirm={handleDelete}
-                onCancel={() => setDeleteId(null)}
+                onClose={() => setDeleteId(null)}
                 title="Confirm Proposal Deletion"
                 message="Are you sure you want to permanently delete this proposal? This action cannot be reversed and all history will be lost."
             />

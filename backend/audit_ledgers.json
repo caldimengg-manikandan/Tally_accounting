@@ -1,0 +1,4 @@
+{
+  "error": "column Ledger.billingAddress does not exist",
+  "stack": "Error\n    at Query.run (C:\\Users\\Arshad Ibrahim\\Tally_accounting\\backend\\node_modules\\sequelize\\lib\\dialects\\postgres\\query.js:50:25)\n    at C:\\Users\\Arshad Ibrahim\\Tally_accounting\\backend\\node_modules\\sequelize\\lib\\sequelize.js:315:28\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async PostgresQueryInterface.select (C:\\Users\\Arshad Ibrahim\\Tally_accounting\\backend\\node_modules\\sequelize\\lib\\dialects\\abstract\\query-interface.js:407:12)\n    at async Ledger.findAll (C:\\Users\\Arshad Ibrahim\\Tally_accounting\\backend\\node_modules\\sequelize\\lib\\model.js:1140:21)"
+}

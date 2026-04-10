@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Filter, Download, Columns, Rows, ChevronLeft, ChevronRight, 
   Settings, X, HelpCircle, Package, User, Calendar, FileText, Trash2, 
-  ArrowLeft, Save, Send, Clock, MoreHorizontal, CheckCircle2, AlertCircle, Loader2
+  ArrowLeft, Save, Send, Clock, MoreHorizontal, CheckCircle2, AlertCircle, Loader2, Edit2
 } from 'lucide-react';
 import { salesAPI, ledgerAPI, inventoryAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 
 // --- Shared Components for the Form ---
 const FormInput = ({ label, value, onChange, placeholder, type = "text", required = false }) => (
@@ -41,6 +44,7 @@ const FormSelect = ({ label, value, onChange, options, placeholder, required = f
 );
 
 const SalesOrdersView = ({ companyId }) => {
+  const navigate = useNavigate();
   const [view, setView] = useState('list'); // 'list' or 'form'
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,6 +53,9 @@ const SalesOrdersView = ({ companyId }) => {
   const [customers, setCustomers] = useState([]);
   const [items, setItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const { addNotification } = useNotificationStore();
   
   // Form State
   const [formData, setFormData] = useState({
@@ -97,7 +104,8 @@ const SalesOrdersView = ({ companyId }) => {
       setItems(Array.isArray(iRes.data) ? iRes.data : []);
     } catch (err) {
       console.error('Fetch error:', err);
-      setStatus({ type: 'error', message: 'Failed to connect to sales server. Please try refreshing.' });
+      const errMsg = err.response?.data?.error || err.message || 'Failed to connect to sales server.';
+      setStatus({ type: 'error', message: errMsg + ' Please try refreshing.' });
     } finally {
       setLoading(false);
     }
@@ -186,19 +194,38 @@ const SalesOrdersView = ({ companyId }) => {
       };
       if (formData.id) {
         await salesAPI.updateOrder(formData.id, sanitizedPayload);
+        addNotification('Sales Order updated successfully', 'success');
       } else {
         await salesAPI.createOrder(sanitizedPayload);
+        addNotification('Sales Order created successfully', 'success');
       }
-      setStatus({ type: 'success', message: 'Sales Order saved successfully!' });
       setTimeout(() => {
         setView('list');
         fetchData();
-        setStatus(null);
       }, 1500);
     } catch (err) {
-      setStatus({ type: 'error', message: err.response?.data?.error || 'Failed to save order.' });
+      addNotification(err.response?.data?.error || 'Failed to save order.', 'error');
     }
     setSaving(false);
+  };
+
+  const handleDelete = (id) => {
+    setDeleteId(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteOrder = async () => {
+    if (!deleteId) return;
+    try {
+      await salesAPI.deleteOrder(deleteId);
+      addNotification('Sales order deleted successfully', 'success');
+      fetchData();
+    } catch (err) {
+      addNotification('Failed to delete sales order', 'error');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteId(null);
+    }
   };
 
   const openEdit = (order) => {
@@ -209,6 +236,13 @@ const SalesOrdersView = ({ companyId }) => {
     });
     setView('form');
   };
+
+  const filteredOrders = Array.isArray(orders) ? orders.filter(o => {
+    if (!o) return false;
+    const numMatch = o.orderNumber?.toLowerCase()?.includes(searchQuery.toLowerCase());
+    const custMatch = o.Customer?.name?.toLowerCase()?.includes(searchQuery.toLowerCase());
+    return numMatch || custMatch;
+  }) : [];
 
   // --- Views ---
   const renderListView = () => (
@@ -249,29 +283,55 @@ const SalesOrdersView = ({ companyId }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {orders.length === 0 ? (
-              <tr><td colSpan="5" className="py-24 text-center text-gray-400 italic font-medium">No sales orders found. Start by creating one!</td></tr>
+            {filteredOrders.length === 0 ? (
+              <tr><td colSpan="5" className="py-24 text-center text-gray-400 italic font-medium">No sales orders found matching your search.</td></tr>
             ) : (
-              orders.map(order => (
-                <tr 
-                  key={order.id} 
-                  onClick={() => openEdit(order)}
-                  className="hover:bg-blue-50/30 transition-colors cursor-pointer group"
-                >
-                  <td className="p-5 text-[13px] font-bold text-blue-600 pl-8">{order.orderNumber}</td>
-                  <td className="p-5 text-[13px] text-gray-600 font-medium">{new Date(order.date).toLocaleDateString()}</td>
-                  <td className="p-5 text-[13px] text-gray-900 font-bold">{order.Customer?.name}</td>
-                  <td className="p-5">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm
-                      ${order.status === 'Draft' ? 'bg-gray-100 text-gray-600' : 
-                        order.status === 'Sent' ? 'bg-blue-100 text-blue-600' : 
-                        'bg-emerald-100 text-emerald-600'}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="p-5 text-right text-[13px] font-black text-gray-900 pr-8">₹{parseFloat(order.totalAmount).toLocaleString('en-IN')}</td>
-                </tr>
-              ))
+              filteredOrders.map(order => {
+                if (!order) return null;
+                return (
+                  <tr 
+                    key={order.id} 
+                    onClick={() => openEdit(order)}
+                    className="hover:bg-blue-50/30 transition-colors cursor-pointer group"
+                  >
+                    <td className="p-5 text-[13px] font-bold text-blue-600 pl-8">{order.orderNumber || 'N/A'}</td>
+                    <td className="p-5 text-[13px] text-gray-600 font-medium">
+                      {order.date ? new Date(order.date).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="p-5 text-[13px] text-gray-900 font-bold">{order.Customer?.name || 'Unknown'}</td>
+                    <td className="p-5">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm
+                        ${order.status === 'Draft' ? 'bg-gray-100 text-gray-600' : 
+                          order.status === 'Sent' ? 'bg-blue-100 text-blue-600' : 
+                          'bg-emerald-100 text-emerald-600'}`}>
+                        {order.status || 'Draft'}
+                      </span>
+                    </td>
+                    <td className="p-5 text-right text-[13px] font-black text-gray-900 pr-8">
+                      <div className="flex items-center justify-end gap-3">
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all mr-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); openEdit(order); }}
+                            className="p-1.5 hover:bg-white rounded border border-transparent hover:border-gray-200 text-gray-400 hover:text-blue-600 transition-all shadow-sm"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              handleDelete(order.id);
+                            }}
+                            className="p-1.5 hover:bg-white rounded border border-transparent hover:border-gray-200 text-gray-400 hover:text-rose-500 transition-all shadow-sm"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        ₹{(parseFloat(order.totalAmount) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -315,8 +375,17 @@ const SalesOrdersView = ({ companyId }) => {
                 label="Customer Name" 
                 required={true}
                 value={formData.customerId} 
-                onChange={val => setFormData(p => ({ ...p, customerId: val }))}
-                options={customers}
+                onChange={val => {
+                  if (val === 'ADD_NEW') {
+                    navigate('/customers/new');
+                  } else {
+                    setFormData(p => ({ ...p, customerId: val }));
+                  }
+                }}
+                options={[
+                  { id: 'ADD_NEW', name: '+ Add New Customer' },
+                  ...customers
+                ]}
                 placeholder="Select or add a customer"
               />
               <FormInput label="Sales Order #" required={true} value={formData.orderNumber} onChange={val => setFormData(p => ({ ...p, orderNumber: val }))} />
@@ -334,7 +403,21 @@ const SalesOrdersView = ({ companyId }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormSelect label="Delivery Method" value={formData.deliveryMethod} onChange={val => setFormData(p => ({ ...p, deliveryMethod: val }))} options={["UPS", "FedEx", "DHL", "Local Courier", "Self Collect"]} />
-              <FormSelect label="Salesperson" value={formData.salesperson} onChange={val => setFormData(p => ({ ...p, salesperson: val }))} options={["Arshad Ibrahim", "John Doe", "Jane Smith"]} />
+              <FormSelect 
+                label="Salesperson" 
+                value={formData.salesperson} 
+                onChange={val => {
+                  if (val === 'ADD_NEW') {
+                    navigate('/customers/new');
+                  } else {
+                    setFormData(p => ({ ...p, salesperson: val }));
+                  }
+                }} 
+                options={[
+                  { id: 'ADD_NEW', name: '+ Add New Salesperson' },
+                  "Arshad Ibrahim", "John Doe", "Jane Smith"
+                ]} 
+              />
             </div>
           </div>
 
@@ -442,17 +525,20 @@ const SalesOrdersView = ({ companyId }) => {
               </div>
               <div className="flex justify-between items-center text-[13px] text-gray-500">
                 <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" name="tax" className="w-3 h-3 text-blue-600" defaultChecked /> <span>TDS</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="radio" name="tax" className="w-3 h-3 text-blue-600" /> <span>TCS</span>
-                  </label>
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Apply GST</span>
                 </div>
-                <select className="h-8 border border-blue-200 rounded px-2 text-[12px] font-bold bg-white text-gray-400 outline-none">
-                  <option>Select a Tax</option>
-                  <option>GST 18%</option>
+                <select 
+                  className="h-8 border border-blue-200 rounded px-2 text-[12px] font-bold bg-white text-gray-700 outline-none"
+                  onChange={e => {
+                    const rate = parseFloat(e.target.value.replace('GST ', '').replace('%', '')) / 100 || 0;
+                    setFormData(p => ({ ...p, tax: p.subTotal * rate }));
+                  }}
+                >
+                  <option value="0">Select GST Rate</option>
+                  <option>GST 5%</option>
                   <option>GST 12%</option>
+                  <option>GST 18%</option>
+                  <option>GST 28%</option>
                 </select>
               </div>
               <div className="flex justify-between items-center text-[13px] text-gray-500 pt-2">
@@ -537,21 +623,15 @@ const SalesOrdersView = ({ companyId }) => {
 
   return (
     <div className="min-h-screen bg-[#fcfcfd] p-6 lg:p-10 font-sans text-gray-900">
-      
-      {/* STATUS TOAST */}
-      {status && (
-        <div className={`fixed top-10 right-10 z-[1000] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-right-10 ${
-          status.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
-        }`}>
-          {status.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
-          <div>
-            <p className="text-sm font-black uppercase tracking-widest">{status.type === 'success' ? 'Success' : 'Attention'}</p>
-            <p className="text-xs font-medium opacity-90">{status.message}</p>
-          </div>
-        </div>
-      )}
-
       {view === 'list' ? renderListView() : renderFormView()}
+
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDeleteOrder}
+        title="Delete Sales Order"
+        message="Are you sure you want to delete this sales order? This action cannot be undone."
+      />
     </div>
   );
 };

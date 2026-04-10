@@ -19,6 +19,8 @@ const Quote = require('./quote.model')(sequelize, DataTypes);
 const RetainerInvoice = require('./retainerInvoice.model')(sequelize, DataTypes);
 const RecurringInvoice = require('./recurringInvoice.model')(sequelize, DataTypes);
 const RetainerAdjustment = require('./retainerAdjustment.model')(sequelize, DataTypes);
+const SalesInvoice = require('./salesInvoice.model')(sequelize, DataTypes);
+const SalesInvoiceItem = require('./salesInvoiceItem.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -126,6 +128,14 @@ Transaction.belongsTo(User, { as: 'Creator', foreignKey: { name: 'createdBy', ty
 Transaction.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 Company.hasMany(Transaction, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
+// 11. Sales Invoices
+SalesInvoice.hasMany(SalesInvoiceItem, { as: 'items', foreignKey: 'SalesInvoiceId', onDelete: 'CASCADE' });
+SalesInvoiceItem.belongsTo(SalesInvoice, { foreignKey: 'SalesInvoiceId' });
+SalesInvoice.belongsTo(Company, { foreignKey: 'CompanyId' });
+Company.hasMany(SalesInvoice, { foreignKey: 'CompanyId' });
+SalesInvoice.belongsTo(Ledger, { as: 'CustomerLedger', foreignKey: 'customerLedgerId' });
+SalesInvoiceItem.belongsTo(Item, { foreignKey: 'itemId' });
+
 module.exports = {
   sequelize,
   User,
@@ -145,5 +155,7 @@ module.exports = {
   Quote,
   RetainerInvoice,
   RecurringInvoice,
-  RetainerAdjustment
+  RetainerAdjustment,
+  SalesInvoice,
+  SalesInvoiceItem
 };

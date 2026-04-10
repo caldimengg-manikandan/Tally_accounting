@@ -72,6 +72,8 @@ exports.processDueInvoices = async (req, res) => {
     });
 
     const results = [];
+    const { RetainerAdjustment, Transaction, Voucher, Ledger } = require('../../models');
+
     for (const template of templates) {
       // Create actual invoice
       const invoiceData = {
@@ -93,16 +95,59 @@ exports.processDueInvoices = async (req, res) => {
       if (template.invoiceType === 'RetainerInvoice') {
         createdInvoice = await RetainerInvoice.create(invoiceData);
       } else {
-        // Fallback to TaxInvoice if model exists, otherwise standard Invoice logic
-        // Assuming we have a standard way to handle regular sales invoices
-        // For this demo, let's use a generic 'Sales' creation or placeholder
+        // Find TaxInvoice model or standard Sales creation
         const { TaxInvoice } = require('../../models');
         if (TaxInvoice) {
             createdInvoice = await TaxInvoice.create(invoiceData);
         } else {
-            // If TaxInvoice model is not available, we might need to check how sales are recorded
-            console.log("TaxInvoice model not found, skipping creation for now");
+            // Assume we create a Voucher of type Sales
+            createdInvoice = await Voucher.create({
+                voucherNumber: invoiceData.invoiceNumber,
+                voucherType: 'Sales',
+                date: now,
+                narration: `Recurring Invoice for ${template.customerName}`,
+                CompanyId: template.CompanyId
+            });
+            // Note: In a real system, you'd also create Transactions here
         }
+      }
+
+      // AUTO-APPLY RETAINER LOGIC
+      // If template has autoApplyRetainer (need to add this field or assume true for now)
+      if (createdInvoice) {
+          const availableRetainer = await RetainerInvoice.findOne({
+              where: {
+                  customerName: template.customerName,
+                  status: ['Paid', 'PartiallyApplied'],
+                  CompanyId: template.CompanyId
+              },
+              order: [['invoiceDate', 'ASC']] // Apply oldest first
+          });
+
+          if (availableRetainer) {
+              const balance = parseFloat(availableRetainer.amountReceived) - parseFloat(availableRetainer.amountUsed);
+              const amountToApply = Math.min(balance, parseFloat(template.totalAmount));
+
+              if (amountToApply > 0) {
+                  await RetainerAdjustment.create({
+                      RetainerInvoiceId: availableRetainer.id,
+                      InvoiceId: createdInvoice.id,
+                      amountToAdjust: amountToApply,
+                      CompanyId: template.CompanyId
+                  });
+
+                  await availableRetainer.update({
+                      amountUsed: parseFloat(availableRetainer.amountUsed) + amountToApply,
+                      status: (parseFloat(availableRetainer.amountUsed) + amountToApply >= parseFloat(availableRetainer.totalAmount)) 
+                              ? 'FullyApplied' : 'PartiallyApplied'
+                  });
+
+                  // Update invoice status if fully paid
+                  if (amountToApply >= parseFloat(template.totalAmount)) {
+                      await createdInvoice.update({ status: 'Paid' });
+                  }
+              }
+          }
       }
 
       // Update next generation date

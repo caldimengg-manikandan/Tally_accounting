@@ -64,6 +64,13 @@ exports.getCompanies = async (req, res) => {
       companies = await req.user.getCompanies({
         order: [['createdAt', 'ASC']]
       });
+
+      // Special rescue: If ADMIN has no linked companies, show all existing ones
+      if (companies.length === 0 && req.user.role === 'ADMIN') {
+        companies = await Company.findAll({
+          order: [['createdAt', 'ASC']]
+        });
+      }
     } else {
       companies = await Company.findAll({
         order: [['createdAt', 'ASC']]

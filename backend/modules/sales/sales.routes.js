@@ -12,7 +12,15 @@ router.post('/invoices', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), s
 // Update orders — MANAGER can approve/update, ACCOUNTANT can edit
 router.put('/orders/:orderId', authorizeRoles('ACCOUNTANT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'), salesController.updateOrder);
 
-// View orders — all roles
+// View orders & invoices — all roles
 router.get('/orders/:companyId', salesController.getOrders);
+router.get('/invoices/company/:companyId', salesController.getInvoicesByCompany);
+router.get('/invoices/detail/:id', salesController.getInvoiceById);
+
+// Update invoices — MANAGER can approve/update, ACCOUNTANT can edit
+router.put('/invoices/:id', authorizeRoles('ACCOUNTANT', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'), salesController.updateInvoice);
+
+router.delete('/orders/:orderId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.deleteOrder);
+router.delete('/invoices/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.deleteInvoice);
 
 module.exports = router;

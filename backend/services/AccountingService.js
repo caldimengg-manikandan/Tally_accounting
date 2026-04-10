@@ -135,10 +135,12 @@ class AccountingService {
     const missing = [];
     if (!salesLedger) missing.push('Sales Ledger');
     
-    const journalEntries = [
-      { ledgerId: customerLedgerId, debit: grandTotal, credit: 0 },
-      { ledgerId: salesLedger.id, debit: 0, credit: totalTaxableValue }
-    ];
+    // 3. Prepare Journal Entries (only if ledgers found)
+    const journalEntries = [];
+    if (salesLedger) {
+      journalEntries.push({ ledgerId: customerLedgerId, debit: grandTotal, credit: 0 });
+      journalEntries.push({ ledgerId: salesLedger.id, debit: 0, credit: totalTaxableValue });
+    }
 
     if (isLocal) {
       // Intra-state: CGST + SGST

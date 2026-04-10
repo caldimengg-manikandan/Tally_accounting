@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 // ── Components ───────────────────────────────────────────────────
+import Notification from './components/Notification';
 import AuthPage from './modules/auth/AuthPage';
 import DashboardView from './modules/dashboard/DashboardView';
 import LedgersView from './modules/accounting/LedgersView';
@@ -29,6 +30,7 @@ import CustomerDetailView from './modules/sales/CustomerDetailView';
 import SalesOrdersView from './modules/sales/SalesOrdersView';
 import PaymentsReceivedView from './modules/sales/PaymentsReceivedView';
 import ProfessionalInvoiceView from './modules/sales/ProfessionalInvoiceView';
+import SalesInvoicesView from './modules/sales/SalesInvoicesView';
 import QuotesView from './modules/sales/QuotesView';
 import RetainerInvoicesView from './modules/sales/RetainerInvoicesView';
 import RecurringInvoicesView from './modules/sales/RecurringInvoicesView';
@@ -79,15 +81,15 @@ const NAV = [
     group: 'Sales',
     icon: ShoppingCart,
     items: [
-      { icon: Users,           label: 'Customers',        path: '/customers', addPath: '/customers/new' },
-      { icon: ClipboardList,   label: 'Quotes',           path: '/quotes', addPath: '/quotes/new' },
-      { icon: FileStack,       label: 'Retainer Invoices', path: '/retainer-invoices', addPath: '/retainer-invoices/new' },
-      { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders', addPath: '/sales-orders/new' },
-      { icon: Receipt,         label: 'Invoices',         path: '/sales/new-invoice', addPath: '/sales/new-invoice' },
-      { icon: Repeat,          label: 'Recurring Invoices', path: '/recurring-invoices', addPath: '/recurring-invoices/new' },
-      { icon: Truck,           label: 'Delivery Challans', path: '/delivery-challans', addPath: '/delivery-challans/new' },
-      { icon: Wallet,          label: 'Payments Received', path: '/payments', addPath: '/payments/new' },
-      { icon: Undo2,           label: 'Credit Notes',      path: '/credit-notes', addPath: '/credit-notes/new' },
+      { icon: Users,           label: 'Customers',        path: '/customers', showPlus: true, plusPath: '/customers/new' },
+      { icon: ClipboardList,   label: 'Quotes',           path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
+      { icon: FileStack,       label: 'Retainer Invoices', path: '/retainer-invoices', showPlus: true, plusPath: '/retainer-invoices/new' },
+      { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders', showPlus: true, plusPath: '/sales-orders/new' },
+      { icon: Receipt, label: 'Invoices', path: '/sales-invoices', showPlus: true, plusPath: '/sales/new-invoice' },
+      { icon: Repeat,          label: 'Recurring Invoices', path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
+      { icon: Truck,           label: 'Delivery Challans', path: '/delivery-challans', showPlus: true, plusPath: '/delivery-challans/new' },
+      { icon: Wallet,          label: 'Payments Received', path: '/payments', showPlus: true, plusPath: '/payments/new' },
+      { icon: Undo2,           label: 'Credit Notes',      path: '/credit-notes', showPlus: true, plusPath: '/credit-notes/new' },
     ]
   },
   {
@@ -486,6 +488,16 @@ function AuthenticatedApp() {
         setCompanies(allCos);
         
         let currentId = companyId;
+        
+        // Validation: If currentId is set but not in the list, clear it to trigger default
+        if (currentId && allCos.length > 0) {
+          const exists = allCos.some(c => c.id === currentId);
+          if (!exists) {
+            console.warn("Current companyId not found in user companies. Resetting...");
+            currentId = null;
+          }
+        }
+
         if (!currentId && allCos.length > 0) {
           currentId = allCos[0].id;
           localStorage.setItem('companyId', currentId);
@@ -572,7 +584,7 @@ function AuthenticatedApp() {
       <Route path="/vendor-credits"      element={shell(VendorCreditsView)} />
 
       {/* Sales */}
-      <Route path="/customers"          element={shell(CustomerDetailView)} />
+      <Route path="/customers"          element={shell(CustomersListView)} />
       <Route path="/customers/new"      element={shell(CustomersView)} />
       <Route path="/customers/view/:id" element={shell(CustomerDetailView)} />
       <Route path="/customers/:id"      element={shell(CustomersView)} />
@@ -585,10 +597,13 @@ function AuthenticatedApp() {
       <Route path="/retainer-invoices/view/:id" element={shell(RetainerInvoicesView)} />
       <Route path="/retainer-invoices/edit/:id" element={shell(RetainerInvoicesView)} />
       <Route path="/sales-orders"       element={shell(SalesOrdersView)} />
-      <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
+            <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
+      <Route path="/sales-invoices"     element={shell(SalesInvoicesView)} />
       <Route path="/sales/new-invoice"  element={shell(ProfessionalInvoiceView)} />
+      <Route path="/sales/edit-invoice/:id" element={shell(ProfessionalInvoiceView)} />
       <Route path="/recurring-invoices" element={shell(RecurringInvoicesView)} />
       <Route path="/recurring-invoices/new" element={shell(RecurringInvoicesView)} />
+      <Route path="/recurring-invoices/edit/:id" element={shell(RecurringInvoicesView)} />
       <Route path="/delivery-challans"  element={shell(DeliveryChallansView)} />
       <Route path="/delivery-challans/new" element={shell(DeliveryChallansView)} />
       <Route path="/payments"           element={shell(PaymentsReceivedView)} />
@@ -640,5 +655,10 @@ export default function App() {
       />
     );
   }
-  return <AuthenticatedApp />;
+  return (
+    <>
+      <Notification />
+      <AuthenticatedApp />
+    </>
+  );
 }

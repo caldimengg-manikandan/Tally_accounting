@@ -7,6 +7,7 @@ import {
   ChevronRight, ArrowUp, ArrowDown, Edit, Trash2
 } from 'lucide-react';
 import { ledgerAPI, groupAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const CustomersListView = ({ companyId }) => {
   const navigate = useNavigate();
@@ -15,6 +16,9 @@ const CustomersListView = ({ companyId }) => {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteName, setDeleteName] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -92,14 +96,24 @@ const CustomersListView = ({ companyId }) => {
     fetchCustomers();
   }, [companyId]);
 
-  const handleDelete = async (id, name, e) => {
+  const handleDelete = (id, name, e) => {
     e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
+    setDeleteId(id);
+    setDeleteName(name);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await ledgerAPI.delete(id);
-      setCustomers(customers.filter(c => c.id !== id));
+      await ledgerAPI.delete(deleteId);
+      setCustomers(customers.filter(c => c.id !== deleteId));
     } catch (err) {
       alert(err.response?.data?.error || "Failed to delete customer");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteId(null);
+      setDeleteName('');
     }
   };
 
@@ -226,7 +240,14 @@ const CustomersListView = ({ companyId }) => {
                 )}
              </div>
           </div>
-       </div>
+        <ConfirmModal 
+           isOpen={isDeleteModalOpen}
+           onClose={() => setIsDeleteModalOpen(false)}
+           onConfirm={confirmDelete}
+           title="Delete Customer"
+           message={`Are you sure you want to delete ${deleteName}? All transaction history and balance data for this customer will be permanently removed.`}
+        />
+     </div>
 
        <div className="p-8">
           {/* Detailed list implementation would go here */}

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { companyAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
+import { CURRENCIES } from '../../utils/currencies';
 
 const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder = "", required = false, help = false }) => (
   <div className="flex flex-col gap-1.5 py-3 border-b border-gray-50 last:border-0 lg:flex-row lg:items-center">
@@ -357,7 +358,7 @@ const CompanyInfoView = () => {
           {/* FINANCIAL SETTINGS */}
           <div className="pt-12 mb-6 border-b border-gray-100 pb-3 text-gray-400 font-bold text-[14px] uppercase tracking-widest">Regional Settings</div>
           
-          <SelectRow label="Base Currency" keyName="baseCurrency" value={formData.baseCurrency} onChange={handleUpdateField} help={true} options={["INR", "USD", "EUR", "GBP", "AED"]} />
+          <SelectRow label="Base Currency" keyName="baseCurrency" value={formData.baseCurrency} onChange={handleUpdateField} help={true} options={CURRENCIES.map(c => c.code)} />
           <SelectRow label="Fiscal Year" keyName="fiscalYear" value={formData.fiscalYear} onChange={handleUpdateField} options={["April - March", "January - December", "July - June", "October - September"]} />
           
           <div className="flex flex-col gap-1.5 py-4 border-b border-gray-50 lg:flex-row lg:items-center">
