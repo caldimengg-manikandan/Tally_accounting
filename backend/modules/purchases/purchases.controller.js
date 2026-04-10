@@ -123,13 +123,18 @@ exports.getExpenses = async (req, res) => {
             
             const expenseTransaction = expense.Transactions?.find(t => t.type === 'Dr');
             
-            let vendorName = '-';
+            let customerName = '-';
             try {
                 if (expense.narration) {
                     const parsed = JSON.parse(expense.narration);
                     if (parsed.vendor) vendorName = parsed.vendor;
+                    if (parsed.customer) customerName = parsed.customer;
                 }
             } catch (e) {}
+
+            // Find the Credit transaction for 'Paid Through'
+            const paymentTransaction = expense.Transactions?.find(t => t.type === 'Cr');
+            const paidThrough = paymentTransaction?.Ledger?.name || 'Cash';
 
             return {
                 id: expense.id,
@@ -138,6 +143,8 @@ exports.getExpenses = async (req, res) => {
                 totalAmount,
                 Ledger: expenseTransaction ? expenseTransaction.Ledger : null,
                 vendorName,
+                customerName,
+                paidThrough,
                 narration: expense.narration
             };
         });

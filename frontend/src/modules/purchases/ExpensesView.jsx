@@ -3,14 +3,23 @@ import {
   Plus, Wallet, RefreshCw, FileText, 
   ChevronDown, ArrowDownUp, Filter, MoreHorizontal,
   Play, CheckCircle2, LayoutList, MapPin, RotateCcw,
-  User, Receipt, MousePointer2, ArrowRight
+  User, Receipt, MousePointer2, ArrowRight, Check,
+  ShoppingCart, BarChart3, RotateCw, Globe, Zap, ShieldCheck,
+  CreditCard
 } from 'lucide-react';
 import { purchaseAPI } from '../../services/api';
+import MileagePreferencesModal from './MileagePreferencesModal';
 
-const ExpensesView = ({ companyId }) => {
+const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab ] = useState('All Expenses');
+  const [activeTab, setActiveTab ] = useState(initialTab);
+  const [showMileageModal, setShowMileageModal] = useState(false);
+
+  // Sync activeTab with initialTab prop when navigating via sidebar
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     if (!companyId) return;
@@ -36,35 +45,116 @@ const ExpensesView = ({ companyId }) => {
   );
 
   return (
+    <>
     <div className="bg-white min-h-screen flex flex-col">
        {/* Tabbed Header */}
-       <div className="flex items-center justify-between px-8 py-2 border-b border-slate-100">
-          <div className="flex items-center gap-6 h-full">
-             <button 
-               onClick={() => setActiveTab('Receipts Inbox')}
-               className={`text-[15px] font-medium px-4 py-3 -mb-[9px] transition-all ${activeTab === 'Receipts Inbox' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
-             >
-                Receipts Inbox
-             </button>
-             <button 
-               onClick={() => setActiveTab('All Expenses')}
-               className={`text-[15px] font-medium px-4 py-3 -mb-[9px] flex items-center gap-1.5 transition-all ${activeTab === 'All Expenses' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
-             >
-                All Expenses <ChevronDown size={14} className={activeTab === 'All Expenses' ? 'text-blue-600' : 'text-slate-400'} />
-             </button>
-          </div>
-          <div className="flex items-center gap-2">
-             <button onClick={() => window.location.href = '/expenses/new'} className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-1.5 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm text-[14px]">
-                <Plus size={16} strokeWidth={2.5}/> New
-             </button>
-             <button className="p-1.5 text-slate-400 hover:text-slate-600 border border-slate-200 rounded-md transition-all">
-                <MoreHorizontal size={18} />
-             </button>
-          </div>
-       </div>
+        <div className="flex items-center justify-between px-8 py-0 border-b border-slate-200 bg-white">
+           <div className="flex items-center h-14">
+              <button 
+                onClick={() => setActiveTab('Receipts Inbox')}
+                className={`text-[13px] font-semibold px-4 h-full transition-all border-b-2 ${activeTab === 'Receipts Inbox' ? 'text-blue-600 border-blue-600' : 'text-slate-600 border-transparent hover:text-slate-900'}`}
+              >
+                 Receipts Inbox
+              </button>
+              <button 
+                onClick={() => setActiveTab('All Expenses')}
+                className={`text-[13px] font-semibold px-4 h-full flex items-center gap-1.5 transition-all border-b-2 ${activeTab === 'All Expenses' ? 'text-blue-600 border-blue-600' : 'text-slate-600 border-transparent hover:text-slate-900'}`}
+              >
+                 All Expenses <ChevronDown size={14} className="mt-0.5" />
+              </button>
+              <button 
+                onClick={() => setActiveTab('Recurring Expenses')}
+                className={`text-[13px] font-semibold px-4 h-full transition-all border-b-2 ${activeTab === 'Recurring Expenses' ? 'text-blue-600 border-blue-600' : 'text-slate-600 border-transparent hover:text-slate-900'}`}
+              >
+                 Recurring Expenses
+              </button>
+           </div>
+           <div className="flex items-center gap-2">
+
+               <div className="flex items-center">
+                  <button 
+                     onClick={() => {
+                        if (activeTab === 'Recurring Expenses') {
+                           window.location.href = '/recurring-expenses/new';
+                        } else {
+                           window.location.href = '/expenses/new';
+                        }
+                     }} 
+                     className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-3 py-1.5 rounded text-[13px] font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                  >
+                     <Plus size={16} strokeWidth={3}/> New
+                  </button>
+               </div>
+            </div>
+        </div>
 
        <div className="flex-1 overflow-auto">
-          {expenses.length > 0 ? (
+          {activeTab === 'Recurring Expenses' ? (
+             <div className="flex-1 flex flex-col items-center bg-white overflow-y-auto w-full">
+                {/* Recurring Expenses Hero */}
+                <div className="mt-16 w-full max-w-[800px] flex flex-col items-center text-center px-4">
+                   <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1e61f0] mb-6 shadow-sm border border-blue-100 italic">
+                      <RotateCw size={32} />
+                   </div>
+                   <h2 className="text-[28px] font-bold text-slate-900 mb-3 italic tracking-tight">Set and Forget: Master Your Recurring Expenses</h2>
+                   <p className="text-slate-500 text-[15px] mb-8 max-w-[600px] leading-relaxed">
+                      Automate your regular business costs. From office rent to software subscriptions, 
+                      stay ahead with automated recording and tracking.
+                   </p>
+                   
+                   <button 
+                     onClick={() => window.location.href = '/recurring-expenses/new'}
+                     className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-10 py-3 rounded text-[14px] font-bold transition-all shadow-lg active:scale-95 mb-16 uppercase tracking-wide"
+                   >
+                      Create Recurring Expense
+                   </button>
+                </div>
+
+                {/* Interactive Lifecycle Section */}
+                <div className="w-full max-w-[1100px] px-8 mb-24">
+                   <div className="bg-slate-50 rounded-3xl p-12 border border-slate-200 shadow-inner relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                      
+                      <div className="relative z-10 flex flex-col items-center">
+                         <h3 className="text-[14px] font-black text-slate-400 uppercase tracking-[4px] mb-12 italic">Recurring Lifecycle</h3>
+                         
+                         <div className="flex items-center justify-between w-full relative">
+                            {/* Connector Line */}
+                            <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -translate-y-1/2 -z-10">
+                               <div className="h-full bg-blue-500 w-full rounded-full opacity-30 shadow-[0_0_15px_rgba(30,97,240,0.5)]"></div>
+                            </div>
+
+                            <TimelineStep icon={<ShoppingCart size={20}/>} label="Spend" desc="Regular cost occurs" active />
+                            <TimelineStep icon={<Plus size={20}/>} label="Record" desc="System auto-creates" active />
+                            <TimelineStep icon={<Check size={20}/>} label="Approve" desc="Quick review" active />
+                            <TimelineStep icon={<CreditCard size={20}/>} label="Pay" desc="Payment processed" active />
+                            <TimelineStep icon={<BarChart3 size={20}/>} label="Track" desc="Usage monitored" active />
+                            <TimelineStep icon={<RotateCw size={20}/>} label="Repeat" desc="Cycle starts over" active isLast />
+                         </div>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Benefits Section */}
+                <div className="w-full max-w-[1000px] px-8 mb-32 grid grid-cols-3 gap-8">
+                   <BenefitCard 
+                      icon={<Zap size={24} className="text-amber-500" />} 
+                      title="Total Automation" 
+                      desc="Say goodbye to manual entry for utilities, rent, and monthly fees." 
+                   />
+                   <BenefitCard 
+                      icon={<ShieldCheck size={24} className="text-emerald-500" />} 
+                      title="100% Accuracy" 
+                      desc="Consistent accounting entries every month with zero human error." 
+                   />
+                   <BenefitCard 
+                      icon={<Globe size={24} className="text-blue-500" />} 
+                      title="Smart Insights" 
+                      desc="Project your future cash flow with accurate recurring cost data." 
+                   />
+                </div>
+             </div>
+          ) : expenses.length > 0 ? (
              <div className="p-8">
                 <table className="w-full text-left">
                    <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
@@ -73,6 +163,8 @@ const ExpensesView = ({ companyId }) => {
                          <th className="px-6 py-4">Expense Account</th>
                          <th className="px-6 py-4">Reference#</th>
                          <th className="px-6 py-4">Vendor Name</th>
+                         <th className="px-6 py-4">Paid Through</th>
+                         <th className="px-6 py-4">Customer Name</th>
                          <th className="px-6 py-4">Status</th>
                          <th className="px-6 py-4 text-right">Amount</th>
                       </tr>
@@ -84,6 +176,8 @@ const ExpensesView = ({ companyId }) => {
                            <td className="px-6 py-4 text-[14px] font-medium text-slate-900">{exp.Ledger?.name || 'General Expense'}</td>
                            <td className="px-6 py-4 text-[14px] text-slate-600">{exp.voucherNumber}</td>
                            <td className="px-6 py-4 text-[14px] text-slate-600">{exp.vendorName || '-'}</td>
+                           <td className="px-6 py-4 text-[14px] text-slate-600">{exp.paidThrough || '-'}</td>
+                           <td className="px-6 py-4 text-[14px] text-slate-600">{exp.customerName || '-'}</td>
                            <td className="px-6 py-4 text-[14px]">
                               <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[11px] font-bold uppercase">Paid</span>
                            </td>
@@ -94,100 +188,152 @@ const ExpensesView = ({ companyId }) => {
                 </table>
              </div>
           ) : (
-             <div className="flex-1 flex flex-col items-center bg-[#fdfdff]">
-                
-                {/* Hero Card */}
-                <div className="mt-16 w-full max-w-[800px] flex flex-col items-center text-center px-4">
-                   <div className="w-[380px] h-[220px] bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-slate-100 overflow-hidden mb-8 group cursor-pointer relative">
-                      <div className="absolute inset-0 bg-slate-50/50 flex flex-col items-center justify-center p-8">
-                         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                            <Play size={28} className="text-[#1e61f0] fill-[#1e61f0] ml-1" />
+             <div className="flex-1 flex flex-col items-center bg-white overflow-y-auto w-full">
+                <div className="w-full max-w-[1000px] mt-12 mb-16 px-8">
+                   <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xl shadow-slate-200/50">
+                      {/* Red Title Box */}
+                      <div className="p-1 items-center justify-center flex">
+                        <div className="w-full bg-[#c53030] rounded-xl py-6 flex flex-col items-center justify-center border-4 border-[#e53e3e]/20 shadow-inner">
+                           <h3 className="text-white text-[48px] font-black tracking-[4px] border-b-4 border-white pb-1 italic leading-none">EXPENSES</h3>
+                        </div>
+                      </div>
+
+                      <div className="p-8 space-y-8">
+                         {/* Definition Box */}
+                         <div className="p-6 bg-white border-2 border-slate-100 rounded-xl relative group hover:border-[#c53030]/20 transition-colors">
+                            <p className="text-[18px] text-slate-800 leading-relaxed font-serif italic text-center">
+                               <span className="font-black text-[22px] not-italic font-sans mr-2">Expenses</span> 
+                               can be defined as "Any cost that a company bears in an attempt to maximize its revenues, and thereby its profits".
+                            </p>
+                            <div className="absolute -top-3 -left-3 w-6 h-6 border-l-2 border-t-2 border-slate-200"></div>
+                            <div className="absolute -bottom-3 -right-3 w-6 h-6 border-r-2 border-b-2 border-slate-200"></div>
                          </div>
-                         <div className="mt-4 flex flex-col items-center gap-1">
-                            <div className="flex items-center gap-1.5 opacity-60">
-                               <Receipt size={16} className="text-blue-600" />
-                               <span className="text-[14px] font-bold text-slate-800">Tally Books</span>
+
+                         {/* Two Column Section */}
+                         <div className="grid grid-cols-2 gap-8 pt-4">
+                            {/* Types of Expenses */}
+                            <div className="space-y-6">
+                               <div className="bg-[#fed7d7] rounded-full py-2 px-10 border-2 border-[#f56565] inline-block shadow-sm">
+                                  <h4 className="text-[#c53030] font-black text-[16px] italic uppercase tracking-wider">Types of Expenses</h4>
+                               </div>
+                               
+                               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-5">
+                                  <div className="flex gap-4">
+                                     <div className="w-6 h-6 shrink-0 bg-[#c53030] rounded-sm flex items-center justify-center text-white text-[12px] transform rotate-45 mt-1">
+                                        <div className="-rotate-45 font-black">&gt;</div>
+                                     </div>
+                                     <div>
+                                        <h5 className="font-black text-slate-900 text-[15px]">Cost of Goods sold (COGS) -</h5>
+                                        <p className="text-slate-600 text-[14px] mt-1 italic">Expenses directly related to generating sales revenues</p>
+                                     </div>
+                                  </div>
+
+                                  <div className="flex gap-4">
+                                     <div className="w-6 h-6 shrink-0 bg-[#c53030] rounded-sm flex items-center justify-center text-white text-[12px] transform rotate-45 mt-1">
+                                        <div className="-rotate-45 font-black">&gt;</div>
+                                     </div>
+                                     <div>
+                                        <h5 className="font-black text-slate-900 text-[15px]">Indirect Expenses –</h5>
+                                        <p className="text-slate-600 text-[14px] mt-1 italic">These are the operating expenses</p>
+                                     </div>
+                                  </div>
+
+                                  <div className="flex gap-4">
+                                     <div className="w-6 h-6 shrink-0 bg-[#c53030] rounded-sm flex items-center justify-center text-white text-[12px] transform rotate-45 mt-1">
+                                        <div className="-rotate-45 font-black">&gt;</div>
+                                     </div>
+                                     <div>
+                                        <h5 className="font-black text-slate-900 text-[15px]">Non Operating Expenses -</h5>
+                                        <p className="text-slate-600 text-[14px] mt-1 italic">those expenses which are not related to "revenue generation for the core business activity"</p>
+                                     </div>
+                                  </div>
+                               </div>
                             </div>
-                            <p className="text-[13px] text-slate-600 italic">How to record and manage expenses</p>
+
+                            {/* P&L Section */}
+                            <div className="space-y-6">
+                               <div className="bg-[#fed7d7] rounded-full py-2 px-10 border-2 border-[#f56565] inline-block shadow-sm">
+                                  <h4 className="text-[#c53030] font-black text-[16px] italic uppercase tracking-wider">Expenses in P&L A/C</h4>
+                               </div>
+
+                               <div className="bg-white p-6 rounded-2xl border-2 border-[#fed7d7] grid grid-cols-2 gap-x-12 gap-y-3">
+                                  {[
+                                     "Salaries", "Bad Debt Loss",
+                                     "Raw Material", "Interest",
+                                     "Electricity Bills", "Tax Expenses",
+                                     "Depreciation", "Other Misc Exp.",
+                                     "Advertisement", "",
+                                     "Insurance", "",
+                                     "Fuel Expenses", "",
+                                     "License Cost", ""
+                                  ].map((item, i) => item ? (
+                                     <div key={i} className="flex items-center gap-3 group">
+                                        <div className="shrink-0 text-[#c53030] font-bold text-[18px] transition-transform group-hover:translate-x-1">➤</div>
+                                        <span className="text-slate-700 text-[14px] font-medium italic">{item}</span>
+                                     </div>
+                                  ) : <div key={i}></div>)}
+                               </div>
+                            </div>
                          </div>
                       </div>
                    </div>
+                </div>
 
-                   <h2 className="text-[28px] font-black text-slate-900 mb-3 tracking-tight italic">Time To Manage Your Expenses!</h2>
-                   <p className="text-slate-500 text-[16px] mb-8 max-w-[500px] leading-relaxed">
-                      Create and manage expenses that are part of your organization's operating costs.
-                   </p>
-                   
-                   <button onClick={() => window.location.href = '/expenses/new'} className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-10 py-3 rounded-xl font-black text-[15px] transition-all shadow-xl shadow-blue-600/20 active:scale-95 mb-4">
-                      RECORD EXPENSE
+                {/* Footer Action Buttons moved to bottom */}
+                <div className="flex flex-col items-center text-center pb-32">
+                   <button onClick={() => window.location.href = '/expenses/new'} className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-10 py-3 rounded text-[14px] font-bold transition-all shadow-lg active:scale-95 mb-4 uppercase tracking-wide">
+                      Create Your First Expense
                    </button>
                    <button className="text-[#1e61f0] text-[14px] font-bold hover:underline">
                       Import Expenses
                    </button>
                 </div>
-
-                <div className="w-full border-t border-slate-100 my-20"></div>
-
-                {/* Lifecycle Section */}
-                <div className="w-full max-w-[1000px] flex flex-col items-center px-4 mb-24">
-                   <h3 className="text-[18px] font-bold text-slate-800 mb-12 italic">Life cycle of an Expense</h3>
-                   
-                   <div className="flex items-center gap-2 w-full justify-center">
-                      <LifecycleStep icon={<Receipt size={18}/>} label="EXPENSE INCURRED" />
-                      <div className="w-10 border-t border-dashed border-slate-300"></div>
-                      <LifecycleStep icon={<RotateCcw size={18}/>} label="RECORD EXPENSE" />
-                      <div className="h-24 w-[1px] border-l border-dashed border-slate-300 mx-4 relative">
-                         <div className="absolute top-0 right-0 w-8 border-t border-dashed border-slate-300"></div>
-                         <div className="absolute bottom-0 right-0 w-8 border-t border-dashed border-slate-300"></div>
-                      </div>
-                      <div className="flex flex-col gap-10">
-                         <div className="flex items-center gap-2">
-                            <LifecycleStep mini label="BILLABLE" active />
-                            <ArrowRight size={14} className="text-slate-300" />
-                            <LifecycleStep mini label="CONVERT TO INVOICE" active />
-                            <ArrowRight size={14} className="text-slate-300" />
-                            <LifecycleStep mini label="GET REIMBURSED" active />
-                         </div>
-                         <div className="flex items-center gap-2">
-                            <LifecycleStep mini label="NON-BILLABLE" color="bg-rose-50 text-rose-600 border-rose-100" />
-                         </div>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="w-full border-t border-slate-100 mb-20"></div>
-
-                {/* Features List */}
-                <div className="w-full max-w-[800px] px-8 mb-32">
-                   <h4 className="text-[16px] font-bold text-slate-800 mb-8 italic">In the Expenses module, you can:</h4>
-                   <div className="space-y-4">
-                      <FeatureItem text="Record a single expense or record expenses in bulk." />
-                      <FeatureItem text="Set mileage rates and record expenses based on the distance travelled." />
-                      <FeatureItem text="Convert an expense into an invoice to get it reimbursed." />
-                   </div>
-                </div>
-
              </div>
           )}
        </div>
     </div>
+    
+    {showMileageModal && (
+        <MileagePreferencesModal onClose={() => setShowMileageModal(false)} />
+    )}
+    </>
   );
 };
 
 const LifecycleStep = ({ icon, label, mini, active, color }) => (
-   <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border shadow-sm transition-all whitespace-nowrap
-      ${mini ? 'text-[11px] font-black' : 'text-[13px] font-bold'}
-      ${active ? 'bg-blue-50 text-[#1e61f0] border-blue-100 shadow-blue-600/5' : color || 'bg-white text-slate-600 border-slate-200'}
+   <div className={`flex items-center gap-2 px-3 py-1.5 rounded border shadow-sm transition-all whitespace-nowrap
+      ${mini ? 'text-[10px] font-bold' : 'text-[12px] font-bold'}
+      ${active ? 'bg-blue-600 text-white border-blue-600' : color || 'bg-white text-slate-600 border-slate-300'}
    `}>
       {icon}
       <span>{label}</span>
    </div>
 );
 
-const FeatureItem = ({ text }) => (
-   <div className="flex items-center gap-3">
-      <CheckCircle2 size={18} className="text-[#1e61f0] shrink-0" />
-      <p className="text-[15px] text-slate-600 font-medium">{text}</p>
+const TimelineStep = ({ icon, label, desc, active, isLast }) => (
+   <div className="flex flex-col items-center gap-4 relative group">
+      <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 transition-all duration-500 shadow-md transform group-hover:scale-110
+         ${active ? 'bg-white border-blue-500 text-blue-600 shadow-blue-500/10' : 'bg-slate-50 border-slate-200 text-slate-400'}
+      `}>
+         {icon}
+      </div>
+      <div className="text-center">
+         <h4 className={`text-[13px] font-black uppercase italic ${active ? 'text-slate-900' : 'text-slate-400'}`}>{label}</h4>
+         <p className="text-[11px] text-slate-400 mt-0.5">{desc}</p>
+      </div>
+      {!isLast && (
+         <div className="absolute top-7 -right-4 translate-x-1/2 text-blue-500/30 font-bold text-[18px]">→</div>
+      )}
+   </div>
+);
+
+const BenefitCard = ({ icon, title, desc }) => (
+   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+      <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-6 group-hover:bg-white transition-colors duration-500">
+         {icon}
+      </div>
+      <h4 className="text-[15px] font-bold text-slate-900 mb-2 italic">{title}</h4>
+      <p className="text-[13px] text-slate-500 leading-relaxed">{desc}</p>
    </div>
 );
 
