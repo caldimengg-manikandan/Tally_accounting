@@ -7,7 +7,8 @@ import {
   ChevronDown, MessageSquare, History, FileText, Send, HelpCircle,
   Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
   Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2,
-  ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline
+  ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline,
+  PlusCircle, Trash
 } from 'lucide-react';
 import { 
   ledgerAPI, salesAPI, quoteAPI, retainerInvoiceAPI, 
@@ -66,6 +67,7 @@ const CustomerDetailView = ({ companyId }) => {
   
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
+  const commentEditorRef = useRef(null);
 
   const activeCompanyId = companyId || localStorage.getItem('companyId');
 
@@ -150,6 +152,37 @@ const CustomerDetailView = ({ companyId }) => {
     fetchTabData();
   }, [activeTab, selectedId, activeCompanyId]);
 
+  // 3. ACTION HANDLERS
+  const handleEditRow = (type, row) => {
+    let path = '';
+    const id = row.id;
+    if (type === 'Invoices') path = `/sales/edit-invoice/${id}`;
+    else if (type === 'Quotes') path = `/quotes/edit/${id}`;
+    else if (type === 'Retainer Invoices') path = `/retainer-invoices/edit/${id}`;
+    else if (type === 'Sales Orders') path = `/sales-orders`; // Generic SO view, may need specific SO edit route
+    else if (type === 'Customer Payments') path = `/payments`;
+
+    if (path) navigate(path);
+  };
+
+  const handleDeleteRow = async (type, id) => {
+    if (!window.confirm(`Are you sure you want to delete this ${type.slice(0, -1).toLowerCase()}?`)) return;
+    try {
+      if (type === 'Invoices') await salesAPI.delete(id);
+      else if (type === 'Quotes') await quoteAPI.delete(id);
+      else if (type === 'Retainer Invoices') await retainerInvoiceAPI.delete(id);
+      else if (type === 'Sales Orders') await salesAPI.deleteOrder(id);
+      else if (type === 'Customer Payments') await voucherAPI.delete(id);
+      
+      addNotification(`${type.slice(0, -1)} deleted successfully`, 'success');
+      // Refresh data
+      setActiveTab('');
+      setTimeout(() => setActiveTab('Transactions'), 100);
+    } catch (err) {
+      addNotification(`Failed to delete ${type.slice(0, -1)}`, 'error');
+    }
+  };
+
   // ─── HELPERS ──────────────────────────────────────────────────────────────
 
   const customer = useMemo(() => {
@@ -228,6 +261,7 @@ const CustomerDetailView = ({ companyId }) => {
     setComments(updated);
     localStorage.setItem(`comments_${selectedId}`, JSON.stringify(updated));
     setNewComment('');
+    if (commentEditorRef.current) commentEditorRef.current.innerHTML = '';
   };
 
   const handleDeleteCustomer = () => {
@@ -353,17 +387,26 @@ const CustomerDetailView = ({ companyId }) => {
                          <Bold 
                            size={16} 
                            className="cursor-pointer hover:text-slate-900 transition-colors" 
-                           onClick={() => { document.execCommand('bold', false, null); }}
+                           onMouseDown={(e) => {
+                               e.preventDefault();
+                               document.execCommand('bold', false, null);
+                           }}
                          />
                          <Italic 
                            size={16} 
                            className="cursor-pointer hover:text-slate-900 transition-colors" 
-                           onClick={() => { document.execCommand('italic', false, null); }}
+                           onMouseDown={(e) => {
+                               e.preventDefault();
+                               document.execCommand('italic', false, null);
+                           }}
                          />
                          <Underline 
                            size={16} 
                            className="cursor-pointer hover:text-slate-900 transition-colors" 
-                           onClick={() => { document.execCommand('underline', false, null); }}
+                           onMouseDown={(e) => {
+                               e.preventDefault();
+                               document.execCommand('underline', false, null);
+                           }}
                          />
                       </div>
                       <div 
@@ -375,9 +418,7 @@ const CustomerDetailView = ({ companyId }) => {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && e.ctrlKey) handleAddComment();
                         }}
-                        ref={(el) => {
-                          if (el && newComment === '') el.innerHTML = '';
-                        }}
+                        ref={commentEditorRef}
                       />
                       <div className="p-3 bg-white border-t border-slate-100">
                         <button onClick={handleAddComment} className="px-4 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-600 hover:bg-slate-50">Add Comment</button>
@@ -419,11 +460,11 @@ const CustomerDetailView = ({ companyId }) => {
                    <div className="flex items-center gap-2 text-blue-600 text-[13px] font-bold cursor-pointer hover:underline mb-2">Go to transactions <ChevronDown size={14}/></div>
                    
                    {[
-                     { name: 'Invoices', data: transactions.invoices, cols: ['DATE', 'INVOICE NUMBER', 'ORDER NUMBER', 'AMOUNT', 'BALANCE DUE', 'STATUS'] },
-                     { name: 'Customer Payments', data: transactions.payments, cols: ['DATE', 'PAYMENT N...', 'REFERENCE ...', 'PAYMENT M...', 'AMOUNT', 'UNUSED AM...', 'STATUS'] },
-                     { name: 'Quotes', data: transactions.quotes, cols: ['DATE', 'QUOTE NUMBER', 'REFERENCE', 'AMOUNT', 'EXPIRY DATE', 'STATUS'] },
-                     { name: 'Retainer Invoices', data: transactions.retainerInvoices, cols: ['DATE', 'RETAINER NUMBER', 'REFERENCE', 'AMOUNT', 'STATUS'] },
-                     { name: 'Sales Orders', data: transactions.salesOrders, cols: ['DATE', 'ORDER NUMBER', 'REFERENCE', 'AMOUNT', 'STATUS'] }
+                     { name: 'Invoices', data: transactions.invoices, cols: ['DATE', 'INVOICE NUMBER', 'ORDER NUMBER', 'AMOUNT', 'BALANCE DUE', 'STATUS', 'ACTION'] },
+                     { name: 'Customer Payments', data: transactions.payments, cols: ['DATE', 'PAYMENT N...', 'REFERENCE ...', 'PAYMENT M...', 'AMOUNT', 'UNUSED AM...', 'STATUS', 'ACTION'] },
+                     { name: 'Quotes', data: transactions.quotes, cols: ['DATE', 'QUOTE NUMBER', 'REFERENCE', 'AMOUNT', 'EXPIRY DATE', 'STATUS', 'ACTION'] },
+                     { name: 'Retainer Invoices', data: transactions.retainerInvoices, cols: ['DATE', 'RETAINER NUMBER', 'REFERENCE', 'AMOUNT', 'STATUS', 'ACTION'] },
+                     { name: 'Sales Orders', data: transactions.salesOrders, cols: ['DATE', 'ORDER NUMBER', 'REFERENCE', 'AMOUNT', 'STATUS', 'ACTION'] }
                    ].map(sec => (
                      <div key={sec.name} className="border border-slate-100 rounded-xl overflow-hidden shadow-[0_2px_15px_rgb(0,0,0,0.03)] bg-white">
                         <div 
@@ -434,7 +475,20 @@ const CustomerDetailView = ({ companyId }) => {
                               <ChevronRight size={16} className={`text-slate-400 transition-transform ${openSections.includes(sec.name) ? 'rotate-90' : ''}`} />
                               <h3 className="text-[15px] font-black text-slate-800 tracking-tight">{sec.name}</h3>
                            </div>
-                           <button className="flex items-center gap-1.5 text-[12px] font-black text-blue-600 hover:text-blue-800 bg-white px-2.5 py-1 rounded-full border border-blue-50 shadow-sm">
+                           <button 
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               const routes = {
+                                 'Invoices': '/sales/new-invoice',
+                                 'Customer Payments': '/payments/new',
+                                 'Quotes': '/quotes/new',
+                                 'Retainer Invoices': '/retainer-invoices/new',
+                                 'Sales Orders': '/sales-orders/new'
+                               };
+                               navigate(routes[sec.name] || '#', { state: { customerId: selectedId } });
+                             }}
+                             className="flex items-center gap-1.5 text-[12px] font-black text-blue-600 hover:text-blue-800 bg-white px-2.5 py-1 rounded-full border border-blue-50 shadow-sm"
+                           >
                               <Plus size={14} strokeWidth={3}/> NEW
                            </button>
                         </div>
@@ -460,12 +514,43 @@ const CustomerDetailView = ({ companyId }) => {
                                                 {row.status || 'Draft'}
                                              </span>
                                           </td>
+                                          <td className="px-6 py-4">
+                                             <div className="flex items-center gap-2">
+                                                <button 
+                                                  onClick={(e) => { e.stopPropagation(); handleEditRow(sec.name, row); }}
+                                                  className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600 transition-colors"
+                                                  title="Edit"
+                                                >
+                                                  <Edit size={14}/>
+                                                </button>
+                                                <button 
+                                                  onClick={(e) => { e.stopPropagation(); handleDeleteRow(sec.name, row.id); }}
+                                                  className="p-1.5 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-colors"
+                                                  title="Delete"
+                                                >
+                                                  <Trash2 size={14}/>
+                                                </button>
+                                             </div>
+                                          </td>
                                        </tr>
                                      ))
                                    ) : (
                                      <tr>
                                         <td colSpan={sec.cols.length} className="px-6 py-20 text-center text-slate-400">
-                                           <div className="text-[14px]">There are no {sec.name.toLowerCase()} - <span className="text-blue-600 font-bold hover:underline cursor-pointer">Add New</span></div>
+                                           <div className="text-[14px]">There are no {sec.name.toLowerCase()} - <span 
+                                                className="text-blue-600 font-bold hover:underline cursor-pointer"
+                                                onClick={() => {
+                                                  const routes = {
+                                                    'Invoices': '/sales/new-invoice',
+                                                    'Customer Payments': '/payments/new',
+                                                    'Quotes': '/quotes/new',
+                                                    'Retainer Invoices': '/retainer-invoices/new',
+                                                    'Sales Orders': '/sales-orders/new'
+                                                  };
+                                                  navigate(routes[sec.name] || '#', { state: { customerId: selectedId } });
+                                                }}
+                                              > Add New</span>
+</div>
                                         </td>
                                      </tr>
                                    )}

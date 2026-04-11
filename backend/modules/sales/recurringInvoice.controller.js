@@ -93,22 +93,41 @@ exports.processDueInvoices = async (req, res) => {
 
       let createdInvoice;
       if (template.invoiceType === 'RetainerInvoice') {
-        createdInvoice = await RetainerInvoice.create(invoiceData);
+        createdInvoice = await RetainerInvoice.create({
+          invoiceNumber: `RECUR-RET-${Date.now()}`,
+          invoiceDate: now,
+          customerName: template.customerName,
+          itemsJson: template.itemsJson,
+          totalAmount: template.totalAmount,
+          status: 'Draft',
+          CompanyId: template.CompanyId
+        });
       } else {
-        // Find TaxInvoice model or standard Sales creation
-        const { TaxInvoice } = require('../../models');
-        if (TaxInvoice) {
-            createdInvoice = await TaxInvoice.create(invoiceData);
-        } else {
-            // Assume we create a Voucher of type Sales
-            createdInvoice = await Voucher.create({
-                voucherNumber: invoiceData.invoiceNumber,
-                voucherType: 'Sales',
-                date: now,
-                narration: `Recurring Invoice for ${template.customerName}`,
-                CompanyId: template.CompanyId
-            });
-            // Note: In a real system, you'd also create Transactions here
+        // Find customer ledger ID from name (template should ideally have ledgerId)
+        const { Ledger, SalesInvoice, SalesInvoiceItem } = require('../../models');
+        const customer = await Ledger.findOne({ where: { name: template.customerName, CompanyId: template.CompanyId } });
+        
+        createdInvoice = await SalesInvoice.create({
+          invoiceNumber: `RECUR-INV-${Date.now()}`,
+          date: now,
+          dueDate: moment().add(30, 'days').toDate(),
+          customerLedgerId: customer?.id || null, // Best effort
+          totalAmount: template.totalAmount,
+          subTotal: template.subTotal,
+          gstAmount: template.taxAmount,
+          status: 'Sent', // Default to sent/active for recurring
+          CompanyId: template.CompanyId,
+          balance: template.totalAmount // Initialize balance
+        });
+
+        // Create line items for the invoice
+        const items = JSON.parse(template.itemsJson || '[]');
+        if (items.length > 0) {
+          await SalesInvoiceItem.bulkCreate(items.map(it => ({
+            ...it,
+            SalesInvoiceId: createdInvoice.id,
+            amount: it.quantity * it.rate
+          })));
         }
       }
 

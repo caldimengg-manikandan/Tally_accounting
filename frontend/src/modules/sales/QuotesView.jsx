@@ -534,6 +534,12 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                     <button onClick={() => window.print()} className="p-2.5 hover:bg-slate-50 rounded border border-slate-200 text-slate-500 transition-colors" title="Download PDF / Print"><Download size={16}/></button>
                     <div className="w-px h-6 bg-slate-200 mx-2"></div>
                     <button onClick={() => setView('email')} className="bg-[#1e61f0] text-white px-6 py-2.5 rounded text-[13px] font-black hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all uppercase tracking-widest">Send Quote</button>
+                    <button 
+                        onClick={() => navigate('/sales/new-invoice', { state: { quoteData: quote } })}
+                        className="bg-emerald-600 text-white px-6 py-2.5 rounded text-[13px] font-black hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all uppercase tracking-widest flex items-center gap-2"
+                    >
+                        <Check size={16} strokeWidth={3} /> Convert to Invoice
+                    </button>
                     <button className="p-2.5 hover:bg-slate-50 rounded border border-slate-200 text-slate-500"><MoreHorizontal size={16}/></button>
                 </div>
             </header>
@@ -619,39 +625,53 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
 
                     {/* Financial Summary Block */}
                     <div className="flex justify-end pt-12">
-                        <div className="w-full max-w-[400px] bg-white border border-slate-100 rounded-xl p-8 shadow-2xl shadow-slate-100 space-y-4">
-                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-400 uppercase tracking-widest">
-                                <span>Sub Total</span>
-                                <span className="text-slate-900">₹{parseFloat(quote.subTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <div className="w-full max-w-[400px] bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
+                            <div className="p-8 space-y-4">
+                                <div className="flex justify-between items-center text-[13px] font-bold text-slate-400 uppercase tracking-widest">
+                                    <span>Sub Total</span>
+                                    <span className="text-slate-900 font-black">₹{parseFloat(quote.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                </div>
+
+                                {parseFloat(quote.discount || 0) > 0 && (
+                                    <div className="flex justify-between items-center text-[13px] font-bold text-emerald-500 uppercase tracking-widest">
+                                        <span>Applied Discount ({quote.discount}%)</span>
+                                        <span className="font-black">- ₹{(parseFloat(quote.subTotal || 0) * (parseFloat(quote.discount) / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                )}
+
+                                {/* GST Calculations Breakdown */}
+                                {quote.selectedTax ? (
+                                    <div className="pt-2 space-y-3">
+                                        <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest opacity-80">
+                                            <span>CGST ({parseFloat(quote.selectedTax.replace(/\D/g, '')) / 2}%)</span>
+                                            <span className="font-black text-slate-700">₹{(parseFloat(quote.taxAmount || 0) / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest opacity-80">
+                                            <span>SGST ({parseFloat(quote.selectedTax.replace(/\D/g, '')) / 2}%)</span>
+                                            <span className="font-black text-slate-700">₹{(parseFloat(quote.taxAmount || 0) / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-between items-center text-[13px] font-bold text-blue-600/50 uppercase tracking-widest italic border-y border-dashed border-slate-100 py-3">
+                                        <span>GST (Exempted)</span>
+                                        <span>₹0.00</span>
+                                    </div>
+                                )}
+
+                                {parseFloat(quote.adjustment || 0) !== 0 && (
+                                    <div className="flex justify-between items-center text-[13px] font-bold text-slate-400 uppercase tracking-widest">
+                                        <span>Adjustments</span>
+                                        <span className="text-slate-900 font-black">₹{parseFloat(quote.adjustment).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                )}
                             </div>
 
-                            {parseFloat(quote.discount || 0) > 0 && (
-                                <div className="flex justify-between items-center text-[13px] font-bold text-emerald-500 uppercase tracking-widest">
-                                    <span>Applied Discount ({quote.discount}%)</span>
-                                    <span>- ₹{(parseFloat(quote.subTotal || 0) * (parseFloat(quote.discount) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                </div>
-                            )}
-
-                            {quote.selectedTax && (
-                                <div className="flex justify-between items-center text-[13px] font-bold text-blue-600 uppercase tracking-widest">
-                                    <span>GST / Tax ({quote.selectedTax})</span>
-                                    <span>+ ₹{parseFloat(quote.taxAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                </div>
-                            )}
-
-                            {parseFloat(quote.adjustment || 0) !== 0 && (
-                                <div className="flex justify-between items-center text-[13px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <span>Adjustments</span>
-                                    <span className="text-slate-900">₹{parseFloat(quote.adjustment).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                </div>
-                            )}
-
-                            <div className="pt-6 mt-4 border-t-4 border-slate-900 flex justify-between items-baseline">
+                            <div className="px-8 py-8 bg-slate-900 flex justify-between items-baseline text-white">
                                 <div className="space-y-0">
-                                    <span className="text-[13px] font-black text-slate-900 uppercase tracking-[0.2em] italic">Net Payable</span>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.3em]">ALL PRICES IN INDIAN RUPEE</p>
+                                    <span className="text-[14px] font-black uppercase tracking-[0.2em] italic opacity-60">Total Amount</span>
+                                    <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.3em] mt-1">Net Payable in INR</p>
                                 </div>
-                                <span className="text-4xl font-black text-slate-900 tracking-tighter italic">₹{parseFloat(quote.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-4xl font-black tracking-tighter italic">₹{parseFloat(quote.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>
@@ -811,6 +831,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [customerNotes, setCustomerNotes] = useState('Looking forward for your business.');
     const [terms, setTerms] = useState('');
     const [loading, setLoading] = useState(false);
+    const location = useLocation();
 
     const [inventoryItems, setInventoryItems] = useState([]);
     const [priceLists, setPriceLists] = useState([]);
@@ -941,12 +962,27 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
             priceListAPI.getByCompany(activeCoId)
         ])
         .then(([ledgersRes, invRes, priceRes]) => {
-            setCustomers(ledgersRes.data || []);
+            const allLedgers = ledgersRes.data || [];
+            setCustomers(allLedgers.filter(l => {
+                const g = l.Group?.name || '';
+                return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer');
+            }));
             setInventoryItems(invRes.data || []);
             setPriceLists(priceRes.data || []);
         })
         .catch(err => console.error("DATA HYDRATION FAILED:", err));
     }, [companyId]);
+
+    // Auto-select customer if passed via state
+    useEffect(() => {
+        if (location.state?.customerId && customers.length > 0) {
+            const found = customers.find(c => String(c.id) === String(location.state.customerId));
+            if (found) {
+                setCustomerName(found.name);
+                setCustomerSearch(found.name);
+            }
+        }
+    }, [location.state?.customerId, customers]);
 
     // Fetch existing quote if editing
     useEffect(() => {
@@ -1324,13 +1360,13 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                         <table className="w-full border-collapse bg-white">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">
-                                    <th className="px-6 py-3 text-left w-1/2">Item Details</th>
-                                    <th className="px-6 py-3 text-right">Quantity</th>
-                                    <th className="px-6 py-3 text-right">
+                                    <th className="px-6 py-3 text-left">Item Details</th>
+                                    <th className="px-6 py-3 text-right w-28">Quantity</th>
+                                    <th className="px-6 py-3 text-right w-36">
                                         <div className="flex items-center justify-end gap-1.5">Rate <Settings size={12} className="text-slate-300"/></div>
                                     </th>
-                                    <th className="px-6 py-3 text-right">Amount</th>
-                                    <th className="w-10"></th>
+                                    <th className="px-6 py-3 text-right w-40">Amount</th>
+                                    <th className="w-12"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -1341,30 +1377,30 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                 value={item.itemDetails}
                                                 onChange={(e) => updateItem(index, 'itemDetails', e.target.value)}
                                                 placeholder="Type or click to select an item."
-                                                className="w-full bg-transparent border-none outline-none text-[14px] font-medium text-slate-700 placeholder:text-slate-400"
+                                                className="w-full bg-transparent border-none outline-none text-[14px] font-medium text-slate-700 placeholder:text-slate-400 focus:bg-white focus:px-2 rounded transition-all"
                                             />
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 align-top">
                                             <input 
                                                 type="number"
                                                 value={item.quantity}
                                                 onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                                                className="w-full text-right bg-transparent border-none outline-none text-[14px] font-medium text-slate-600"
+                                                className="w-full text-right bg-transparent border-none outline-none text-[14px] font-medium text-slate-600 focus:bg-white rounded transition-all"
                                             />
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 align-top">
                                             <input 
                                                 type="number"
                                                 value={item.rate}
                                                 onChange={(e) => updateItem(index, 'rate', e.target.value)}
-                                                className="w-full text-right bg-transparent border-none outline-none text-[14px] font-medium text-slate-600 font-mono"
+                                                className="w-full text-right bg-transparent border-none outline-none text-[14px] font-medium text-slate-600 font-mono focus:bg-white rounded transition-all"
                                             />
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-6 py-4 text-right align-top">
                                             <span className="text-[14px] font-bold text-slate-900 font-mono">{parseFloat(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </td>
-                                        <td className="px-4 py-4 text-center">
-                                            <button onClick={() => removeItem(index)} className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                        <td className="px-4 py-4 text-center align-top">
+                                            <button onClick={() => removeItem(index)} className="mt-1 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
                                                 <X size={16} />
                                             </button>
                                         </td>
