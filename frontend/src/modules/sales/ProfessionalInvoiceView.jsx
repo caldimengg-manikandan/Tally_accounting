@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Plus, Trash2, Save, Printer, ArrowLeft, 
   Search, Info, Check, Loader2, X, Settings, ChevronDown, File
@@ -9,6 +9,7 @@ import { ledgerAPI, inventoryAPI, salesAPI, companyAPI } from '../../services/ap
 export default function ProfessionalInvoiceView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const companyId = localStorage.getItem('companyId');
 
   // ─── State ────────────────────────────────────────────────────────
@@ -53,8 +54,45 @@ export default function ProfessionalInvoiceView() {
           ledgerAPI.getByCompany(companyId),
           inventoryAPI.getByCompany(companyId)
         ]);
-        setCustomers(Array.isArray(lRes.data) ? lRes.data : []);
+        const allLedgers = Array.isArray(lRes.data) ? lRes.data : [];
+        const filteredCustomers = allLedgers.filter(l => {
+          const gName = l.Group?.name || '';
+          return gName.toLowerCase().includes('debtor') || gName.toLowerCase().includes('customer');
+        });
+        setCustomers(filteredCustomers);
         setItems(Array.isArray(iRes.data) ? iRes.data : []);
+
+        // HANDLE CONVERSION FROM CHALLAN, QUOTE, OR ORDER
+        if (!id && location.state) {
+          const { challanData, quoteData, orderData } = location.state;
+          const source = challanData || quoteData || orderData;
+
+          if (source) {
+            setCustomerId(source.customerLedgerId || source.LedgerId || source.customerId);
+            setOrderNo(source.referenceNumber || source.orderNumber || source.quoteNumber || '');
+            
+            // Map Line Items (Logic varies slightly by source)
+            const rawItems = source.items || (typeof source.itemsJson === 'string' ? JSON.parse(source.itemsJson) : source.itemsJson) || [];
+            if (rawItems.length > 0) {
+              setLineItems(rawItems.map(it => ({
+                id: Math.random(),
+                itemId: it.itemId,
+                description: it.description || it.itemDetails || it.detail || '',
+                quantity: parseFloat(it.quantity || 1),
+                rate: parseFloat(it.rate || 0),
+                amount: parseFloat(it.quantity || 1) * parseFloat(it.rate || 0)
+              })));
+            }
+
+            // Map Totals
+            if (source.discountPercent) setDiscountPercent(source.discountPercent);
+            if (source.adjustment) setAdjustment(source.adjustment);
+            if (source.subject) setSubject(source.subject);
+            if (source.customerNotes) setNotes(source.customerNotes);
+          } else if (location.state.customerId) {
+            setCustomerId(location.state.customerId);
+          }
+        }
 
         // LOAD EXISTING DRAFT IF ID EXISTS
         if (id) {
@@ -92,7 +130,7 @@ export default function ProfessionalInvoiceView() {
       }
     };
     loadData();
-  }, [companyId, id]);
+  }, [companyId, id, location.state]);
 
   // ─── Calculation Logic ──────────────────────────────────────────
   const subTotal = useMemo(() => {
@@ -297,18 +335,18 @@ export default function ProfessionalInvoiceView() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-y border-slate-200">
-                <th className="px-4 py-3 text-left w-1/2">Item Details</th>
-                <th className="px-4 py-3 text-right">Quantity</th>
-                <th className="px-4 py-3 text-right">Rate</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-                <th className="px-4 py-3"></th>
+                <th className="px-4 py-3 text-left">Item Details</th>
+                <th className="px-4 py-3 text-right w-28">Quantity</th>
+                <th className="px-4 py-3 text-right w-36">Rate</th>
+                <th className="px-4 py-3 text-right w-40">Amount</th>
+                <th className="px-4 py-3 w-12"></th>
               </tr>
             </thead>
             <tbody>
               {lineItems.map(line => (
                 <tr key={line.id} className="border-b border-slate-100 group">
                   <td className="px-4 py-4">
-                    <div className="relative group">
+                    <div className="relative">
                       <select 
                         value={line.itemId} 
                         onChange={e => {
@@ -318,7 +356,7 @@ export default function ProfessionalInvoiceView() {
                              updateLine(line.id, 'itemId', e.target.value);
                           }
                         }}
-                        className="w-full p-2 border border-transparent hover:border-slate-200 border-dashed rounded text-sm outline-none bg-transparent appearance-none"
+                        className="w-full p-2 border border-transparent hover:border-slate-200 border-dashed rounded text-sm outline-none bg-transparent appearance-none transition-all"
                       >
                         <option value="">Type or click to select an item.</option>
                         {items.map(it => (
@@ -329,17 +367,24 @@ export default function ProfessionalInvoiceView() {
                         <option disabled>──────────</option>
                         <option value="NEW_ITEM" className="text-blue-600 font-bold">➕ Add New Item</option>
                       </select>
+                      <div className="text-[11px] text-slate-400 pl-2 mt-1">
+                        {items.find(i => i.id === line.itemId)?.description || 'Additional description...'}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-right">
-                    <input type="number" value={line.quantity} onChange={e => updateLine(line.id, 'quantity', e.target.value)} className="w-20 p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded" />
+                  <td className="px-4 py-4 text-right align-top">
+                    <input type="number" value={line.quantity} onChange={e => updateLine(line.id, 'quantity', e.target.value)} className="w-full p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded transition-all" />
                   </td>
-                  <td className="px-4 py-4 text-right">
-                    <input type="number" value={line.rate} onChange={e => updateLine(line.id, 'rate', e.target.value)} className="w-24 p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded" />
+                  <td className="px-4 py-4 text-right align-top">
+                    <input type="number" value={line.rate} onChange={e => updateLine(line.id, 'rate', e.target.value)} className="w-full p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded transition-all" />
                   </td>
-                  <td className="px-4 py-4 text-right text-sm font-medium">{(line.quantity * line.rate).toFixed(2)}</td>
-                  <td className="px-4 py-4 text-center">
-                    <button onClick={() => removeLine(line.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><X size={16}/></button>
+                  <td className="px-4 py-4 text-right align-top">
+                    <div className="p-2 text-sm font-bold text-slate-900">
+                      {(line.quantity * line.rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-center align-top">
+                    <button onClick={() => removeLine(line.id)} className="mt-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><X size={16}/></button>
                   </td>
                 </tr>
               ))}

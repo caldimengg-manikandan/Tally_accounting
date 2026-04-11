@@ -22,5 +22,10 @@ router.put('/invoices/:id', authorizeRoles('ACCOUNTANT', 'MANAGER', 'ADMIN', 'SU
 
 router.delete('/orders/:orderId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.deleteOrder);
 router.delete('/invoices/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.deleteInvoice);
++
++// New Payment & Credit Application Routes
++router.get('/invoices/open/:customerId', salesController.getOpenInvoices);
++router.post('/payments/record', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.recordPayment);
++router.post('/credits/apply', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.applyCredit);
 
 module.exports = router;

@@ -134,7 +134,8 @@ exports.createInvoice = async (req, res) => {
       CompanyId: companyId, customerLedgerId, invoiceNumber, date, dueDate,
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount,
-      customerNotes, termsConditions, status: status || 'Draft'
+      customerNotes, termsConditions, status: status || 'Draft',
+      balance: totalAmount // Initialize balance
     }, { transaction: t });
 
     // 2. Create line items
@@ -220,7 +221,8 @@ exports.updateInvoice = async (req, res) => {
       customerLedgerId, invoiceNumber, date, dueDate,
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount,
-      customerNotes, termsConditions, status
+      customerNotes, termsConditions, status,
+      balance: totalAmount - (invoice.amountPaid || 0) // Recalculate balance
     }, { transaction: t });
 
     // Update items
@@ -275,3 +277,116 @@ exports.deleteInvoice = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.getOpenInvoices = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    const { Op } = require('sequelize');
+    const invoices = await SalesInvoice.findAll({
+      where: { 
+        customerLedgerId: customerId,
+        balance: { [Op.gt]: 0 },
+        status: { [Op.notIn]: ['Draft', 'Void'] }
+      },
+      order: [['date', 'ASC']]
+    });
+    res.json(invoices);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.recordPayment = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { companyId, customerId, paymentDate, amount, depositToId, reference, invoices } = req.body;
+    // invoices: [{ id, amountToApply }]
+
+    // 1. Create Receipt Voucher
+    const voucher = await AccountingService.recordJournalEntry({
+      companyId,
+      date: paymentDate,
+      voucherType: 'Receipt',
+      narration: `Payment received from customer. Ref: ${reference || 'N/A'}`,
+      reference,
+      entries: [
+        { ledgerId: depositToId, debit: amount, credit: 0 }, // Bank/Cash (Debit)
+        { ledgerId: customerId, debit: 0, credit: amount }  // Accounts Receivable (Credit)
+      ],
+      userId: req.user?.id
+    }, t);
+
+    // 2. Apply to Invoices
+    if (invoices && Array.isArray(invoices)) {
+        for (const inv of invoices) {
+          const invoice = await SalesInvoice.findByPk(inv.id, { transaction: t });
+          if (invoice) {
+            const newPaid = parseFloat(invoice.amountPaid || 0) + parseFloat(inv.amountToApply);
+            const newBalance = parseFloat(invoice.totalAmount) - newPaid;
+            let status = invoice.status;
+            if (newBalance <= 0) status = 'Paid';
+            else if (newPaid > 0) status = 'Partially Paid';
+
+            await invoice.update({ amountPaid: newPaid, balance: newBalance, status }, { transaction: t });
+          }
+        }
+    }
+
+    await t.commit();
+    res.json({ message: 'Payment recorded successfully', voucher });
+  } catch (err) {
+    if (t) await t.rollback();
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.applyCredit = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { companyId, customerId, sourceId, sourceType, invoices } = req.body;
+    // sourceType: 'Retainer' or 'CreditNote'
+    // invoices: [{ id, amountToApply }]
+
+    const { RetainerInvoice, CreditNote, RetainerAdjustment } = require('../../models');
+
+    for (const inv of invoices) {
+      // 1. Update Invoice
+      const invoice = await SalesInvoice.findByPk(inv.id, { transaction: t });
+      if (invoice) {
+        const newPaid = parseFloat(invoice.amountPaid || 0) + parseFloat(inv.amountToApply);
+        const newBalance = parseFloat(invoice.totalAmount) - newPaid;
+        let status = invoice.status;
+        if (newBalance <= 0) status = 'Paid';
+        else if (newPaid > 0) status = 'Partially Paid';
+
+        await invoice.update({ amountPaid: newPaid, balance: newBalance, status }, { transaction: t });
+
+        // 2. Update Source Credit
+        if (sourceType === 'Retainer') {
+          const retainer = await RetainerInvoice.findByPk(sourceId, { transaction: t });
+          const newUsed = parseFloat(retainer.amountUsed || 0) + parseFloat(inv.amountToApply);
+          let retStatus = retainer.status;
+          if (newUsed >= parseFloat(retainer.amountReceived || 0)) retStatus = 'FullyApplied';
+          else if (newUsed > 0) retStatus = 'PartiallyApplied';
+
+          await retainer.update({ amountUsed: newUsed, status: retStatus }, { transaction: t });
+
+          // 3. Create Adjustment Record
+          await RetainerAdjustment.create({
+            RetainerInvoiceId: sourceId,
+            InvoiceId: inv.id,
+            amountToAdjust: inv.amountToApply,
+            CompanyId: companyId
+          }, { transaction: t });
+        }
+      }
+    }
+
+    await t.commit();
+    res.json({ message: 'Credit applied successfully' });
+  } catch (err) {
+    if (t) await t.rollback();
+    res.status(500).json({ error: err.message });
+  }
+};
+

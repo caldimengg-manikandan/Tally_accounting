@@ -54,7 +54,11 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
             ledgerAPI.getByCompany(companyId),
             inventoryAPI.getByCompany(companyId)
         ]).then(([ledgersRes, itemsRes]) => {
-            setCustomers(ledgersRes.data || []);
+            const allLedgers = ledgersRes.data || [];
+            setCustomers(allLedgers.filter(l => {
+                const g = l.Group?.name || '';
+                return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer');
+            }));
             setItems(itemsRes.data || []);
         }).finally(() => setLoading(false));
 
@@ -179,10 +183,17 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                             <div className="flex-1 flex gap-2">
                                 <select 
                                     value={formData.customerName} 
-                                    onChange={e => setFormData({...formData, customerName: e.target.value})}
+                                    onChange={e => {
+                                        if (e.target.value === 'NEW_CUSTOMER') {
+                                            navigate('/customers/new');
+                                        } else {
+                                            setFormData({...formData, customerName: e.target.value});
+                                        }
+                                    }}
                                     className="flex-1 p-2 border border-slate-200 rounded text-sm focus:border-blue-500 outline-none"
                                 >
                                     <option value="">Select or add a customer</option>
+                                    <option value="NEW_CUSTOMER" className="text-blue-600 font-bold">➕ Add New Customer</option>
                                     {customers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                 </select>
                                 <button className="p-2 bg-blue-600 text-white rounded"><Search size={16}/></button>
@@ -250,11 +261,11 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-y border-slate-200">
-                                <th className="px-4 py-3 text-left w-1/2">Item Details</th>
-                                <th className="px-4 py-3 text-right">Quantity</th>
-                                <th className="px-4 py-3 text-right">Rate</th>
-                                <th className="px-4 py-3 text-right">Amount</th>
-                                <th className="px-4 py-3"></th>
+                                <th className="px-4 py-3 text-left">Item Details</th>
+                                <th className="px-4 py-3 text-right w-28">Quantity</th>
+                                <th className="px-4 py-3 text-right w-36">Rate</th>
+                                <th className="px-4 py-3 text-right w-40">Amount</th>
+                                <th className="px-4 py-3 w-12"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -265,7 +276,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                             <select 
                                                 value={line.itemId} 
                                                 onChange={e => handleItemSelect(line.id, e.target.value)}
-                                                className="w-full p-2 border border-transparent hover:border-slate-200 border-dashed rounded text-sm outline-none bg-transparent appearance-none"
+                                                className="w-full p-2 border border-transparent hover:border-slate-200 border-dashed rounded text-sm outline-none bg-transparent appearance-none transition-all"
                                             >
                                                 <option value="">Type or click to select an item.</option>
                                                 {items.map(it => (
@@ -279,18 +290,22 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                             value={line.description}
                                             onChange={e => handleUpdateLine(line.id, 'description', e.target.value)}
                                             placeholder="Additional description..." 
-                                            className="w-full mt-2 h-12 p-2 border border-transparent hover:border-slate-100 rounded text-xs text-slate-500 outline-none resize-none bg-transparent"
+                                            className="w-full mt-2 h-12 p-2 border border-transparent hover:border-slate-100 rounded text-xs text-slate-500 outline-none resize-none bg-transparent transition-all"
                                         />
                                     </td>
-                                    <td className="px-4 py-4 text-right">
-                                        <input type="number" value={line.quantity} onChange={e => handleUpdateLine(line.id, 'quantity', e.target.value)} className="w-20 p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded" />
+                                    <td className="px-4 py-4 text-right align-top">
+                                        <input type="number" value={line.quantity} onChange={e => handleUpdateLine(line.id, 'quantity', e.target.value)} className="w-full p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded transition-all" />
                                     </td>
-                                    <td className="px-4 py-4 text-right">
-                                        <input type="number" value={line.rate} onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)} className="w-24 p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded" />
+                                    <td className="px-4 py-4 text-right align-top">
+                                        <input type="number" value={line.rate} onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)} className="w-full p-2 text-right text-sm outline-none bg-transparent border border-transparent focus:border-slate-200 rounded transition-all" />
                                     </td>
-                                    <td className="px-4 py-4 text-right text-sm font-medium">{(parseFloat(line.amount) || 0).toFixed(2)}</td>
-                                    <td className="px-4 py-4 text-center">
-                                        <button onClick={() => setLineItems(prev => prev.filter(p => p.id !== line.id))} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><X size={16}/></button>
+                                    <td className="px-4 py-4 text-right align-top">
+                                        <div className="p-2 text-sm font-bold text-slate-900">
+                                            {(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-4 text-center align-top">
+                                        <button onClick={() => setLineItems(prev => prev.filter(p => p.id !== line.id))} className="mt-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><X size={16}/></button>
                                     </td>
                                 </tr>
                             ))}
