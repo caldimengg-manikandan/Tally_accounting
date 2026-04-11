@@ -7,7 +7,13 @@ const { sequelize } = require('./models');
 const path = require('path');
 
 // 1. Initial Config (Loaded from backend/.env)
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../.env') });
+console.log('--- DATABASE CONFIGURATION ENGINE ---');
+if (process.env.DATABASE_URL) {
+  console.log('Connecting to CLOUD POSTGRES via DATABASE_URL');
+} else {
+  console.log(`DATABASE_URL not found. Dialect: ${process.env.DB_DIALECT || 'sqlite'}`);
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -83,7 +89,8 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 sequelize.sync(syncOptions).then(() => {
-  console.log(`✅ Ledger Database Synced [${dialect}]`);
+  const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
+  console.log(`✅ Ledger Database Synced [${connectedTo}]`);
   app.listen(PORT, () => {
     console.log(`🚀 Tally Enterprise Hub online at PORT: ${PORT}`);
   });
