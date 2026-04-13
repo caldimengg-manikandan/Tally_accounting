@@ -136,7 +136,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     }
   };
 
-  cons  return (
+  return (
     <div className="bg-white min-h-screen text-[13px] text-slate-800 font-medium pb-24">
        {/* ─── Top Bar ──────────────────────────────────────────────── */}
        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
