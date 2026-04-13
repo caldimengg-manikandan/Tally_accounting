@@ -213,8 +213,8 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                       </button>
                    </div>
                    {isVendorDropdownOpen && (
-                      <div className="absolute top-[calc(100%+4px)] left-0 w-[360px] bg-white border border-slate-200 rounded-md shadow-lg z-50 overflow-hidden">
-                         <div className="max-h-[200px] overflow-y-auto py-1">
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-[360px] bg-white border border-slate-200 rounded-md shadow-lg z-50 flex flex-col">
+                         <div className="max-h-[200px] overflow-y-auto py-1 custom-scrollbar">
                             {filteredVendors.length > 0 ? (
                                filteredVendors.map(vendor => (
                                   <div 
@@ -232,6 +232,19 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                             ) : (
                                <div className="px-6 py-4 text-center text-slate-500 text-[12px]">No vendors found.</div>
                             )}
+                         </div>
+                         <div className="border-t border-slate-200">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                 // Route or trigger modal for new vendor
+                                 setIsVendorDropdownOpen(false);
+                              }}
+                              className="w-full px-4 py-2 flex items-center gap-2 text-[13px] font-medium text-blue-500 hover:bg-slate-50 transition-colors"
+                            >
+                               <PlusCircle size={16} className="text-blue-500 fill-blue-500 text-white" />
+                               <span>New Vendor</span>
+                            </button>
                          </div>
                       </div>
                    )}
