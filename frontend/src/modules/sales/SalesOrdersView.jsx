@@ -95,10 +95,8 @@ const SalesOrdersView = ({ companyId }) => {
 
       const safeLedgers = Array.isArray(cRes.data) ? cRes.data : [];
       setCustomers(safeLedgers.filter(l => {
-        const groupName = l.Group?.name;
-        if (typeof groupName !== 'string') return false;
-        const lowered = groupName.toLowerCase();
-        return lowered.includes('debtor') || lowered.includes('customer');
+        const gName = l.Group?.name || '';
+        return gName.toLowerCase().includes('debtor') || gName.toLowerCase().includes('customer');
       }));
 
       setItems(Array.isArray(iRes.data) ? iRes.data : []);
@@ -279,7 +277,8 @@ const SalesOrdersView = ({ companyId }) => {
               <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Date</th>
               <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Customer</th>
               <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
-              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right pr-8">Amount</th>
+              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">Amount</th>
+              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right pr-8">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -307,12 +306,25 @@ const SalesOrdersView = ({ companyId }) => {
                         {order.status || 'Draft'}
                       </span>
                     </td>
-                    <td className="p-5 text-right text-[13px] font-black text-gray-900 pr-8">
-                      <div className="flex items-center justify-end gap-3">
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all mr-2">
+                    <td className="p-5 text-right text-[13px] font-black text-gray-900">
+                      ₹{(parseFloat(order.totalAmount) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="p-5 text-right pr-8">
+                       <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              navigate('/sales/new-invoice', { state: { orderData: order } });
+                            }}
+                            className="p-1.5 hover:bg-emerald-50 rounded border border-transparent hover:border-emerald-200 text-emerald-600 transition-all shadow-sm"
+                            title="Convert to Invoice"
+                          >
+                            <CheckCircle2 size={14} />
+                          </button>
                           <button 
                             onClick={(e) => { e.stopPropagation(); openEdit(order); }}
                             className="p-1.5 hover:bg-white rounded border border-transparent hover:border-gray-200 text-gray-400 hover:text-blue-600 transition-all shadow-sm"
+                            title="Edit"
                           >
                             <Edit2 size={14} />
                           </button>
@@ -322,12 +334,11 @@ const SalesOrdersView = ({ companyId }) => {
                               handleDelete(order.id);
                             }}
                             className="p-1.5 hover:bg-white rounded border border-transparent hover:border-gray-200 text-gray-400 hover:text-rose-500 transition-all shadow-sm"
+                            title="Delete"
                           >
                             <Trash2 size={14} />
                           </button>
-                        </div>
-                        ₹{(parseFloat(order.totalAmount) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      </div>
+                       </div>
                     </td>
                   </tr>
                 );

@@ -22,6 +22,10 @@ const RetainerAdjustment = require('./retainerAdjustment.model')(sequelize, Data
 const SalesInvoice = require('./salesInvoice.model')(sequelize, DataTypes);
 const SalesInvoiceItem = require('./salesInvoiceItem.model')(sequelize, DataTypes);
 const SystemMail = require('./systemMail.model')(sequelize, DataTypes);
+const CreditNote = require('./creditNote.model')(sequelize, DataTypes);
+const CreditNoteItem = require('./creditNoteItem.model')(sequelize, DataTypes);
+const DeliveryChallan = require('./deliveryChallan.model')(sequelize, DataTypes);
+const DeliveryChallanItem = require('./deliveryChallanItem.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -108,6 +112,8 @@ Quote.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID
 // 8. Retainer Invoices
 Company.hasMany(RetainerInvoice, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 RetainerInvoice.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+RetainerInvoice.belongsTo(Ledger, { as: 'CustomerLedger', foreignKey: 'customerLedgerId' });
+Ledger.hasMany(RetainerInvoice, { foreignKey: 'customerLedgerId' });
 
 // 9. Recurring Invoices
 Company.hasMany(RecurringInvoice, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -147,6 +153,24 @@ SystemMail.belongsTo(Ledger, { foreignKey: { name: 'LedgerId', type: DataTypes.U
 User.hasMany(SystemMail, { foreignKey: { name: 'SenderId', type: DataTypes.UUID } });
 SystemMail.belongsTo(User, { as: 'Sender', foreignKey: { name: 'SenderId', type: DataTypes.UUID } });
 
+// 13. Credit Notes
+CreditNote.hasMany(CreditNoteItem, { as: 'items', foreignKey: 'CreditNoteId', onDelete: 'CASCADE' });
+CreditNoteItem.belongsTo(CreditNote, { foreignKey: 'CreditNoteId' });
+CreditNote.belongsTo(Company, { foreignKey: 'CompanyId' });
+Company.hasMany(CreditNote, { foreignKey: 'CompanyId' });
+CreditNote.belongsTo(Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
+CreditNote.belongsTo(Ledger, { as: 'ARAccount', foreignKey: 'accountsReceivableId' });
+CreditNoteItem.belongsTo(Item, { foreignKey: 'itemId' });
+CreditNoteItem.belongsTo(Ledger, { as: 'Account', foreignKey: 'accountId' });
+
+// 14. Delivery Challans
+DeliveryChallan.hasMany(DeliveryChallanItem, { as: 'items', foreignKey: 'DeliveryChallanId', onDelete: 'CASCADE' });
+DeliveryChallanItem.belongsTo(DeliveryChallan, { foreignKey: 'DeliveryChallanId' });
+DeliveryChallan.belongsTo(Company, { foreignKey: 'CompanyId' });
+Company.hasMany(DeliveryChallan, { foreignKey: 'CompanyId' });
+DeliveryChallan.belongsTo(Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
+DeliveryChallanItem.belongsTo(Item, { foreignKey: 'itemId' });
+
 module.exports = {
   sequelize,
   User,
@@ -169,5 +193,9 @@ module.exports = {
   RetainerAdjustment,
   SalesInvoice,
   SalesInvoiceItem,
-  SystemMail
+  SystemMail,
+  CreditNote,
+  CreditNoteItem,
+  DeliveryChallan,
+  DeliveryChallanItem
 };

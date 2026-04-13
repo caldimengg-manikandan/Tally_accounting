@@ -58,7 +58,8 @@ import {
   Receipt, Wallet, TrendingUp, Shield, LogOut,
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
-  PieChart, Landmark, Target, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus
+  PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
+  PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -69,15 +70,15 @@ const NAV = [
     group: 'Home',
     icon: LayoutDashboard,
     items: [
-      { label: 'Dashboard',        path: '/dashboard' },
+      { label: 'Dashboard',        path: '/dashboard', icon: LayoutDashboard },
     ]
   },
   {
     group: 'Items',
-    icon: ShoppingBag,
+    icon: Package,
     items: [
-      { label: 'Items',        path: '/inventory', showPlus: true, plusPath: '/inventory/new' },
-      { label: 'Price Lists',  path: '/price-lists', showPlus: true, plusPath: '/price-lists/new' },
+      { label: 'Items',        path: '/inventory', icon: Package, showPlus: true, plusPath: '/inventory/new' },
+      { label: 'Price Lists',  path: '/price-lists', icon: ClipboardList, showPlus: true, plusPath: '/price-lists/new' },
     ]
   },
   {
@@ -85,10 +86,10 @@ const NAV = [
     icon: ShoppingCart,
     items: [
       { icon: Users,           label: 'Customers',        path: '/customers', showPlus: true, plusPath: '/customers/new' },
-      { icon: ClipboardList,   label: 'Quotes',           path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
+      { icon: FileText,        label: 'Quotes',           path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
       { icon: FileStack,       label: 'Retainer Invoices', path: '/retainer-invoices', showPlus: true, plusPath: '/retainer-invoices/new' },
       { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders', showPlus: true, plusPath: '/sales-orders/new' },
-      { icon: Receipt, label: 'Invoices', path: '/sales-invoices', showPlus: true, plusPath: '/sales/new-invoice' },
+      { icon: Receipt,         label: 'Invoices',         path: '/sales-invoices', showPlus: true, plusPath: '/sales/new-invoice' },
       { icon: Repeat,          label: 'Recurring Invoices', path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
       { icon: Truck,           label: 'Delivery Challans', path: '/delivery-challans', showPlus: true, plusPath: '/delivery-challans/new' },
       { icon: Wallet,          label: 'Payments Received', path: '/payments', showPlus: true, plusPath: '/payments/new' },
@@ -99,56 +100,65 @@ const NAV = [
     group: 'Purchases',
     icon: ShoppingBag,
     items: [
-      { label: 'Vendors',            path: '/vendors', showPlus: true, plusPath: '/vendors/new' },
-      { label: 'Expenses',           path: '/expenses', showPlus: true, plusPath: '/expenses/new' },
-      { label: 'Recurring Expenses', path: '/recurring-expenses', showPlus: true, plusPath: '/recurring-expenses/new' },
-      { label: 'Purchase Orders',    path: '/purchase-orders', showPlus: true, plusPath: '/purchase-orders/new' },
-      { label: 'Bills',              path: '/bills', showPlus: true, plusPath: '/bills/new' },
-      { label: 'Recurring Bills',    path: '/recurring-bills', showPlus: true, plusPath: '/recurring-bills/new' },
-      { label: 'Payments Made',      path: '/payments-made', showPlus: true, plusPath: '/payments-made/new' },
-      { label: 'Vendor Credits',     path: '/vendor-credits', showPlus: true, plusPath: '/vendor-credits/new' },
+      { label: 'Vendors',            path: '/vendors', icon: Users, showPlus: true, plusPath: '/vendors/new' },
+      { label: 'Expenses',           path: '/expenses', icon: Receipt, showPlus: true, plusPath: '/expenses/new' },
+      { label: 'Recurring Expenses', path: '/recurring-expenses', icon: Repeat, showPlus: true, plusPath: '/recurring-expenses/new' },
+      { label: 'Purchase Orders',    path: '/purchase-orders', icon: ShoppingBag, showPlus: true, plusPath: '/purchase-orders/new' },
+      { label: 'Bills',              path: '/bills', icon: FileStack, showPlus: true, plusPath: '/bills/new' },
+      { label: 'Recurring Bills',    path: '/recurring-bills', icon: Repeat, showPlus: true, plusPath: '/recurring-bills/new' },
+      { label: 'Payments Made',      path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
+      { label: 'Vendor Credits',     path: '/vendor-credits', icon: Undo2, showPlus: true, plusPath: '/vendor-credits/new' },
+    ]
+  },
+  {
+    group: 'Time Tracking',
+    icon: Activity,
+    items: [
+      { label: 'Projects', path: '/time-tracking/projects', icon: Target },
+      { label: 'Timesheet', path: '/time-tracking/timesheet', icon: Clock },
     ]
   },
   {
     group: 'Banking',
     icon: Landmark,
     items: [
-      { label: 'Banking',          path: '/reconciliation' },
+      { label: 'Banking',          path: '/reconciliation', icon: Landmark },
     ]
   },
   {
     group: 'Accountant',
-    icon: BookOpen,
+    icon: UserCheck,
     items: [
-      { label: 'Vouchers',         path: '/vouchers' },
-      { label: 'Ledgers',          path: '/ledgers' },
-      { label: 'Cost Centers',     path: '/cost-centers' },
+      { label: 'Vouchers',         path: '/vouchers', icon: BookOpen },
+      { label: 'Ledgers',          path: '/ledgers', icon: BookOpen },
+      { label: 'Cost Centers',     path: '/cost-centers', icon: Target },
     ]
   },
   {
     group: 'Reports',
     icon: BarChart2,
     items: [
-      { label: 'Trial Balance',    path: '/reports/trial-balance' },
-      { label: 'Profit & Loss',    path: '/reports/pl' },
-      { label: 'Balance Sheet',    path: '/reports/bs' },
-      { label: 'Day Book',         path: '/reports/daybook' },
-      { label: 'GST Returns',      path: '/reports/gst' },
+      { label: 'Trial Balance',    path: '/reports/trial-balance', icon: BarChart2 },
+      { label: 'Profit & Loss',    path: '/reports/pl', icon: PieChart },
+      { label: 'Balance Sheet',    path: '/reports/bs', icon: FileBarChart2 },
+      { label: 'Day Book',         path: '/reports/daybook', icon: ClipboardList },
+      { label: 'GST Returns',      path: '/reports/gst', icon: Shield },
     ]
   },
   {
-    group: 'APPS',
-    icon: UserCheck,
+    group: 'Documents',
+    icon: FileStack,
     items: [
-      { label: 'Payroll',          path: '/payroll' },
+      { label: 'Documents', path: '/documents', icon: FileStack },
     ]
   },
   {
-    group: 'Setup',
+    group: 'APP SETUP',
     icon: Settings,
     items: [
-      { label: 'Company',          path: '/settings/company' },
-      { label: 'Audit Trail',      path: '/reports/audit' },
+      { label: 'Payroll',          path: '/payroll', icon: UserCheck },
+      { label: 'Company Settings', path: '/settings/company', icon: Building2 },
+      { label: 'Audit Trail',      path: '/reports/audit', icon: Shield },
     ]
   },
 ];
@@ -157,61 +167,126 @@ const NAV = [
 // SIDEBAR GROUP
 // ═══════════════════════════════════════════════════════════════════
 const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) => {
-  const [expanded, setExpanded] = useState(pathname.startsWith('/customers') || pathname.startsWith('/quotes') || pathname.startsWith('/sales') || pathname.startsWith('/retainer') || pathname.startsWith('/recurring') || pathname.startsWith('/delivery') || pathname.startsWith('/payments') || pathname.startsWith('/credit') || pathname.startsWith('/inventory') || pathname.startsWith('/price-lists') || pathname.startsWith('/vendors') || pathname.startsWith('/expenses') || pathname.startsWith('/bills') || pathname.startsWith('/purchase-orders') || pathname.startsWith('/payments-made') || pathname.startsWith('/vendor-credits'));
+  const [expanded, setExpanded] = useState(
+    pathname.includes(group.toLowerCase().replace(' ', '-')) ||
+    items.some(it => pathname === it.path || pathname.startsWith(it.path))
+  );
 
   const isActive = items.some(item => pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path)));
 
+  const [isHovered, setIsHovered] = useState(false);
+
   if (collapsed) {
     return (
-      <div className="space-y-1">
-        <div className="mx-4 h-px bg-slate-50 mb-3 mt-1"></div>
-        {items.map(item => (
-          <NavItem
-            key={item.path}
-            icon={item.icon}
-            label={item.label}
-            active={pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path))}
-            onClick={() => navigate(item.path)}
-            collapsed={collapsed}
-          />
-        ))}
+      <div 
+        className="relative"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <NavItem
+          icon={Icon}
+          label={group}
+          active={isActive}
+          onClick={() => navigate(items[0]?.path || '/')}
+          collapsed={collapsed}
+          hasChildren={items.length > 0}
+        />
+
+        {/* HOVER FLYOUT MENU */}
+        {isHovered && items.length > 0 && (
+          <div 
+            className="absolute left-[84px] top-0 w-[240px] bg-white rounded-r-2xl shadow-[10px_0_30px_rgba(0,0,0,0.12)] border-y border-r border-slate-100 py-6 px-4 z-[100] animate-fade-in-right"
+            style={{ minHeight: '100%' }}
+          >
+            <div className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-4 pl-2">
+              {group}
+            </div>
+            <div className="space-y-1">
+              {items.map(item => {
+                const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+                return (
+                  <div 
+                    key={item.path} 
+                    className={`group/sub flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer
+                      ${active ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
+                    onClick={() => { navigate(item.path); setIsHovered(false); }}
+                  >
+                    <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-blue-600' : ''}`}>
+                      {item.label}
+                    </span>
+                    {item.showPlus && (
+                       <button 
+                         onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); setIsHovered(false); }}
+                         className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-blue-600 hover:text-white"
+                       >
+                         <Plus size={12} strokeWidth={3} />
+                       </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
+  // EXPANDED VIEW
+  if (group === 'Home' || items.length === 0) {
+    return items.map(item => (
+      <NavItem
+        key={item.path}
+        icon={item.icon}
+        label={item.label}
+        active={pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path))}
+        onClick={() => navigate(item.path)}
+        collapsed={collapsed}
+      />
+    ));
+  }
+
   return (
-    <div className="space-y-1">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className={`flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all duration-300 group
-          ${isActive ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}
-      >
-        <div className="flex items-center gap-3 flex-1">
-          <div className="transition-transform duration-300 group-hover:scale-110">
-            {expanded ? <ChevronDown size={18}/> : <ChevronRight size={18}/>}
+    <div className="space-y-0.5">
+      {!collapsed && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          title={`${group} Group`}
+          className={`flex items-center gap-3 w-full px-4 py-2.5 transition-all duration-300 group
+            ${isActive ? 'text-slate-900 font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}
+        >
+          <div className="flex items-center gap-2.5 flex-1">
+            <div className={`transition-transform duration-300 ${expanded ? 'rotate-0' : '-rotate-90'}`}>
+              <ChevronDown size={14} className="text-slate-400" />
+            </div>
+            <span className={`text-[11px] font-black text-slate-300 uppercase tracking-[0.2em]`}>{group}</span>
           </div>
-          {Icon && <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />}
-          <span className="text-[13px] font-black tracking-tight">{group}</span>
-        </div>
-      </button>
+        </button>
+      )}
 
       {expanded && (
-        <div className="ml-9 space-y-1 mt-1 animate-fade-down">
+        <div className="ml-8 space-y-0.5 mt-0.5">
           {items.map(item => {
             const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
             return (
-              <div key={item.path} className="group/item flex items-center justify-between px-4 py-2 rounded-xl transition-all duration-200 hover:bg-slate-50">
+              <div 
+                key={item.path} 
+                className={`group/item flex items-center justify-between px-4 py-1.5 rounded-l-full transition-all duration-200 
+                  ${active ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : 'hover:bg-slate-50 text-slate-500 hover:text-slate-900'}`}
+              >
                 <button
                   onClick={() => navigate(item.path)}
+                  title={item.label}
                   className={`flex-1 text-left text-[12px] font-medium tracking-tight
-                    ${active ? 'text-blue-600 font-bold' : 'text-slate-400 group-hover/item:text-slate-900'}`}
+                    ${active ? 'text-blue-600 font-bold' : 'text-slate-500 group-hover/item:text-slate-900'}`}
                 >
                   {item.label}
                 </button>
-                {(item.addPath || item.plusPath || item.showPlus) && (
+                {(item.showPlus) && (
                    <button 
-                     onClick={(e) => { e.stopPropagation(); navigate(item.addPath || item.plusPath); }}
-                     className="hidden group-hover/item:flex items-center justify-center w-5 h-5 rounded-md bg-blue-500 text-white shrink-0 shadow-sm transition-all hover:bg-blue-600"
+                     onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); }}
+                     title={`Add New ${item.label}`}
+                     className="hidden group-hover/item:flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white shrink-0 shadow-sm transition-all hover:bg-blue-700"
                    >
                      <Plus size={12} strokeWidth={3} />
                    </button>
@@ -228,25 +303,40 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
 // ═══════════════════════════════════════════════════════════════════
 // SIDEBAR ITEM
 // ═══════════════════════════════════════════════════════════════════
-const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, showPlus }) => (
+const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, showPlus, hasChildren }) => (
   <button
     onClick={onClick}
     data-label={label}
-    className={`flex items-center gap-3 w-full transition-all duration-300 group relative
-      ${active ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}
+    title={collapsed ? label : ''}
+    className={`flex transition-all duration-200 group relative
       ${collapsed 
-        ? 'justify-center h-12 w-12 mx-auto rounded-2xl p-0 nav-tooltip' 
-        : 'px-4 py-3 rounded-2xl'}`}
+        ? `flex-col items-center justify-center h-[72px] w-full gap-1.5 border-b border-slate-50/50
+           ${active ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`
+        : `items-center gap-3 w-full px-6 py-2.5 rounded-l-full
+           ${active ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}`}
   >
-    {Icon && <Icon size={20} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />}
-    {!collapsed && <span className={`text-[13px] font-black tracking-tight ${active ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>{label}</span>}
-    {active && !collapsed && !showPlus && <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-white/50 animate-pulse"></div>}
+    {Icon && <Icon size={collapsed ? 22 : 18} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? (collapsed ? 'text-white' : 'text-blue-600') : 'text-slate-400 group-hover:text-slate-900'}`} />}
+    
+    {collapsed ? (
+      <>
+        <span className={`text-[10px] font-bold leading-none text-center truncate w-full px-1 uppercase tracking-tighter ${active ? 'text-white' : 'text-slate-500'}`}>
+          {label.length > 8 ? label.substring(0, 7) + '..' : label}
+        </span>
+        {hasChildren && (
+          <div className="absolute bottom-1 right-1 w-0 h-0 border-l-[6px] border-l-transparent border-b-[6px] border-b-slate-300"></div>
+        )}
+      </>
+    ) : (
+      <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-blue-600' : 'text-slate-600 group-hover:text-slate-900'}`}>{label}</span>
+    )}
+
     {showPlus && !collapsed && (
       <div 
         onClick={(e) => { e.stopPropagation(); onPlusClick && onPlusClick(); }}
-        className="ml-auto opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-white/20 rounded-md"
+        title={`Add New ${label}`}
+        className="ml-auto opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-blue-100 rounded-md"
       >
-        <Plus size={14} strokeWidth={3} className={active ? 'text-white' : 'group-hover:text-[#1e61f0]'} />
+        <Plus size={14} strokeWidth={3} className={active ? 'text-blue-600' : 'text-slate-400 hover:text-blue-600'} />
       </div>
     )}
   </button>
@@ -263,7 +353,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
   const [collapsed, setCollapsed] = useState(false);
   const user = useMemo(() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
 
-  const sidebarW = collapsed ? 68 : 230;
+  const sidebarW = collapsed ? 84 : 230;
 
   // Breadcrumb
   const breadcrumbs = useMemo(() => {
@@ -294,7 +384,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
     >
 
       {/* ─── SIDEBAR ─────────────────────────────────────────── */}
-      <aside style={{
+      <aside className="no-print" style={{
         width: sidebarW,
         minWidth: sidebarW,
         background: '#fff',
@@ -319,7 +409,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         </div>
 
         {/* Nav */}
-        <nav className={`flex-1 py-6 space-y-6 ${collapsed ? 'px-1 overflow-y-visible' : 'px-4 overflow-y-auto'}`}>
+        <nav className={`flex-1 space-y-0 ${collapsed ? 'px-0 overflow-y-visible py-0' : 'px-0 overflow-y-auto py-6'}`}>
           {NAV.filter(section => {
             // RBAC FILTERING LOGIC
             const role = user.role || 'VIEWER';
@@ -327,60 +417,28 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             if (role === 'AUDITOR') return ['Home', 'Reports', 'Setup'].includes(section.group);
             if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accountant', 'Payroll'].includes(section.group);
             return true; // ADMIN, MANAGER, ACCOUNTANT see all
-          }).map(section => {
-            if (section.group !== 'Home' && !collapsed) {
-              return (
-                <NavGroup
-                  key={section.group}
-                  group={section.group}
-                  icon={section.icon}
-                  items={section.items}
-                  collapsed={collapsed}
-                  pathname={pathname}
-                  navigate={navigate}
-                />
-              );
-            }
-
-            return (
-              <div key={section.group} className="space-y-1">
-                {!collapsed && (
-                  <div className="px-3 mb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
-                    {section.group}
-                  </div>
-                )}
-                {collapsed && <div className="mx-4 h-px bg-slate-50 mb-3 mt-1"></div>}
-                <div className="space-y-1">
-                  {section.items.map(item => {
-                    const active = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
-                    return (
-                      <NavItem
-                        key={item.path}
-                        icon={item.icon}
-                        label={item.label}
-                        active={active}
-                        onClick={() => navigate(item.path)}
-                        onPlusClick={item.plusPath ? () => navigate(item.plusPath) : null}
-                        collapsed={collapsed}
-                        showPlus={item.showPlus}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+          }).map(section => (
+            <NavGroup
+              key={section.group}
+              group={section.group}
+              icon={section.icon}
+              items={section.items}
+              collapsed={collapsed}
+              pathname={pathname}
+              navigate={navigate}
+            />
+          ))}
         </nav>
 
-        {/* Collapse toggle */}
-        <div className="p-3 border-t border-gray-100">
-          <button
-            onClick={() => setCollapsed(c => !c)}
-            className="w-full flex items-center justify-center gap-2 p-2 rounded-md border border-gray-100 bg-gray-50 text-gray-400 hover:text-gray-900 transition-all text-xs font-bold"
-          >
-            {collapsed ? <ChevronsRight size={15} /> : <><ChevronsLeft size={15} /><span>Collapse</span></>}
-          </button>
-        </div>
+        {/* Collapse toggle - Floating Transparent version */}
+        <button 
+          onClick={() => setCollapsed(!collapsed)}
+          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          className={`absolute -right-3 bottom-24 w-6 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm z-[60] cursor-pointer
+            ${collapsed ? 'rotate-180' : ''}`}
+        >
+          <PanelLeftClose size={14} strokeWidth={3} />
+        </button>
 
         {/* User card */}
         <div className="p-4 border-t border-slate-50">
@@ -405,7 +463,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 relative z-40 shrink-0">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 relative z-40 shrink-0 no-print">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Workspace</span>
@@ -612,10 +670,14 @@ function AuthenticatedApp() {
       <Route path="/recurring-invoices/edit/:id" element={shell(RecurringInvoicesView)} />
       <Route path="/delivery-challans"  element={shell(DeliveryChallansView)} />
       <Route path="/delivery-challans/new" element={shell(DeliveryChallansView)} />
+      <Route path="/delivery-challans/edit/:id" element={shell(DeliveryChallansView)} />
+      <Route path="/delivery-challans/view/:id" element={shell(DeliveryChallansView)} />
       <Route path="/payments"           element={shell(PaymentsReceivedView)} />
       <Route path="/payments/new"       element={shell(PaymentsReceivedView)} />
       <Route path="/credit-notes"       element={shell(CreditNotesView)} />
       <Route path="/credit-notes/new"   element={shell(CreditNotesView)} />
+      <Route path="/credit-notes/edit/:id" element={shell(CreditNotesView)} />
+      <Route path="/credit-notes/view/:id" element={shell(CreditNotesView)} />
       <Route path="/tax-invoices"       element={shell(GSTInvoiceView)} />
 
       {/* Operations */}

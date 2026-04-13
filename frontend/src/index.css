@@ -107,3 +107,18 @@ body {
 [contenteditable] {
   word-break: break-word;
 }
+
+@keyframes fade-in-right {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in-right {
+  animation: fade-in-right 0.2s ease-out;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

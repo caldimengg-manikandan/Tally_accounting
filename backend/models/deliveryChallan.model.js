@@ -1,48 +1,38 @@
 module.exports = (sequelize, DataTypes) => {
-  const SalesInvoice = sequelize.define('SalesInvoice', {
+  const DeliveryChallan = sequelize.define('DeliveryChallan', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
     },
-    invoiceNumber: {
+    challanNumber: {
       type: DataTypes.STRING,
       allowNull: false
     },
-    orderNumber: DataTypes.STRING,
+    referenceNumber: DataTypes.STRING,
     date: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW
     },
-    dueDate: DataTypes.DATE,
+    challanType: {
+      type: DataTypes.STRING,
+      defaultValue: 'Supply' // Supply, Job Work, etc.
+    },
     status: {
-      type: DataTypes.ENUM('Draft', 'Confirmed', 'Sent', 'Partially Paid', 'Paid', 'Void', 'Overdue'),
+      type: DataTypes.ENUM('Draft', 'Open', 'Delivered', 'Invoiced', 'Void'),
       defaultValue: 'Draft'
     },
-    amountPaid: {
-      type: DataTypes.DECIMAL(20, 2),
-      defaultValue: 0
-    },
-    balance: {
-      type: DataTypes.DECIMAL(20, 2),
-      defaultValue: 0
-    },
-    terms: DataTypes.STRING,
     salesperson: DataTypes.STRING,
     subject: DataTypes.TEXT,
     subTotal: {
       type: DataTypes.DECIMAL(20, 2),
       defaultValue: 0
     },
-    discountAmount: {
+    discount: {
       type: DataTypes.DECIMAL(20, 2),
       defaultValue: 0
     },
-    discountPercent: {
-      type: DataTypes.DECIMAL(5, 2),
-      defaultValue: 0
-    },
-    gstAmount: {
+    taxAmount: {
       type: DataTypes.DECIMAL(20, 2),
       defaultValue: 0
     },
@@ -63,15 +53,14 @@ module.exports = (sequelize, DataTypes) => {
     customerLedgerId: {
       type: DataTypes.UUID,
       allowNull: false
-    },
-    VoucherId: DataTypes.UUID // Linked after confirmation
+    }
   });
 
-  SalesInvoice.associate = (models) => {
-    SalesInvoice.hasMany(models.SalesInvoiceItem, { as: 'items', foreignKey: 'SalesInvoiceId' });
-    SalesInvoice.belongsTo(models.Company);
-    SalesInvoice.belongsTo(models.Ledger, { as: 'CustomerLedger', foreignKey: 'customerLedgerId' });
+  DeliveryChallan.associate = (models) => {
+    DeliveryChallan.hasMany(models.DeliveryChallanItem, { as: 'items', foreignKey: 'DeliveryChallanId' });
+    DeliveryChallan.belongsTo(models.Company);
+    DeliveryChallan.belongsTo(models.Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
   };
 
-  return SalesInvoice;
+  return DeliveryChallan;
 };

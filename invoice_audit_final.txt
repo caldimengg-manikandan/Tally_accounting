@@ -1,0 +1,18 @@
+--- INVOICE AUDIT ---
+
+
+COMPANY: Indus Enterprises Private Limited [b03b1ec3-5f34-4460-9ef5-bda22fb4d360]
+  RECURRING (0)
+  RETAINER (0)
+
+COMPANY: Indus Enterprises Private Limited [5f6dd28a-bbc3-4664-8ce5-1a469ea6f82c]
+  RECURRING (0)
+  RETAINER (0)
+
+COMPANY: Sundry [3208c42b-f600-43d3-bf21-f608abd22a8a]
+  RECURRING (0)
+  RETAINER (0)
+
+COMPANY: The MOON Enterprises [5f028981-8de4-4c19-9a90-54257dd87f70]
+  RECURRING (1)
+  RETAINER (3)

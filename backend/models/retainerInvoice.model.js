@@ -20,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
+    customerLedgerId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     projectName: {
       type: DataTypes.STRING
     },

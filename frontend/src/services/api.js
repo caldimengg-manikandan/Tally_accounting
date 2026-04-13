@@ -134,6 +134,9 @@ export const salesAPI = {
   updateInvoice: (id, data) => api.put(`/sales/invoices/${id}`, data),
   deleteOrder: (id) => api.delete(`/sales/orders/${id}`),
   deleteInvoice: (id) => api.delete(`/sales/invoices/${id}`),
+  getOpenInvoices: (customerId) => api.get(`/sales/invoices/open/${customerId}`),
+  recordPayment: (data) => api.post('/sales/payments/record', data),
+  applyCredit: (data) => api.post('/sales/credits/apply', data)
 };
 
 // ─── Quotes ────────────────────────────────────────
@@ -163,6 +166,22 @@ export const recurringInvoiceAPI = {
   update: (id, data) => api.put(`/recurring-invoices/${id}`, data),
   delete: (id) => api.delete(`/recurring-invoices/${id}`),
   processDue: () => api.post('/recurring-invoices/process-due')
+};
+
+export const deliveryChallanAPI = {
+  create: (data) => api.post('/delivery-challans', data),
+  getByCompany: (companyId) => api.get(`/delivery-challans/company/${companyId}`),
+  getById: (id) => api.get(`/delivery-challans/${id}`),
+  update: (id, data) => api.put(`/delivery-challans/${id}`, data),
+  delete: (id) => api.delete(`/delivery-challans/${id}`)
+};
+
+export const creditNoteAPI = {
+  create: (data) => api.post('/credit-notes', data),
+  getByCompany: (companyId) => api.get(`/credit-notes/company/${companyId}`),
+  getById: (id) => api.get(`/credit-notes/${id}`),
+  update: (id, data) => api.put(`/credit-notes/${id}`, data),
+  delete: (id) => api.delete(`/credit-notes/${id}`)
 };
 
 // ─── Cost Centers ──────────────────────────────────
