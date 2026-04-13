@@ -70,6 +70,7 @@ app.use('/api/retainer-invoices', require('./modules/sales/retainerInvoice.route
 app.use('/api/recurring-invoices', require('./modules/sales/recurringInvoice.routes'));
 app.use('/api/pricelists', require('./modules/inventory/pricelist.routes'));
 app.use('/api/purchases', require('./modules/purchases/purchases.routes'));
+app.use('/api/mail', require('./modules/mail/mail.routes'));
 app.use('/api/delivery-challans', require('./modules/sales/deliveryChallan.routes'));
 app.use('/api/credit-notes', require('./modules/sales/creditNote.routes'));
 

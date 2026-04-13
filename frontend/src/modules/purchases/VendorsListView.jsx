@@ -172,7 +172,7 @@ const VendorsListView = ({ companyId }) => {
                    sortedVendors.map(v => (
                      <tr 
                        key={v.id} 
-                       onClick={() => navigate(`/vendors/${v.id}`)}
+                       onClick={() => navigate(`/vendors/view/${v.id}`)}
                        className="hover:bg-slate-50 transition-colors cursor-pointer group"
                      >
                         <td className="px-6 py-4 text-[14px] font-medium text-blue-600 group-hover:underline">{v.name}</td>
@@ -225,23 +225,6 @@ const VendorsListView = ({ companyId }) => {
                               >
                                  <Plus size={20} strokeWidth={3}/> Onboard New Vendor
                               </button>
-                              <button 
-                                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-8 py-3 rounded-xl font-bold text-[15px] flex items-center gap-2.5 transition-all shadow-sm active:scale-[0.98]"
-                              >
-                                 <UploadIcon size={20} strokeWidth={2.5} className="text-slate-400" /> Bulk Import
-                              </button>
-                           </div>
-                           
-                           <div className="mt-16 flex items-center gap-8 py-6 px-10 bg-slate-50/50 rounded-2xl border border-slate-100/50 shadow-inner">
-                              <div className="text-left">
-                                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Total Payables</p>
-                                 <p className="text-xl font-black text-slate-900 italic">₹ 0.00</p>
-                              </div>
-                              <div className="w-[1px] h-10 bg-slate-200"></div>
-                              <div className="text-left">
-                                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Active Vendors</p>
-                                 <p className="text-xl font-black text-slate-900 italic">0</p>
-                              </div>
                            </div>
                         </div>
                      </td>

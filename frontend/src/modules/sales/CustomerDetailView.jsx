@@ -8,14 +8,15 @@ import {
   Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
   Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2,
   ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline,
-  PlusCircle, Trash
+  CheckCircle2, AlertCircle, PlusCircle, Trash
 } from 'lucide-react';
 import { 
   ledgerAPI, salesAPI, quoteAPI, retainerInvoiceAPI, 
-  voucherAPI, reportsAPI, companyAPI 
+  voucherAPI, reportsAPI, companyAPI, mailAPI 
 } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
+import ComposeMailModal from '../../components/ComposeMailModal';
 
 const CustomerDetailView = ({ companyId }) => {
   const { id } = useParams();
@@ -24,7 +25,14 @@ const CustomerDetailView = ({ companyId }) => {
   const [selectedId, setSelectedId] = useState(id);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Overview');
+  const [mails, setMails] = useState([]);
+  const [loadingMails, setLoadingMails] = useState(false);
+  const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
   const { addNotification } = useNotificationStore();
+
+  const user = useMemo(() => { 
+    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } 
+  }, []);
   
   // Data for tabs
   const [transactions, setTransactions] = useState({
@@ -251,10 +259,11 @@ const CustomerDetailView = ({ companyId }) => {
 
   const handleAddComment = () => {
     if (!newComment.trim()) return;
+    const authorName = user.name || (user.email ? user.email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + user.email.split('@')[0].split('.')[0].slice(1) : 'Administrator');
     const comment = {
        id: Date.now(),
        text: newComment,
-       author: 'Antigravity User',
+       author: authorName,
        date: new Date().toLocaleString()
     };
     const updated = [...comments, comment];
@@ -279,6 +288,25 @@ const CustomerDetailView = ({ companyId }) => {
       setIsDeleteModalOpen(false);
     }
   };
+
+  const fetchMails = async () => {
+    if (!selectedId) return;
+    setLoadingMails(true);
+    try {
+      const response = await mailAPI.getByLedger(selectedId);
+      setMails(response.data);
+    } catch (err) {
+      console.error('Failed to fetch mails:', err);
+    } finally {
+      setLoadingMails(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'Mails') {
+      fetchMails();
+    }
+  }, [activeTab, selectedId]);
 
   const toggleSection = (name) => {
     setOpenSections(prev => prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]);
@@ -384,30 +412,24 @@ const CustomerDetailView = ({ companyId }) => {
                 <div className="p-10 space-y-8 animate-fade-in max-w-4xl">
                    <div className="border border-slate-200 rounded-lg bg-slate-50/50 overflow-hidden shadow-sm">
                       <div className="p-3 border-b border-slate-200 flex gap-4 text-slate-400">
-                         <Bold 
-                           size={16} 
-                           className="cursor-pointer hover:text-slate-900 transition-colors" 
-                           onMouseDown={(e) => {
-                               e.preventDefault();
-                               document.execCommand('bold', false, null);
-                           }}
-                         />
-                         <Italic 
-                           size={16} 
-                           className="cursor-pointer hover:text-slate-900 transition-colors" 
-                           onMouseDown={(e) => {
-                               e.preventDefault();
-                               document.execCommand('italic', false, null);
-                           }}
-                         />
-                         <Underline 
-                           size={16} 
-                           className="cursor-pointer hover:text-slate-900 transition-colors" 
-                           onMouseDown={(e) => {
-                               e.preventDefault();
-                               document.execCommand('underline', false, null);
-                           }}
-                         />
+                         <button 
+                           onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold', false, null); }}
+                           className="hover:text-slate-900 transition-colors"
+                         >
+                           <Bold size={16} />
+                         </button>
+                         <button 
+                           onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic', false, null); }}
+                           className="hover:text-slate-900 transition-colors"
+                         >
+                           <Italic size={16} />
+                         </button>
+                         <button 
+                           onMouseDown={(e) => { e.preventDefault(); document.execCommand('underline', false, null); }}
+                           className="hover:text-slate-900 transition-colors"
+                         >
+                           <Underline size={16} />
+                         </button>
                       </div>
                       <div 
                         contentEditable
@@ -431,10 +453,14 @@ const CustomerDetailView = ({ companyId }) => {
                         <div className="space-y-6">
                            {comments.map(c => (
                              <div key={c.id} className="flex gap-4 group">
-                                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100 uppercase">{c.author[0]}</div>
+                                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100 uppercase">
+                                  {(c.author === 'Antigravity User' || c.author?.includes('@') ? (user.name || (user.email ? user.email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + user.email.split('@')[0].split('.')[0].slice(1) : 'Administrator')) : c.author)[0]}
+                                </div>
                                 <div className="flex-1 space-y-1">
                                    <div className="flex items-center gap-2">
-                                      <span className="text-[13px] font-bold text-slate-800">{c.author}</span>
+                                      <span className="text-[13px] font-bold text-slate-800">
+                                        {c.author === 'Antigravity User' || c.author?.includes('@') ? (user.name || (user.email ? user.email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + user.email.split('@')[0].split('.')[0].slice(1) : 'Administrator')) : c.author}
+                                      </span>
                                       <span className="text-[11px] text-slate-400 font-medium">{c.date}</span>
                                    </div>
                                    <div 
@@ -563,20 +589,74 @@ const CustomerDetailView = ({ companyId }) => {
                 </div>
               )}
 
-              {activeTab === 'Mails' && (
+               {activeTab === 'Mails' && (
                 <div className="p-10 space-y-6 animate-fade-in max-w-4xl">
-                   <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white">
-                      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                         <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-tighter">System Mails</h3>
-                         <div className="flex items-center gap-1 text-[13px] text-blue-600 font-bold cursor-pointer px-3 py-1 bg-blue-50 rounded hover:bg-blue-100 transition-colors">
-                            <Mail size={14} className="mr-1.5"/> Link Email account <ChevronDown size={14}/>
+                   <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100/50 bg-white">
+                      <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md">
+                         <div>
+                            <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">System Mails</h3>
+                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Automated and Direct Emails</p>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <button 
+                               onClick={() => setIsComposeModalOpen(true)}
+                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-black hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
+                            >
+                               <Mail size={16}/> Compose Email
+                            </button>
                          </div>
                       </div>
-                      <div className="p-20 text-center space-y-4">
-                         <div className="flex justify-center"><Mail size={48} className="text-orange-300 opacity-50" strokeWidth={1}/></div>
-                         <p className="text-[14px] text-slate-500 font-medium flex items-center justify-center gap-2">
-                            <Info size={16} className="text-orange-400"/> No emails sent.
-                         </p>
+
+                      <div className="min-h-[400px]">
+                         {loadingMails ? (
+                            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
+                               <Loader2 className="animate-spin mb-4" size={32} />
+                               <p className="text-[13px] font-bold">Retrieving history...</p>
+                            </div>
+                         ) : mails.length > 0 ? (
+                            <div className="divide-y divide-slate-50">
+                               {mails.map(m => (
+                                  <div key={m.id} className="p-6 hover:bg-slate-50/50 transition-colors group">
+                                     <div className="flex items-start justify-between mb-2">
+                                        <div className="flex items-center gap-3">
+                                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${m.status === 'Sent' ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
+                                              {m.status === 'Sent' ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
+                                           </div>
+                                           <div>
+                                              <p className="text-[14px] font-bold text-slate-800 tracking-tight">{m.subject}</p>
+                                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                                 <span>To: {m.toEmail}</span>
+                                                 <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                                                 <span>By: {m.Sender?.name || 'System'}</span>
+                                              </div>
+                                           </div>
+                                        </div>
+                                        <div className="text-right">
+                                           <p className="text-[12px] font-bold text-slate-500">{new Date(m.sentAt).toLocaleDateString()}</p>
+                                           <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mt-1">{new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                        </div>
+                                     </div>
+                                     <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed ml-11 italic pl-1 border-l-2 border-slate-100 group-hover:border-blue-200 transition-colors">
+                                        {m.body}
+                                     </p>
+                                  </div>
+                               ))}
+                            </div>
+                         ) : (
+                            <div className="p-20 text-center space-y-4">
+                               <Mail size={48} className="mx-auto text-slate-100" strokeWidth={1}/>
+                               <div className="space-y-1">
+                                  <p className="text-[15px] text-slate-400 font-bold tracking-tight italic">No emails sent yet</p>
+                                  <p className="text-[13px] text-slate-300 max-w-xs mx-auto font-medium">Capture communications here by sending an email or statement to this customer.</p>
+                               </div>
+                               <button 
+                                  onClick={() => setIsComposeModalOpen(true)}
+                                  className="text-[12px] font-black text-blue-600 hover:text-blue-800 underline decoration-blue-100 underline-offset-4"
+                               >
+                                  Send First Communication
+                                </button>
+                            </div>
+                         )}
                       </div>
                    </div>
                 </div>
@@ -598,7 +678,7 @@ const CustomerDetailView = ({ companyId }) => {
                             <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50"><Printer size={18}/></button>
                             <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50"><FileText size={18}/></button>
                             <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50 font-black">₹</button>
-                            <button className="px-5 py-2 bg-blue-600 text-white rounded text-[13px] font-bold shadow-md shadow-blue-100 flex items-center gap-2 hover:bg-blue-700">
+                            <button onClick={() => setIsComposeModalOpen(true)} className="px-5 py-2 bg-blue-600 text-white rounded text-[13px] font-bold shadow-md shadow-blue-100 flex items-center gap-2 hover:bg-blue-700">
                                <Send size={14}/> Send Email
                             </button>
                          </div>
@@ -923,6 +1003,19 @@ const CustomerDetailView = ({ companyId }) => {
           </div>
         </div>
       )}
+      <ComposeMailModal 
+        isOpen={isComposeModalOpen}
+        onClose={() => setIsComposeModalOpen(false)}
+        recipientEmail={customer?.email}
+        recipientName={`${customer?.salutation || ''} ${customer?.firstName || ''} ${customer?.lastName || ''}`.trim()}
+        ledgerId={selectedId}
+        companyId={companyId}
+        onSent={() => {
+          fetchMails();
+          addNotification({ message: 'Email sent successfully', type: 'success' });
+        }}
+      />
+
       <ConfirmModal 
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

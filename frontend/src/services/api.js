@@ -67,6 +67,7 @@ export const voucherAPI = {
   create: (data) => api.post('/vouchers', data),
   getByCompany: (companyId) => api.get(`/vouchers/${companyId}`),
   getById: (id) => api.get(`/vouchers/detail/${id}`),
+  updateNarration: (id, narration) => api.put(`/vouchers/${id}/narration`, { narration }),
   delete: (id) => api.delete(`/vouchers/${id}`),
 };
 
@@ -101,7 +102,7 @@ export const inventoryAPI = {
   getByCompany: (companyId) => api.get(`/inventory/${companyId}`),
   updateItem: (itemId, data) => api.put(`/inventory/${itemId}`, data),
   updateStock: (itemId, data) => api.post(`/inventory/stock/${itemId}`, data),
-  uploadImage: (formData) => api.post('/inventory/upload', formData),
+  uploadImage: (formData) => api.post('/inventory/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getItemHistory: (id) => api.get(`/inventory/${id}/history`),
   deleteItem: (id) => api.delete(`/inventory/${id}`),
 };
@@ -191,6 +192,11 @@ export const costCenterAPI = {
 };
 
 // ─── Accounting Utilities ──────────────────────────
+export const mailAPI = {
+  send: (data) => api.post('/mail/send', data),
+  getByLedger: (ledgerId) => api.get(`/mail/ledger/${ledgerId}`),
+};
+
 export const accountingAPI = {
   calculateGST: (data) => api.post('/accounting/calculate-gst', data),
   scanReceipt: (data) => api.post('/accounting/scan-receipt', data),

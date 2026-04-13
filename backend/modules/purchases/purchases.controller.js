@@ -124,6 +124,7 @@ exports.getExpenses = async (req, res) => {
             const expenseTransaction = expense.Transactions?.find(t => t.type === 'Dr');
             
             let customerName = '-';
+            let vendorName = '-';
             try {
                 if (expense.narration) {
                     const parsed = JSON.parse(expense.narration);

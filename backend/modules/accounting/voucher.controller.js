@@ -106,3 +106,18 @@ exports.deleteVoucher = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.updateVoucherNarration = async (req, res) => {
+  try {
+    const voucher = await Voucher.findByPk(req.params.id);
+    if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
+    
+    // We only allow updating the narration for these kinds of UI attachments (receipts)
+    voucher.narration = req.body.narration;
+    await voucher.save();
+    
+    res.json({ message: 'Voucher narration updated successfully', voucher });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

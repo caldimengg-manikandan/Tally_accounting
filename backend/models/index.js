@@ -21,6 +21,7 @@ const RecurringInvoice = require('./recurringInvoice.model')(sequelize, DataType
 const RetainerAdjustment = require('./retainerAdjustment.model')(sequelize, DataTypes);
 const SalesInvoice = require('./salesInvoice.model')(sequelize, DataTypes);
 const SalesInvoiceItem = require('./salesInvoiceItem.model')(sequelize, DataTypes);
+const SystemMail = require('./systemMail.model')(sequelize, DataTypes);
 const CreditNote = require('./creditNote.model')(sequelize, DataTypes);
 const CreditNoteItem = require('./creditNoteItem.model')(sequelize, DataTypes);
 const DeliveryChallan = require('./deliveryChallan.model')(sequelize, DataTypes);
@@ -142,6 +143,16 @@ Company.hasMany(SalesInvoice, { foreignKey: 'CompanyId' });
 SalesInvoice.belongsTo(Ledger, { as: 'CustomerLedger', foreignKey: 'customerLedgerId' });
 SalesInvoiceItem.belongsTo(Item, { foreignKey: 'itemId' });
 
+// 12. System Mails
+Company.hasMany(SystemMail, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+SystemMail.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+Ledger.hasMany(SystemMail, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+SystemMail.belongsTo(Ledger, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+
+User.hasMany(SystemMail, { foreignKey: { name: 'SenderId', type: DataTypes.UUID } });
+SystemMail.belongsTo(User, { as: 'Sender', foreignKey: { name: 'SenderId', type: DataTypes.UUID } });
+
 // 13. Credit Notes
 CreditNote.hasMany(CreditNoteItem, { as: 'items', foreignKey: 'CreditNoteId', onDelete: 'CASCADE' });
 CreditNoteItem.belongsTo(CreditNote, { foreignKey: 'CreditNoteId' });
@@ -152,7 +163,7 @@ CreditNote.belongsTo(Ledger, { as: 'ARAccount', foreignKey: 'accountsReceivableI
 CreditNoteItem.belongsTo(Item, { foreignKey: 'itemId' });
 CreditNoteItem.belongsTo(Ledger, { as: 'Account', foreignKey: 'accountId' });
 
-// 12. Delivery Challans
+// 14. Delivery Challans
 DeliveryChallan.hasMany(DeliveryChallanItem, { as: 'items', foreignKey: 'DeliveryChallanId', onDelete: 'CASCADE' });
 DeliveryChallanItem.belongsTo(DeliveryChallan, { foreignKey: 'DeliveryChallanId' });
 DeliveryChallan.belongsTo(Company, { foreignKey: 'CompanyId' });
@@ -182,6 +193,7 @@ module.exports = {
   RetainerAdjustment,
   SalesInvoice,
   SalesInvoiceItem,
+  SystemMail,
   CreditNote,
   CreditNoteItem,
   DeliveryChallan,
