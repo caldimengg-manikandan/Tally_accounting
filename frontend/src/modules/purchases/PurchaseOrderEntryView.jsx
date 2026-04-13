@@ -11,6 +11,7 @@ import {
 import { purchaseAPI, inventoryAPI, companyAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
+import VendorForm from './VendorForm';
 
 const PurchaseOrderEntryView = ({ companyId }) => {
   // ── Form State ──────────────────────────────────────────────────
@@ -45,6 +46,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [vendorSearch, setVendorSearch] = useState('');
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [activeRowForAccount, setActiveRowForAccount] = useState(null);
   const [accountGroups, setAccountGroups] = useState([
     { category: 'Other Current Asset', accounts: ['Advance Tax', 'Employee Advance', 'Prepaid Expenses', 'TDS Receivable'] },
@@ -237,7 +239,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                             <button 
                               type="button"
                               onClick={() => {
-                                 // Route or trigger modal for new vendor
+                                 setIsVendorModalOpen(true);
                                  setIsVendorDropdownOpen(false);
                               }}
                               className="w-full px-4 py-2 flex items-center gap-2 text-[13px] font-medium text-blue-500 hover:bg-slate-50 transition-colors"
@@ -575,6 +577,44 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                setIsAccountModalOpen(false);
             }}
           />
+       )}
+
+       {isVendorModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] p-6 animate-in fade-in">
+             <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col slide-in-from-bottom-4 animate-in duration-300">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                   <h2 className="text-[16px] font-bold text-slate-800 flex items-center gap-2">
+                       <User size={18} className="text-blue-600" />
+                       Create New Vendor
+                   </h2>
+                   <button 
+                     onClick={() => setIsVendorModalOpen(false)}
+                     className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors"
+                   >
+                      <X size={16} />
+                   </button>
+                </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-[#f8fafc]">
+                   <div className="absolute inset-0">
+                      <VendorForm 
+                        standalone={false} 
+                        onCancel={() => setIsVendorModalOpen(false)}
+                        onSaveSuccess={(newVendor) => {
+                           if (companyId) {
+                              purchaseAPI.getVendors(companyId).then(res => {
+                                 setVendors(res.data || []);
+                                 if (newVendor && newVendor.id) {
+                                    setFormData(prev => ({ ...prev, vendorId: newVendor.id, vendorName: newVendor.name || newVendor.displayName }));
+                                 }
+                              });
+                           }
+                           setIsVendorModalOpen(false);
+                        }}
+                      />
+                   </div>
+                </div>
+             </div>
+          </div>
        )}
     </div>
   );
