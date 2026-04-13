@@ -39,6 +39,7 @@ import CreditNotesView from './modules/sales/CreditNotesView';
 import PayrollView from './modules/payroll/PayrollView';
 import VendorsListView from './modules/purchases/VendorsListView';
 import VendorsView from './modules/purchases/VendorsView';
+import VendorDetailView from './modules/purchases/VendorDetailView';
 import BillsView from './modules/purchases/BillsView';
 import ExpensesView from './modules/purchases/ExpensesView';
 import PurchaseOrdersView from './modules/purchases/PurchaseOrdersView';
@@ -575,6 +576,7 @@ function AuthenticatedApp() {
       {/* Purchases */}
       <Route path="/vendors"             element={shell(VendorsListView)} />
       <Route path="/vendors/new"         element={shell(VendorsView)} />
+      <Route path="/vendors/view/:id"    element={shell(VendorDetailView)} />
       <Route path="/vendors/:id"         element={shell(VendorsView)} />
       <Route path="/expenses"            element={shell(ExpensesView)} />
       <Route path="/expenses/new"        element={shell(ExpenseEntryView)} />

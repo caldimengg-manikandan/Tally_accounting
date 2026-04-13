@@ -1,0 +1,846 @@
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  ChevronLeft, Edit, Trash2, MoreHorizontal, Plus, Search, 
+  Settings, Paperclip, Mail, Phone, MapPin, Globe, 
+  Info, CreditCard, Clock, Activity, ArrowRight,
+  ChevronDown, MessageSquare, History, FileText, Send, HelpCircle,
+  Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
+  Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2,
+  ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline, Truck, CheckCircle2, AlertCircle
+} from 'lucide-react';
+import { 
+  ledgerAPI, purchaseAPI, 
+  voucherAPI, reportsAPI, companyAPI, mailAPI 
+} from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
+import ConfirmModal from '../../components/ConfirmModal';
+import ComposeMailModal from '../../components/ComposeMailModal';
+
+const DetailRow = ({ label, value }) => (
+  <div className="flex justify-between items-center py-1">
+    <span className="text-[12px] font-bold text-slate-400 uppercase tracking-tight">{label}</span>
+    <span className="text-[13px] font-black text-slate-700">{value || '---'}</span>
+  </div>
+);
+
+const VendorDetailView = ({ companyId }) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [vendors, setVendors] = useState([]);
+  const [selectedId, setSelectedId] = useState(id);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('Overview');
+  const [mails, setMails] = useState([]);
+  const [loadingMails, setLoadingMails] = useState(false);
+  const [isComposeModalOpen, setIsComposeModalOpen] = useState(false);
+  const { addNotification } = useNotificationStore();
+
+  const user = useMemo(() => { 
+    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } 
+  }, []);
+  
+  // Data for tabs
+  const [transactions, setTransactions] = useState({
+    bills: [],
+    payments: [],
+    expenses: [],
+    orders: [],
+    recurringBills: [],
+    recurringExpenses: [],
+    vendorCredits: [],
+    journals: []
+  });
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [statementData, setStatementData] = useState(null);
+  const [currentCompany, setCurrentCompany] = useState(null);
+
+  // UI state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isEditingPaymentTerms, setIsEditingPaymentTerms] = useState(false);
+  const [paymentTerms, setPaymentTerms] = useState('');
+  const [isEditingBalance, setIsEditingBalance] = useState(false);
+  const [openingBalance, setOpeningBalance] = useState('0');
+  const [openSections, setOpenSections] = useState(['Bills', 'Bill Payments']);
+  const [statusFilters, setStatusFilters] = useState({
+    Bills: 'All', 'Bill Payments': 'All', Expenses: 'All', 'Recurring Bills': 'All',
+    'Recurring Expenses': 'All', 'Purchase Orders': 'All', 'Vendor Credits': 'All', Journals: 'All'
+  });
+  const [activeStatusPopover, setActiveStatusPopover] = useState(null);
+
+  const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
+  const [addressType, setAddressType] = useState('billing'); // 'billing' or 'shipping'
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddForm, setQuickAddForm] = useState({ companyName: '', email: '', mobile: '', salutation: 'Mr.' });
+  const [addressForm, setAddressForm] = useState({
+    attention: '',
+    country: 'India',
+    address1: '',
+    address2: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
+    fax: ''
+  });
+  
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  
+  const fileInputRef = useRef(null);
+  const settingsRef = useRef(null);
+
+  const activeCompanyId = companyId || localStorage.getItem('companyId');
+
+  // Click outside to close settings
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+        setIsSettingsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 1. Fetch Company & Vendors
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [ledgersRes, companyRes] = await Promise.all([
+          ledgerAPI.getByCompany(activeCompanyId),
+          companyAPI.getById(activeCompanyId)
+        ]);
+        
+        const allLedgers = ledgersRes.data || [];
+        const vendorLedgers = allLedgers.filter(l => 
+          l.Group?.name?.toLowerCase().includes('creditor') || 
+          l.groupName?.toLowerCase().includes('creditor')
+        );
+        setVendors(vendorLedgers);
+        setCurrentCompany(companyRes.data);
+      } catch (err) {
+        console.error("Failed to fetch data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [activeCompanyId]);
+
+  useEffect(() => {
+    if (id) setSelectedId(id);
+  }, [id]);
+
+  // 2. Data Fetching per Tab
+  useEffect(() => {
+    if (!selectedId || !activeCompanyId) return;
+
+    const fetchTabData = async () => {
+      try {
+         if (activeTab === 'Transactions') {
+           const [ordersRes, billsRes, expensesRes, vouchersRes] = await Promise.all([
+             purchaseAPI.getOrders(activeCompanyId),
+             purchaseAPI.getBills(activeCompanyId),
+             purchaseAPI.getExpenses(activeCompanyId),
+             voucherAPI.getByCompany(activeCompanyId)
+           ]);
+
+           setTransactions({
+             bills: (billsRes.data || []).filter(b => String(b.LedgerId) === String(selectedId)),
+             payments: (vouchersRes.data || []).filter(v => v.type === 'Payment' && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
+             expenses: (expensesRes.data || []).filter(e => String(e.LedgerId) === String(selectedId)),
+             orders: (ordersRes.data || []).filter(o => String(o.LedgerId) === String(selectedId))
+           });
+         } else if (activeTab === 'Statement') {
+           const fromDate = new Date();
+           fromDate.setDate(1); // Start of month
+           const res = await reportsAPI.ledgerStatement(selectedId, fromDate.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+           setStatementData(res.data);
+         } else if (activeTab === 'Comments') {
+            const stored = localStorage.getItem(`vendor_comments_${selectedId}`);
+            setComments(stored ? JSON.parse(stored) : []);
+         }
+      } catch (err) {
+        console.error("Tab data fetch failed", err);
+      }
+    };
+    fetchTabData();
+  }, [activeTab, selectedId, activeCompanyId]);
+
+  const vendor = useMemo(() => {
+    const found = vendors.find(v => String(v.id) === String(selectedId));
+    if (found) {
+      setPaymentTerms(found.paymentTerms || 'Due on Receipt');
+      setOpeningBalance(String(found.openingBalance || 0));
+    }
+    return found;
+  }, [vendors, selectedId]);
+
+  const handleUpdateField = async (field, value) => {
+    try {
+       const data = { ...vendor, [field]: value };
+       if (field === 'openingBalance') data.currentBalance = parseFloat(value);
+       await ledgerAPI.update(vendor.id, data);
+       if (field === 'paymentTerms') setIsEditingPaymentTerms(false);
+       if (field === 'openingBalance') setIsEditingBalance(false);
+       setVendors(prev => prev.map(v => v.id === vendor.id ? { ...v, [field]: value } : v));
+    } catch (err) {
+      addNotification(`Failed to update ${field}`, 'error');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setLoading(true);
+    try {
+      await ledgerAPI.update(vendor.id, vendor);
+      addNotification('Vendor profile saved successfully!', 'success');
+    } catch (err) {
+      addNotification('Failed to save profile changes.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVendorSelect = (vendorId) => {
+    setSelectedId(String(vendorId));
+    navigate(`/vendors/view/${vendorId}`);
+  };
+
+  const handleQuickAdd = async () => {
+    if (!quickAddForm.companyName) return;
+    setLoading(true);
+    try {
+        const payload = {
+            ...quickAddForm,
+            name: quickAddForm.companyName,
+            companyId: activeCompanyId,
+            groupName: 'Sundry Creditors',
+            openingBalance: 0,
+            currentBalance: 0
+        };
+        const res = await ledgerAPI.create(payload);
+        const newVendor = res.data.ledger || res.data;
+        setVendors(prev => [...prev, newVendor]);
+        setSelectedId(String(newVendor.id));
+        navigate(`/vendors/view/${newVendor.id}`);
+        setIsQuickAddOpen(false);
+        setQuickAddForm({ companyName: '', email: '', mobile: '', salutation: 'Mr.' });
+    } catch (err) {
+        addNotification('Failed to register vendor', 'error');
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    const authorName = user.name || (user.email ? user.email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + user.email.split('@')[0].split('.')[0].slice(1) : 'Administrator');
+    const comment = {
+       id: Date.now(),
+       text: newComment,
+       author: authorName,
+       date: new Date().toLocaleString()
+    };
+    const updated = [...comments, comment];
+    setComments(updated);
+    localStorage.setItem(`vendor_comments_${selectedId}`, JSON.stringify(updated));
+    setNewComment('');
+  };
+
+  const handleDeleteVendor = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await ledgerAPI.delete(vendor.id);
+      addNotification('Vendor deleted successfully', 'success');
+      navigate('/vendors');
+    } catch (err) {
+      addNotification('Failed to delete vendor', 'error');
+    } finally {
+      setIsDeleteModalOpen(false);
+    }
+  };
+
+  const fetchMails = useCallback(async () => {
+    if (!selectedId) return;
+    setLoadingMails(true);
+    try {
+      const response = await mailAPI.getByLedger(selectedId);
+      setMails(response.data);
+    } catch (err) {
+      console.error('Failed to fetch mails:', err);
+    } finally {
+      setLoadingMails(false);
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (activeTab === 'Mails') {
+      fetchMails();
+    }
+  }, [activeTab, fetchMails]);
+
+  const toggleSection = (name) => {
+    setOpenSections(prev => prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]);
+  };
+
+  const handleStatusChange = (section, status) => {
+    setStatusFilters(prev => ({ ...prev, [section]: status }));
+    setActiveStatusPopover(null);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const base64 = evt.target.result;
+      try {
+        await handleUpdateField('image', base64);
+      } catch (err) {
+        addNotification("Failed to save image", "error");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (loading && vendors.length === 0) {
+    return <div className="flex items-center justify-center min-h-[400px]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
+  }
+
+  return (
+    <div className="flex h-[calc(100vh-80px)] bg-[#fbfcff] overflow-hidden">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
+      {/* ─── SIDEBAR ─────────────────────────────────────── */}
+      <div className={`${id ? 'w-[350px]' : 'w-full'} border-r border-slate-200 bg-white flex flex-col shrink-0 transition-all duration-300`}>
+        <div className="p-4 border-b border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className={`${id ? 'text-[14px]' : 'text-[24px]'} font-bold text-slate-900 transition-all`}>Active Vendors</h2>
+            <button onClick={() => setIsQuickAddOpen(true)} className={`${id ? 'w-7 h-7' : 'px-4 py-2'} flex items-center justify-center rounded bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95`}>
+              <Plus size={id ? 16 : 18} className={id ? '' : 'mr-2'}/> {!id && 'New Vendor'}
+            </button>
+          </div>
+          <div className="relative">
+             <Search size={id ? 14 : 18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+             <input type="text" placeholder="Search Vendors" className={`w-full ${id ? 'pl-9 pr-3 py-1.5 text-[13px]' : 'pl-12 pr-4 py-3 text-[16px]'} bg-white border border-slate-200 rounded outline-none transition-all focus:border-blue-600`} />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+          {vendors.length === 0 ? (
+            <div className="p-10 text-center text-[12px] text-slate-400 font-bold uppercase tracking-widest opacity-30 mt-20">NO VENDORS FOUND</div>
+          ) : vendors.map(v => (
+            <div key={v.id} onClick={() => handleVendorSelect(v.id)} className={`px-5 py-4 cursor-pointer border-b border-slate-50 transition-all border-l-[4px] ${String(v.id) === String(selectedId) ? 'bg-[#f0f5ff] border-l-blue-600' : 'hover:bg-slate-50 border-l-transparent'}`}>
+              <div className="flex justify-between items-start mb-2">
+                <span className={`text-[13px] font-black truncate max-w-[140px] ${String(v.id) === String(selectedId) ? 'text-blue-600' : 'text-slate-700'}`}>{v.name}</span>
+                <span className="text-[14px] font-black text-slate-900 tracking-tighter italic">₹{parseFloat(v.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                 <div className={`w-2 h-2 rounded-full ${parseFloat(v.currentBalance || 0) > 0 ? 'bg-orange-400' : 'bg-green-400'}`}></div>
+                 <div className="text-[11px] text-slate-400 font-bold tracking-widest truncate">{v.email || 'NO_MAIL_ID'}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── MAIN CONTENT ─────────────────────────────────── */}
+      <div className="flex-1 flex flex-col bg-white overflow-hidden shadow-2xl">
+        {vendor ? (
+          <>
+            <header className="px-8 py-5 flex items-center justify-between border-b border-slate-50 bg-[#fbfcff]">
+               <div className="flex items-center gap-4">
+                  <button onClick={() => navigate(-1)} className="p-1.5 rounded hover:bg-slate-100"><ChevronLeft size={18}/></button>
+                  <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{vendor.name}</h1>
+               </div>
+               <div className="flex items-center gap-2.5">
+                  <button onClick={handleSaveProfile} disabled={loading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all flex items-center gap-2 disabled:opacity-50">
+                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16}/>}
+                     {loading ? 'Saving...' : 'Save Profile'}
+                  </button>
+                  <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                  <button onClick={() => navigate(`/vendors/${vendor.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-white shadow-sm">Edit</button>
+                  <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600"><Paperclip size={16}/></button>
+                  <div className="bg-blue-600 text-white rounded-md flex items-center shadow-lg shadow-blue-100 overflow-hidden">
+                     <button className="px-5 py-2 text-[13px] font-bold border-r border-blue-500/30 hover:bg-blue-700">New Transaction</button>
+                     <button className="px-2 py-2 hover:bg-blue-700"><ChevronDown size={16}/></button>
+                  </div>
+                  <button className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 flex items-center gap-1.5 hover:bg-white shadow-sm">
+                     More <ChevronDown size={14}/>
+                  </button>
+                  <button className="p-1.5 text-slate-300 hover:text-slate-500" onClick={() => navigate(-1)}><X size={20}/></button>
+               </div>
+            </header>
+
+            <div className="px-8 border-b border-slate-100 flex gap-10">
+               {['Overview', 'Comments', 'Transactions', 'Mails', 'Statement'].map(tab => (
+                 <button key={tab} onClick={() => setActiveTab(tab)} className={`py-4 text-[14px] font-bold tracking-tight relative transition-all ${activeTab === tab ? 'text-blue-600' : 'text-slate-400 hover:text-slate-700'}`}>
+                   {tab} {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[3px] bg-blue-600 rounded-t-full"></div>}
+                 </button>
+               ))}
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
+              {activeTab === 'Comments' && (
+                <div className="p-10 space-y-8 animate-fade-in max-w-4xl">
+                   <div className="border border-slate-200 rounded-lg bg-slate-50/50 overflow-hidden shadow-sm">
+                      <div className="p-3 border-b border-slate-200 flex gap-4 text-slate-400">
+                         <button 
+                           onMouseDown={(e) => { e.preventDefault(); document.execCommand('bold', false, null); }}
+                           className="hover:text-slate-900 transition-colors"
+                         >
+                           <Bold size={16} />
+                         </button>
+                         <button 
+                           onMouseDown={(e) => { e.preventDefault(); document.execCommand('italic', false, null); }}
+                           className="hover:text-slate-900 transition-colors"
+                         >
+                           <Italic size={16} />
+                         </button>
+                         <button 
+                           onMouseDown={(e) => { e.preventDefault(); document.execCommand('underline', false, null); }}
+                           className="hover:text-slate-900 transition-colors"
+                         >
+                           <Underline size={16} />
+                         </button>
+                      </div>
+                      <div 
+                        contentEditable
+                        onInput={e => setNewComment(e.currentTarget.innerHTML)}
+                        onBlur={e => setNewComment(e.currentTarget.innerHTML)}
+                        placeholder="Add a comment..." 
+                        className="w-full p-4 min-h-[120px] bg-transparent outline-none text-[15px] text-slate-700 font-sans"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && e.ctrlKey) handleAddComment();
+                        }}
+                        ref={(el) => {
+                          if (el && newComment === '') el.innerHTML = '';
+                        }}
+                      />
+                      <div className="p-3 bg-white border-t border-slate-100">
+                        <button onClick={handleAddComment} className="px-4 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-600 hover:bg-slate-50">Add Comment</button>
+                      </div>
+                   </div>
+                   <div className="space-y-6">
+                      <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">ALL COMMENTS</h3>
+                      {comments.length > 0 ? (
+                        <div className="space-y-6">
+                           {comments.map(c => (
+                             <div key={c.id} className="flex gap-4 group">
+                                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold border border-blue-100 uppercase">
+                                  {(c.author === 'Antigravity User' || c.author?.includes('@') ? (user.name || (user.email ? user.email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + user.email.split('@')[0].split('.')[0].slice(1) : 'Administrator')) : c.author)[0]}
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                   <div className="flex items-center gap-2">
+                                      <span className="text-[13px] font-bold text-slate-800">
+                                        {c.author === 'Antigravity User' || c.author?.includes('@') ? (user.name || (user.email ? user.email.split('@')[0].split('.')[0].charAt(0).toUpperCase() + user.email.split('@')[0].split('.')[0].slice(1) : 'Administrator')) : c.author}
+                                      </span>
+                                      <span className="text-[11px] text-slate-400 font-medium">{c.date}</span>
+                                   </div>
+                                   <div className="text-[14px] text-slate-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: c.text }} />
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-20 bg-slate-50/30 rounded-xl border border-dashed border-slate-100">
+                           <MessageSquare size={32} className="mx-auto text-slate-200 mb-3" strokeWidth={1}/>
+                           <p className="text-[14px] text-slate-400 italic">No comments yet.</p>
+                        </div>
+                      )}
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'Transactions' && (
+                <div className="p-8 space-y-6 animate-fade-in relative">
+                   <div className="flex items-center gap-1.5 text-[14px] text-blue-600 font-bold cursor-pointer hover:underline mb-4">
+                      Go to transactions <ChevronDown size={14}/>
+                   </div>
+
+                   {[
+                     { name: 'Bills', data: transactions.bills, cols: ['DATE', 'BILL#', 'ORDER NUMBER', 'VENDOR NAME', 'AMOUNT', 'BALANCE DUE', 'STATUS'] },
+                     { name: 'Bill Payments', data: transactions.payments, cols: ['DATE', 'PAYMENT NUMBER', 'REFERENCE NUMBER', 'PAYMENT MODE', 'AMOUNT PAID', 'UNUSED AMOUNT', 'STATUS'] },
+                     { name: 'Expenses', data: transactions.expenses, cols: ['DATE', 'EXPENSE ACCOUNT', 'INVOICE NUMBER', 'VENDOR NAME', 'PAID THROUGH', 'CUSTOMER NAME', 'AMOUNT', 'STATUS'] },
+                     { name: 'Recurring Bills', data: transactions.recurringBills, cols: ['PROFILE NAME', 'FREQUENCY', 'LAST BILL DATE', 'NEXT BILL DATE', 'STATUS'] },
+                     { name: 'Recurring Expenses', data: transactions.recurringExpenses, cols: ['PROFILE NAME', 'EXPENSE ACCOUNT', 'FREQUENCY', 'LAST EXPENSE DATE', 'NEXT EXPENSE DATE', 'STATUS'] },
+                     { name: 'Purchase Orders', data: transactions.orders, cols: ['PURCHASE ORDER#', 'REFERENCE NUMBER', 'DATE', 'DELIVERY DATE', 'AMOUNT', 'STATUS'] },
+                     { name: 'Vendor Credits', data: transactions.vendorCredits, cols: ['DATE', 'CREDIT NOTE NUMBER', 'ORDER NUMBER', 'BALANCE', 'AMOUNT', 'STATUS'] },
+                     { name: 'Journals', data: transactions.journals, cols: ['DATE', 'JOURNAL NUMBER', 'REFERENCE NUMBER', 'DEBIT', 'CREDIT'] }
+                   ].map(sec => {
+                     const filteredData = statusFilters[sec.name] === 'All' 
+                       ? sec.data 
+                       : sec.data.filter(d => d.status === statusFilters[sec.name]);
+
+                     return (
+                       <div key={sec.name} className="border border-slate-100 rounded-lg overflow-hidden shadow-sm bg-white">
+                          <div className="px-6 py-3 bg-slate-50/30 flex items-center justify-between cursor-pointer group hover:bg-slate-50 transition-colors" onClick={() => toggleSection(sec.name)}>
+                             <div className="flex items-center gap-3">
+                                <ChevronRight size={14} className={`text-slate-400 transition-transform ${openSections.includes(sec.name) ? 'rotate-90' : ''}`} />
+                                <h3 className="text-[14px] font-bold text-slate-700 tracking-tight">{sec.name}</h3>
+                             </div>
+                             <div className="flex items-center gap-4" onClick={e => e.stopPropagation()}>
+                                <div className="relative">
+                                   <div 
+                                     onClick={() => setActiveStatusPopover(activeStatusPopover === sec.name ? null : sec.name)}
+                                     className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                                   >
+                                      <Filter size={12}/> Status: <span className={statusFilters[sec.name] !== 'All' ? 'text-blue-600' : ''}>{statusFilters[sec.name]}</span> <ChevronDown size={11}/>
+                                   </div>
+                                   
+                                   {activeStatusPopover === sec.name && (
+                                     <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-1 animate-fade-down overflow-hidden">
+                                        {['All', 'Open', 'Overdue', 'Unpaid', 'Partially Paid', 'Paid', 'Void'].map(status => (
+                                          <button 
+                                            key={status} 
+                                            onClick={() => handleStatusChange(sec.name, status)}
+                                            className={`w-full text-left px-4 py-2 text-[12px] font-bold transition-colors ${statusFilters[sec.name] === status ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                                          >
+                                            {status}
+                                          </button>
+                                        ))}
+                                     </div>
+                                   )}
+                                </div>
+                                <button className="flex items-center gap-1 text-[11px] font-black text-blue-600 hover:text-blue-800">
+                                   <Plus size={14} strokeWidth={3}/> NEW
+                                </button>
+                             </div>
+                          </div>
+                          {openSections.includes(sec.name) && (
+                            <div className="overflow-x-auto">
+                               <table className="w-full text-left">
+                                  <thead>
+                                     <tr className="bg-white border-b border-slate-50">
+                                        {sec.cols.map(c => <th key={c} className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{c}</th>)}
+                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                     {filteredData.length > 0 ? (
+                                       filteredData.map((row, i) => (
+                                         <tr key={i} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 text-[12px] text-slate-600">
+                                            <td className="px-6 py-3">{row.date || 'N/A'}</td>
+                                            <td className="px-6 py-3 font-bold text-blue-600">{row.number || row.orderNumber || row.billNumber || '---'}</td>
+                                            <td className="px-6 py-3">{row.reference || row.orderNumber || '---'}</td>
+                                            <td className="px-6 py-3">{vendor?.name || '---'}</td>
+                                            <td className="px-6 py-3 font-bold text-slate-900">₹{parseFloat(row.totalAmount || row.amount || 0).toLocaleString()}</td>
+                                            {sec.name === 'Bills' && <td className="px-6 py-3">₹{row.balanceDue || '0.00'}</td>}
+                                            <td className="px-6 py-3">
+                                               <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-black ${row.status === 'Paid' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
+                                                  {row.status || 'Draft'}
+                                               </span>
+                                            </td>
+                                         </tr>
+                                       ))
+                                     ) : (
+                                       <tr>
+                                          <td colSpan={sec.cols.length} className="px-8 py-10 text-center text-slate-300">
+                                             <div className="text-[13px] font-medium italic">
+                                               {statusFilters[sec.name] !== 'All' 
+                                                 ? `No transactions found with status "${statusFilters[sec.name]}"` 
+                                                 : `There are no ${sec.name === 'Bill Payments' ? 'Bills' : sec.name} - Add New`
+                                               }
+                                             </div>
+                                          </td>
+                                       </tr>
+                                     )}
+                                  </tbody>
+                               </table>
+                            </div>
+                          )}
+                       </div>
+                     );
+                   })}
+                </div>
+              )}
+
+               {activeTab === 'Mails' && (
+                <div className="p-10 space-y-6 animate-fade-in max-w-4xl">
+                   <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100/50 bg-white">
+                      <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md">
+                         <div>
+                            <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Communication History</h3>
+                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Automated and Direct Emails</p>
+                         </div>
+                         <div className="flex items-center gap-3">
+                            <button 
+                               onClick={() => setIsComposeModalOpen(true)}
+                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-black hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
+                            >
+                               <Mail size={16}/> Compose Email
+                            </button>
+                         </div>
+                      </div>
+
+                      <div className="min-h-[400px]">
+                         {loadingMails ? (
+                            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
+                               <Loader2 className="animate-spin mb-4" size={32} />
+                               <p className="text-[13px] font-bold">Retrieving history...</p>
+                            </div>
+                         ) : mails.length > 0 ? (
+                            <div className="divide-y divide-slate-50">
+                               {mails.map(m => (
+                                  <div key={m.id} className="p-6 hover:bg-slate-50/50 transition-colors group">
+                                     <div className="flex items-start justify-between mb-2">
+                                        <div className="flex items-center gap-3">
+                                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${m.status === 'Sent' ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
+                                              {m.status === 'Sent' ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
+                                           </div>
+                                           <div>
+                                              <p className="text-[14px] font-bold text-slate-800 tracking-tight">{m.subject}</p>
+                                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                                 <span>To: {m.toEmail}</span>
+                                                 <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                                                 <span>By: {m.Sender?.name || 'System'}</span>
+                                              </div>
+                                           </div>
+                                        </div>
+                                        <div className="text-right">
+                                           <p className="text-[12px] font-bold text-slate-500">{new Date(m.sentAt).toLocaleDateString()}</p>
+                                           <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mt-1">{new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                        </div>
+                                     </div>
+                                     <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed ml-11 italic pl-1 border-l-2 border-slate-100 group-hover:border-blue-200 transition-colors">
+                                        {m.body}
+                                     </p>
+                                  </div>
+                               ))}
+                            </div>
+                         ) : (
+                            <div className="p-20 text-center space-y-4">
+                               <Mail size={48} className="mx-auto text-slate-100" strokeWidth={1}/>
+                               <div className="space-y-1">
+                                  <p className="text-[15px] text-slate-400 font-bold tracking-tight italic">No emails sent yet</p>
+                                  <p className="text-[13px] text-slate-300 max-w-xs mx-auto font-medium">Capture communications here by sending an email or statement to this vendor.</p>
+                               </div>
+                               <button 
+                                  onClick={() => setIsComposeModalOpen(true)}
+                                  className="text-[12px] font-black text-blue-600 hover:text-blue-800 underline decoration-blue-100 underline-offset-4"
+                               >
+                                  Send First Communication
+                                </button>
+                            </div>
+                         )}
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'Statement' && (
+                <div className="p-8 bg-slate-50/50 min-h-full animate-fade-in">
+                   <div className="max-w-4xl mx-auto space-y-6">
+                      <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6">
+                         <div className="flex gap-3">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700">
+                               <Calendar size={14} className="text-slate-400"/> This Month <ChevronDown size={14}/>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700">
+                               Filter By: All <ChevronDown size={14}/>
+                            </div>
+                         </div>
+                         <div className="flex items-center gap-2">
+                             <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50 transition-colors"><Printer size={18}/></button>
+                             <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50 transition-colors"><FileText size={18}/></button>
+                             <button className="px-5 py-2 bg-blue-600 text-white rounded text-[13px] font-black shadow-lg shadow-blue-100 flex items-center gap-2 hover:bg-blue-700 transition-all" onClick={() => setIsComposeModalOpen(true)}>
+                                <Send size={14}/> Send Email
+                             </button>
+                         </div>
+                      </div>
+
+                      {/* Professional Document Style Statement */}
+                      <div className="bg-white rounded-lg shadow-2xl overflow-hidden aspect-[1/1.3] p-16 border border-slate-200 font-serif relative">
+                         {/* Company Header */}
+                         <div className="absolute top-0 right-0 p-8 text-[12px] text-right space-y-1 not-italic font-sans">
+                            <p className="font-black text-[18px] text-slate-900 tracking-tight">{currentCompany?.name || 'Indus CAI private Ltd'}</p>
+                            <p className="text-slate-500 font-medium">{currentCompany?.state || 'Tamil Nadu'}, India</p>
+                            <p className="text-blue-600 font-bold">{currentCompany?.email || 'office@induscai.com'}</p>
+                         </div>
+
+                         {/* Vendor Address */}
+                         <div className="mt-2 text-[12px] font-sans">
+                            <p className="text-slate-400 mb-1 font-bold uppercase tracking-widest text-[10px]">To</p>
+                            <p className="text-blue-600 font-black text-[15px] italic">{vendor?.name || 'Vendor Name'}</p>
+                            <div className="text-slate-500 font-medium mt-1">
+                               {vendor?.email}<br/>
+                               {vendor?.mobile}
+                            </div>
+                         </div>
+
+                         {/* Main Title */}
+                         <div className="mt-20 text-center space-y-2">
+                            <h2 className="text-[28px] font-black text-slate-900 border-b-4 border-slate-900 inline-block pb-2 px-4 italic uppercase tracking-tighter">Statement of Accounts</h2>
+                            <p className="text-[14px] font-black text-slate-400 font-sans mt-4">01/04/2026 To 30/04/2026</p>
+                         </div>
+
+                         {/* Summary Table */}
+                         <div className="mt-20 flex justify-end">
+                            <div className="w-80 space-y-0 text-[13px] font-sans shadow-xl border border-slate-100 rounded-lg overflow-hidden">
+                               <div className="bg-slate-900 p-3 font-black text-white border-b border-slate-200 uppercase tracking-widest text-[10px]">Account Summary</div>
+                               <div className="flex justify-between p-3 border-b border-slate-50"><span>Opening Balance</span><span className="font-bold">₹0.00</span></div>
+                               <div className="flex justify-between p-3 border-b border-slate-50"><span>Billed Amount</span><span className="font-bold">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</span></div>
+                               <div className="flex justify-between p-3 border-b border-slate-50"><span>Amount Paid</span><span className="font-bold">₹0.00</span></div>
+                               <div className="flex justify-between p-4 border-b border-slate-200 bg-slate-50/50"><span className="font-black text-slate-900 uppercase">Balance Due</span><span className="font-black text-[18px] text-blue-600">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</span></div>
+                            </div>
+                         </div>
+
+                         {/* Transaction Table */}
+                         <table className="w-full mt-24 text-[12px] font-sans border-t-2 border-slate-900">
+                            <thead className="bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-widest">
+                               <tr className="border-b border-slate-100">
+                                  <th className="px-4 py-3 text-left">Date</th>
+                                  <th className="px-4 py-3 text-left">Transactions</th>
+                                  <th className="px-4 py-3 text-left">Reference</th>
+                                  <th className="px-4 py-3 text-right">Debit</th>
+                                  <th className="px-4 py-3 text-right">Credit</th>
+                                  <th className="px-4 py-3 text-right">Balance</th>
+                               </tr>
+                            </thead>
+                            <tbody className="text-slate-600">
+                               <tr className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-4 py-4 italic font-medium">01/04/2026</td>
+                                  <td className="px-4 py-4 font-black text-slate-900 uppercase tracking-tighter italic text-[13px]">*** Opening Balance ***</td>
+                                  <td className="px-4 py-4">---</td>
+                                  <td className="px-4 py-4 text-right">0.00</td>
+                                  <td className="px-4 py-4 text-right">0.00</td>
+                                  <td className="px-4 py-4 text-right font-black text-slate-900">0.00</td>
+                               </tr>
+                            </tbody>
+                            <tfoot>
+                               <tr className="font-black text-slate-900 text-[14px] bg-slate-50/50">
+                                  <td colSpan={5} className="px-4 py-6 text-right uppercase tracking-widest text-[11px]">Current Balance Due</td>
+                                  <td className="px-4 py-6 text-right text-blue-600 text-[16px]">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</td>
+                               </tr>
+                            </tfoot>
+                         </table>
+
+                         <div className="mt-32 border-t border-slate-100 pt-8 text-[11px] text-slate-400 italic text-center font-sans tracking-wide">
+                            Thank you for your business. Please contact us if you have any questions regarding this statement.
+                         </div>
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'Overview' && (
+                <div className="p-8 flex gap-10 animate-fade-in group">
+                  {/* Left Column Profile */}
+                  <div className="w-[420px] shrink-0 space-y-12">
+                    <div className="flex gap-6 relative">
+                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+                       <div className="relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
+                          <div className="w-24 h-24 rounded-2xl bg-slate-900 flex items-center justify-center text-white overflow-hidden shadow-2xl border-4 border-white transition-transform hover:scale-105">
+                             {vendor.image ? <img src={vendor.image} className="w-full h-full object-cover" /> : <ImageIcon size={48} strokeWidth={1} className="opacity-40"/>}
+                          </div>
+                       </div>
+                       <div className="space-y-1.5 pt-1">
+                          <h3 className="text-[17px] font-black text-slate-900 leading-tight">{vendor.salutation} {vendor.firstName} {vendor.lastName}</h3>
+                          <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{vendor.email}</span></div>
+                          <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{vendor.mobile || 'No contact'}</span></div>
+                       </div>
+
+                       <div className="ml-auto absolute top-0 right-0" ref={settingsRef}>
+                          <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`p-2 rounded-full transition-colors ${isSettingsOpen ? 'bg-slate-100 text-blue-600' : 'hover:bg-slate-100 text-slate-400'}`}><Settings size={20}/></button>
+                          {isSettingsOpen && (
+                             <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-2 animate-fade-down overflow-hidden">
+                                <button onClick={() => { setIsSettingsOpen(false); navigate(`/vendors/${vendor.id}`); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3"><Edit size={16} className="text-blue-500" /> Edit Profile</button>
+                                <button onClick={() => { setIsSettingsOpen(false); handleDeleteVendor(); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3"><Trash2 size={16} /> Delete Vendor</button>
+                             </div>
+                          )}
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">ADDRESS</h4>
+                       <div className="grid grid-cols-2 gap-10 pt-2">
+                          <div className="space-y-3">
+                             <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
+                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer">New Address</span></p>
+                          </div>
+                          <div className="space-y-3">
+                             <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
+                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer">New Address</span></p>
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">OTHER DETAILS</h4>
+                       <div className="space-y-6 pt-2">
+                          <DetailRow label="Vendor Type" value={vendor.customerType || 'Business'} />
+                          <DetailRow label="Currency" value={vendor.currency || 'INR'} />
+                          <DetailRow label="Payment Terms" value={vendor.paymentTerms || 'Due on Receipt'} />
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column Financials */}
+                  <div className="flex-1 space-y-12 border-l border-slate-50 pl-10 pb-20">
+                     <div className="p-8 bg-slate-900 rounded-2xl text-white relative overflow-hidden shadow-2xl shadow-slate-200">
+                        <div className="relative z-10 flex items-start justify-between gap-10">
+                           <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-[14px] font-black italic tracking-widest text-slate-400 uppercase"><Truck size={16} /> PROCUREMENT STATUS</div>
+                              <p className="text-[16px] text-white/90 font-medium leading-relaxed">View all your pending bills and purchase orders for this vendor.</p>
+                           </div>
+                           <div className="flex flex-col gap-2 shrink-0">
+                              <button onClick={() => navigate('/bills/new')} className="px-6 py-2 bg-white text-slate-900 rounded-lg text-[13px] font-black hover:bg-slate-50 transition-all shadow-xl">New Bill</button>
+                               <button onClick={() => navigate('/purchase-orders/new')} className="px-6 py-2 bg-white/10 text-white border border-white/20 rounded-lg text-[13px] font-black hover:bg-white/20 transition-all">New PO</button>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="space-y-6">
+                        <h4 className="text-[20px] font-black text-slate-900 tracking-tight flex items-center gap-3">Payables <div className="h-0.5 flex-1 bg-slate-50"></div></h4>
+                        <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100 bg-white">
+                           <table className="w-full text-left">
+                              <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-black text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">UNUSED PAYMENTS</th></tr></thead>
+                              <tbody><tr><td className="px-8 py-8 font-black text-slate-700">{vendor.currency || 'INR'}</td><td className="px-8 py-8 text-right font-black text-[24px] text-slate-900">₹{parseFloat(vendor.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">₹0.00</td></tr></tbody>
+                           </table>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+           <div className="flex-1 flex flex-col items-center justify-center p-20 text-center opacity-40">
+              <Users size={64} className="text-slate-200 mb-8" />
+              <h3 className="text-[24px] font-black text-slate-900 mb-3 tracking-tighter">Select a Vendor</h3>
+              <p className="text-[15px] text-slate-500 max-w-sm mx-auto font-medium">Click on a vendor in the list to reveal their procurement details.</p>
+           </div>
+         )}
+      </div>
+
+      <ComposeMailModal 
+        isOpen={isComposeModalOpen}
+        onClose={() => setIsComposeModalOpen(false)}
+        recipientEmail={vendor?.email}
+        recipientName={`${vendor?.salutation || ''} ${vendor?.firstName || ''} ${vendor?.lastName || ''}`.trim()}
+        ledgerId={selectedId}
+        companyId={currentCompany?.id}
+        onSent={() => {
+          fetchMails();
+          addNotification({ message: 'Email sent successfully', type: 'success' });
+        }}
+      />
+
+      <ConfirmModal 
+         isOpen={isDeleteModalOpen}
+         onClose={() => setIsDeleteModalOpen(false)}
+         onConfirm={confirmDelete}
+         title="Delete Vendor"
+         message={`Are you sure you want to delete ${vendor?.name}? This action cannot be undone.`}
+      />
+    </div>
+  );
+};
+
+export default VendorDetailView;

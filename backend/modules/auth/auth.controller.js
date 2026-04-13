@@ -20,7 +20,7 @@ exports.register = async (req, res) => {
       name: name || undefined,
       role: role || 'ADMIN' 
     });
-    res.status(201).json({ message: 'User created', user: { id: user.id, email: user.email, role: user.role } });
+    res.status(201).json({ message: 'User created', user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
     // If it's still a validation error, grab the specific field error
     if (err.name === 'SequelizeValidationError' || err.name === 'SequelizeUniqueConstraintError') {
@@ -61,7 +61,7 @@ exports.login = async (req, res) => {
     
     res.json({ 
       token, 
-      user: { id: user.id, email: user.email, role: user.role, activeCompanyId: activeCoId },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: activeCoId },
       companies: userCompanies 
     });
   } catch (err) {
@@ -101,7 +101,7 @@ exports.switchCompany = async (req, res) => {
     res.json({ 
       message: 'Company switched successfully',
       token,
-      user: { id: user.id, email: user.email, role: user.role, activeCompanyId: user.activeCompanyId }
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId }
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

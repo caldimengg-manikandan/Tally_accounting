@@ -21,6 +21,7 @@ const RecurringInvoice = require('./recurringInvoice.model')(sequelize, DataType
 const RetainerAdjustment = require('./retainerAdjustment.model')(sequelize, DataTypes);
 const SalesInvoice = require('./salesInvoice.model')(sequelize, DataTypes);
 const SalesInvoiceItem = require('./salesInvoiceItem.model')(sequelize, DataTypes);
+const SystemMail = require('./systemMail.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -136,6 +137,16 @@ Company.hasMany(SalesInvoice, { foreignKey: 'CompanyId' });
 SalesInvoice.belongsTo(Ledger, { as: 'CustomerLedger', foreignKey: 'customerLedgerId' });
 SalesInvoiceItem.belongsTo(Item, { foreignKey: 'itemId' });
 
+// 12. System Mails
+Company.hasMany(SystemMail, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+SystemMail.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+Ledger.hasMany(SystemMail, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+SystemMail.belongsTo(Ledger, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+
+User.hasMany(SystemMail, { foreignKey: { name: 'SenderId', type: DataTypes.UUID } });
+SystemMail.belongsTo(User, { as: 'Sender', foreignKey: { name: 'SenderId', type: DataTypes.UUID } });
+
 module.exports = {
   sequelize,
   User,
@@ -157,5 +168,6 @@ module.exports = {
   RecurringInvoice,
   RetainerAdjustment,
   SalesInvoice,
-  SalesInvoiceItem
+  SalesInvoiceItem,
+  SystemMail
 };

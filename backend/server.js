@@ -70,6 +70,7 @@ app.use('/api/retainer-invoices', require('./modules/sales/retainerInvoice.route
 app.use('/api/recurring-invoices', require('./modules/sales/recurringInvoice.routes'));
 app.use('/api/pricelists', require('./modules/inventory/pricelist.routes'));
 app.use('/api/purchases', require('./modules/purchases/purchases.routes'));
+app.use('/api/mail', require('./modules/mail/mail.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));

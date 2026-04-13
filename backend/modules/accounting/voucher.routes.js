@@ -11,5 +11,6 @@ router.post('/', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherCo
 // View vouchers (all roles)
 router.get('/:companyId', voucherController.getVouchers);
 router.get('/detail/:id', voucherController.getVoucherById);
+router.put('/:id/narration', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'DATA_ENTRY'), voucherController.updateVoucherNarration);
 
 module.exports = router;

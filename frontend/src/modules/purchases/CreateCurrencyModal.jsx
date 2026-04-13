@@ -1,13 +1,116 @@
 import React, { useState } from 'react';
 import { X, ChevronDown } from 'lucide-react';
 
+const CURRENCY_MAP = {
+  'AED': { symbol: 'د.إ', name: 'UAE Dirham' },
+  'AFN': { symbol: '؋', name: 'Afghan Afghani' },
+  'ALL': { symbol: 'L', name: 'Albanian Lek' },
+  'AMD': { symbol: '֏', name: 'Armenian Dram' },
+  'ANG': { symbol: 'ƒ', name: 'Netherlands Antillean Guilder' },
+  'AOA': { symbol: 'Kz', name: 'Angolan Kwanza' },
+  'ARS': { symbol: '$', name: 'Argentine Peso' },
+  'AUD': { symbol: '$', name: 'Australian Dollar' },
+  'AWG': { symbol: 'ƒ', name: 'Aruban Florin' },
+  'AZN': { symbol: '₼', name: 'Azerbaijani Manat' },
+  'BAM': { symbol: 'KM', name: 'Bosnia-Herzegovina Mark' },
+  'BBD': { symbol: '$', name: 'Barbadian Dollar' },
+  'BDT': { symbol: '৳', name: 'Bangladeshi Taka' },
+  'BGN': { symbol: 'лв', name: 'Bulgarian Lev' },
+  'BHD': { symbol: '.د.ب', name: 'Bahraini Dinar' },
+  'BIF': { symbol: 'FBu', name: 'Burundian Franc' },
+  'BMD': { symbol: '$', name: 'Bermudian Dollar' },
+  'BND': { symbol: '$', name: 'Brunei Dollar' },
+  'BOB': { symbol: '$b', name: 'Bolivian Boliviano' },
+  'BRL': { symbol: 'R$', name: 'Brazilian Real' },
+  'BSD': { symbol: '$', name: 'Bahamian Dollar' },
+  'BTN': { symbol: 'Nu.', name: 'Bhutanese Ngultrum' },
+  'BWP': { symbol: 'P', name: 'Botswanan Pula' },
+  'BYN': { symbol: 'Br', name: 'Belarusian Ruble' },
+  'BZD': { symbol: 'BZ$', name: 'Belize Dollar' },
+  'CAD': { symbol: '$', name: 'Canadian Dollar' },
+  'CDF': { symbol: 'FC', name: 'Congolese Franc' },
+  'CHF': { symbol: 'CHF', name: 'Swiss Franc' },
+  'CLP': { symbol: '$', name: 'Chilean Peso' },
+  'CNY': { symbol: '¥', name: 'Chinese Yuan' },
+  'COP': { symbol: '$', name: 'Colombian Peso' },
+  'CRC': { symbol: '₡', name: 'Costa Rican Colón' },
+  'CUC': { symbol: 'CUC$', name: 'Cuban Convertible Peso' },
+  'CUP': { symbol: '₱', name: 'Cuban Peso' },
+  'CVE': { symbol: '$', name: 'Cape Verdean Escudo' },
+  'CZK': { symbol: 'Kč', name: 'Czech Koruna' },
+  'DJF': { symbol: 'Fdj', name: 'Djiboutian Franc' },
+  'DKK': { symbol: 'kr', name: 'Danish Krone' },
+  'DOP': { symbol: 'RD$', name: 'Dominican Peso' },
+  'DZD': { symbol: 'دج', name: 'Algerian Dinar' },
+  'EGP': { symbol: '£', name: 'Egyptian Pound' },
+  'ERN': { symbol: 'Nfk', name: 'Eritrean Nakfa' },
+  'ETB': { symbol: 'Br', name: 'Ethiopian Birr' },
+  'EUR': { symbol: '€', name: 'Euro' },
+  'FJD': { symbol: '$', name: 'Fijian Dollar' },
+  'FKP': { symbol: '£', name: 'Falkland Islands Pound' },
+  'GBP': { symbol: '£', name: 'British Pound' },
+  'GEL': { symbol: '₾', name: 'Georgian Lari' },
+  'GGP': { symbol: '£', name: 'Guernsey Pound' },
+  'GHS': { symbol: 'GH₵', name: 'Ghanaian Cedi' },
+  'GIP': { symbol: '£', name: 'Gibraltar Pound' },
+  'GMD': { symbol: 'D', name: 'Gambian Dalasi' },
+  'GNF': { symbol: 'FG', name: 'Guinean Franc' },
+  'GTQ': { symbol: 'Q', name: 'Guatemalan Quetzal' },
+  'GYD': { symbol: '$', name: 'Guyanaese Dollar' },
+  'HKD': { symbol: '$', name: 'Hong Kong Dollar' },
+  'HNL': { symbol: 'L', name: 'Honduran Lempira' },
+  'HRK': { symbol: 'kn', name: 'Croatian Kuna' },
+  'HTG': { symbol: 'G', name: 'Haitian Gourde' },
+  'HUF': { symbol: 'Ft', name: 'Hungarian Forint' },
+  'IDR': { symbol: 'Rp', name: 'Indonesian Rupiah' },
+  'ILS': { symbol: '₪', name: 'Israeli New Shekel' },
+  'IMP': { symbol: '£', name: 'Isle of Man Pound' },
+  'INR': { symbol: '₹', name: 'Indian Rupee' },
+  'IQD': { symbol: 'ع.د', name: 'Iraqi Dinar' },
+  'IRR': { symbol: '﷼', name: 'Iranian Rial' },
+  'ISK': { symbol: 'kr', name: 'Icelandic Króna' },
+  'JEP': { symbol: '£', name: 'Jersey Pound' },
+  'JMD': { symbol: 'J$', name: 'Jamaican Dollar' },
+  'JOD': { symbol: 'JD', name: 'Jordanian Dinar' },
+  'JPY': { symbol: '¥', name: 'Japanese Yen' },
+  'KES': { symbol: 'KSh', name: 'Kenyan Shilling' },
+  'KGS': { symbol: 'лв', name: 'Kyrgystani Som' },
+  'KHR': { symbol: '៛', name: 'Cambodian Riel' },
+  'KMF': { symbol: 'CF', name: 'Comorian Franc' },
+  'KPW': { symbol: '₩', name: 'North Korean Won' },
+  'KRW': { symbol: '₩', name: 'South Korean Won' },
+  'KWD': { symbol: 'KD', name: 'Kuwaiti Dinar' },
+  'KYD': { symbol: '$', name: 'Cayman Islands Dollar' },
+  'KZT': { symbol: 'лв', name: 'Kazakhstani Tenge' },
+  'LAK': { symbol: '₭', name: 'Laotian Kip' },
+  'LBP': { symbol: '£', name: 'Lebanese Pound' },
+  'LKR': { symbol: '₨', name: 'Sri Lankan Rupee' },
+  'LRD': { symbol: '$', name: 'Liberian Dollar' },
+  'LSL': { symbol: 'L', name: 'Lesotho Loti' },
+  'LYD': { symbol: 'LD', name: 'Libyan Dinar' },
+  'MAD': { symbol: 'MAD', name: 'Moroccan Dirham' },
+  'MDL': { symbol: 'lei', name: 'Moldovan Leu' },
+  'MGA': { symbol: 'Ar', name: 'Malagasy Ariary' },
+  'MKD': { symbol: 'ден', name: 'Macedonian Denar' },
+  'MMK': { symbol: 'K', name: 'Myanmar Kyat' },
+  'MNT': { symbol: '₮', name: 'Mongolian Tugrik' },
+  'MOP': { symbol: 'MOP$', name: 'Macanese Pataca' },
+  'MRU': { symbol: 'UM', name: 'Mauritanian Ouguiya' },
+  'MUR': { symbol: '₨', name: 'Mauritian Rupee' },
+  'MVR': { symbol: 'Rf', name: 'Maldivian Rufiyaa' },
+  'MWK': { symbol: 'MK', name: 'Malawian Kwacha' },
+  'MXN': { symbol: '$', name: 'Mexican Peso' },
+  'MYR': { symbol: 'RM', name: 'Malaysian Ringgit' },
+  'MZN': { symbol: 'MT', name: 'Mozambican Metical' }
+};
+
 const CreateCurrencyModal = ({ onClose, onSave }) => {
   const [formData, setFormData] = useState({
     code: '',
     symbol: '',
     name: '',
     decimalPlaces: '2',
-    format: '###,###.##'
+    format: '1,234,567.89'
   });
 
   const currencyCodes = [
@@ -24,11 +127,22 @@ const CreateCurrencyModal = ({ onClose, onSave }) => {
   ];
 
   const decimalOptions = ['0', '1', '2', '3', '4'];
-  const formatOptions = ['###,###.##', '###.###,##', '### ###.##', '###,###'];
+  const formatOptions = ['1,234,567.89', '1.234.567,89', '1 234 567.89', '1,234,567'];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Auto-populate symbol and name if code is selected
+    if (name === 'code' && CURRENCY_MAP[value]) {
+       setFormData(prev => ({ 
+          ...prev, 
+          code: value,
+          symbol: CURRENCY_MAP[value].symbol,
+          name: CURRENCY_MAP[value].name 
+       }));
+    } else {
+       setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSave = () => {
