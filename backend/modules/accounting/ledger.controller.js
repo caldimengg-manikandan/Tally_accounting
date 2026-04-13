@@ -47,6 +47,7 @@ exports.createLedger = async (req, res) => {
 // Get all Ledgers for a company, grouped by their parent Group
 exports.getLedgers = async (req, res) => {
   try {
+    console.log(`[LEDGER_FETCH] Requesting ledgers for companyId: ${req.params.companyId}`);
     const ledgers = await Ledger.findAll({
       where: { CompanyId: req.params.companyId },
       include: [{ model: Group, attributes: ['id', 'name', 'nature'] }],

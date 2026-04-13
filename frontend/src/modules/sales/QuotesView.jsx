@@ -494,6 +494,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
     return (
         <div className="animate-fade-in p-8 pb-32">
             <style>
+                {`
                 @media print {
                     body * {
                         visibility: hidden !important;
@@ -513,6 +514,12 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                         height: auto !important;
                         overflow: visible !important;
                         background: white !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .print-bg-dark {
+                        background-color: #0f172a !important;
+                        color: white !important;
                     }
                     .print-hidden {
                         display: none !important;
@@ -544,12 +551,12 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
             </header>
 
             {/* Document Layout - Professional Business Format */}
-            <div id="printable-quote" className="mt-20 bg-white shadow-2xl max-w-[850px] mx-auto border border-slate-200 rounded-sm relative print:shadow-none print:mt-0 print:border-0 min-h-[1100px] flex flex-col">
+            <div id="printable-quote" className="mt-20 bg-white shadow-2xl max-w-[850px] mx-auto border border-slate-200 rounded-sm relative print:shadow-none print:mt-0 print:border-0 overflow-visible">
                 
                 {/* Visual Accent Top */}
                 <div className="h-2 bg-slate-900 w-full" />
 
-                <div className="p-16 flex-1">
+                <div className="p-16">
                     <div className="flex justify-between items-start mb-20">
                         <div className="space-y-6">
                             <div className="space-y-1">
@@ -596,13 +603,13 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                     {/* Modern Professional Table */}
                     <div className="mt-12 rounded-lg overflow-hidden border border-slate-100 shadow-sm mb-12">
                         <table className="w-full text-left">
-                            <thead className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.2em]">
-                                <tr>
-                                    <th className="px-8 py-5">#</th>
+                            <thead>
+                                <tr className="bg-slate-900 text-white font-black text-[11px] uppercase tracking-[0.2em] print-bg-dark">
+                                    <th className="px-8 py-5 text-center">#</th>
                                     <th className="px-8 py-5">Description of Services</th>
-                                    <th className="px-8 py-5 text-center">Qty</th>
-                                    <th className="px-8 py-5 text-right">Unit Rate</th>
-                                    <th className="px-8 py-5 text-right">Total</th>
+                                    <th className="px-8 py-5 text-center whitespace-nowrap">Qty</th>
+                                    <th className="px-8 py-5 text-right whitespace-nowrap">Unit Rate</th>
+                                    <th className="px-8 py-5 text-right whitespace-nowrap">Total</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
@@ -622,98 +629,107 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                         </table>
                     </div>
 
-                    {/* Financial Summary Block */}
-                    <div className="flex justify-end pt-12 pb-20">
-                        <div className="w-full max-w-[420px] space-y-4">
-                            <div className="bg-white border-2 border-slate-900 rounded-2xl overflow-hidden shadow-2xl">
-                                <div className="p-8 space-y-4">
-                                    <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest">
+                    {/* Financial Summary Block - REFINED */}
+                    <div className="flex justify-end pt-8 pb-12 border-t border-slate-100 mt-10">
+                        <div className="w-full max-w-[420px]">
+                            <div className="bg-slate-50/50 rounded-3xl overflow-hidden border border-slate-100 shadow-xl">
+                                <div className="p-8 space-y-5">
+                                    <div className="flex justify-between items-center text-[12px] font-black text-slate-400 uppercase tracking-[0.2em]">
                                         <span>Sub Total</span>
-                                        <span className="text-slate-900 font-black">₹{parseFloat(quote.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        <span className="text-slate-900 text-[15px]">₹{parseFloat(quote.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
 
                                     {parseFloat(quote.discount || 0) > 0 && (
-                                        <div className="flex justify-between items-center text-[13px] font-bold text-emerald-600 uppercase tracking-widest">
-                                            <span>Applied Discount ({quote.discount}%)</span>
-                                            <span className="font-black">- ₹{(parseFloat(quote.subTotal || 0) * (parseFloat(quote.discount) / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                        <div className="flex justify-between items-center text-[12px] font-black text-emerald-600 uppercase tracking-[0.2em]">
+                                            <span>Discount ({quote.discount}%)</span>
+                                            <span>- ₹{(parseFloat(quote.subTotal || 0) * (parseFloat(quote.discount) / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}
 
-                                    {/* GST Breakdown */}
-                                    {String(quote.selectedTax).toLowerCase().includes('gst') ? (
-                                        <div className="pt-2 mt-2 border-t border-slate-50 space-y-3">
-                                            <div className="flex justify-between items-center text-[13px] font-black text-slate-400 uppercase tracking-widest">
-                                                <span>CGST ({parseFloat(quote.selectedTax.replace(/\D/g, '') || 0) / 2}%)</span>
-                                                <span className="text-slate-700">₹{(parseFloat(quote.taxAmount || 0) / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-[13px] font-black text-slate-400 uppercase tracking-widest">
-                                                <span>SGST ({parseFloat(quote.selectedTax.replace(/\D/g, '') || 0) / 2}%)</span>
-                                                <span className="text-slate-700">₹{(parseFloat(quote.taxAmount || 0) / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-[11px] font-bold text-slate-300 border-t border-slate-50 pt-2 uppercase tracking-[0.2em]">
-                                                <span>Total Tax</span>
-                                                <span>₹{parseFloat(quote.taxAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                            </div>
+                                    {/* GST Details - Robust Checks */}
+                                    {quote.selectedTax && (String(quote.selectedTax).toLowerCase().includes('gst') || String(quote.selectedTax).toLowerCase().includes('tax')) ? (
+                                        <div className="pt-4 mt-2 border-t border-slate-200/50 space-y-3">
+                                            {String(quote.selectedTax).toLowerCase().includes('gst') ? (
+                                                <>
+                                                    <div className="flex justify-between items-center text-[12px] font-black text-slate-400 uppercase tracking-widest">
+                                                        <span>CGST ({parseFloat((quote.selectedTax || "").replace(/\D/g, '') || 0) / 2}%)</span>
+                                                        <span className="text-slate-900">₹{(parseFloat(quote.taxAmount || 0) / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-[12px] font-black text-slate-400 uppercase tracking-widest">
+                                                        <span>SGST ({parseFloat((quote.selectedTax || "").replace(/\D/g, '') || 0) / 2}%)</span>
+                                                        <span className="text-slate-900">₹{(parseFloat(quote.taxAmount || 0) / 2).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="flex justify-between items-center text-[12px] font-black text-slate-400 uppercase tracking-widest">
+                                                    <span>{quote.selectedTax}</span>
+                                                    <span className="text-slate-900">₹{parseFloat(quote.taxAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                </div>
+                                            )}
                                         </div>
-                                    ) : quote.taxAmount > 0 ? (
-                                        <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest">
-                                            <span>Tax ({quote.selectedTax})</span>
-                                            <span className="text-slate-900 font-black">₹{parseFloat(quote.taxAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    ) : parseFloat(quote.taxAmount || 0) > 0 ? (
+                                        <div className="flex justify-between items-center text-[12px] font-black text-slate-400 uppercase tracking-[0.2em] pt-4 border-t border-slate-200/50">
+                                            <span>Total Tax</span>
+                                            <span className="text-slate-900">₹{parseFloat(quote.taxAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                         </div>
-                                    ) : (
-                                        <div className="flex justify-between items-center text-[12px] font-bold text-slate-300 uppercase tracking-widest italic py-1">
-                                            <span>Tax (Non-Taxable)</span>
-                                            <span>₹0.00</span>
-                                        </div>
-                                    )}
+                                    ) : null}
 
-                                    {/* Adjustments */}
                                     {parseFloat(quote.adjustment || 0) !== 0 && (
-                                        <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest">
+                                        <div className="flex justify-between items-center text-[12px] font-black text-slate-400 uppercase tracking-[0.2em]">
                                             <span>Adjustments</span>
-                                            <span className={parseFloat(quote.adjustment) > 0 ? "text-slate-900 font-black" : "text-rose-600 font-black"}>
+                                            <span className={parseFloat(quote.adjustment) > 0 ? "text-slate-900" : "text-rose-600"}>
                                                 {parseFloat(quote.adjustment) > 0 ? '+' : ''} ₹{parseFloat(quote.adjustment).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                             </span>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="px-8 py-8 bg-slate-900 flex justify-between items-baseline text-white">
-                                    <div className="space-y-0">
-                                        <span className="text-[14px] font-black uppercase tracking-[0.2em] italic opacity-60">Grand Total</span>
-                                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.3em] mt-1 italic">Incl. All Taxes</p>
+                                <div className="px-8 py-8 bg-slate-900 flex justify-between items-center text-white print-bg-dark">
+                                    <div className="space-y-1">
+                                        <span className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400">GRAND TOTAL</span>
+                                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-[0.2em]">Inclusive of all taxes</p>
                                     </div>
-                                    <span className="text-4xl font-black tracking-tighter italic">₹{parseFloat(quote.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-4xl font-black italic tracking-tighter">₹{parseFloat(quote.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
-                            
-                            {/* Amount in Words */}
-                            <div className="px-4 text-right">
-                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 items-end flex justify-end gap-2">
-                                    <Info size={10}/> Total Amount in Words
-                                </p>
-                                <p className="text-[12px] font-bold text-slate-500 italic max-w-[300px] ml-auto leading-tight">
+
+                            <div className="mt-6 px-4 text-right">
+                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 italic">Total Amount in Words</p>
+                                <p className="text-[12px] font-bold text-slate-500 italic max-w-[320px] ml-auto leading-tight">
                                     {numberToWords(Math.round(quote.totalAmount || 0))} Rupees Only
                                 </p>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Secure Footer Block */}
-                <div className="bg-slate-900 p-12 grid grid-cols-2 gap-16 text-white min-h-[220px]">
-                    {quote.termsConditions && (
+                    {/* Secure Footer Block */}
+                    <div className="mt-20 bg-slate-50 rounded-2xl p-10 flex justify-between items-center border border-slate-100">
                         <div className="space-y-4">
-                            <p className="text-[11px] font-black text-blue-400 uppercase tracking-[0.4em]">TERMS & CONDITIONS</p>
-                            <p className="text-[12px] text-white/70 leading-relaxed font-medium line-clamp-4">{quote.termsConditions}</p>
+                            <div>
+                                <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Terms & Conditions</h5>
+                                <p className="text-[12px] text-slate-500 font-medium max-w-[400px] leading-relaxed italic">
+                                    {quote.termsConditions || "Standard terms apply. This quote is valid for 30 days from the date of issue."}
+                                </p>
+                            </div>
+                            {quote.customerNotes && (
+                                <div>
+                                    <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Notes</h5>
+                                    <p className="text-[12px] text-slate-500 italic">{quote.customerNotes}</p>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-2 text-slate-300">
+                                <div className="h-[1px] w-8 bg-slate-200" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.4em]">Official Signature</span>
+                            </div>
                         </div>
-                    )}
-                    {quote.customerNotes && (
-                        <div className="space-y-4 text-right ml-auto max-w-[300px]">
-                            <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.4em]">OFFICIAL REMARKS</p>
-                            <p className="text-[12px] text-white/80 leading-relaxed font-bold italic tracking-tight">"{quote.customerNotes}"</p>
+                        <div className="text-right">
+                            <div className="w-32 h-12 bg-slate-200/50 rounded-lg mb-4 flex items-center justify-center italic text-slate-400 text-[10px] font-bold uppercase tracking-widest border border-dashed border-slate-300">
+                                Place Seal Here
+                            </div>
+                            <p className="text-slate-900 font-black text-[14px] uppercase tracking-tighter">{currentCompany?.name}</p>
+                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Authorized Signatory</p>
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -753,7 +769,7 @@ const EmailSendView = ({ quote, onCancel, onSend }) => {
     };
 
     return (
-        <div className="bg-[#f8fafc] min-h-screen pt-28 pb-20 px-10 animate-fade-up">
+        <div className="bg-[#f8fafc] min-h-screen pt-28 pb-20 px-10 animate-fade-in print:bg-white print:p-0 print:pt-0">
             <div className="max-w-3xl mx-auto">
                 <div className="mb-8 flex items-center justify-between">
                     <div>
@@ -851,9 +867,10 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [items, setItems] = useState([{ id: Date.now(), itemDetails: '', quantity: 1.00, rate: 0.00, amount: 0.00 }]);
     const [discount, setDiscount] = useState(0);
     const [adjustment, setAdjustment] = useState(0);
-    const [customerNotes, setCustomerNotes] = useState('Looking forward for your business.');
     const [terms, setTerms] = useState('');
+    const [customerNotes, setCustomerNotes] = useState('');
     const [loading, setLoading] = useState(false);
+    const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false, confirmText: 'OK' });
     const location = useLocation();
 
     const [inventoryItems, setInventoryItems] = useState([]);
@@ -1090,14 +1107,28 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
         if (!quoteDate) missingFields.push('Quote Date');
         
         // Ensure at least one item has content
-        const validItems = items.filter(it => it.itemDetails.trim() !== '' && it.rate > 0);
+        const validItems = items.filter(it => it.itemDetails && it.itemDetails.trim() !== '' && it.rate > 0);
         if (validItems.length === 0) {
-            addNotification('Please add at least one item with a valid rate.', 'error');
+            setModalConfig({
+                isOpen: true,
+                title: 'No Items Added',
+                message: 'Please add at least one item with a valid name and rate before confirming the quote.',
+                type: 'warning',
+                showCancel: false,
+                confirmText: 'Understood'
+            });
             return;
         }
 
         if (missingFields.length > 0) {
-            addNotification(`Required fields missing: ${missingFields.join(', ')}`, 'error');
+            setModalConfig({
+                isOpen: true,
+                title: 'Data Required',
+                message: `The following fields are mandatory: ${missingFields.join(', ')}. Please fill them to proceed.`,
+                type: 'danger',
+                showCancel: false,
+                confirmText: 'Review Form'
+            });
             return;
         }
 
@@ -1588,6 +1619,16 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                     onSave={(newVal) => setQuoteNo(newVal)}
                 />
             )}
+
+            <ConfirmModal 
+                isOpen={modalConfig.isOpen}
+                onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                type={modalConfig.type}
+                showCancel={modalConfig.showCancel}
+                confirmText={modalConfig.confirmText}
+            />
         </div>
     );
 };

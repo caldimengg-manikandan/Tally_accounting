@@ -19,6 +19,7 @@ const CustomersListView = ({ companyId }) => {
   const [deleteId, setDeleteId] = useState(null);
   const [deleteName, setDeleteName] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -76,12 +77,14 @@ const CustomersListView = ({ companyId }) => {
         const res = await ledgerAPI.getByCompany(companyId);
         
         // Filter for Sundry Debtors (Customers) only
-        const allLedgers = res.data || [];
+        const allLedgers = Array.isArray(res.data) ? res.data : [];
         console.log("Total ledgers fetched:", allLedgers.length);
         
         const customerLedgers = allLedgers.filter(l => 
           l.Group?.name?.toLowerCase().includes('debtor') || 
-          l.groupName?.toLowerCase().includes('debtor')
+          l.groupName?.toLowerCase().includes('debtor') ||
+          l.Group?.name?.toLowerCase().includes('customer') ||
+          l.groupName?.toLowerCase().includes('customer')
         );
         
         console.log("Filtered customers:", customerLedgers.length);
@@ -109,7 +112,14 @@ const CustomersListView = ({ companyId }) => {
       await ledgerAPI.delete(deleteId);
       setCustomers(customers.filter(c => c.id !== deleteId));
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to delete customer");
+      setModalConfig({
+        isOpen: true,
+        title: 'Delete Failed',
+        message: err.response?.data?.error || "Failed to delete customer. Please ensure there are no active transactions linked to this customer.",
+        type: 'danger',
+        showCancel: false,
+        confirmText: 'Continue'
+      });
     } finally {
       setIsDeleteModalOpen(false);
       setDeleteId(null);
@@ -246,6 +256,16 @@ const CustomersListView = ({ companyId }) => {
            onConfirm={confirmDelete}
            title="Delete Customer"
            message={`Are you sure you want to delete ${deleteName}? All transaction history and balance data for this customer will be permanently removed.`}
+        />
+
+        <ConfirmModal 
+            isOpen={modalConfig.isOpen}
+            onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+            title={modalConfig.title}
+            message={modalConfig.message}
+            type={modalConfig.type}
+            showCancel={modalConfig.showCancel}
+            confirmText={modalConfig.confirmText}
         />
      </div>
 

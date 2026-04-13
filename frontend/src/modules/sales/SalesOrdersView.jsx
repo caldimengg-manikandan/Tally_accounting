@@ -55,6 +55,7 @@ const SalesOrdersView = ({ companyId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
   const { addNotification } = useNotificationStore();
   
   // Form State
@@ -178,7 +179,14 @@ const SalesOrdersView = ({ companyId }) => {
 
   const handleSave = async (status = 'Draft') => {
     if (!formData.customerId) {
-      setStatus({ type: 'error', message: 'Please select a customer.' });
+      setModalConfig({
+        isOpen: true,
+        title: 'Selection Required',
+        message: 'Please select a customer before moving forward with this sales order.',
+        type: 'warning',
+        showCancel: false,
+        confirmText: 'Okay'
+      });
       return;
     }
     setSaving(true);
@@ -244,46 +252,58 @@ const SalesOrdersView = ({ companyId }) => {
 
   // --- Views ---
   const renderListView = () => (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center mb-8">
-        <div className="relative w-96 group">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search Sales Orders..." 
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-[13px] font-medium outline-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="h-10 px-4 flex items-center gap-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-[13px] font-bold hover:bg-gray-50 transition-all shadow-sm">
-            <Download size={16} /> Export
-          </button>
-          <button 
-            onClick={() => { resetForm(); setView('form'); }}
-            className="h-10 px-6 flex items-center gap-2 bg-blue-600 text-white rounded-lg text-[13px] font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
-          >
-            <Plus size={18} strokeWidth={3} /> NEW SALES ORDER
-          </button>
-        </div>
+    <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
+      {/* Header Section */}
+      <div className="p-8 flex items-center justify-between border-b border-slate-100">
+          <div>
+              <h1 className="text-[28px] font-black text-slate-900 tracking-tighter uppercase">Sales Orders</h1>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-1">Track and manage your customer orders</p>
+          </div>
+          <div className="flex items-center gap-3">
+              <button 
+                  onClick={() => { resetForm(); setView('form'); }}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-[4px] font-black text-[13px] hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all flex items-center gap-2 uppercase tracking-widest"
+              >
+                  <Plus size={18} /> New Sales Order
+              </button>
+              <button className="p-2.5 border border-slate-200 rounded text-slate-400 hover:bg-slate-50 transition-colors"><MoreHorizontal size={20}/></button>
+          </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden">
+      {/* Search & Bar */}
+      <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/20 flex items-center justify-between">
+          <div className="relative w-96 group">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+              <input 
+                  type="text" 
+                  placeholder="Search Sales Orders..." 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-2 border border-slate-200 rounded-[4px] text-[13px] font-bold outline-none focus:border-blue-500 transition-all bg-white"
+              />
+          </div>
+          <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+              <Download size={14} /> Export
+          </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50/50 border-b border-gray-100">
-              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-8">Order #</th>
-              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Date</th>
-              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Customer</th>
-              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
-              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">Amount</th>
-              <th className="p-5 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right pr-8">Action</th>
+          <thead className="sticky top-0 bg-white z-10">
+            <tr className="border-b border-slate-100">
+              <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Date</th>
+              <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Order #</th>
+              <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Customer</th>
+              <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest">Status</th>
+              <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest text-right">Amount</th>
+              <th className="px-8 py-4 text-[11px] font-black text-slate-300 uppercase tracking-widest text-center">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filteredOrders.length === 0 ? (
-              <tr><td colSpan="5" className="py-24 text-center text-gray-400 italic font-medium">No sales orders found matching your search.</td></tr>
+          <tbody className="divide-y divide-slate-50">
+            {loading ? (
+                <tr><td colSpan="6" className="py-24 text-center font-black text-slate-300 uppercase tracking-widest italic animate-pulse">Synchronizing Orders...</td></tr>
+            ) : filteredOrders.length === 0 ? (
+              <tr><td colSpan="6" className="py-24 text-center text-slate-300 font-black uppercase tracking-widest italic">No sales orders found</td></tr>
             ) : (
               filteredOrders.map(order => {
                 if (!order) return null;
@@ -293,47 +313,37 @@ const SalesOrdersView = ({ companyId }) => {
                     onClick={() => openEdit(order)}
                     className="hover:bg-blue-50/30 transition-colors cursor-pointer group"
                   >
-                    <td className="p-5 text-[13px] font-bold text-blue-600 pl-8">{order.orderNumber || 'N/A'}</td>
-                    <td className="p-5 text-[13px] text-gray-600 font-medium">
+                    <td className="px-8 py-5 text-[14px] font-bold text-slate-500">
                       {order.date ? new Date(order.date).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="p-5 text-[13px] text-gray-900 font-bold">{order.Customer?.name || 'Unknown'}</td>
-                    <td className="p-5">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-sm
-                        ${order.status === 'Draft' ? 'bg-gray-100 text-gray-600' : 
-                          order.status === 'Sent' ? 'bg-blue-100 text-blue-600' : 
-                          'bg-emerald-100 text-emerald-600'}`}>
+                    <td className="px-8 py-5 text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors">{order.orderNumber || 'N/A'}</td>
+                    <td className="px-8 py-5">
+                        <div className="text-[14px] font-black text-slate-800">{order.Customer?.name || 'Unknown'}</div>
+                        {order.referenceNumber && <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Ref: {order.referenceNumber}</div>}
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border
+                        ${order.status === 'Draft' ? 'bg-slate-50 text-slate-500 border-slate-100' : 
+                          order.status === 'Sent' ? 'bg-blue-50 text-blue-600 border-blue-100' : 
+                          'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                         {order.status || 'Draft'}
                       </span>
                     </td>
-                    <td className="p-5 text-right text-[13px] font-black text-gray-900">
+                    <td className="px-8 py-5 text-right text-[15px] font-black text-slate-900 tracking-tight">
                       ₹{(parseFloat(order.totalAmount) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="p-5 text-right pr-8">
-                       <div className="flex items-center justify-end gap-2">
-                          <button 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              navigate('/sales/new-invoice', { state: { orderData: order } });
-                            }}
-                            className="p-1.5 hover:bg-emerald-50 rounded border border-transparent hover:border-emerald-200 text-emerald-600 transition-all shadow-sm"
-                            title="Convert to Invoice"
-                          >
-                            <CheckCircle2 size={14} />
-                          </button>
+                    <td className="px-8 py-5 text-center">
+                       <div className="flex items-center justify-center gap-2 transition-all">
                           <button 
                             onClick={(e) => { e.stopPropagation(); openEdit(order); }}
-                            className="p-1.5 hover:bg-white rounded border border-transparent hover:border-gray-200 text-gray-400 hover:text-blue-600 transition-all shadow-sm"
+                            className="p-1.5 hover:bg-white rounded text-blue-600 border border-transparent hover:border-blue-100"
                             title="Edit"
                           >
                             <Edit2 size={14} />
                           </button>
                           <button 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              handleDelete(order.id);
-                            }}
-                            className="p-1.5 hover:bg-white rounded border border-transparent hover:border-gray-200 text-gray-400 hover:text-rose-500 transition-all shadow-sm"
+                            onClick={(e) => { e.stopPropagation(); handleDelete(order.id); }}
+                            className="p-1.5 hover:bg-white rounded text-rose-600 border border-transparent hover:border-rose-100"
                             title="Delete"
                           >
                             <Trash2 size={14} />
@@ -457,18 +467,11 @@ const SalesOrdersView = ({ companyId }) => {
                       <select 
                         value={item.itemId}
                         onChange={e => handleItemUpdate(item.id, 'itemId', e.target.value)}
-                        className="w-full text-[13px] font-bold text-gray-800 bg-transparent outline-none border-b border-transparent focus:border-blue-300 pb-1"
+                        className="w-full text-[13px] font-black text-slate-800 bg-transparent outline-none border-b border-transparent focus:border-blue-300 pb-1"
                       >
                         <option value="">Type or click to select an Item.</option>
                         {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                       </select>
-                      <input 
-                        type="text" 
-                        placeholder="Add description..." 
-                        value={item.detail}
-                        onChange={e => handleItemUpdate(item.id, 'detail', e.target.value)}
-                        className="w-full text-[11px] text-gray-400 bg-transparent outline-none mt-1"
-                      />
                     </td>
                     <td className="py-4 px-4 align-top">
                       <input 
@@ -642,6 +645,16 @@ const SalesOrdersView = ({ companyId }) => {
         onConfirm={confirmDeleteOrder}
         title="Delete Sales Order"
         message="Are you sure you want to delete this sales order? This action cannot be undone."
+      />
+
+      <ConfirmModal 
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        showCancel={modalConfig.showCancel}
+        confirmText={modalConfig.confirmText}
       />
     </div>
   );

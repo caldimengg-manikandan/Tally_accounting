@@ -1,29 +1,22 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
 
-async function checkSqlite() {
+async function check() {
   const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: path.join(__dirname, 'database.sqlite'),
-    logging: false,
+    logging: false
   });
 
-  const Company = require('./models/company.model')(sequelize, DataTypes);
-  const Ledger = require('./models/ledger.model')(sequelize, DataTypes);
-
   try {
-    const companies = await Company.findAll({ raw: true });
-    console.log("SQLITE COMPANIES FOUND:", companies.length);
-    for (const co of companies) {
-      console.log(` - Company: ${co.name} (${co.id})`);
-      const ledgers = await Ledger.findAll({ where: { CompanyId: co.id }, raw: true });
-      console.log(`   - Ledgers: ${ledgers.length}`);
-    }
+    const [results] = await sequelize.query("SELECT name FROM Ledgers;");
+    console.log(`FOUND ${results.length} LEDGERS IN SQLITE:`);
+    results.forEach(r => console.log(` - ${r.name}`));
+    process.exit(0);
   } catch (err) {
-    console.error("SQLITE CHECK ERROR:", err);
-  } finally {
-    await sequelize.close();
+    console.log("NO DATA IN SQLITE OR TABLE MISSING.");
+    process.exit(0);
   }
 }
 
-checkSqlite();
+check();

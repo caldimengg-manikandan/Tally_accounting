@@ -752,14 +752,23 @@ const CustomerDetailView = ({ companyId }) => {
                     <div className="flex gap-6 relative">
                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
                        <div className="relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
-                          <div className="w-24 h-24 rounded-2xl bg-slate-900 flex items-center justify-center text-white overflow-hidden shadow-2xl border-4 border-white transition-transform hover:scale-105">
-                             {customer.image ? <img src={customer.image} className="w-full h-full object-cover" /> : <ImageIcon size={48} strokeWidth={1} className="opacity-40"/>}
-                             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="w-24 h-24 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 overflow-hidden transition-all hover:border-blue-400 hover:bg-white relative">
+                             {customer.image ? (
+                               <img src={customer.image} className="w-full h-full object-cover" />
+                             ) : (
+                               <div className="flex flex-col items-center gap-1 opacity-40">
+                                 <Camera size={28} strokeWidth={1.5}/>
+                                 <span className="text-[9px] font-black uppercase tracking-widest">Add Photo</span>
+                               </div>
+                             )}
+                             <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                                <ImageIcon size={18} className="text-white" />
+                                <span className="text-[8px] font-black text-white uppercase tracking-tighter">Update</span>
                              </div>
                           </div>
                        </div>
                        
-                       <div className="space-y-1.5 pt-1">
+                       <div className="space-y-1 pt-1.5 flex-1">
                           <h3 className="text-[17px] font-black text-slate-900 leading-tight">{customer.salutation} {customer.firstName} {customer.lastName}</h3>
                           <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{customer.email}</span></div>
                           <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{customer.mobile || 'No contact'}</span></div>

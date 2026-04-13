@@ -26,6 +26,9 @@ const CreditNote = require('./creditNote.model')(sequelize, DataTypes);
 const CreditNoteItem = require('./creditNoteItem.model')(sequelize, DataTypes);
 const DeliveryChallan = require('./deliveryChallan.model')(sequelize, DataTypes);
 const DeliveryChallanItem = require('./deliveryChallanItem.model')(sequelize, DataTypes);
+const Project = require('./project.model')(sequelize, DataTypes);
+const ProjectTask = require('./projectTask.model')(sequelize, DataTypes);
+const ProjectUser = require('./projectUser.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -171,6 +174,23 @@ Company.hasMany(DeliveryChallan, { foreignKey: 'CompanyId' });
 DeliveryChallan.belongsTo(Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
 DeliveryChallanItem.belongsTo(Item, { foreignKey: 'itemId' });
 
+// 15. Projects & Time Tracking
+Company.hasMany(Project, { foreignKey: 'CompanyId' });
+Project.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Project.belongsTo(Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
+Ledger.hasMany(Project, { foreignKey: 'customerLedgerId' });
+
+Project.hasMany(ProjectTask, { as: 'tasks', foreignKey: 'ProjectId', onDelete: 'CASCADE' });
+ProjectTask.belongsTo(Project, { foreignKey: 'ProjectId' });
+
+Project.belongsToMany(User, { through: ProjectUser, as: 'users', foreignKey: 'ProjectId' });
+User.belongsToMany(Project, { through: ProjectUser, as: 'assignedProjects', foreignKey: 'UserId' });
+Project.hasMany(ProjectUser, { foreignKey: 'ProjectId' });
+ProjectUser.belongsTo(Project, { foreignKey: 'ProjectId' });
+ProjectUser.belongsTo(User, { foreignKey: 'UserId' });
+User.hasMany(ProjectUser, { foreignKey: 'UserId' });
+
 module.exports = {
   sequelize,
   User,
@@ -197,5 +217,8 @@ module.exports = {
   CreditNote,
   CreditNoteItem,
   DeliveryChallan,
-  DeliveryChallanItem
+  DeliveryChallanItem,
+  Project,
+  ProjectTask,
+  ProjectUser
 };

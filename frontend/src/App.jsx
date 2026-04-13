@@ -37,6 +37,7 @@ import RecurringInvoicesView from './modules/sales/RecurringInvoicesView';
 import DeliveryChallansView from './modules/sales/DeliveryChallansView';
 import CreditNotesView from './modules/sales/CreditNotesView';
 import PayrollView from './modules/payroll/PayrollView';
+import ProjectsView from './modules/time_tracking/ProjectsView';
 import VendorsListView from './modules/purchases/VendorsListView';
 import VendorsView from './modules/purchases/VendorsView';
 import VendorDetailView from './modules/purchases/VendorDetailView';
@@ -259,7 +260,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
             <div className={`transition-transform duration-300 ${expanded ? 'rotate-0' : '-rotate-90'}`}>
               <ChevronDown size={14} className="text-slate-400" />
             </div>
-            <span className={`text-[11px] font-black text-slate-300 uppercase tracking-[0.2em]`}>{group}</span>
+            <span className={`text-[11px] font-black text-slate-800 uppercase tracking-[0.2em]`}>{group}</span>
           </div>
         </button>
       )}
@@ -272,13 +273,13 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
               <div 
                 key={item.path} 
                 className={`group/item flex items-center justify-between px-4 py-1.5 rounded-l-full transition-all duration-200 
-                  ${active ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : 'hover:bg-slate-50 text-slate-500 hover:text-slate-900'}`}
+                  ${active ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : 'hover:bg-slate-50 text-slate-800 hover:text-slate-900'}`}
               >
                 <button
                   onClick={() => navigate(item.path)}
                   title={item.label}
                   className={`flex-1 text-left text-[12px] font-medium tracking-tight
-                    ${active ? 'text-blue-600 font-bold' : 'text-slate-500 group-hover/item:text-slate-900'}`}
+                    ${active ? 'text-blue-600 font-bold' : 'text-slate-800 group-hover/item:text-slate-900'}`}
                 >
                   {item.label}
                 </button>
@@ -319,7 +320,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
     
     {collapsed ? (
       <>
-        <span className={`text-[10px] font-bold leading-none text-center truncate w-full px-1 uppercase tracking-tighter ${active ? 'text-white' : 'text-slate-500'}`}>
+        <span className={`text-[10px] font-bold leading-none text-center truncate w-full px-1 uppercase tracking-tighter ${active ? 'text-white' : 'text-slate-800'}`}>
           {label.length > 8 ? label.substring(0, 7) + '..' : label}
         </span>
         {hasChildren && (
@@ -327,7 +328,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
         )}
       </>
     ) : (
-      <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-blue-600' : 'text-slate-600 group-hover:text-slate-900'}`}>{label}</span>
+      <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-blue-600' : 'text-slate-900 group-hover:text-slate-900'}`}>{label}</span>
     )}
 
     {showPlus && !collapsed && (
@@ -663,10 +664,12 @@ function AuthenticatedApp() {
       <Route path="/sales-orders"       element={shell(SalesOrdersView)} />
             <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
       <Route path="/sales-invoices"     element={shell(SalesInvoicesView)} />
+      <Route path="/sales-invoices/:id" element={shell(SalesInvoicesView)} />
       <Route path="/sales/new-invoice"  element={shell(ProfessionalInvoiceView)} />
       <Route path="/sales/edit-invoice/:id" element={shell(ProfessionalInvoiceView)} />
       <Route path="/recurring-invoices" element={shell(RecurringInvoicesView)} />
       <Route path="/recurring-invoices/new" element={shell(RecurringInvoicesView)} />
+      <Route path="/recurring-invoices/view/:id" element={shell(RecurringInvoicesView)} />
       <Route path="/recurring-invoices/edit/:id" element={shell(RecurringInvoicesView)} />
       <Route path="/delivery-challans"  element={shell(DeliveryChallansView)} />
       <Route path="/delivery-challans/new" element={shell(DeliveryChallansView)} />
@@ -679,6 +682,11 @@ function AuthenticatedApp() {
       <Route path="/credit-notes/edit/:id" element={shell(CreditNotesView)} />
       <Route path="/credit-notes/view/:id" element={shell(CreditNotesView)} />
       <Route path="/tax-invoices"       element={shell(GSTInvoiceView)} />
+
+      {/* Time Tracking */}
+      <Route path="/time-tracking/projects"      element={shell(ProjectsView)} />
+      <Route path="/time-tracking/projects/new"  element={shell(ProjectsView)} />
+      <Route path="/time-tracking/projects/edit/:id" element={shell(ProjectsView)} />
 
       {/* Operations */}
       <Route path="/inventory"          element={shell(InventoryView)} />

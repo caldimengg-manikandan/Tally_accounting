@@ -360,7 +360,7 @@ const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
                     <button onClick={handleEmail} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded flex items-center gap-1.5 text-[12px] font-bold transition-all">
                         <Mail size={14}/> Email
                     </button>
-                    <button onClick={handlePrint} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded flex items-center gap-1.5 text-[12px] font-bold transition-all">
+                    <button onClick={handlePrint} className="px-4 py-1.5 bg-slate-50 text-slate-700 rounded flex items-center gap-1.5 text-[12px] font-bold transition-all border border-slate-200 hover:bg-white hover:border-blue-400">
                         <Printer size={14}/> PDF/Print <ChevronDown size={14}/>
                     </button>
                     <span className="w-px h-5 bg-slate-100 mx-2" />
@@ -373,8 +373,8 @@ const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
             </div>
 
             {/* Document Pane */}
-            <div className="flex-1 overflow-y-auto p-16 bg-[#f8fafc] flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all">
-                <div className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-lg min-h-[1050px] w-full max-w-4xl mx-auto p-12 relative overflow-hidden border border-slate-100 mb-20 animate-fade-up">
+            <div className="flex-1 overflow-y-auto p-4 md:p-12 lg:p-16 bg-[#f8fafc] flex flex-col items-center custom-scrollbar print:p-0 print:bg-white print:overflow-visible transition-all">
+                <div className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-lg min-h-[1050px] w-full max-w-4xl mx-auto p-12 relative overflow-hidden border border-slate-100 mb-20 animate-fade-up print:shadow-none print:border-none print:m-0 print:rounded-none">
                     {/* Status Ribbon */}
                     <div className="absolute top-8 -right-12 w-48 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] transform rotate-45 text-center shadow-lg border-y-2 border-emerald-400 z-10 no-print">
                         {challan.status}
@@ -411,33 +411,40 @@ const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
                     </div>
 
                     {/* Table */}
-                    <div className="mb-12">
+                    <div className="mb-20 print:mb-0">
                         <table className="w-full border-collapse border border-slate-300">
                             <thead>
-                                <tr className="bg-slate-900 text-[10px] font-black text-white uppercase tracking-widest border-b border-slate-900">
+                                <tr className="bg-slate-900 text-[10px] font-black text-white uppercase tracking-widest border-b border-slate-900 no-print">
                                     <th className="py-4 px-2 border-r border-slate-800 w-12">#</th>
                                     <th className="py-4 px-4 border-r border-slate-800 text-left">Item & Description</th>
                                     <th className="py-4 px-2 border-r border-slate-800 w-24 text-center">Qty</th>
                                     <th className="py-4 px-2 border-r border-slate-800 w-32 text-center">Rate</th>
                                     <th className="py-4 px-2 w-40 text-center">Amount</th>
                                 </tr>
+                                <tr className="hidden print:table-row bg-white text-[10px] font-black text-slate-900 uppercase tracking-widest border-b-2 border-slate-900">
+                                    <th className="py-3 px-2 border-r border-slate-300 w-12">#</th>
+                                    <th className="py-3 px-4 border-r border-slate-300 text-left">Item & Description</th>
+                                    <th className="py-3 px-2 border-r border-slate-300 w-24 text-center">Qty</th>
+                                    <th className="py-3 px-2 border-r border-slate-300 w-32 text-center">Rate</th>
+                                    <th className="py-3 px-2 w-40 text-center">Amount</th>
+                                </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {challan.items?.map((item, idx) => (
                                     <tr key={idx} className="text-[12px] font-medium text-slate-700">
-                                        <td className="p-5 border-r border-slate-200 text-center font-bold text-slate-400">{idx + 1}</td>
-                                        <td className="p-5 border-r border-slate-200">
-                                            <p className="font-black text-slate-900 mb-1 text-[13px]">{item.Item?.name}</p>
-                                            <p className="text-[10px] text-slate-400 leading-relaxed italic line-clamp-2">{item.description}</p>
+                                        <td className="p-4 border-r border-slate-200 text-center font-bold text-slate-400">{idx + 1}</td>
+                                        <td className="p-4 border-r border-slate-200">
+                                            <p className="font-black text-slate-900 mb-0.5 text-[13px]">{item.Item?.name}</p>
+                                            <p className="text-[10px] text-slate-400 italic line-clamp-1">{item.description}</p>
                                         </td>
-                                        <td className="p-5 border-r border-slate-200 text-center font-black">{parseFloat(item.quantity).toFixed(2)}</td>
-                                        <td className="p-5 border-r border-slate-200 text-right font-bold text-slate-500">{formatCurrency(item.rate)}</td>
-                                        <td className="p-5 text-right font-black text-slate-900">{formatCurrency(item.amount)}</td>
+                                        <td className="p-4 border-r border-slate-200 text-center font-black">{parseFloat(item.quantity).toFixed(2)}</td>
+                                        <td className="p-4 border-r border-slate-200 text-right font-bold text-slate-500">{formatCurrency(item.rate)}</td>
+                                        <td className="p-4 text-right font-black text-slate-900">{formatCurrency(item.amount)}</td>
                                     </tr>
                                 ))}
                                 {/* Fillers */}
-                                {[...Array(Math.max(0, 8 - (challan.items?.length || 0)))].map((_, i) => (
-                                    <tr key={i} className="h-14">
+                                {[...Array(Math.max(0, 5 - (challan.items?.length || 0)))].map((_, i) => (
+                                    <tr key={i} className="h-12">
                                         <td className="border-r border-slate-100"></td>
                                         <td className="border-r border-slate-100"></td>
                                         <td className="border-r border-slate-100"></td>
@@ -448,24 +455,24 @@ const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
                             </tbody>
                         </table>
 
-                        {/* Totals Section */}
-                        <div className="flex border-x border-b border-slate-300 rounded-b shadow-[0_2px_5px_rgba(0,0,0,0.02)]">
-                            <div className="flex-1 p-10 flex flex-col justify-end bg-slate-50/10">
-                                <p className="text-[10px] font-black text-slate-400 italic uppercase tracking-[0.25em] mb-2 opacity-60">Total Amount In Words</p>
-                                <p className="text-[12px] font-black text-slate-800 underline decoration-slate-200 underline-offset-4">Indian Rupee Only</p>
+                        {/* Totals Section Refactored for Print Stability */}
+                        <div className="flex border-x border-b border-slate-300 rounded-b overflow-hidden break-inside-avoid">
+                            <div className="flex-1 p-8 flex flex-col justify-end bg-slate-50/10">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total Amount In Words</p>
+                                <p className="text-[11px] font-black text-slate-800 uppercase tracking-tighter">Indian Rupee Only</p>
                             </div>
-                            <div className="w-[360px] bg-white border-l border-slate-200">
-                                <div className="flex justify-between px-8 py-5 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                            <div className="w-[320px] bg-white border-l border-slate-200 pt-2 pb-1">
+                                <div className="flex justify-between px-8 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                                     <span>Sub Total</span>
                                     <span className="text-slate-900 font-black">{formatCurrency(challan.subTotal)}</span>
                                 </div>
-                                <div className="flex justify-between px-8 py-5 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                                <div className="flex justify-between px-8 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50">
                                     <span>IGST (18%)</span>
                                     <span className="text-slate-900 font-black">{formatCurrency(challan.taxAmount)}</span>
                                 </div>
-                                <div className="flex justify-between px-8 py-8 text-[14px] font-black text-slate-900 bg-slate-50/50">
-                                    <span className="text-slate-400 uppercase tracking-[0.2em] text-[10px]">Total Amount</span>
-                                    <span className="text-2xl tracking-tighter">₹{formatCurrency(challan.totalAmount)}</span>
+                                <div className="flex justify-between px-8 py-5 text-[15px] font-black text-slate-900 bg-slate-100/50" style={{ webkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                                    <span className="text-slate-500 uppercase tracking-[0.1em] text-[10px] mt-1">Grand Total</span>
+                                    <span className="text-xl tracking-tight">₹{formatCurrency(challan.totalAmount)}</span>
                                 </div>
                             </div>
                         </div>
@@ -530,6 +537,7 @@ const DeliveryChallansView = ({ companyId }) => {
     const isNew = location.pathname.includes('/new');
     const isEdit = location.pathname.includes('/edit');
     const isView = location.pathname.includes('/view');
+    const isDetail = isView && id;
 
     const fetchChallans = async () => {
         if (!companyId) return;
@@ -544,7 +552,7 @@ const DeliveryChallansView = ({ companyId }) => {
         }
     };
 
-    useEffect(() => { fetchChallans(); }, [companyId]);
+    useEffect(() => { fetchChallans(); }, [companyId, location.key]);
 
     const handleDelete = async () => {
         if (!deleteId) return;
@@ -552,6 +560,7 @@ const DeliveryChallansView = ({ companyId }) => {
             await deliveryChallanAPI.delete(deleteId);
             addNotification('Delivery Challan deleted', 'success');
             setDeleteId(null);
+            if (id === deleteId) navigate('/delivery-challans');
             fetchChallans();
         } catch (err) {
             addNotification('Failed to delete challan', 'error');
@@ -564,12 +573,9 @@ const DeliveryChallansView = ({ companyId }) => {
     ), [challans, searchTerm]);
 
     if (isNew || isEdit) return <DeliveryChallanForm companyId={companyId} navigate={navigate} editId={id} />;
-    
-    // When viewing a specific challan, show the detail view
-    if (isView && id) return <DeliveryChallanDetail id={id} navigate={navigate} companyId={companyId} />;
 
     return (
-        <div className="flex flex-col h-screen bg-[#f8fafc] overflow-hidden">
+        <div className="flex h-[calc(100vh-80px)] bg-[#f8fafc] overflow-hidden">
             <ConfirmModal 
                 isOpen={!!deleteId}
                 onClose={() => setDeleteId(null)}
@@ -579,113 +585,164 @@ const DeliveryChallansView = ({ companyId }) => {
                 type="danger"
             />
 
-            {/* Header Section */}
-            <div className="bg-white px-8 py-6 flex items-center justify-between border-b border-slate-200">
-                <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        Delivery Challans <ChevronDown size={20} className="text-slate-400 mt-1" />
-                    </h1>
+            {/* --- MASTER LIST (SIDEBAR) --- */}
+            <div className={`flex-col border-r border-slate-200 bg-white transition-all duration-300 flex no-print ${isDetail ? 'w-[380px]' : 'w-0 opacity-0 overflow-hidden'}`}>
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                    <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">All Challans</h3>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => navigate('/delivery-challans/new')} className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all">
+                            <Plus size={16} />
+                        </button>
+                        <button onClick={fetchChallans} className="p-1.5 text-slate-400 hover:text-blue-600 transition-all">
+                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center bg-slate-100 px-3 py-2 rounded-lg border border-slate-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                        <Search size={16} className="text-slate-400" />
+                <div className="p-4 border-b border-slate-50">
+                    <div className="relative group">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                         <input 
                             type="text" 
-                            placeholder="Search challans..." 
-                            value={searchTerm} 
-                            onChange={e => setSearchTerm(e.target.value)} 
-                            className="bg-transparent border-none outline-none ml-2 text-sm w-64 font-medium"
+                            placeholder="Quick find..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] font-semibold outline-none focus:bg-white focus:border-blue-500 transition-all"
                         />
                     </div>
-                    <button onClick={() => navigate('/delivery-challans/new')} className="bg-[#008ef0] hover:bg-[#007cd0] text-white px-5 py-2 rounded-lg font-bold text-[13px] flex items-center gap-2 transition-all shadow-md">
-                        <Plus size={18} /> New Challan
-                    </button>
-                    <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all border border-slate-200"><Settings size={18}/></button>
+                </div>
+                <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+                    {filtered.map(c => (
+                        <div 
+                            key={c.id}
+                            onClick={() => navigate(`/delivery-challans/view/${c.id}`)}
+                            className={`px-6 py-4 cursor-pointer transition-all border-l-4 ${id === c.id ? 'bg-blue-50 border-blue-600' : 'hover:bg-slate-50 border-transparent'}`}
+                        >
+                            <div className="flex justify-between items-start mb-1">
+                                <span className={`text-[13px] font-black ${id === c.id ? 'text-blue-600' : 'text-slate-800'}`}>{c.challanNumber}</span>
+                                <span className="text-[13px] font-black text-slate-900">₹{parseFloat(c.totalAmount).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                               <span className="text-[11px] font-bold text-slate-400 truncate max-w-[180px]">{c.Customer?.name}</span>
+                               <span className="text-[9px] font-black uppercase text-slate-300 border border-slate-100 px-1.5 py-0.5 rounded tracking-widest">{new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            {/* Table Section */}
-            <div className="flex-1 overflow-auto p-8">
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200">
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase">Date</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase">Challan #</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase">Customer</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase">Status</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase text-right">Amount</th>
-                                <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest uppercase text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3">
-                                            <Loader2 size={32} className="text-blue-500 animate-spin" />
-                                            <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Syncing Records...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 opacity-30">
-                                            <Truck size={48} className="text-slate-400" />
-                                            <span className="text-sm font-black text-slate-500 uppercase tracking-[0.3em]">No Documents Found</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filtered.map(c => (
-                                <tr 
-                                    key={c.id} 
-                                    onClick={() => navigate(`/delivery-challans/view/${c.id}`)}
-                                    className="hover:bg-blue-50/30 cursor-pointer transition-colors group"
-                                >
-                                    <td className="px-6 py-5 text-[13px] font-bold text-slate-600">
-                                        {new Date(c.date).toLocaleDateString('en-GB')}
-                                    </td>
-                                    <td className="px-6 py-5 text-[13px] font-black text-blue-600">
-                                        {c.challanNumber}
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="text-[14px] font-black text-slate-800">{c.Customer?.name}</div>
-                                        {c.referenceNumber && <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{c.referenceNumber}</div>}
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                            c.status === 'Open' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'
-                                        }`}>
-                                            {c.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right">
-                                        ₹{parseFloat(c.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); navigate(`/delivery-challans/edit/${c.id}`); }}
-                                                className="p-2 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded transition-all"
-                                                title="Edit"
+            {/* --- MAIN AREA (TABLE OR DETAIL) --- */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                {isDetail ? (
+                    <DeliveryChallanDetail id={id} navigate={navigate} companyId={companyId} />
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Table Header */}
+                        <div className="bg-white px-8 py-7 flex items-center justify-between border-b border-slate-200">
+                            <div>
+                                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Delivery Challans</h1>
+                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Manage product shipments and job work</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                                    <Search size={18} className="text-slate-300" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search by number or customer..." 
+                                        value={searchTerm} 
+                                        onChange={e => setSearchTerm(e.target.value)} 
+                                        className="bg-transparent border-none outline-none ml-3 text-[14px] w-72 font-semibold"
+                                    />
+                                </div>
+                                <button onClick={() => navigate('/delivery-challans/new')} className="bg-[#1e61f0] hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-black text-[13px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-200">
+                                    <Plus size={18} strokeWidth={3} /> New Challan
+                                </button>
+                                <button onClick={fetchChallans} className="p-3 bg-white border border-slate-200 text-slate-400 rounded-2xl hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">
+                                    <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Table Content */}
+                        <div className="flex-1 overflow-auto p-10 bg-slate-50/50">
+                            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                            <th className="px-10 py-6">Date</th>
+                                            <th className="px-10 py-6">Challan #</th>
+                                            <th className="px-10 py-6">Customer</th>
+                                            <th className="px-10 py-6">Status</th>
+                                            <th className="px-10 py-6 text-right">Amount</th>
+                                            <th className="px-10 py-6 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {loading ? (
+                                            <tr><td colSpan="6" className="py-32 text-center font-black text-slate-300 uppercase tracking-widest italic animate-pulse">Syncing Challans...</td></tr>
+                                        ) : filtered.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="6" className="py-32 text-center">
+                                                    <div className="flex flex-col items-center opacity-30">
+                                                        <Truck size={64} strokeWidth={1} className="text-slate-400 mb-4" />
+                                                        <span className="text-sm font-black text-slate-500 uppercase tracking-[0.4em]">No Shipments Recorded</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : filtered.map(c => (
+                                            <tr 
+                                                key={c.id} 
+                                                onClick={() => navigate(`/delivery-challans/view/${c.id}`)}
+                                                className={`hover:bg-blue-50/30 cursor-pointer transition-all group`}
                                             >
-                                                <Edit2 size={16}/>
-                                            </button>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); setDeleteId(c.id); }}
-                                                className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded transition-all"
-                                                title="Delete"
-                                            >
-                                                <Trash2 size={16}/>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                                <td className="px-10 py-6 text-[14px] font-bold text-slate-600">
+                                                    {new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                </td>
+                                                <td className="px-10 py-6 text-[14px] font-black text-blue-600">
+                                                    {c.challanNumber}
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <div className="flex items-center gap-3">
+                                                       <div className="w-9 h-9 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 font-bold text-[13px]">{c.Customer?.name?.charAt(0)}</div>
+                                                       <div>
+                                                           <div className="text-[14px] font-black text-slate-800">{c.Customer?.name}</div>
+                                                           {c.referenceNumber && <div className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">{c.referenceNumber}</div>}
+                                                       </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] ${
+                                                        c.status === 'Open' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'
+                                                    }`}>
+                                                        {c.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-10 py-6 text-[16px] font-black text-slate-900 text-right font-sans">
+                                                    ₹{parseFloat(c.totalAmount).toLocaleString()}
+                                                </td>
+                                                <td className="px-10 py-6">
+                                                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/delivery-challans/edit/${c.id}`); }}
+                                                            className="p-2.5 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-xl transition-all"
+                                                        >
+                                                            <Edit2 size={16}/>
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); setDeleteId(c.id); }}
+                                                            className="p-2.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-xl transition-all"
+                                                        >
+                                                            <Trash2 size={16}/>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

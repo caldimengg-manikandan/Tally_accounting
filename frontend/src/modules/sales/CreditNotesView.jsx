@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { creditNoteAPI, ledgerAPI, inventoryAPI } from '../../services/api';
+import { creditNoteAPI, ledgerAPI, inventoryAPI, salesAPI } from '../../services/api';
 import { 
   Plus, Calendar, Undo2, MoreHorizontal, Edit2, Trash2, 
   Settings, CheckCircle2, AlertCircle, Clock, ArrowRight,
@@ -127,8 +127,12 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
     };
 
     const handleSave = async (status = 'Open') => {
-        if (!formData.customerLedgerId || !formData.accountsReceivableId || lineItems.every(li => !li.itemId)) {
-            addNotification('Please select a Customer, AR Account and add at least one item.', 'error');
+        if (!formData.customerLedgerId || !formData.accountsReceivableId) {
+            addNotification('Please select both a Customer and an AR Account.', 'error');
+            return;
+        }
+        if (lineItems.every(li => !li.itemId)) {
+            addNotification('Please add at least one item to the credit note.', 'error');
             return;
         }
         setSaving(true);
@@ -200,6 +204,17 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                         </div>
                     </div>
                     <div className="pt-4 space-y-4">
+                        <div className="flex items-center gap-4">
+                            <label className="w-32 text-[12px] text-rose-500 font-bold tracking-tight">Account*</label>
+                            <select 
+                                value={formData.accountsReceivableId} 
+                                onChange={e => setFormData({...formData, accountsReceivableId: e.target.value})}
+                                className="flex-1 p-2 bg-[#f3f7ff]/50 border border-slate-200 rounded-lg text-[13px] font-semibold outline-none transition-all shadow-sm"
+                            >
+                                <option value="">Select AR Account</option>
+                                {arAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </select>
+                        </div>
                         <div className="flex items-center gap-4">
                             <label className="w-32 text-[12px] text-slate-500 font-bold">Salesperson</label>
                             <select value={formData.salesperson} onChange={e => setFormData({...formData, salesperson: e.target.value})} className="flex-1 p-2 border border-slate-200 rounded-lg text-[13px] font-semibold outline-none">
@@ -275,6 +290,10 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
     const [note, setNote] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    
+    // Application state
+    const [showApplyModal, setShowApplyModal] = useState(false);
+    const [openInvoices, setOpenInvoices] = useState([]);
 
     useEffect(() => {
         if (!id) return;
@@ -282,6 +301,17 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
     }, [id]);
 
     const formatCurrency = (val) => parseFloat(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const handleApplyToInvoices = async () => {
+        if (!note?.customerLedgerId) return;
+        try {
+            const res = await salesAPI.getOpenInvoices(note.customerLedgerId);
+            setOpenInvoices(res.data || []);
+            setShowApplyModal(true);
+        } catch (err) {
+            addNotification('Failed to fetch open invoices', 'error');
+        }
+    };
 
     const handleDelete = async () => {
         try {
@@ -322,6 +352,56 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                 </div>
             </div>
 
+            {/* Apply Credits Modal */}
+            {showApplyModal && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[1000] flex items-center justify-center p-4 animate-fade-in shadow-2xl">
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in border border-slate-200">
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <h3 className="text-[15px] font-bold text-slate-800">Apply Credits to Invoices</h3>
+                            <button onClick={() => setShowApplyModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={18}/></button>
+                        </div>
+                        <div className="p-10">
+                            {openInvoices.length === 0 ? (
+                                <div className="space-y-6">
+                                    <p className="text-[14px] text-slate-600 leading-relaxed py-4 border-b border-slate-50">
+                                        There are no invoices in the open status for this customer. Hence, credits cannot be applied.
+                                    </p>
+                                    <div className="flex justify-start pt-2">
+                                        <button 
+                                            onClick={() => setShowApplyModal(false)}
+                                            className="px-6 py-2 bg-[#008ef0] text-white rounded font-bold text-[13px] hover:bg-[#007cd0] shadow-md transition-all active:scale-95"
+                                        >
+                                            OK
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-4">Select Invoices to Apply Credit</p>
+                                    <table className="w-full text-left border-collapse border border-slate-100 rounded-lg overflow-hidden">
+                                        <thead className="bg-slate-50 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-4 py-3">Invoice #</th>
+                                                <th className="px-4 py-3">Date</th>
+                                                <th className="px-4 py-3 text-right">Balance</th>
+                                                <th className="px-4 py-3 text-right">Amount to Apply</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 italic text-slate-400 text-[11px]">
+                                            <tr><td colSpan="4" className="p-8 text-center">Implementation of credit allocation pending selected invoice logic.</td></tr>
+                                        </tbody>
+                                    </table>
+                                    <div className="flex justify-end gap-3 pt-6">
+                                        <button onClick={() => setShowApplyModal(false)} className="px-5 py-2 border border-slate-200 text-slate-500 rounded font-bold text-[12px]">Cancel</button>
+                                        <button className="px-5 py-2 bg-[#008ef0] text-white rounded font-bold text-[12px] opacity-50 cursor-not-allowed">Save Application</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Sub Toolbar (Zoho Style) */}
             <div className="bg-white border-b border-slate-100 px-6 py-2 flex items-center justify-between shadow-sm no-print">
                 <div className="flex items-center gap-1">
@@ -335,7 +415,10 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                         <Printer size={14}/> PDF/Print <ChevronDown size={14}/>
                     </button>
                     <span className="w-px h-5 bg-slate-100 mx-2" />
-                    <button className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded flex items-center gap-1.5 text-[12px] font-bold transition-all">
+                    <button 
+                        onClick={handleApplyToInvoices}
+                        className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded flex items-center gap-1.5 text-[12px] font-bold transition-all"
+                    >
                         <Plus size={14}/> Apply to Invoices
                     </button>
                     <button className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded flex items-center gap-1.5 text-[12px] font-bold transition-all">
@@ -506,60 +589,216 @@ const CreditNotesView = ({ companyId }) => {
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
+    const [modalConfig, setModalConfig] = useState({ isOpen: false, id: null, name: '' });
 
     const isNew = location.pathname.includes('/new');
     const isEdit = location.pathname.includes('/edit');
     const isView = location.pathname.includes('/view');
+    const isDetail = isView && id;
 
     const fetchNotes = async () => {
         if (!companyId) return;
-        try { setLoading(true); const res = await creditNoteAPI.getByCompany(companyId); setNotes(res.data || []); }
-        catch (err) { console.error(err); } finally { setLoading(false); }
+        try { 
+            setLoading(true); 
+            const res = await creditNoteAPI.getByCompany(companyId); 
+            setNotes(res.data || []); 
+        } catch (err) { 
+            console.error(err); 
+        } finally { 
+            setLoading(false); 
+        }
     };
 
-    useEffect(() => { fetchNotes(); }, [companyId]);
+    useEffect(() => { fetchNotes(); }, [companyId, location.key]);
 
-    const filtered = useMemo(() => notes.filter(n => n.creditNoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) || n.Customer?.name.toLowerCase().includes(searchTerm.toLowerCase())), [notes, searchTerm]);
+    const handleSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+        setSortConfig({ key, direction });
+    };
+
+    const sortedNotes = useMemo(() => {
+        let sortable = [...notes];
+        if (sortConfig.key) {
+            sortable.sort((a, b) => {
+                let aVal = a[sortConfig.key];
+                let bVal = b[sortConfig.key];
+                if (sortConfig.key === 'customerName') { aVal = a.Customer?.name || ''; bVal = b.Customer?.name || ''; }
+                if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return sortable;
+    }, [notes, sortConfig]);
+
+    const filtered = useMemo(() => sortedNotes.filter(n => 
+        n.creditNoteNumber.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (n.Customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    ), [sortedNotes, searchTerm]);
+
+    const handleDelete = async () => {
+        try {
+            await creditNoteAPI.delete(modalConfig.id);
+            addNotification('Credit Note deleted successfully', 'success');
+            setNotes(notes.filter(n => n.id !== modalConfig.id));
+            setModalConfig({ isOpen: false, id: null, name: '' });
+            if (id === modalConfig.id) navigate('/credit-notes');
+            fetchNotes();
+        } catch (err) {
+            addNotification('Failed to delete credit note', 'error');
+        }
+    };
 
     if (isNew || isEdit) return <CreditNoteForm companyId={companyId} navigate={navigate} editId={id} />;
 
     return (
-        <div className="flex h-screen bg-white overflow-hidden font-sans">
-            <div className={`no-print flex flex-col border-r border-slate-100 transition-all duration-300 bg-white ${isView ? 'w-[360px]' : 'flex-1'}`}>
-                <div className="px-5 py-4 bg-white border-b border-slate-100 flex items-center justify-between">
+        <div className="flex h-[calc(100vh-80px)] bg-[#f8fafc] overflow-hidden animate-fade-in">
+             <ConfirmModal 
+                isOpen={modalConfig.isOpen}
+                onClose={() => setModalConfig({ isOpen: false, id: null, name: '' })}
+                onConfirm={handleDelete}
+                title="Delete Credit Note"
+                message={`Are you sure you want to delete ${modalConfig.name}? This action will permanently remove the record and cannot be undone.`}
+                type="danger"
+                confirmText="Permanently Delete"
+            />
+
+            {/* --- MASTER LIST (SIDEBAR) --- */}
+            <div className={`flex-col border-r border-slate-200 bg-white transition-all duration-300 flex no-print ${isDetail ? 'w-[380px]' : 'w-0 opacity-0 overflow-hidden'}`}>
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                    <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">All Credit Notes</h3>
                     <div className="flex items-center gap-2">
-                        <button className="text-[15px] font-bold text-slate-800 flex items-center gap-1 hover:text-blue-600 transition-all whitespace-nowrap">All Credit Notes <ChevronDown size={14} className="mt-0.5" /></button>
-                    </div>
-                    <div className="flex items-center gap-1.5 ml-4">
-                        <button onClick={() => navigate('/credit-notes/new')} className="p-1.5 bg-[#008ef0] text-white rounded font-bold transition-all hover:bg-[#007cd0] shadow-sm"><Plus size={16}/></button>
-                        <button className="p-1.5 text-slate-400 border border-slate-200 rounded hover:bg-slate-50 transition-all"><MoreVertical size={16}/></button>
+                        <button onClick={() => navigate('/credit-notes/new')} className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm transition-all">
+                            <Plus size={16} />
+                        </button>
+                        <button onClick={fetchNotes} className="p-1.5 text-slate-400 hover:text-blue-600 transition-all">
+                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                        </button>
                     </div>
                 </div>
-                <div className="px-5 py-2.5 bg-slate-50/40 border-b border-slate-100 flex items-center gap-2">
-                    <Search size={14} className="text-slate-400" />
-                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-slate-300" />
-                    <Filter size={14} className="text-slate-400" />
+                <div className="p-4 border-b border-slate-50">
+                    <div className="relative group">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                        <input 
+                            type="text" 
+                            placeholder="Quick find..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] font-semibold outline-none focus:bg-white focus:border-blue-500 transition-all"
+                        />
+                    </div>
                 </div>
-                <div className="flex-1 overflow-y-auto divide-y divide-slate-50 custom-scrollbar">
-                    {loading ? <div className="p-12 text-center font-bold text-slate-200 animate-pulse uppercase tracking-widest text-[10px]">Syncing...</div> : filtered.length === 0 ? <div className="p-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest opacity-40">No Records Found</div> : filtered.map(n => (
-                        <div key={n.id} onClick={() => navigate(`/credit-notes/view/${n.id}`)} className={`px-5 py-5 cursor-pointer transition-all border-l-4 ${id === n.id ? 'bg-[#f3f7ff] border-blue-600' : 'bg-white border-transparent hover:bg-slate-50'}`}>
-                            <div className="flex justify-between items-start mb-1"><span className={`text-[13px] font-black ${id === n.id ? 'text-blue-600' : 'text-slate-800'}`}>{n.Customer?.name}</span><span className="text-[13px] font-black text-slate-900 ml-4">₹{parseFloat(n.totalAmount).toLocaleString()}</span></div>
-                            <div className="flex justify-between items-center text-[11px] font-bold text-slate-500">
-                                <div className="opacity-80"><span className="hover:underline">{n.creditNoteNumber}</span><span className="mx-1.5 opacity-30">|</span><span>{new Date(n.date).toLocaleDateString('en-GB')}</span></div>
-                                <span className={`uppercase tracking-widest text-[9px] font-black ${n.status === 'Open' ? 'text-emerald-500' : 'text-slate-400'}`}>{n.status}</span>
+                <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+                    {filtered.map(n => (
+                        <div 
+                            key={n.id}
+                            onClick={() => navigate(`/credit-notes/view/${n.id}`)}
+                            className={`px-6 py-4 cursor-pointer transition-all border-l-4 ${id === n.id ? 'bg-blue-50 border-blue-600' : 'hover:bg-slate-50 border-transparent'}`}
+                        >
+                            <div className="flex justify-between items-start mb-1">
+                                <span className={`text-[13px] font-black ${id === n.id ? 'text-blue-600' : 'text-slate-800'}`}>{n.creditNoteNumber}</span>
+                                <span className="text-[13px] font-black text-slate-900">₹{parseFloat(n.totalAmount || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                               <span className="text-[11px] font-bold text-slate-400 truncate max-w-[180px]">{n.Customer?.name}</span>
+                               <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded tracking-widest ${n.status === 'Open' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>{n.status}</span>
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
-            {isView && id ? <CreditNoteDetail id={id} navigate={navigate} companyId={companyId} /> : (
-                <div className="flex-1 flex flex-col items-center justify-center bg-[#fcfdfe] text-slate-300 transition-all animate-fade-in">
-                    <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm">
-                        <Undo2 size={48} className="opacity-20" />
+
+            {/* --- MAIN AREA (TABLE OR DETAIL) --- */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                {isDetail ? (
+                    <CreditNoteDetail id={id} navigate={navigate} companyId={companyId} />
+                ) : (
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        {/* Table Header */}
+                        <div className="bg-white p-8 flex items-center justify-between border-b border-slate-100">
+                            <div>
+                                <h1 className="text-[28px] font-black text-slate-900 tracking-tighter uppercase">Credit Notes</h1>
+                                <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sales Returns & Adjustments</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/credit-notes/new')} className="px-6 py-2.5 bg-blue-600 text-white rounded-[4px] font-black text-[13px] hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all flex items-center gap-2 uppercase tracking-widest">
+                                    <Plus size={18} /> Issue Credit Note
+                                </button>
+                                <button onClick={fetchNotes} className="p-2.5 border border-slate-200 rounded text-slate-400 hover:bg-slate-50 transition-colors">
+                                    <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Search & Bar */}
+                        <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/20">
+                            <div className="relative w-96 group">
+                                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search by number or customer..." 
+                                    value={searchTerm} 
+                                    onChange={e => setSearchTerm(e.target.value)} 
+                                    className="w-full pl-12 pr-4 py-2 border border-slate-200 rounded-[4px] text-[13px] font-bold outline-none focus:border-blue-500 transition-all bg-white shadow-sm"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Table Content */}
+                        <div className="flex-1 overflow-auto bg-white">
+                            <table className="w-full text-left">
+                                <thead className="sticky top-0 bg-white z-10">
+                                    <tr className="border-b border-slate-100 text-[11px] font-black text-slate-300 uppercase tracking-widest">
+                                        <th className="px-10 py-5">Date</th>
+                                        <th className="px-10 py-5">Credit Note #</th>
+                                        <th className="px-10 py-5 cursor-pointer hover:text-blue-600" onClick={() => handleSort('customerName')}>Customer</th>
+                                        <th className="px-10 py-5">Status</th>
+                                        <th className="px-10 py-5 text-right">Amount</th>
+                                        <th className="px-10 py-5 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {loading ? (
+                                        <tr><td colSpan="6" className="py-24 text-center font-black text-slate-300 uppercase tracking-widest italic animate-pulse">Syncing Credit Data...</td></tr>
+                                    ) : filtered.length === 0 ? (
+                                        <tr><td colSpan="6" className="py-24 text-center text-slate-300 font-black uppercase tracking-widest italic">No credit notes found</td></tr>
+                                    ) : filtered.map(n => (
+                                        <tr 
+                                            key={n.id} 
+                                            onClick={() => navigate(`/credit-notes/view/${n.id}`)}
+                                            className="hover:bg-blue-50/30 transition-colors cursor-pointer group"
+                                        >
+                                            <td className="px-10 py-6 text-[14px] font-bold text-slate-500">
+                                                {new Date(n.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </td>
+                                            <td className="px-10 py-6 text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase">{n.creditNoteNumber}</td>
+                                            <td className="px-10 py-6 text-[14px] font-black text-slate-800">{n.Customer?.name}</td>
+                                            <td className="px-10 py-6">
+                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                                    n.status === 'Open' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'
+                                                }`}>
+                                                    {n.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-10 py-6 text-right font-black text-slate-900 text-[15px] tracking-tight whitespace-nowrap">
+                                                ₹{parseFloat(n.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="px-10 py-6">
+                                                <div className="flex items-center justify-center gap-2 transition-all">
+                                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/credit-notes/edit/${n.id}`); }} className="p-1.5 hover:bg-white rounded text-blue-600 border border-transparent hover:border-blue-100" title="Edit"><Edit2 size={14}/></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setModalConfig({ isOpen: true, id: n.id, name: n.creditNoteNumber }); }} className="p-1.5 hover:bg-white rounded text-rose-600 border border-transparent hover:border-rose-100" title="Delete"><Trash2 size={14}/></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                </table>
+                        </div>
                     </div>
-                    <p className="uppercase tracking-[0.4em] text-[10px] font-black opacity-30 italic">Select a record to preview session</p>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };

@@ -22,6 +22,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DOUBLE,
       defaultValue: 0.00
     },
+    groupName: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     // Customer/Vendor Specific Fields
     customerType: {
       type: DataTypes.ENUM('Business', 'Individual'),

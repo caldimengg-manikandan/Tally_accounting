@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Plus, Trash2, Save, Printer, ArrowLeft, 
-  Search, Info, Check, Loader2, X, Settings, ChevronDown, File
+  Search, Info, Check, Loader2, X, Settings, ChevronDown, File, AlertTriangle
 } from 'lucide-react';
+import ConfirmModal from '../../components/ConfirmModal';
 import { ledgerAPI, inventoryAPI, salesAPI, companyAPI } from '../../services/api';
 
 export default function ProfessionalInvoiceView() {
@@ -44,6 +45,7 @@ export default function ProfessionalInvoiceView() {
   const [termsText,  setTermsText]  = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
 
   // ─── Load Data ──────────────────────────────────────────────────
   useEffect(() => {
@@ -162,7 +164,17 @@ export default function ProfessionalInvoiceView() {
   };
 
   const handleSave = async (status = 'Confirmed') => {
-    if (!customerId) return alert('Please select a customer');
+    if (!customerId) {
+        setModalConfig({
+            isOpen: true,
+            title: 'Customer Missing',
+            message: 'Please select a customer before saving the invoice.',
+            type: 'warning',
+            showCancel: false,
+            confirmText: 'Got it'
+        });
+        return;
+    }
     setIsSaving(true);
     try {
       const payload = {
@@ -181,7 +193,14 @@ export default function ProfessionalInvoiceView() {
       }
       navigate('/vouchers');
     } catch (err) {
-      alert('Failed to save invoice');
+      setModalConfig({
+          isOpen: true,
+          title: 'Save Failed',
+          message: 'Failed to save invoice. Please check your connection and try again.',
+          type: 'danger',
+          showCancel: false,
+          confirmText: 'Retry'
+      });
     } finally {
       setIsSaving(false);
     }
@@ -232,7 +251,14 @@ export default function ProfessionalInvoiceView() {
               <div className="flex-1 flex items-center gap-2">
                 <input type="text" value={invoiceNo} readOnly className="flex-1 p-2 border border-slate-200 rounded text-sm bg-slate-50" />
                 <button 
-                  onClick={() => alert('Invoice Auto-numbering configuration.')}
+                  onClick={() => setModalConfig({
+                      isOpen: true,
+                      title: 'Configuration',
+                      message: 'Invoice Auto-numbering and prefix settings can be managed in the Settings panel.',
+                      type: 'info',
+                      showCancel: false,
+                      confirmText: 'Close'
+                  })}
                   className="text-slate-400 hover:text-blue-600 transition-colors"
                 >
                   <Settings size={18}/>
@@ -489,6 +515,16 @@ export default function ProfessionalInvoiceView() {
            <button onClick={() => navigate(-1)} className="px-6 py-2 border border-slate-200 rounded text-sm font-medium hover:bg-slate-50">Cancel</button>
         </div>
       </div>
+      
+      <ConfirmModal 
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        showCancel={modalConfig.showCancel}
+        confirmText={modalConfig.confirmText}
+      />
     </div>
   );
 }

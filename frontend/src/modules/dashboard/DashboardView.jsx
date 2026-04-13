@@ -48,6 +48,23 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
     Contra:  'bg-amber-50 text-amber-600 border border-amber-100',
   };
 
+  const formatDescription = (v) => {
+    const val = v.narration;
+    const type = v.voucherType;
+    if (!val) return type === 'Payment' ? 'Outgoing Payment' : type === 'Receipt' ? 'Incoming Receipt' : 'General Transaction';
+    try {
+      if (typeof val === 'string' && val.trim().startsWith('{')) {
+        const parsed = JSON.parse(val);
+        if (type === 'Payment' && parsed.vendor) return `Payment to ${parsed.vendor}`;
+        if (type === 'Receipt' && (parsed.customer || parsed.customerName)) return `Receipt from ${parsed.customer || parsed.customerName}`;
+        if (parsed.notes) return parsed.notes;
+      }
+      return val;
+    } catch (e) {
+      return val;
+    }
+  };
+
   return (
     <div className="p-8 lg:p-12 max-w-[1600px] mx-auto space-y-10 animate-fade-in bg-[#f8fafc] min-h-screen font-sans">
       
@@ -124,49 +141,49 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
                </button>
             </div>
             
-            <div className="flex-1">
-               {liveVouchers.length === 0 ? (
-                 <div className="py-32 text-center opacity-30 flex flex-col items-center">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                       <AlertCircle size={32} strokeWidth={1}/>
+<div className="flex-1">
+        {liveVouchers.length === 0 ? (
+          <div className="py-32 text-center opacity-30 flex flex-col items-center">
+             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle size={32} strokeWidth={1}/>
+             </div>
+             <p className="text-[11px] font-black uppercase tracking-[0.2em]">Data Synchronizing...</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+             {liveVouchers.map(v => {
+               const amount = (v.Transactions || []).reduce((a, t) => a + (parseFloat(t.debit) || 0), 0);
+               return (
+                 <div key={v.id} onClick={() => navigate('/vouchers')}
+                   className="px-8 py-5 flex items-center justify-between hover:bg-slate-50/50 transition-all group cursor-pointer border-l-2 border-transparent hover:border-blue-500">
+                    <div className="flex items-center gap-5">
+                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black
+                          ${v.voucherType === 'Receipt' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
+                            v.voucherType === 'Payment' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 
+                            v.voucherType === 'Contra' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
+                          {v.voucherType === 'Receipt' ? <ArrowDownRight size={16} strokeWidth={2}/> : <ArrowUpRight size={16} strokeWidth={2}/>}
+                       </div>
+                       <div>
+                          <div className="font-bold text-slate-900 text-[14px] leading-tight mb-1">{formatDescription(v)}</div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${VOUCHER_TYPE_COLOR[v.voucherType] || 'bg-slate-100 text-slate-600'}`}>
+                              {v.voucherType}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400 tracking-tight">#{v.voucherNumber} · {fmtDate(v.date)}</span>
+                          </div>
+                       </div>
                     </div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.2em]">Data Synchronizing...</p>
+                    <div className="text-right">
+                       <div className="font-black text-slate-900 text-base">{fmt(amount)}</div>
+                       <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Currency (INR)</div>
+                    </div>
                  </div>
-               ) : (
-                 <div className="divide-y divide-slate-50">
-                    {liveVouchers.map(v => {
-                      const amount = (v.Transactions || []).reduce((a, t) => a + (parseFloat(t.debit) || 0), 0);
-                      return (
-                        <div key={v.id} onClick={() => navigate('/vouchers')}
-                          className="px-8 py-5 flex items-center justify-between hover:bg-slate-50/50 transition-all group cursor-pointer border-l-2 border-transparent hover:border-blue-500">
-                           <div className="flex items-center gap-5">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black
-                                 ${v.voucherType === 'Receipt' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
-                                   v.voucherType === 'Payment' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 
-                                   v.voucherType === 'Contra' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
-                                 {v.voucherType === 'Receipt' ? <ArrowDownRight size={16} strokeWidth={2}/> : <ArrowUpRight size={16} strokeWidth={2}/>}
-                              </div>
-                              <div>
-                                 <div className="font-bold text-slate-900 text-[14px] leading-tight mb-1">{v.narration || 'General Transaction'}</div>
-                                 <div className="flex items-center gap-2">
-                                   <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${VOUCHER_TYPE_COLOR[v.voucherType] || 'bg-slate-100 text-slate-600'}`}>
-                                     {v.voucherType}
-                                   </span>
-                                   <span className="text-[10px] font-bold text-slate-400 tracking-tight">#{v.voucherNumber} · {fmtDate(v.date)}</span>
-                                 </div>
-                              </div>
-                           </div>
-                           <div className="text-right">
-                              <div className="font-black text-slate-900 text-base">{fmt(amount)}</div>
-                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Currency (INR)</div>
-                           </div>
-                        </div>
-                      );
-                    })}
-                 </div>
-               )}
-            </div>
-         </div>
+               );
+             })}
+          </div>
+        )}
+      </div>
+    </div>
 
          {/* SIDE HUB */}
          <div className="space-y-8">

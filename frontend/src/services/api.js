@@ -184,6 +184,16 @@ export const creditNoteAPI = {
   delete: (id) => api.delete(`/credit-notes/${id}`)
 };
 
+// ─── Time Tracking ──────────────────────────────────
+export const projectAPI = {
+  create: (data) => api.post('/projects', data),
+  getByCompany: (companyId) => api.get(`/projects/${companyId}`),
+  getById: (id) => api.get(`/projects/detail/${id}`),
+  update: (id, data) => api.put(`/projects/${id}`, data),
+  delete: (id) => api.delete(`/projects/${id}`),
+};
+
+
 // ─── Cost Centers ──────────────────────────────────
 export const costCenterAPI = {
   create: (data) => api.post('/cost-centers', data),

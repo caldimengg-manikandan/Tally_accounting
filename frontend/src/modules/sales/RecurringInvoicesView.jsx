@@ -400,6 +400,252 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RECURRING INVOICE DETAIL VIEW
+// ─────────────────────────────────────────────────────────────────────────────
+const RecurringInvoiceDetail = ({ id, companyId, navigate }) => {
+    const { addNotification } = useNotificationStore();
+    const [template, setTemplate] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('Overview');
+
+    useEffect(() => {
+        if (!id || !companyId) return;
+        setLoading(true);
+        recurringInvoiceAPI.getByCompany(companyId).then(res => {
+            const found = res.data.find(t => t.id === id);
+            setTemplate(found);
+        }).finally(() => setLoading(false));
+    }, [id, companyId]);
+
+    if (loading) return <div className="p-32 text-center font-bold text-slate-300 animate-pulse uppercase tracking-[0.3em]">Loading Profile Details...</div>;
+    if (!template) return <div className="p-32 text-center text-slate-400">Profile not found.</div>;
+
+    const items = JSON.parse(template.itemsJson || '[]');
+
+    return (
+        <div className="p-8 bg-[#f8fafc] min-h-screen font-sans animate-fade-in">
+            <header className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('/recurring-invoices')} className="p-2 hover:bg-white rounded-xl text-slate-400 transition-all shadow-sm"><ArrowLeft size={20} /></button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{template.templateName}</h1>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{template.customerName}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => navigate(`/recurring-invoices/edit/${template.id}`)}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        <Edit2 size={16} /> Edit Profile
+                    </button>
+                    <button className="px-6 py-2.5 bg-[#1e61f0] text-white rounded-xl font-bold text-[13px] hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 uppercase tracking-widest">
+                        Create Invoice Now
+                    </button>
+                </div>
+            </header>
+
+            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden min-h-[600px] flex flex-col">
+                <div className="px-10 py-6 border-b border-slate-100 flex items-center gap-8">
+                    {['Overview', 'Next Invoice', 'Recent Activities'].map(tab => (
+                        <button 
+                            key={tab} 
+                            onClick={() => setActiveTab(tab)}
+                            className={`text-[12px] font-black uppercase tracking-widest pb-2 transition-all border-b-2 ${activeTab === tab ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex-1 p-10">
+                    {activeTab === 'Overview' && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+                            <div className="space-y-8">
+                                <section>
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Automation Details</h3>
+                                    <div className="space-y-4">
+                                        {[
+                                            { label: 'Profile Status', value: template.status, isStatus: true },
+                                            { label: 'Start Date', value: new Date(template.startDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) },
+                                            { label: 'End Date', value: template.endDate ? new Date(template.endDate).toLocaleDateString() : 'Never Expires' },
+                                            { label: 'Repeat Cycle', value: template.frequency },
+                                            { label: 'Payment Terms', value: 'Due on Receipt' }
+                                        ].map(row => (
+                                            <div key={row.label} className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                                                <span className="text-slate-500 font-medium">{row.label}</span>
+                                                <span className={`${row.isStatus ? (row.value === 'Active' ? 'text-emerald-500' : 'text-rose-500') : 'text-slate-900'} font-bold`}>{row.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Billing Configuration</h3>
+                                    <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
+                                        <div className="flex items-center gap-3 text-slate-600">
+                                            <Info size={16} className="text-blue-500" />
+                                            <p className="text-[13px] font-medium leading-relaxed">
+                                                Invoices will be generated <span className="font-bold text-slate-900">{template.frequency}</span> starting from {new Date(template.startDate).toLocaleDateString()}. 
+                                                Auto-send is {template.autoSend ? 'ENABLED' : 'DISABLED'}.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <div className="space-y-8">
+                                <section className="bg-blue-600 p-8 rounded-[2rem] text-white shadow-xl shadow-blue-100">
+                                    <div className="flex justify-between items-start mb-8">
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-widest opacity-70 mb-1">Total Recurring amount</p>
+                                            <h2 className="text-3xl font-black">₹{parseFloat(template.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h2>
+                                        </div>
+                                        <Tag size={24} className="opacity-40" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Cycle</p>
+                                            <p className="text-sm font-black">{template.frequency}</p>
+                                        </div>
+                                        <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Next Run</p>
+                                            <p className="text-sm font-black">{new Date(template.nextGenerationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Item Snapshot</h3>
+                                    <div className="space-y-3">
+                                        {items.map((item, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs">{item.name?.charAt(0)}</div>
+                                                    <div>
+                                                        <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Quantity: {item.quantity}</p>
+                                                    </div>
+                                                </div>
+                                                <span className="text-sm font-bold text-slate-900">₹{parseFloat(item.amount || 0).toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'Next Invoice' && (
+                        <div className="py-10">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-10 text-center">Next Scheduled Invoice Preview</h3>
+                            <div className="max-w-2xl mx-auto bg-white shadow-[0_20px_60px_rgba(0,0,0,0.1)] rounded-xl border border-slate-100 overflow-hidden relative">
+                                <div className="absolute top-0 right-0 p-8">
+                                     <div className="bg-emerald-500 text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest absolute top-0 right-0">ACTIVE</div>
+                                </div>
+                                <div className="p-12 space-y-12">
+                                    <div className="flex justify-between items-start">
+                                        <div className="space-y-1">
+                                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Your Company Ltd</h4>
+                                            <p className="text-[11px] text-slate-400 font-medium">Tamil Nadu, India</p>
+                                        </div>
+                                        <h2 className="text-2xl font-black text-slate-800/20 uppercase tracking-tighter">TAX INVOICE</h2>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-12 text-[11px]">
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between border-b border-slate-50 pb-2">
+                                                <span className="text-slate-400 font-bold uppercase">#</span>
+                                                <span className="text-slate-800 font-black">Will be generated automatically</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-50 pb-2">
+                                                <span className="text-slate-400 font-bold uppercase">Invoice Date</span>
+                                                <span className="text-slate-800 font-black">{new Date(template.nextGenerationDate).toLocaleDateString()}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-50 pb-2">
+                                                <span className="text-slate-400 font-bold uppercase">Terms</span>
+                                                <span className="text-slate-800 font-black">Due on Receipt</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-slate-400 font-bold uppercase">Bill To</p>
+                                            <p className="text-blue-600 font-black text-xs">{template.customerName}</p>
+                                        </div>
+                                    </div>
+
+                                    <table className="w-full text-[11px]">
+                                        <thead>
+                                            <tr className="bg-slate-50 text-slate-400 font-black uppercase text-[9px] border-y border-slate-100">
+                                                <th className="px-4 py-2 text-left"># Item & Description</th>
+                                                <th className="px-4 py-2 text-right">Qty</th>
+                                                <th className="px-4 py-2 text-right">Rate</th>
+                                                <th className="px-4 py-2 text-right">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {items.map((it, idx) => (
+                                                <tr key={idx} className="border-b border-slate-50">
+                                                    <td className="px-4 py-4 font-bold text-slate-800">{idx + 1}. {it.name}</td>
+                                                    <td className="px-4 py-4 text-right font-medium text-slate-500">{it.quantity}.00</td>
+                                                    <td className="px-4 py-4 text-right font-medium text-slate-500">{parseFloat(it.rate).toLocaleString()}</td>
+                                                    <td className="px-4 py-4 text-right font-black text-slate-800">{parseFloat(it.amount).toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+
+                                    <div className="flex justify-end pt-6">
+                                        <div className="w-64 space-y-3">
+                                            <div className="flex justify-between text-[11px]">
+                                                <span className="text-slate-400 font-bold">Sub Total</span>
+                                                <span className="text-slate-800 font-black">{parseFloat(template.totalAmount - (template.taxAmount || 0)).toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between text-lg font-black text-slate-900 pt-3 border-t-2 border-slate-900 border-double">
+                                                <span>Total</span>
+                                                <span>₹{parseFloat(template.totalAmount).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'Recent Activities' && (
+                        <div className="max-w-3xl mx-auto py-10">
+                            <div className="relative border-l-2 border-blue-100 ml-48 space-y-12">
+                                <div className="relative">
+                                    <div className="absolute -left-52 top-0 w-48 text-right pr-8">
+                                        <p className="text-[12px] font-black text-slate-800 uppercase tracking-tight">{new Date().toLocaleDateString()}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                    </div>
+                                    <div className="absolute -left-[11px] top-1.5 w-5 h-5 bg-blue-600 rounded-full border-4 border-white shadow-sm shadow-blue-200"></div>
+                                    <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm ml-8 transition-all hover:border-blue-200 hover:shadow-md">
+                                        <p className="text-[13px] font-bold text-slate-800">Profile Modernized</p>
+                                        <p className="text-[11px] text-slate-400 font-medium mt-1">Automation template updated to full-screen premium layout by <span className="text-blue-600 font-bold uppercase tracking-tighter">{JSON.parse(localStorage.getItem('user') || '{}').email?.split('@')[0] || 'Admin'}</span></p>
+                                    </div>
+                                </div>
+                                <div className="relative opacity-60">
+                                    <div className="absolute -left-52 top-0 w-48 text-right pr-8">
+                                        <p className="text-[12px] font-bold text-slate-500 uppercase tracking-tight">{new Date(template.createdAt).toLocaleDateString()}</p>
+                                        <p className="text-[10px] font-medium text-slate-300 uppercase tracking-widest">10:52 AM</p>
+                                    </div>
+                                    <div className="absolute -left-[11px] top-1.5 w-5 h-5 bg-slate-200 rounded-full border-4 border-white"></div>
+                                    <div className="bg-white border border-slate-50 p-6 rounded-2xl ml-8">
+                                        <p className="text-[13px] font-bold text-slate-500">Recurring Invoice created for ₹{parseFloat(template.totalAmount).toLocaleString()}</p>
+                                        <p className="text-[11px] text-slate-400 font-medium mt-1">by System Administrator</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // RECURRING INVOICES VIEW (LIST)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -411,23 +657,20 @@ const RecurringInvoicesView = ({ companyId }) => {
   
   const isNew = location.pathname.includes('/new');
   const isEdit = location.pathname.includes('/edit');
+  const isDetail = location.pathname.includes('/view') || (!isNew && !isEdit && id);
 
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   
   const fetchTemplates = async () => {
-    if (!companyId) {
-        console.warn('RecurringInvoicesView: companyId is missing');
-        return;
-    }
-    console.log('RecurringInvoicesView: Fetching for companyId:', companyId);
+    if (!companyId) return;
     try {
       setLoading(true);
       const res = await recurringInvoiceAPI.getByCompany(companyId);
-      console.log('RecurringInvoicesView: Received templates:', res.data);
       setTemplates(res.data || []);
     } catch (err) {
       console.error('Fetch Templates Error:', err);
@@ -443,21 +686,14 @@ const RecurringInvoicesView = ({ companyId }) => {
   const handleRunAutomation = async () => {
     try {
       setRunning(true);
-      console.log('RecurringInvoicesView: Running manual cycle...');
       const res = await recurringInvoiceAPI.processDue();
       addNotification(res.data.message || 'Automation run complete', 'success');
       fetchTemplates();
     } catch (err) {
-      console.error('Run Automation Error:', err);
       addNotification('Automation run failed', 'error');
     } finally {
       setRunning(false);
     }
-  };
-
-  const handleDelete = (tid) => {
-    setDeleteId(tid);
-    setIsDeleteModalOpen(true);
   };
 
   const confirmDelete = async () => {
@@ -465,6 +701,7 @@ const RecurringInvoicesView = ({ companyId }) => {
     try {
       await recurringInvoiceAPI.delete(deleteId);
       addNotification('Template deleted successfully', 'success');
+      if (id === deleteId) navigate('/recurring-invoices');
       fetchTemplates();
     } catch (err) {
       addNotification('Failed to delete template', 'error');
@@ -485,141 +722,163 @@ const RecurringInvoicesView = ({ companyId }) => {
      }
   };
 
+  const filtered = templates.filter(t => 
+    t.templateName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    t.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (isNew || isEdit) return <RecurringInvoiceForm companyId={companyId} navigate={navigate} editId={id} />;
 
-  if (loading) return <div className="p-32 text-center font-bold text-slate-400">Loading Automation Profiles...</div>;
-
   return (
-    <div className="flex flex-col min-h-screen bg-white">
-      <header className="px-8 py-4 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 z-[100]">
-        <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigate('/recurring-invoices')}>
-           <h1 className="text-[20px] font-bold text-slate-900">All Recurring Invoices</h1>
-           <ChevronDown size={18} className="text-blue-600 mt-1" />
-        </div>
-        <div className="flex items-center gap-3">
-           <button 
-             onClick={handleRunAutomation}
-             disabled={running}
-             className="px-4 py-2 border border-slate-200 text-slate-600 rounded-md text-[13px] font-medium hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
-           >
-              {running ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} Run Cycle
-           </button>
-           <button 
-             onClick={() => navigate('/recurring-invoices/new')}
-             className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
-           >
-              <Plus size={18} strokeWidth={2.5} /> New
-           </button>
-        </div>
-      </header>
+    <div className="flex h-[calc(100vh-64px)] bg-[#f8fafc] overflow-hidden animate-fade-in">
+        <ConfirmModal 
+            isOpen={isDeleteModalOpen}
+            onClose={() => setIsDeleteModalOpen(false)}
+            onConfirm={confirmDelete}
+            title="Terminate Automation"
+            message="Are you sure you want to delete this recurring template?"
+            type="danger"
+        />
 
-      <div className="p-8">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-4">Profile Name</th>
-              <th className="px-6 py-4">Customer Name</th>
-              <th className="px-6 py-4">Frequency</th>
-              <th className="px-6 py-4">Last Generated</th>
-              <th className="px-6 py-4 text-center">Next Generation</th>
-              <th className="px-6 py-4 text-right">Amount</th>
-              <th className="px-6 py-4 text-center">Status</th>
-              <th className="px-6 py-4 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {templates.length > 0 ? (
-              templates.map(t => (
-                <tr 
-                  key={t.id} 
-                  className="hover:bg-slate-50 transition-colors cursor-pointer group"
-                >
-                  <td className="px-6 py-4 text-[14px] font-medium text-blue-600 group-hover:underline" onClick={() => navigate(`/recurring-invoices/edit/${t.id}`)}>
-                    {t.templateName}
-                  </td>
-                  <td className="px-6 py-4 text-[14px] text-slate-600">{t.customerName}</td>
-                  <td className="px-6 py-4 text-[13px] text-slate-500 font-medium whitespace-nowrap">{t.frequency}</td>
-                  <td className="px-6 py-4 text-[13px] text-slate-500 font-medium whitespace-nowrap italic">
-                    {t.lastGeneratedDate ? new Date(t.lastGeneratedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Never'}
-                  </td>
-                  <td className="px-6 py-4 text-center text-[13px] text-slate-600 font-medium">
-                    {new Date(t.nextGenerationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="text-[14px] text-slate-900 font-medium whitespace-nowrap">
-                      ₹ {parseFloat(t.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border ${t.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                       <button 
-                        onClick={(e) => { e.stopPropagation(); toggleStatus(t); }} 
-                        className={`p-1.5 rounded border transition-all shadow-sm ${t.status === 'Active' ? 'bg-amber-50 text-amber-500 border-amber-200' : 'bg-emerald-50 text-emerald-500 border-emerald-200'}`}
-                        title={t.status === 'Active' ? 'Pause' : 'Resume'}
-                       >
-                         {t.status === 'Active' ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-                       </button>
-                       <button 
-                         onClick={(e) => { e.stopPropagation(); navigate(`/recurring-invoices/edit/${t.id}`); }} 
-                         className="p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all"
-                         title="Edit Template"
-                       >
-                         <Edit2 size={14} />
-                       </button>
-                       <button 
-                         onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }} 
-                         className="p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 rounded shadow-sm transition-all"
-                         title="Delete Template"
-                       >
-                         <Trash2 size={14} />
-                       </button>
+        {/* --- MASTER LIST (LEFT SIDE) --- */}
+        <div className={`flex flex-col border-r border-slate-200 transition-all duration-500 overflow-hidden ${isDetail ? 'w-[400px] bg-white' : 'w-full p-8'}`}>
+            <header className={`flex items-center justify-between transition-all duration-300 ${isDetail ? 'p-6 border-b border-slate-100 mb-0' : 'mb-10'}`}>
+                <div className="space-y-1">
+                    <h1 className={`${isDetail ? 'text-lg' : 'text-[28px]'} font-black text-slate-900 tracking-tighter uppercase transition-all`}>
+                        {isDetail ? 'Automation Profiles' : 'Recurring Invoices'}
+                    </h1>
+                    {!isDetail && <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-1">Automated Billing Profiles</p>}
+                </div>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => navigate('/recurring-invoices/new')}
+                        className={`bg-[#1e61f0] text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-100 flex items-center gap-2 hover:bg-blue-700 ${isDetail ? 'p-2' : 'px-8 py-3.5 text-[13px] uppercase tracking-widest'}`}
+                    >
+                        <Plus size={isDetail ? 20 : 18} strokeWidth={2.5} />
+                        {!isDetail && "New Template"}
+                    </button>
+                    {isDetail && (
+                        <button onClick={fetchTemplates} className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:text-blue-600 transition-all">
+                             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                        </button>
+                    )}
+                </div>
+            </header>
+
+            {!isDetail && (
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="relative group flex-1 max-w-[400px]">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="Search automation profiles..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-2xl w-full outline-none focus:border-blue-500 transition-all font-semibold text-[14px] shadow-sm"
+                        />
                     </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="8" className="px-6 py-20 text-center">
-                   <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
-                         <RefreshCw size={24} />
-                      </div>
-                      <p className="text-slate-500 text-[14px]">No recurring invoices profiles found.</p>
-                      <div className="flex items-center gap-4">
-                        <button 
-                          onClick={() => navigate('/recurring-invoices/new')}
-                          className="text-blue-600 text-[13px] font-medium hover:underline"
-                        >
-                           Configure your first automation template
-                        </button>
-                        <span className="text-slate-300">|</span>
-                        <button 
-                          onClick={fetchTemplates}
-                          className="text-slate-400 text-[13px] font-medium hover:text-slate-600 flex items-center gap-1"
-                        >
-                           <RefreshCw size={12} /> Refresh List
-                        </button>
-                      </div>
-                   </div>
-                </td>
-              </tr>
+                    <button 
+                        onClick={handleRunAutomation}
+                        disabled={running}
+                        className="px-6 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold text-[13px] hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm uppercase tracking-widest"
+                    >
+                        {running ? <Loader2 size={18} className="animate-spin text-blue-500" /> : <RefreshCw size={18} className="text-blue-600" />} Cycle
+                    </button>
+                </div>
             )}
-          </tbody>
-        </table>
-      </div>
 
-      <ConfirmModal 
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={confirmDelete}
-        title="Terminate Automation Template"
-        message="Are you sure you want to delete this recurring invoice template? No more future invoices will be generated for this customer."
-      />
+            <div className={`flex-1 overflow-y-auto no-scrollbar bg-white`}>
+                <table className="w-full text-left">
+                    {!isDetail && (
+                        <thead className="sticky top-0 bg-white z-10">
+                            <tr className="bg-white text-[11px] font-black text-slate-300 uppercase tracking-widest border-b border-slate-100">
+                                <th className="px-10 py-5">Profile & Frequency</th>
+                                <th className="px-10 py-5">Customer</th>
+                                <th className="px-10 py-5">Last Run</th>
+                                <th className="px-10 py-5 text-center">Next Run</th>
+                                <th className="px-10 py-5 text-right">Amount</th>
+                                <th className="px-10 py-5 text-center">Status</th>
+                                <th className="px-10 py-5 text-center">Action</th>
+                            </tr>
+                        </thead>
+                    )}
+                    <tbody className="divide-y divide-slate-50">
+                        {loading ? (
+                            <tr><td colSpan="7" className="py-20 text-center font-black text-slate-300 uppercase tracking-widest italic animate-pulse whitespace-nowrap">Syncing Automation...</td></tr>
+                        ) : filtered.length === 0 ? (
+                            <tr><td colSpan="7" className="py-20 text-center text-slate-300 font-black uppercase tracking-widest">No automation profiles defined</td></tr>
+                        ) : filtered.map(t => (
+                            <tr 
+                                key={t.id} 
+                                onClick={() => navigate(`/recurring-invoices/view/${t.id}`)}
+                                className={`transition-all group cursor-pointer ${id === t.id ? 'bg-blue-50/50' : 'hover:bg-blue-50/30'}`}
+                            >
+                                {isDetail ? (
+                                    /* --- COMPACT LIST ITEM (SIDEBAR MODE) --- */
+                                    <td className="px-6 py-5">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex flex-col">
+                                                <span className={`text-[13px] font-black ${id === t.id ? 'text-blue-600' : 'text-slate-900'} transition-colors`}>{t.templateName}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 mt-0.5">{t.customerName}</span>
+                                            </div>
+                                            <span className="text-[14px] font-black text-slate-800">₹{parseFloat(t.totalAmount || 0).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                            <span className="text-blue-600">{t.frequency}</span>
+                                            <span className={t.status === 'Active' ? 'text-emerald-500' : 'text-rose-500'}>{t.status}</span>
+                                        </div>
+                                    </td>
+                                ) : (
+                                    /* --- FULL TABLE ROW (TABLE MODE) --- */
+                                    <>
+                                        <td className="px-10 py-6">
+                                            <div className="flex flex-col">
+                                                <span className="text-[14px] font-black text-slate-900 leading-none group-hover:text-blue-600 transition-colors uppercase tracking-tight">{t.templateName}</span>
+                                                <span className="text-[10px] font-black text-blue-500 mt-1.5 uppercase tracking-widest">{t.frequency}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-10 py-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center font-black text-[14px] shadow-sm">{t.customerName?.charAt(0)}</div>
+                                                <span className="text-[14px] font-black text-slate-900">{t.customerName}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-10 py-6 text-[13px] font-bold text-slate-500">
+                                            {t.lastGeneratedDate ? new Date(t.lastGeneratedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'PENDING'}
+                                        </td>
+                                        <td className="px-10 py-6 text-center text-[13px] font-black text-slate-900">
+                                            {new Date(t.nextGenerationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </td>
+                                        <td className="px-10 py-6 text-right font-black text-slate-900 text-[15px] tracking-tight">
+                                            ₹{parseFloat(t.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-10 py-6 text-center">
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border
+                                                ${t.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                                {t.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-10 py-6">
+                                            <div className="flex items-center justify-center gap-2 transition-all">
+                                                <button onClick={(e) => { e.stopPropagation(); navigate(`/recurring-invoices/edit/${t.id}`); }} className="p-1.5 hover:bg-white rounded text-blue-600 border border-transparent hover:border-blue-100" title="Edit"><Edit2 size={14}/></button>
+                                                <button onClick={(e) => { e.stopPropagation(); setDeleteId(t.id); setIsDeleteModalOpen(true); }} className="p-1.5 hover:bg-white rounded text-rose-600 border border-transparent hover:border-rose-100" title="Delete"><Trash2 size={14}/></button>
+                                            </div>
+                                        </td>
+                                    </>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {/* --- DETAIL AREA (RIGHT SIDE) --- */}
+        {isDetail && (
+            <div className="flex-1 overflow-y-auto no-scrollbar bg-white relative">
+                <RecurringInvoiceDetail id={id} companyId={companyId} navigate={navigate} />
+            </div>
+        )}
     </div>
   );
 };
