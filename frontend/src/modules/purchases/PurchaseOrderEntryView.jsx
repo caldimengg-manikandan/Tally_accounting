@@ -6,11 +6,16 @@ import {
   User, MapPin, Calendar, CreditCard, Truck,
   FileText, Tag, Link, Info, ArrowLeft,
   Save, Send as SendIcon, UploadCloud, GripVertical, Paperclip,
-  Image as ImageIcon, LayoutGrid
+  Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
 import { purchaseAPI, inventoryAPI, companyAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
+import VendorForm from './VendorForm';
+import PurchaseDeliveryAddressModal from './PurchaseDeliveryAddressModal';
+import CreateItemModal from '../inventory/CreateItemModal';
+import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
+import { COUNTRY_CODES } from '../../utils/countryCodes';
 
 const PurchaseOrderEntryView = ({ companyId }) => {
   // ── Form State ──────────────────────────────────────────────────
@@ -25,11 +30,20 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     deliveryDate: '',
     paymentTerms: 'Due on Receipt',
     shipmentPreference: '',
+    deliveryAddressData: {
+      attention: '',
+      street1: 'No. 42, Innovation Hub,',
+      street2: '',
+      city: 'Bangalore',
+      state: 'Karnataka',
+      zip: '560001',
+      country: 'India',
+      phone: ''
+    },
     notes: '',
     terms: '',
     discount: 0,
     adjustment: 0,
-    taxType: 'GST',
     taxRate: 0,
     tags: []
   });
@@ -45,6 +59,25 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [vendorSearch, setVendorSearch] = useState('');
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [activeRowForItemModal, setActiveRowForItemModal] = useState(null);
+  
+  // Custom Payment Terms Dropdown State
+  const [isTermsDropdownOpen, setIsTermsDropdownOpen] = useState(false);
+  const [termsSearchTerm, setTermsSearchTerm] = useState('');
+  const paymentTermsOptions = [
+    'Due end of next month',
+    'Due end of the month',
+    'Due on Receipt',
+    'Net 15',
+    'Net 30',
+    'Net 45',
+    'Net 60'
+  ];
+  const filteredTerms = paymentTermsOptions.filter(t => t.toLowerCase().includes(termsSearchTerm.toLowerCase()));
+
   const [activeRowForAccount, setActiveRowForAccount] = useState(null);
   const [accountGroups, setAccountGroups] = useState([
     { category: 'Other Current Asset', accounts: ['Advance Tax', 'Employee Advance', 'Prepaid Expenses', 'TDS Receivable'] },
@@ -54,21 +87,60 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     { category: 'Cost Of Goods Sold', accounts: ['[ tryhgtrjh ] 24325', 'Cost of Goods Sold', 'Job Costing', 'Labor', 'Materials', 'Subcontractor'] },
     { category: 'Other Asset', accounts: ['Stock', 'Inventory Asset'] },
   ]);
+  const [openItemDropdown, setOpenItemDropdown] = useState(null);
+  const itemDropdownRef = useRef(null);
   const [openAccountDropdown, setOpenAccountDropdown] = useState(null);
   const accountDropdownRef = useRef(null);
   const vendorDropdownRef = useRef(null);
   const fileInputRef = useRef(null);
   const attachmentRef = useRef(null);
+  const termsDropdownRef = useRef(null);
   const [attachments, setAttachments] = useState([]);
   const [isAttachmentListOpen, setIsAttachmentListOpen] = useState(false);
+  const [accountSearchTerm, setAccountSearchTerm] = useState('');
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [savedPO, setSavedPO] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   // ── Context Data ────────────────────────────────────────────────
   useEffect(() => {
     if (companyId) {
       purchaseAPI.getVendors(companyId).then(res => setVendors(res.data || []));
-      inventoryAPI.getByCompany(companyId).then(res => setInventoryItems(res.data || []));
+      inventoryAPI.getByCompany(companyId).then(res => {
+        console.log('Inventory Items Loaded:', res.data?.length);
+        setInventoryItems(res.data || []);
+      });
     }
   }, [companyId]);
+
+  const handleItemSelect = (rowId, invItem) => {
+    setItems(items.map(it => {
+      if (it.id === rowId) {
+        return {
+          ...it,
+          itemName: invItem.name,
+          rate: invItem.costPrice || invItem.sellingPrice || 0,
+          account: invItem.purchaseAccount || it.account || 'Cost of Goods Sold',
+          amount: (invItem.costPrice || invItem.sellingPrice || 0) * it.qty
+        };
+      }
+      return it;
+    }));
+    setOpenItemDropdown(null);
+  };
+
+  const handleItemCreatedSuccess = (newItem) => {
+    // Update local inventory list
+    setInventoryItems(prev => [...prev, newItem]);
+    
+    // Auto-select the item for the active row
+    if (activeRowForItemModal) {
+      handleItemSelect(activeRowForItemModal, newItem);
+    }
+    
+    setIsItemModalOpen(false);
+    setActiveRowForItemModal(null);
+  };
 
   // ── Outside Click Logic ─────────────────────────────────────────
   useEffect(() => {
@@ -79,6 +151,17 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // ── Item Dropdown Outside Click ─────────────────────────────────
+  useEffect(() => {
+    const handleItemClickOutside = (event) => {
+      if (itemDropdownRef.current && !itemDropdownRef.current.contains(event.target)) {
+        setOpenItemDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleItemClickOutside);
+    return () => document.removeEventListener('mousedown', handleItemClickOutside);
   }, []);
 
   // ── Account Dropdown Outside Click ──────────────────────────────
@@ -103,17 +186,31 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     return () => document.removeEventListener('mousedown', handleAttachmentClickOutside);
   }, []);
 
+  // ── Terms Dropdown Outside Click ────────────────────────────────
+  useEffect(() => {
+    const handleTermsClickOutside = (event) => {
+      if (termsDropdownRef.current && !termsDropdownRef.current.contains(event.target)) {
+        setIsTermsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleTermsClickOutside);
+    return () => document.removeEventListener('mousedown', handleTermsClickOutside);
+  }, []);
+
   // ── Calculations ────────────────────────────────────────────────
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (item.qty * item.rate), 0);
     const discountAmount = (subtotal * (formData.discount / 100));
     const taxableAmount = subtotal - discountAmount;
+    
+    // GST Calculation
     const taxAmount = (taxableAmount * (formData.taxRate / 100));
     const total = taxableAmount + taxAmount + parseFloat(formData.adjustment || 0);
 
     return {
       subtotal,
       discountAmount,
+      taxableAmount,
       taxAmount,
       total
     };
@@ -160,582 +257,703 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     });
   };
 
+  const handleSaveOrder = async (sendEmail = false) => {
+    if (!formData.vendorId) {
+      alert('Please select a vendor');
+      return;
+    }
+    if (items.some(item => !item.itemName || item.qty <= 0)) {
+      alert('Please ensure all items have a name and quantity');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload = {
+        orderNumber: formData.poNumber,
+        date: formData.date,
+        totalAmount: totals.total,
+        status: sendEmail ? 'Sent' : 'Draft',
+        notes: formData.notes,
+        supplierLedgerId: formData.vendorId,
+        companyId
+      };
+
+      const res = await purchaseAPI.createOrder(payload);
+      const savedData = res.data;
+      
+      setSavedPO(savedData);
+      
+      if (sendEmail) {
+        setIsEmailModalOpen(true);
+      } else {
+        alert('Purchase Order saved successfully');
+        window.history.back();
+      }
+    } catch (err) {
+      console.error('Error saving PO:', err);
+      alert('Failed to save Purchase Order. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="bg-[#f8fafc] min-h-screen pb-32">
-       {/* ─── Top Navigation ────────────────────────────────────────── */}
-       <div className="bg-white border-b border-slate-200 px-8 py-4 sticky top-0 z-40">
-          <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-             <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => window.history.back()}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-all"
-                >
-                   <ArrowLeft size={20} />
-                </button>
-                <div>
-                   <h1 className="text-[18px] font-black text-slate-900 tracking-tight">New Purchase Order</h1>
-                   <div className="flex items-center gap-2 mt-0.5">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Drafting Mode • Auto-saved</span>
-                   </div>
-                </div>
-             </div>
-             <div className="flex items-center gap-3">
-                <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl font-black text-[13px] flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
-                   <SendIcon size={14} strokeWidth={3} />
-                   Save & Send
-                </button>
-             </div>
+    <div className="bg-white min-h-screen text-[13px] text-slate-800 font-medium pb-24">
+       {/* ─── Top Bar ──────────────────────────────────────────────── */}
+       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+             <ShoppingBag size={20} className="text-slate-800" />
+             <h1 className="text-[18px] text-slate-800">New Purchase Order</h1>
           </div>
+          <button 
+            onClick={() => window.history.back()}
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+          >
+             <X size={20} />
+          </button>
        </div>
 
-       <div className="max-w-[1600px] mx-auto px-8 py-2">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
+       <div className="flex">
+          {/* ─── Main Form Area ───────────────────────────────────── */}
+          <div className="flex-1 px-8 py-6 max-w-[1200px]">
              
-             {/* ─── Left Column (Form) ─────────────────────────────────── */}
-             <div className="space-y-3">
+             {/* Form Grid */}
+             <div className="grid grid-cols-[180px_1fr] gap-y-6 items-start max-w-4xl">
                 
-                {/* 1. Vendor & Delivery Address */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group">
-                   <div className="p-3 px-6 border-b border-slate-50 bg-slate-50/30">
-                      <div className="flex items-center gap-2">
-                         <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                            <User size={16} />
+                {/* Vendor Name */}
+                <label className="text-red-500 pt-2"><span className="text-slate-700">Vendor Name</span>*</label>
+                <div className="relative" ref={vendorDropdownRef}>
+                   <div className="flex max-w-[400px]">
+                      <div className="relative flex-1">
+                         <input 
+                           type="text"
+                           placeholder="Select a Vendor"
+                           value={formData.vendorName || vendorSearch}
+                           onChange={(e) => {
+                              setVendorSearch(e.target.value);
+                              setIsVendorDropdownOpen(true);
+                           }}
+                           onFocus={() => setIsVendorDropdownOpen(true)}
+                           className="w-full h-9 px-3 border border-slate-300 rounded-l text-slate-800 focus:border-blue-500 outline-none"
+                         />
+                         <ChevronDown 
+                           size={14} 
+                           onClick={(e) => {
+                              e.stopPropagation();
+                              setIsVendorDropdownOpen(!isVendorDropdownOpen);
+                           }}
+                           className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" 
+                         />
+                      </div>
+                      <button className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600">
+                         <Search size={14} />
+                      </button>
+                   </div>
+                   {isVendorDropdownOpen && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-[360px] bg-white border border-slate-200 rounded-md shadow-lg z-50 flex flex-col">
+                         <div className="max-h-[200px] overflow-y-auto py-1 custom-scrollbar">
+                            {filteredVendors.length > 0 ? (
+                               filteredVendors.map(vendor => (
+                                  <div 
+                                     key={vendor.id}
+                                     onClick={() => {
+                                        setFormData({ ...formData, vendorId: vendor.id, vendorName: vendor.name });
+                                        setVendorSearch('');
+                                        setIsVendorDropdownOpen(false);
+                                     }}
+                                     className="px-4 py-2 hover:bg-blue-50 text-[13px] text-slate-700 cursor-pointer"
+                                  >
+                                     {vendor.name}
+                                  </div>
+                               ))
+                            ) : (
+                               <div className="px-6 py-4 text-center text-slate-500 text-[12px]">No vendors found.</div>
+                            )}
                          </div>
-                         <h2 className="text-[13px] font-black text-slate-900 uppercase tracking-tight">Vendor & Delivery</h2>
+                         <div className="border-t border-slate-200">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                 setIsVendorModalOpen(true);
+                                 setIsVendorDropdownOpen(false);
+                              }}
+                              className="w-full px-4 py-2 flex items-center gap-2 text-[13px] font-medium text-blue-500 hover:bg-slate-50 transition-colors"
+                            >
+                               <PlusCircle size={16} className="text-blue-500 fill-blue-500 text-white" />
+                               <span>New Vendor</span>
+                            </button>
+                         </div>
+                      </div>
+                   )}
+                </div>
+
+                {/* Delivery Address */}
+                <label className="text-red-500 pt-1"><span className="text-slate-700">Delivery Address</span>*</label>
+                <div>
+                   <div className="flex items-center gap-6 mb-3">
+                      {['Organization', 'Customer'].map(type => (
+                         <label key={type} className="flex items-center gap-2 cursor-pointer">
+                            <input 
+                              type="radio" 
+                              name="deliveryAddressType"
+                              checked={formData.deliveryAddress === type}
+                              onChange={() => setFormData({ ...formData, deliveryAddress: type })}
+                              className="w-3.5 h-3.5 text-blue-600 border-slate-300 focus:ring-blue-500 disabled:opacity-50"
+                            />
+                            <span className="text-[13px] text-slate-800">{type}</span>
+                         </label>
+                      ))}
+                   </div>
+                   <div className="bg-white border border-slate-200 rounded p-4 max-w-[500px]">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                         <div className="col-span-2">
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Attention</label>
+                            <input 
+                              type="text" 
+                              value={formData.deliveryAddressData.attention}
+                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, attention: e.target.value } })}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                            />
+                         </div>
+                         <div className="col-span-2">
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Street 1</label>
+                            <input 
+                              type="text" 
+                              value={formData.deliveryAddressData.street1}
+                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, street1: e.target.value } })}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                            />
+                         </div>
+                         <div className="col-span-2">
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Street 2</label>
+                            <input 
+                              type="text" 
+                              value={formData.deliveryAddressData.street2}
+                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, street2: e.target.value } })}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                            />
+                         </div>
+                         <div>
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">City</label>
+                            <input 
+                              type="text" 
+                              value={formData.deliveryAddressData.city}
+                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, city: e.target.value } })}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                            />
+                         </div>
+                         <div>
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">State/Province</label>
+                            <input 
+                              type="text" 
+                              value={formData.deliveryAddressData.state}
+                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, state: e.target.value } })}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                            />
+                         </div>
+                         <div>
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">ZIP</label>
+                            <input 
+                              type="text" 
+                              value={formData.deliveryAddressData.zip}
+                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, zip: e.target.value } })}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                            />
+                         </div>
+                         <div>
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Country</label>
+                            <select 
+                              value={formData.deliveryAddressData.country}
+                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, country: e.target.value } })}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                            >
+                               <option value="" className="text-slate-400">Select country</option>
+                               {COUNTRY_CODES.map((c, i) => (
+                                  <option key={i} value={c.country}>{c.country}</option>
+                               ))}
+                            </select>
+                         </div>
+                         <div className="col-span-2">
+                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Phone</label>
+                            <input 
+                              type="text" 
+                              value={formData.deliveryAddressData.phone}
+                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, phone: e.target.value } })}
+                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                            />
+                         </div>
                       </div>
                    </div>
-                   
-                   <div className="p-4 space-y-4">
-                      {/* Vendor Selection */}
-                      <div className="grid grid-cols-1 gap-4">
-                         <div className="relative" ref={vendorDropdownRef}>
-                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">Vendor Name <span className="text-red-500">*</span></label>
-                            <div className="relative">
-                               <input 
-                                 type="text"
-                                 placeholder="Search or select a vendor"
-                                 value={formData.vendorName || vendorSearch}
-                                 onChange={(e) => {
-                                    setVendorSearch(e.target.value);
-                                    setIsVendorDropdownOpen(true);
-                                 }}
-                                 onFocus={() => setIsVendorDropdownOpen(true)}
-                                 className="w-full h-10 pl-10 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-900 focus:bg-white focus:border-indigo-600 transition-all outline-none"
-                               />
-                               <Search size={16} className="absolute left-3.5 top-3 text-slate-300" />
-                               <ChevronDown 
-                                 size={16} 
-                                 onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsVendorDropdownOpen(!isVendorDropdownOpen);
-                                 }}
-                                 className={`absolute right-3.5 top-3 text-slate-300 cursor-pointer transition-transform duration-300 ${isVendorDropdownOpen ? 'rotate-180 text-indigo-600' : ''}`} 
-                               />
-                            </div>
+                </div>
 
-                            {isVendorDropdownOpen && (
-                               <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 origin-top">
-                                  <div className="max-h-[200px] overflow-y-auto py-1 custom-scrollbar">
-                                     {filteredVendors.length > 0 ? (
-                                        filteredVendors.map(vendor => (
-                                           <div 
-                                              key={vendor.id}
-                                              onClick={() => {
-                                                 setFormData({ ...formData, vendorId: vendor.id, vendorName: vendor.name });
-                                                 setVendorSearch('');
-                                                 setIsVendorDropdownOpen(false);
-                                              }}
-                                              className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 transition-colors"
-                                           >
-                                              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
-                                                 <User size={14} />
-                                              </div>
-                                              <div>
-                                                 <div className="text-[12px] font-black text-slate-700">{vendor.name}</div>
-                                              </div>
+                {/* Purchase Order# */}
+                <label className="text-red-500 pt-2"><span className="text-slate-700">Purchase Order#</span>*</label>
+                <input 
+                  type="text"
+                  value={formData.poNumber}
+                  onChange={(e) => setFormData({ ...formData, poNumber: e.target.value })}
+                  className="w-full max-w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
+                />
+
+                {/* Reference# */}
+                <label className="text-slate-700 pt-2">Reference#</label>
+                <input 
+                  type="text"
+                  value={formData.reference}
+                  onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                  className="w-full max-w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
+                />
+
+                {/* Date */}
+                <label className="text-slate-700 pt-2">Date</label>
+                <input 
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  className="w-full max-w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
+                />
+
+                {/* Delivery Date & Payment Terms */}
+                <label className="text-slate-700 pt-2">Delivery Date</label>
+                <div className="flex items-center gap-6 max-w-2xl">
+                   <input 
+                     type="date"
+                     value={formData.deliveryDate}
+                     onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
+                     className="w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-400 focus:border-blue-500 outline-none"
+                   />
+                   <div className="flex items-center gap-4">
+                      <span className="text-slate-700 min-w-[100px]">Payment Terms</span>
+                      <div className="relative w-[280px]" ref={termsDropdownRef}>
+                         <button 
+                            type="button"
+                            onClick={() => {
+                               setIsTermsDropdownOpen(!isTermsDropdownOpen);
+                               setTermsSearchTerm('');
+                            }}
+                            className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none ${isTermsDropdownOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-300 text-slate-800'}`}
+                         >
+                            <span className="text-[13px]">{formData.paymentTerms || 'Select terms...'}</span>
+                            <ChevronDown size={14} className={`text-blue-500 transition-transform ${isTermsDropdownOpen ? 'rotate-180' : ''}`} />
+                         </button>
+                         
+                         {isTermsDropdownOpen && (
+                            <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded lg shadow-lg z-50 overflow-hidden">
+                               <div className="p-2 border-b border-slate-100">
+                                  <div className="relative">
+                                     <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                     <input 
+                                        type="text"
+                                        value={termsSearchTerm}
+                                        onChange={(e) => setTermsSearchTerm(e.target.value)}
+                                        placeholder="Search"
+                                        className="w-full pl-8 pr-3 py-1.5 border border-slate-300 text-slate-800 rounded focus:outline-none focus:border-blue-500 text-[13px]"
+                                        autoFocus
+                                     />
+                                  </div>
+                               </div>
+                               <div className="max-h-48 overflow-y-auto py-1 custom-scrollbar">
+                                  {filteredTerms.map((term, index) => (
+                                     <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() => {
+                                           setFormData({ ...formData, paymentTerms: term });
+                                           setIsTermsDropdownOpen(false);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 text-[13px] flex flex-row items-center justify-between hover:bg-slate-50 transition-colors ${formData.paymentTerms === term ? 'bg-blue-50 text-slate-800' : 'text-slate-700'}`}
+                                     >
+                                        {term}
+                                        {formData.paymentTerms === term && <CheckCircle2 size={14} className="text-blue-500" />}
+                                     </button>
+                                  ))}
+                                  {filteredTerms.length === 0 && (
+                                     <div className="text-[13px] text-slate-500 p-3 text-center">No terms found</div>
+                                  )}
+                               </div>
+                            </div>
+                         )}
+                      </div>
+                   </div>
+                </div>
+
+                {/* Shipment Preference */}
+                <label className="text-slate-700 pt-2">Shipment Preference</label>
+                <div className="relative max-w-[280px]">
+                   <select 
+                     value={formData.shipmentPreference}
+                     onChange={(e) => setFormData({ ...formData, shipmentPreference: e.target.value })}
+                     className="w-full h-9 px-3 pr-8 border border-slate-300 rounded text-slate-400 focus:border-blue-500 outline-none appearance-none"
+                   >
+                      <option value="" disabled>Choose the shipment preference</option>
+                   </select>
+                   <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                </div>
+             </div>
+
+             {/* Transaction Level Divider */}
+             <div className="mt-10 mb-2 max-w-[1200px]">
+                <button className="flex items-center gap-2 text-slate-600 font-medium hover:text-slate-900">
+                   <Settings size={14} className="text-slate-400" />
+                   At Transaction Level
+                   <ChevronDown size={12} className="text-slate-400" />
+                </button>
+             </div>
+
+             {/* ─── Item Table ───────────────────────────────────────── */}
+             <div className="max-w-[1200px] border border-slate-200 rounded-t-md bg-white relative z-10">
+                {/* Table Header */}
+                <div className="flex items-center bg-slate-50/80 border-b border-slate-200 p-2 px-3">
+                   <h3 className="font-bold text-slate-800">Item Table</h3>
+                   <div className="ml-auto flex items-center gap-1.5 text-blue-600 font-medium cursor-pointer hover:text-blue-800">
+                      <CheckCircle2 size={14} /> <span>Bulk Actions</span>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-[2.5fr_2fr_1fr_1fr_1fr_40px] items-center border-b border-slate-200 bg-white">
+                   <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest">ITEM DETAILS</div>
+                   <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-center">ACCOUNT</div>
+                   <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-right">QUANTITY</div>
+                   <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-right flex items-center justify-end gap-1">
+                      RATE <LayoutGrid size={10} className="text-slate-400"/>
+                   </div>
+                   <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-right">AMOUNT</div>
+                   <div></div>
+                </div>
+
+                {/* Table Rows */}
+                <div className="divide-y divide-slate-100">
+                   {items.map((item, index) => (
+                      <div key={item.id} className="grid grid-cols-[2.5fr_2fr_1fr_1fr_1fr_40px] items-start hover:bg-slate-50/50 group/row relative min-h-[44px]">
+                         
+                         {/* Grip handle absolute left */}
+                         <div className="absolute left-1 top-2 text-slate-300 opacity-0 group-hover/row:opacity-100 cursor-grab">
+                            <GripVertical size={14} />
+                         </div>
+
+                         {/* Item Details */}
+                         <div className="px-6 py-2 relative border-l border-transparent" ref={openItemDropdown === item.id ? itemDropdownRef : null}>
+                            <textarea 
+                              placeholder="Type or click to select an item."
+                              value={item.itemName}
+                              onClick={() => setOpenItemDropdown(openItemDropdown === item.id ? null : item.id)}
+                              onChange={(e) => {
+                                 handleItemChange(item.id, 'itemName', e.target.value);
+                                 setOpenItemDropdown(item.id);
+                              }}
+                              className={`w-full bg-transparent text-[13px] text-slate-800 resize-none h-[50px] px-2 py-1.5 outline-none transition-colors rounded ${openItemDropdown === item.id ? 'border border-blue-500 ring-1 ring-blue-500 bg-white' : 'border border-transparent hover:border-slate-300'}`}
+                            />
+                            
+                            {openItemDropdown === item.id && (
+                               <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
+                                  <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
+                                     {inventoryItems.filter(inv => inv.name.toLowerCase().includes((item.itemName || '').toLowerCase())).map(invItem => (
+                                        <div 
+                                          key={invItem.id || invItem._id || invItem.name}
+                                          onClick={() => handleItemSelect(item.id, invItem)}
+                                          className={`px-4 py-2 text-[13px] cursor-pointer flex flex-col justify-center border-b border-slate-100 last:border-0 ${item.itemName === invItem.name ? 'bg-blue-500 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+                                        >
+                                           <div className={`font-medium ${item.itemName === invItem.name ? 'text-white' : 'text-slate-700'}`}>{invItem.name}</div>
+                                           <div className={`text-[12px] mt-0.5 ${item.itemName === invItem.name ? 'text-blue-100' : 'text-slate-500'}`}>
+                                              Purchase Rate: ₹{(invItem.costPrice || invItem.sellingPrice || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
                                            </div>
-                                        ))
-                                     ) : (
-                                        <div className="px-6 py-4 text-center">
-                                           <div className="text-[12px] font-bold text-slate-500">No vendors found.</div>
+                                        </div>
+                                     ))}
+                                     {inventoryItems.filter(inv => inv.name.toLowerCase().includes((item.itemName || '').toLowerCase())).length === 0 && (
+                                        <div className="px-6 py-4 flex flex-col items-center justify-center text-center">
+                                           <Package size={24} className="text-slate-300 mb-2" />
+                                           <span className="text-[13px] text-slate-600 font-medium">No matching items found</span>
+                                           <span className="text-[11px] text-slate-400 mt-1">Try a different search term</span>
                                         </div>
                                      )}
                                   </div>
+                                  <div 
+                                    className="px-4 py-3 bg-white border-t border-slate-100 flex items-center gap-2 text-[13px] font-medium text-blue-600 hover:bg-slate-50 cursor-pointer transition-colors shrink-0"
+                                    onClick={() => {
+                                       setActiveRowForItemModal(item.id);
+                                       setIsItemModalOpen(true);
+                                       setOpenItemDropdown(null);
+                                    }}
+                                  >
+                                     <PlusCircle size={14} className="fill-blue-600 text-white" /> Add New Item
+                                  </div>
                                </div>
                             )}
-
-                            <div className="flex items-center gap-4 mt-3">
-                               <div className="flex bg-slate-50 p-1 rounded-lg border border-slate-100">
-                                  {['Organization', 'Customer'].map(type => (
-                                     <button 
-                                       key={type}
-                                       type="button"
-                                       onClick={() => setFormData({ ...formData, deliveryAddress: type })}
-                                       className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${formData.deliveryAddress === type ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-600'}`}
-                                     >
-                                        {type}
-                                     </button>
-                                  ))}
-                               </div>
-                            </div>
                          </div>
 
-                         {/* Delivery Address Textarea */}
-                         <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                             <div className="flex items-center gap-2 mb-2">
-                                <MapPin size={14} className="text-slate-400" />
-                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Delivery Address</span>
-                             </div>
-                             <textarea 
-                               value={formData.deliveryAddressText}
-                               onChange={(e) => setFormData({ ...formData, deliveryAddressText: e.target.value })}
-                               className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[12px] font-medium text-slate-900 focus:border-indigo-600 transition-all outline-none resize-none"
-                               rows={2}
-                             ></textarea>
-                         </div>
-                      </div>
-                   </div>
-                </div>
-
-                {/* 2. Order Details */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group">
-                   <div className="p-3 px-6 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                         <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                            <FileText size={16} />
-                         </div>
-                         <h2 className="text-[13px] font-black text-slate-900 uppercase tracking-tight">Order Details</h2>
-                      </div>
-                   </div>
-                   
-                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
-                         <div>
-                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">PO No <span className="text-red-500">*</span></label>
-                            <input 
-                              type="text"
-                              value={formData.poNumber}
-                              onChange={(e) => setFormData({ ...formData, poNumber: e.target.value })}
-                              className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-black text-slate-900 focus:bg-white focus:border-indigo-600 transition-all outline-none"
-                            />
-                         </div>
-                         <div>
-                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">Reference#</label>
-                            <input 
-                              type="text"
-                              placeholder="Optional"
-                              value={formData.reference}
-                              onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                              className="w-full h-10 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-900 focus:bg-white focus:border-indigo-600 transition-all outline-none"
-                            />
-                         </div>
-                         <div>
-                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">Order Date</label>
-                            <div className="relative">
-                               <input 
-                                 type="date"
-                                 value={formData.date}
-                                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                 className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-900 focus:bg-white focus:border-indigo-600 transition-all outline-none"
-                               />
-                               <Calendar size={16} className="absolute left-3.5 top-3 text-slate-300" />
-                            </div>
-                         </div>
-                         <div>
-                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">Delivery Date</label>
-                            <div className="relative">
-                               <input 
-                                 type="date"
-                                 value={formData.deliveryDate}
-                                 onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
-                                 className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-900 focus:bg-white focus:border-indigo-600 transition-all outline-none"
-                               />
-                               <Calendar size={16} className="absolute left-3.5 top-3 text-slate-300" />
-                            </div>
-                         </div>
-                         <div className="md:col-span-2">
-                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 ml-1">Payment Terms</label>
-                            <div className="relative">
-                               <select 
-                                 value={formData.paymentTerms}
-                                 onChange={(e) => {
-                                    if (e.target.value === "Configure Terms") {
-                                       setIsTermsModalOpen(true);
-                                    } else {
-                                       setFormData({ ...formData, paymentTerms: e.target.value });
-                                    }
-                                 }}
-                                 className="w-full h-10 pl-10 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold text-slate-900 focus:bg-white focus:border-indigo-600 transition-all outline-none appearance-none"
-                               >
-                               {['Due end of next month', 'Due end of the month', 'Due on Receipt', 'Net 15', 'Net 30', 'Net 45', 'Net 60'].map(term => (
-                                  <option key={term} value={term}>{term}</option>
-                               ))}
-                               <option disabled>──────────</option>
-                               <option value="Configure Terms">⚙️ Configure Terms</option>
-                            </select>
-                            <CreditCard size={16} className="absolute left-3.5 top-3 text-slate-300" />
-                            <ChevronDown size={16} className="absolute right-3.5 top-3 text-slate-300 pointer-events-none" />
-                            </div>
-                         </div>
-                    </div>
-                 </div>
-
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm group overflow-visible">
-                   <div className="p-3 px-6 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                         <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                            <ShoppingBag size={16} />
-                         </div>
-                         <h2 className="text-[13px] font-black text-slate-900 uppercase tracking-tight">Item Table</h2>
-                      </div>
-                   </div>
-                   
-                   <div className="bg-slate-50/50 border-b border-slate-100 py-2.5 px-3">
-                      <div className="flex items-center gap-3">
-                         <div className="w-[18px]"></div> {/* Spacer for grip */}
-                         <div className="flex-1 grid grid-cols-[2fr_1.5fr_0.8fr_1fr_1.2fr] items-center">
-                            <div className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Item Details</div>
-                            <div className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-l border-slate-200">Account</div>
-                            <div className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-l border-slate-200 text-center">Quantity</div>
-                            <div className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-l border-slate-200 flex items-center justify-end gap-1.5">
-                               <span>Rate</span> 
-                               <LayoutGrid size={12} className="text-slate-400" />
-                            </div>
-                            <div className="px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-l border-slate-200 text-right">Amount</div>
-                         </div>
-                         <div className="w-10"></div> {/* Spacer for delete */}
-                      </div>
-                   </div>
-
-                   <div className="p-3 space-y-2 bg-white min-h-[200px]">
-                      {items.map((item, index) => (
-                         <div key={item.id} className="bg-white hover:bg-slate-50/50 rounded-xl border border-slate-100 flex items-center gap-3 group/row transition-all py-1">
-                            <div className="cursor-grab text-slate-200 hover:text-slate-400 transition-colors pl-2">
-                               <GripVertical size={18} />
+                         {/* Account */}
+                         <div className="px-3 py-2 border-l border-slate-100 relative" ref={openAccountDropdown === item.id ? accountDropdownRef : null}>
+                            <div 
+                              onClick={() => setOpenAccountDropdown(openAccountDropdown === item.id ? null : item.id)}
+                              className="w-full flex items-center justify-between text-[13px] cursor-pointer hover:bg-white border-b border-transparent hover:border-slate-300 px-1 py-1"
+                            >
+                               <span className={item.account ? 'text-slate-800 truncate' : 'text-slate-500'}>{item.account || 'Select an account'}</span>
+                               <ChevronDown size={14} className="text-slate-400" />
                             </div>
                             
-                            <div className="flex-1 grid grid-cols-[2fr_1.5fr_0.8fr_1fr_1.2fr] items-stretch">
-                               {/* Item Details */}
-                               <div className="px-2">
-                                  <input 
-                                    type="text"
-                                    placeholder="Select or type item"
-                                    value={item.itemName}
-                                    onChange={(e) => handleItemChange(item.id, 'itemName', e.target.value)}
-                                    className="w-full h-9 px-3 bg-transparent border-0 text-[12px] font-bold text-slate-900 focus:bg-white focus:ring-1 focus:ring-indigo-400 rounded-lg transition-all outline-none"
-                                  />
-                               </div>
+                            {openAccountDropdown === item.id && (
+                                <div className="absolute top-[80%] left-0 w-full min-w-[200px] bg-white border border-slate-200 shadow-xl z-50 rounded-md overflow-hidden flex flex-col">
+                                   <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+                                      <div className="relative">
+                                         <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                                         <input 
+                                           autoFocus
+                                           placeholder="Search accounts..."
+                                           value={accountSearchTerm}
+                                           onChange={(e) => setAccountSearchTerm(e.target.value)}
+                                           className="w-full pl-7 pr-2 py-1 text-[12px] outline-none border border-slate-200 rounded bg-white"
+                                         />
+                                      </div>
+                                   </div>
+                                   <div className="max-h-[220px] overflow-y-auto py-1 custom-scrollbar">
+                                      {accountGroups.map(group => {
+                                         const filteredAccounts = group.accounts.filter(a => a.toLowerCase().includes(accountSearchTerm.toLowerCase()));
+                                         if (filteredAccounts.length === 0) return null;
+                                         return (
+                                            <div key={group.category}>
+                                               <div className="px-3 py-1 font-bold text-slate-400 bg-slate-50 text-[11px] uppercase tracking-wider">{group.category}</div>
+                                               {filteredAccounts.map(acc => (
+                                                  <div 
+                                                    key={acc}
+                                                    onClick={() => {
+                                                       handleItemChange(item.id, 'account', acc);
+                                                       setOpenAccountDropdown(null);
+                                                       setAccountSearchTerm('');
+                                                    }}
+                                                    className={`px-4 py-1.5 text-[13px] cursor-pointer hover:bg-blue-600 hover:text-white ${item.account === acc ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'}`}
+                                                  >
+                                                     {acc}
+                                                  </div>
+                                               ))}
+                                            </div>
+                                         );
+                                      })}
+                                   </div>
+                                   <div 
+                                     onClick={() => {
+                                        setActiveRowForAccount(item.id);
+                                        setIsAccountModalOpen(true);
+                                        setOpenAccountDropdown(null);
+                                     }}
+                                     className="px-4 py-2 border-t border-slate-100 flex items-center gap-2 text-[12px] font-medium text-blue-600 hover:bg-slate-50 cursor-pointer transition-colors"
+                                   >
+                                      <Plus size={14} className="bg-blue-600 text-white rounded-full p-0.5" /> New Account
+                                   </div>
+                                </div>
+                             )}
+                         </div>
 
-                               {/* Account */}
-                               <div className="relative px-2 border-l border-slate-100" ref={openAccountDropdown === item.id ? accountDropdownRef : null}>
-                                  <div 
-                                    onClick={() => setOpenAccountDropdown(openAccountDropdown === item.id ? null : item.id)}
-                                    className={`w-full h-9 px-3 flex items-center justify-between text-[12px] font-bold transition-all rounded-lg border border-transparent hover:border-slate-200 hover:bg-slate-50/50 ${openAccountDropdown === item.id ? 'bg-white ring-1 ring-indigo-400 border-indigo-400 text-slate-900 shadow-sm' : 'text-slate-900'}`}
-                                  >
-                                     <span className={item.account ? 'text-slate-900 truncate' : 'text-slate-400'}>{item.account || 'Choose account'}</span>
-                                     <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${openAccountDropdown === item.id ? 'rotate-180' : ''}`} />
-                                  </div>
-                                  
-                                  {openAccountDropdown === item.id && (
-                                     <div className="absolute top-full left-2 right-2 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-200" style={{minWidth: '240px'}}>
-                                        <div className="max-h-[280px] overflow-y-auto py-1 custom-scrollbar">
-                                           {accountGroups.map(group => (
-                                              <div key={group.category}>
-                                                 <div className="px-4 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-50/80 sticky top-0">{group.category}</div>
-                                                 {group.accounts.map(acc => (
-                                                    <div 
-                                                      key={acc}
-                                                      onClick={() => {
-                                                         handleItemChange(item.id, 'account', acc);
-                                                         setOpenAccountDropdown(null);
-                                                      }}
-                                                      className={`px-6 py-2 text-[13px] font-medium cursor-pointer transition-colors ${item.account === acc ? 'bg-indigo-500 text-white font-bold' : 'text-slate-700 hover:bg-slate-50'}`}
-                                                    >
-                                                       {acc}
-                                                    </div>
-                                                 ))}
-                                              </div>
-                                           ))}
-                                        </div>
-                                        <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-2.5 sticky bottom-0">
-                                           <button 
-                                             type="button"
-                                             onClick={() => {
-                                                setActiveRowForAccount(item.id);
-                                                setIsAccountModalOpen(true);
-                                                setOpenAccountDropdown(null);
-                                             }}
-                                             className="flex items-center gap-2 text-[13px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors w-full"
-                                           >
-                                              <PlusCircle size={16} />
-                                              <span>New Account</span>
-                                           </button>
-                                        </div>
-                                     </div>
-                                  )}
-                               </div>
+                         {/* Quantity */}
+                         <div className="px-3 py-2 border-l border-slate-100">
+                            <input 
+                              type="number"
+                              value={item.qty}
+                              onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)}
+                              className="w-full bg-transparent text-[13px] text-right border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-1 outline-none"
+                            />
+                         </div>
 
-                               {/* Quantity */}
-                               <div className="px-2 border-l border-slate-100 flex items-center">
-                                  <input 
-                                    type="number"
-                                    value={item.qty}
-                                    onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)}
-                                    className="w-full h-9 bg-transparent border-0 text-[12px] font-black text-slate-900 text-center focus:bg-white focus:ring-1 focus:ring-indigo-400 rounded-lg transition-all outline-none"
-                                  />
-                               </div>
+                         {/* Rate */}
+                         <div className="px-3 py-2 border-l border-slate-100">
+                            <input 
+                              type="number"
+                              value={item.rate}
+                              onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)}
+                              className="w-full bg-transparent text-[13px] text-right border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-1 outline-none"
+                            />
+                         </div>
 
-                               {/* Rate */}
-                               <div className="px-2 border-l border-slate-100 flex items-center">
-                                  <input 
-                                    type="number"
-                                    value={item.rate}
-                                    onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)}
-                                    className="w-full h-9 bg-transparent border-0 text-[12px] font-black text-slate-900 text-right focus:bg-white focus:ring-1 focus:ring-indigo-400 rounded-lg transition-all outline-none"
-                                  />
-                               </div>
+                         {/* Amount */}
+                         <div className="px-3 py-2 border-l border-slate-100 text-right font-medium py-3 text-slate-800">
+                            {Number(item.qty * item.rate).toFixed(2)}
+                         </div>
 
-                               {/* Amount */}
-                               <div className="px-3 border-l border-slate-100 flex items-center justify-end">
-                                  <div className="text-[13px] font-black text-slate-900">
-                                     ₹ {(item.qty * item.rate).toLocaleString()}
-                                  </div>
-                               </div>
-                            </div>
-
+                         {/* Delete */}
+                         <div className="flex items-center justify-center pt-2.5">
                             <button 
                               onClick={() => removeItem(item.id)}
-                              className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-200 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover/row:opacity-100"
+                              className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/row:opacity-100"
                             >
-                               <Trash2 size={18} />
+                               <X size={16} strokeWidth={2.5} />
                             </button>
                          </div>
-                      ))}
-
-                      {/* Add Item Button - Below Items */}
-                      {items.length > 0 && (
-                         <button 
-                           onClick={addItem}
-                           className="w-full py-2 bg-white border border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 rounded-xl transition-all flex items-center justify-center gap-2 text-[12px] font-black text-indigo-600"
-                         >
-                            <PlusCircle size={14} />
-                            <span>ADD NEW ITEM</span>
-                         </button>
-                      )}
-
-                      {items.length === 0 && (
-                         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[32px] border border-dashed border-slate-200 animate-in fade-in zoom-in duration-500">
-                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-                               <ShoppingBag size={32} />
-                            </div>
-                            <p className="text-slate-400 font-bold text-[14px]">Add items to your purchase order</p>
-                            <button 
-                               onClick={addItem}
-                               className="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-[13px] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
-                            >
-                               + Add First Item
-                            </button>
-                         </div>
-                      )}
-                   </div>
+                      </div>
+                   ))}
                 </div>
-
-                {/* 4. Upload Files */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-visible">
-                    <div className="p-4 py-5">
-                       <h2 className="text-[12px] font-bold text-slate-500 mb-3 ml-0.5">Attach File(s) to Purchase Order</h2>
-                       
-                       <input 
-                         type="file" 
-                         ref={fileInputRef} 
-                         onChange={handleFileChange} 
-                         className="hidden" 
-                         multiple 
-                       />
-
-                       <div className="flex items-center gap-2 relative" ref={attachmentRef}>
-                          <div className="flex items-center">
-                             <button 
-                               type="button"
-                               onClick={() => fileInputRef.current?.click()}
-                               className="flex items-center gap-2 px-4 h-9 bg-white border border-dashed border-slate-300 rounded-lg hover:border-indigo-400 hover:bg-indigo-50/10 transition-all text-[12px] font-black text-slate-600 group"
-                             >
-                                <UploadCloud size={14} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                                <span>Upload File</span>
-                             </button>
-                          </div>
-
-                          <button 
-                            type="button"
-                            onClick={() => setIsAttachmentListOpen(!isAttachmentListOpen)}
-                            className={`flex items-center gap-1.5 px-3 h-9 rounded-lg transition-all ${attachments.length > 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-100 text-slate-400 pointer-events-none'}`}
-                          >
-                             <Paperclip size={14} strokeWidth={3} />
-                             <span className="text-[13px] font-black">{attachments.length}</span>
-                          </button>
-
-                          {isAttachmentListOpen && attachments.length > 0 && (
-                             <div className="absolute top-[calc(100%+8px)] left-0 w-[400px] bg-white border border-slate-200 rounded-xl shadow-2xl z-[100] animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
-                                <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-1">
-                                   {attachments.map(att => (
-                                      <div key={att.id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg group/item transition-colors">
-                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 shadow-sm">
-                                               {att.type.startsWith('image/') ? <ImageIcon size={20} /> : <FileText size={20} />}
-                                            </div>
-                                            <div>
-                                               <div className="text-[12px] font-black text-slate-900 truncate max-w-[200px]">{att.name}</div>
-                                               <div className="text-[10px] font-bold text-slate-400">File Size: {att.size}</div>
-                                            </div>
-                                         </div>
-                                         <button 
-                                           onClick={(e) => {
-                                              e.stopPropagation();
-                                              removeAttachment(att.id);
-                                           }}
-                                           className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover/item:opacity-100"
-                                         >
-                                            <Trash2 size={16} />
-                                         </button>
-                                      </div>
-                                   ))}
-                                </div>
-                             </div>
-                          )}
-                       </div>
-
-                       <div className="mt-4 space-y-2">
-                          <label className="flex items-center gap-2 cursor-pointer group">
-                             <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                             <span className="text-[11px] font-bold text-slate-600 group-hover:text-slate-900 transition-colors">Display attachments in vendor portal and emails</span>
-                          </label>
-                          <p className="text-[10px] font-bold text-slate-500 italic mt-1.5 ml-0.5">Max 5 files, 10MB each</p>
-                       </div>
-                    </div>
-                </div>
-
              </div>
 
-             {/* ─── Right Column (Sticky Summary) ────────────────────── */}
-             <div className="lg:sticky lg:top-24 space-y-3">
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-indigo-900/5 overflow-hidden relative">
-                   <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-600"></div>
-                   
-                   <div className="p-4">
-                      <div className="flex items-center gap-2 mb-4">
-                         <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                            <CreditCard size={18} />
-                         </div>
-                         <h2 className="text-[14px] font-black text-slate-900 uppercase tracking-tight">Summary</h2>
+             {/* Add item rows */}
+             <div className="max-w-[1200px] border border-t-0 border-slate-200 bg-white p-3 flex gap-4">
+                <button onClick={addItem} className="text-[13px] font-medium text-slate-700 border border-slate-300 px-3 py-1 bg-slate-50 hover:bg-slate-100 rounded shadow-sm">
+                   Add Row
+                </button>
+             </div>
+
+             {/* Summary Calculation Area within flow */}
+             <div className="max-w-[1200px] mt-6 flex justify-end">
+                <div className="w-[450px] bg-slate-50 border border-slate-200 rounded-md p-4 animate-in fade-in duration-500">
+                   <div className="space-y-4">
+                      {/* Sub Total */}
+                      <div className="flex justify-between text-slate-600">
+                         <span className="text-[13px]">Sub Total</span>
+                         <span className="font-medium text-slate-800">{(totals.subtotal).toFixed(2)}</span>
                       </div>
-
-                      <div className="space-y-2.5">
-                         <div className="flex items-center justify-between">
-                            <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px]">Subtotal</span>
-                            <span className="font-black text-slate-900 text-[13px]">₹ {totals.subtotal.toLocaleString()}</span>
-                         </div>
-
-                         <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5">
-                               <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px]">Disc</span>
+                      
+                      {/* Discount Row */}
+                      <div className="flex items-center justify-between gap-4">
+                         <div className="flex items-center gap-2">
+                            <span className="text-slate-600 text-[13px]">Discount</span>
+                            <div className="flex items-center border border-slate-300 rounded bg-white overflow-hidden h-7 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
                                <input 
-                                 type="number"
+                                 type="number" 
                                  value={formData.discount}
                                  onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                                 className="w-12 h-7 px-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-black text-slate-900 text-center outline-none"
+                                 className="w-16 px-2 text-right outline-none text-[13px]" 
                                />
-                               <span className="text-[10px] font-black text-slate-400">%</span>
+                               <div className="px-2 bg-slate-100 border-l border-slate-300 text-slate-500 font-medium select-none text-[11px]">%</div>
                             </div>
-                            <span className="font-black text-red-500 text-[13px]">- ₹ {totals.discountAmount.toLocaleString()}</span>
                          </div>
+                         <span className="font-medium text-red-500">{(totals.discountAmount).toFixed(2)}</span>
+                      </div>
 
-                         <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5">
+                      {/* GST Selection & Rate Row */}
+                      <div className="py-3 border-y border-slate-200/50 flex items-center justify-between gap-4">
+                         <div className="flex items-center gap-2">
+                            <span className="text-slate-600 text-[13px] font-bold">GST</span>
+                            <div className="flex-1 min-w-[160px]">
                                <select 
-                                 value={formData.taxType}
-                                 onChange={(e) => setFormData({ ...formData, taxType: e.target.value })}
-                                 className="h-7 px-1 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-black text-slate-900 uppercase outline-none"
-                               >
-                                  <option value="GST">GST</option>
-                                  <option value="TDS">TDS</option>
-                                  <option value="TCS">TCS</option>
-                               </select>
-                               <input 
-                                 type="number"
                                  value={formData.taxRate}
-                                 onChange={(e) => setFormData({ ...formData, taxRate: e.target.value })}
-                                 className="w-12 h-7 px-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-black text-slate-900 text-center outline-none"
-                               />
-                               <span className="text-[10px] font-black text-slate-400">%</span>
+                                 onChange={(e) => setFormData({ ...formData, taxRate: parseFloat(e.target.value) })}
+                                 className="w-full h-8 px-2 text-[12px] border border-slate-300 rounded focus:border-blue-500 outline-none bg-white transition-all appearance-none cursor-pointer pr-6 text-slate-700"
+                                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.4rem center', backgroundSize: '1em' }}
+                               >
+                                  <option value="0">Select a Tax</option>
+                                  <option value="5">GST @ 5%</option>
+                                  <option value="12">GST @ 12%</option>
+                                  <option value="18">GST @ 18%</option>
+                                  <option value="28">GST @ 28%</option>
+                               </select>
                             </div>
-                            <span className="font-black text-slate-900 text-[13px]">+ ₹ {totals.taxAmount.toLocaleString()}</span>
                          </div>
+                         <div className="font-medium text-slate-800 text-[13px]">
+                            {totals.taxAmount.toFixed(2)}
+                         </div>
+                      </div>
 
-                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                               <span className="font-bold text-slate-400 uppercase tracking-widest text-[10px]">Adjustment</span>
-                               <input 
-                                 type="number"
-                                 value={formData.adjustment}
-                                 onChange={(e) => setFormData({ ...formData, adjustment: e.target.value })}
-                                 className="w-16 h-7 px-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[11px] font-black text-slate-900 text-right outline-none"
-                               />
-                            </div>
-                            <span className="font-black text-slate-900 text-[13px]">₹ {parseFloat(formData.adjustment || 0).toLocaleString()}</span>
+                      {/* Adjustment Row */}
+                      <div className="flex items-center justify-between gap-4">
+                         <div className="flex items-center gap-2">
+                            <div className="px-2 py-1 border border-dashed border-slate-300 rounded text-slate-500 text-[11px] bg-white">Adjustment</div>
+                            <input 
+                              type="number" 
+                              value={formData.adjustment}
+                              onChange={(e) => setFormData({ ...formData, adjustment: e.target.value })}
+                              className="w-24 h-8 px-2 border border-slate-300 rounded outline-none text-[13px] text-right focus:border-blue-500 transition-all font-medium text-slate-700" 
+                            />
                          </div>
+                         <span className="font-medium text-slate-800">{(parseFloat(formData.adjustment || 0)).toFixed(2)}</span>
+                      </div>
 
-                         <div className="pt-4 mt-4 border-t border-slate-50">
-                            <div className="flex items-center justify-between">
-                               <span className="font-black text-indigo-600 uppercase tracking-widest text-[11px]">Total</span>
-                               <span className="text-[20px] font-black text-slate-900 tracking-tighter">₹ {totals.total.toLocaleString()}</span>
-                            </div>
-                         </div>
+                      {/* Total Grand Row */}
+                      <div className="flex justify-between items-center text-slate-800 pt-3 border-t-2 border-slate-200 mt-2">
+                         <span className="font-bold text-[16px]">Total ( ₹ )</span>
+                         <span className="font-bold text-[18px]">{(totals.total).toFixed(2)}</span>
                       </div>
                    </div>
                 </div>
-
-                <div className="flex items-center justify-center gap-2 py-3 px-6 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                   <Clock size={14} className="text-indigo-600" />
-                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Auto-saving...</span>
-                </div>
              </div>
 
+             {/* ─── Attachments Section ────────────────────────────────── */}
+             <div className="mt-12 pb-10 border-t border-slate-100 pt-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex flex-col gap-4">
+                   <h3 className="text-[14px] font-semibold text-slate-700">Attach File(s) to Purchase Order</h3>
+                   
+                   <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-3">
+                         <div 
+                           className="flex items-center border-2 border-dashed border-slate-200 rounded-lg p-0.5 hover:border-blue-300 hover:bg-blue-50/20 transition-all cursor-pointer group"
+                           onClick={() => fileInputRef.current?.click()}
+                         >
+                            <div className="flex items-center h-8 px-4 gap-2 text-slate-600 group-hover:text-blue-600 font-medium text-[13px]">
+                               <UploadCloud size={16} />
+                               <span>Upload File</span>
+                            </div>
+                            <div className="w-px h-5 bg-slate-200 mx-1"></div>
+                            <div className="px-3 text-slate-400 group-hover:text-blue-500">
+                               <ChevronDown size={14} />
+                            </div>
+                         </div>
+                         <input 
+                           type="file" 
+                           ref={fileInputRef} 
+                           className="hidden" 
+                           multiple 
+                           onChange={handleFileChange} 
+                         />
+                      </div>
+                      <p className="text-[11px] text-slate-400">You can upload a maximum of 10 files, 10MB each</p>
+                   </div>
+
+                   {/* Attachment List Preview */}
+                   {attachments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-3">
+                         {attachments.map(file => (
+                            <div key={file.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm hover:shadow-md transition-shadow group animate-in zoom-in-95">
+                               <div className="w-8 h-8 rounded bg-blue-50 flex items-center justify-center text-blue-500">
+                                  <FileText size={16} />
+                               </div>
+                               <div className="flex flex-col min-w-[120px]">
+                                  <span className="text-[12px] font-medium text-slate-700 truncate max-w-[200px]">{file.name}</span>
+                                  <span className="text-[10px] text-slate-400">{file.size}</span>
+                               </div>
+                               <button 
+                                 onClick={() => removeAttachment(file.id)}
+                                 className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                               >
+                                  <X size={14} />
+                               </button>
+                            </div>
+                         ))}
+                      </div>
+                   )}
+                </div>
+             </div>
           </div>
        </div>
 
-       {/* ─── Sticky Bottom Action Bar ──────────────────────────────── */}
-       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-100 px-8 py-3 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
-          <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-             <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => window.history.back()}
-                  className="px-4 py-2 rounded-lg text-[12px] font-black text-slate-500 hover:text-slate-900 transition-all flex items-center gap-2"
-                >
-                   CANCEL
-                </button>
-                <div className="flex items-center gap-2">
-                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Progress saved</span>
-                </div>
-             </div>
-             <div className="flex items-center gap-3">
-                <button className="px-5 py-2.5 rounded-xl text-[13px] font-black text-indigo-600 border-2 border-indigo-50 hover:border-indigo-600 transition-all active:scale-95">
-                   SAVE DRAFT
-                </button>
-                <button className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[13px] font-black flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-95 group">
-                   <SendIcon size={16} />
-                   SAVE & SEND
-                </button>
-             </div>
+       {/* ─── Bottom Actions ────────────────────────────────────── */}
+       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between px-8 z-50">
+          <div className="flex items-center gap-3">
+             <button 
+               onClick={() => handleSaveOrder(false)}
+               disabled={isSaving}
+               className="px-4 h-8 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium rounded border border-slate-300 transition-colors disabled:opacity-50"
+             >
+                {isSaving ? 'Saving...' : 'Save as Draft'}
+             </button>
+             <button 
+               onClick={() => handleSaveOrder(true)}
+               disabled={isSaving}
+               className="px-4 h-8 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors shadow-sm disabled:opacity-50"
+             >
+                {isSaving ? 'Saving...' : 'Save and Send'}
+             </button>
+             <button onClick={() => window.history.back()} className="px-4 h-8 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded border border-slate-200 transition-colors">
+                Cancel
+             </button>
+          </div>
+          <div className="flex items-center text-slate-600 text-[12px]">
+             PDF Template: <span className="font-bold ml-1 text-slate-700">'Standard Template'</span> 
+             <button className="ml-2 text-blue-600 hover:text-blue-800 hover:underline">Change</button>
           </div>
        </div>
 
+       {/* Modals */}
        {isTermsModalOpen && (
           <ConfigurePaymentTermsModal 
             onClose={() => setIsTermsModalOpen(false)}
             onSave={(updatedTerms) => {
-               // Logic to persist terms could go here
-               console.log("Updated terms:", updatedTerms);
                setIsTermsModalOpen(false);
             }}
           />
@@ -765,6 +983,69 @@ const PurchaseOrderEntryView = ({ companyId }) => {
             }}
           />
        )}
+
+       {isVendorModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] p-6 animate-in fade-in">
+             <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl h-[90vh] overflow-hidden flex flex-col slide-in-from-bottom-4 animate-in duration-300">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                   <h2 className="text-[16px] font-bold text-slate-800 flex items-center gap-2">
+                       <User size={18} className="text-blue-600" />
+                       Create New Vendor
+                   </h2>
+                   <button 
+                     onClick={() => setIsVendorModalOpen(false)}
+                     className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors"
+                   >
+                      <X size={16} />
+                   </button>
+                </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#f8fafc]">
+                   <VendorForm 
+                     standalone={false} 
+                     onCancel={() => setIsVendorModalOpen(false)}
+                     onSaveSuccess={(newVendor) => {
+                        if (companyId) {
+                           purchaseAPI.getVendors(companyId).then(res => {
+                              setVendors(res.data || []);
+                              if (newVendor && newVendor.id) {
+                                 setFormData(prev => ({ ...prev, vendorId: newVendor.id, vendorName: newVendor.name || newVendor.displayName }));
+                              }
+                           });
+                        }
+                        setIsVendorModalOpen(false);
+                     }}
+                   />
+                </div>
+             </div>
+          </div>
+       )}
+
+        {isItemModalOpen && (
+          <CreateItemModal 
+            isOpen={isItemModalOpen}
+            onClose={() => setIsItemModalOpen(false)}
+            onSuccess={handleItemCreatedSuccess}
+            companyId={companyId}
+          />
+        )}
+
+        {isEmailModalOpen && (
+          <PurchaseOrderEmailModal 
+            isOpen={isEmailModalOpen}
+            onClose={() => {
+              setIsEmailModalOpen(false);
+              window.history.back(); // Navigate back after closing the email modal if it was a save flow
+            }}
+            vendor={vendors.find(v => v.id === formData.vendorId)}
+            poData={{...formData, id: savedPO?.id, companyId}}
+            totals={totals}
+            attachments={attachments}
+            onSent={() => {
+              alert('Email sent successfully');
+              window.history.back();
+            }}
+          />
+        )}
     </div>
   );
 };

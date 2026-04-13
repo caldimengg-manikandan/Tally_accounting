@@ -5,8 +5,6 @@ const CreateAccountModal = ({ onClose, onSave, accounts }) => {
   const [formData, setFormData] = useState({
     accountType: 'Fixed Asset',
     accountName: '',
-    isSubAccount: false,
-    parentAccountId: '',
     accountCode: '',
     description: ''
   });
@@ -22,10 +20,6 @@ const CreateAccountModal = ({ onClose, onSave, accounts }) => {
   const handleSave = () => {
     if (!formData.accountName) {
       alert("Account Name is required");
-      return;
-    }
-    if (formData.isSubAccount && !formData.parentAccountId) {
-      alert("Parent Account is required for sub-accounts");
       return;
     }
     // Simulate API call and return the new account object
@@ -97,45 +91,6 @@ const CreateAccountModal = ({ onClose, onSave, accounts }) => {
                 className="w-full h-11 px-4 text-[14px] border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
               />
             </div>
-
-            {/* Sub-account */}
-            <div className="grid grid-cols-[160px_1fr] items-center gap-6">
-              <div />
-              <div className="flex items-center gap-2">
-                <input 
-                  type="checkbox"
-                  id="sub-acc"
-                  name="isSubAccount"
-                  checked={formData.isSubAccount}
-                  onChange={handleChange}
-                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="sub-acc" className="text-[13px] text-slate-600 select-none">Make this a sub-account</label>
-                <HelpCircle size={14} className="text-slate-300 cursor-help" />
-              </div>
-            </div>
-
-            {/* Parent Account (Conditional) */}
-            {formData.isSubAccount && (
-              <div className="grid grid-cols-[160px_1fr] items-center gap-6 animate-in slide-in-from-top-2 duration-200">
-                <label className="text-[14px] font-medium text-red-500">Parent Account*</label>
-                <select 
-                  name="parentAccountId"
-                  value={formData.parentAccountId}
-                  onChange={handleChange}
-                  className="w-full h-11 px-4 text-[14px] border border-slate-200 rounded-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none bg-white"
-                >
-                  <option value="">Select an account</option>
-                  {accounts?.map(group => (
-                    <optgroup key={group.category} label={group.category}>
-                      {group.accounts.map(acc => (
-                        <option key={acc} value={acc}>{acc}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-            )}
 
             {/* Account Code */}
             <div className="grid grid-cols-[160px_1fr] items-center gap-6">

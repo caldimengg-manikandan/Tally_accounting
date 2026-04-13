@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, Edit, Trash2, MoreHorizontal, Plus, Search, 
-  Settings, Paperclip, Mail, Phone, MapPin, Globe, 
+  Settings, Paperclip, Mail, Phone, Smartphone, MapPin, Globe, 
   Info, CreditCard, Clock, Activity, ArrowRight,
   ChevronDown, MessageSquare, History, FileText, Send, HelpCircle,
   Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
@@ -112,7 +112,9 @@ const VendorDetailView = ({ companyId }) => {
           ledgerAPI.getByCompany(activeCompanyId),
           companyAPI.getById(activeCompanyId)
         ]);
-        setAllLedgers(ledgersRes.data || []);
+        
+        const allLedgersData = ledgersRes.data || [];
+        setAllLedgers(allLedgersData);
         setCurrentCompany(companyRes.data);
       } catch (err) {
         console.error("Failed to fetch data", err);
@@ -747,8 +749,10 @@ const VendorDetailView = ({ companyId }) => {
                        </div>
                        <div className="space-y-1.5 pt-1">
                           <h3 className="text-[17px] font-black text-slate-900 leading-tight">{vendor.salutation} {vendor.firstName} {vendor.lastName}</h3>
-                          <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{vendor.email}</span></div>
-                          <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{vendor.mobile || 'No contact'}</span></div>
+                          <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{vendor.email || 'No email'}</span></div>
+                          {vendor.phone && <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{vendor.phone}</span></div>}
+                          {vendor.mobile && <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Smartphone size={14}/> <span>{vendor.mobile}</span></div>}
+                          {!vendor.phone && !vendor.mobile && <div className="flex items-center gap-2 text-[13px] text-slate-400 font-medium"><Phone size={14}/> <span>No contact</span></div>}
                        </div>
 
                        <div className="ml-auto absolute top-0 right-0" ref={settingsRef}>
@@ -765,14 +769,53 @@ const VendorDetailView = ({ companyId }) => {
                     <div className="space-y-6">
                        <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">ADDRESS</h4>
                        <div className="grid grid-cols-2 gap-10 pt-2">
-                          <div className="space-y-3">
-                             <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
-                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer">New Address</span></p>
-                          </div>
-                          <div className="space-y-3">
-                             <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
-                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer">New Address</span></p>
-                          </div>
+                           {/* Billing Address */}
+                           {(() => {
+                              let billing = null;
+                              try { billing = vendor.billingAddressJson ? JSON.parse(vendor.billingAddressJson) : (vendor.billingAddress ? JSON.parse(vendor.billingAddress) : null); } catch(e) {}
+                              const hasAddr = billing && (billing.street1 || billing.city || billing.state || billing.attention || billing.country || billing.pinCode);
+                              return (
+                                <div className="space-y-3">
+                                   <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
+                                   {hasAddr ? (
+                                     <div className="text-[12px] text-slate-500 leading-relaxed space-y-0.5">
+                                       {billing.attention && <p className="font-bold text-slate-700">{billing.attention}</p>}
+                                       {billing.street1 && <p>{billing.street1}</p>}
+                                       {billing.street2 && <p>{billing.street2}</p>}
+                                       {(billing.city || billing.state || billing.pinCode) && <p>{[billing.city, billing.state, billing.pinCode].filter(Boolean).join(', ')}</p>}
+                                       {billing.country && <p>{billing.country}</p>}
+                                       {billing.phone && <p className="mt-1 text-slate-400">Ph: {billing.phone}</p>}
+                                     </div>
+                                   ) : (
+                                     <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => navigate(`/vendors/${vendor.id}`)}>New Address</span></p>
+                                   )}
+                                </div>
+                              );
+                           })()}
+
+                           {/* Shipping Address */}
+                           {(() => {
+                              let shipping = null;
+                              try { shipping = vendor.shippingAddressJson ? JSON.parse(vendor.shippingAddressJson) : (vendor.shippingAddress ? JSON.parse(vendor.shippingAddress) : null); } catch(e) {}
+                              const hasAddr = shipping && (shipping.street1 || shipping.city || shipping.state || shipping.attention || shipping.country || shipping.pinCode);
+                              return (
+                                <div className="space-y-3">
+                                   <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
+                                   {hasAddr ? (
+                                     <div className="text-[12px] text-slate-500 leading-relaxed space-y-0.5">
+                                       {shipping.attention && <p className="font-bold text-slate-700">{shipping.attention}</p>}
+                                       {shipping.street1 && <p>{shipping.street1}</p>}
+                                       {shipping.street2 && <p>{shipping.street2}</p>}
+                                       {(shipping.city || shipping.state || shipping.pinCode) && <p>{[shipping.city, shipping.state, shipping.pinCode].filter(Boolean).join(', ')}</p>}
+                                       {shipping.country && <p>{shipping.country}</p>}
+                                       {shipping.phone && <p className="mt-1 text-slate-400">Ph: {shipping.phone}</p>}
+                                     </div>
+                                   ) : (
+                                     <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => navigate(`/vendors/${vendor.id}`)}>New Address</span></p>
+                                   )}
+                                </div>
+                              );
+                           })()}
                        </div>
                     </div>
 
