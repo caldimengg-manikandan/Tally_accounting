@@ -136,6 +136,30 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     }
   };
 
+  const filteredVendors = vendors.filter(v => 
+    v.name?.toLowerCase().includes(vendorSearch.toLowerCase())
+  );
+
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newAttachments = files.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      file,
+      name: file.name,
+      size: (file.size / 1024).toFixed(1) + ' KB',
+      type: file.type
+    }));
+    setAttachments(prev => [...prev, ...newAttachments]);
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments(prev => {
+      const filtered = prev.filter(att => att.id !== id);
+      if (filtered.length === 0) setIsAttachmentListOpen(false);
+      return filtered;
+    });
+  };
+
   return (
     <div className="bg-white min-h-screen text-[13px] text-slate-800 font-medium pb-24">
        {/* ─── Top Bar ──────────────────────────────────────────────── */}
