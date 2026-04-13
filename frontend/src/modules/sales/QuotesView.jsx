@@ -493,7 +493,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
 
     return (
         <div className="animate-fade-in p-8 pb-32">
-            <style>
+            <style>{`
                 @media print {
                     body * {
                         visibility: hidden !important;
@@ -518,8 +518,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                         display: none !important;
                     }
                 }
-                `}
-            </style>
+            `}</style>
             {/* Header / Actions Sidebar Style */}
             <header className="sticky top-0 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between z-20 shadow-sm print:hidden shrink-0">
                 <div className="flex items-center gap-4">
