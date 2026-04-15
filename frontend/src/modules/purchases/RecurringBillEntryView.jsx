@@ -4,11 +4,11 @@ import {
   ChevronDown, Search, Filter, MoreHorizontal,
   Clock, CheckCircle2, XCircle, Send,
   User, MapPin, Calendar, CreditCard, Truck,
-  FileText, Tag, Link, Info, ArrowLeft,
+  FileText, Tag, Link, Info, ArrowLeft, ArrowRight,
   Save, Send as SendIcon, UploadCloud, GripVertical, Paperclip,
   Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
-import { purchaseAPI, inventoryAPI, companyAPI } from '../../services/api';
+import { purchaseAPI, inventoryAPI, companyAPI, recurringBillAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
 import VendorForm from './VendorForm';
@@ -17,17 +17,17 @@ import CreateItemModal from '../inventory/CreateItemModal';
 import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
 
-const PurchaseOrderEntryView = ({ companyId }) => {
-  // ── Form State ──────────────────────────────────────────────────
+const RecurringBillEntryView = ({ companyId }) => {
+  // â”€â”€ Form State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [formData, setFormData] = useState({
     vendorName: '',
     vendorId: '',
+    profileName: '',
+    repeatEvery: 'Week',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    neverExpires: true,
     deliveryAddress: 'Organization',
-    deliveryAddressText: 'No. 42, Innovation Hub,\nBangalore, Karnataka, 560001\nIndia',
-    poNumber: 'PO-' + Math.floor(10000 + Math.random() * 90000),
-    reference: '',
-    date: new Date().toISOString().split('T')[0],
-    deliveryDate: '',
     paymentTerms: 'Due on Receipt',
     shipmentPreference: '',
     deliveryAddressData: {
@@ -44,7 +44,6 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     terms: '',
     discount: 0,
     adjustment: 0,
-    taxRate: 0,
     tdsRate: 0,
     tdsName: '',
     tags: []
@@ -54,7 +53,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0 }
   ]);
 
-  // ── Search & Dropdown State ─────────────────────────────────────
+  // â”€â”€ Search & Dropdown State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [vendors, setVendors] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
@@ -65,6 +64,8 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [activeRowForItemModal, setActiveRowForItemModal] = useState(null);
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [isVendorDetailsOpen, setIsVendorDetailsOpen] = useState(false);
   
   // Custom Payment Terms Dropdown State
   const [isTermsDropdownOpen, setIsTermsDropdownOpen] = useState(false);
@@ -103,6 +104,9 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [savedPO, setSavedPO] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [vendorPanelTab, setVendorPanelTab] = useState('details');
+  const [isAddressExpanded, setIsAddressExpanded] = useState(false);
+  const [isContactPersonsExpanded, setIsContactPersonsExpanded] = useState(false);
   const [isTDSDropdownOpen, setIsTDSDropdownOpen] = useState(false);
   const [tdsSearchTerm, setTdsSearchTerm] = useState('');
   const tdsDropdownRef = useRef(null);
@@ -119,8 +123,19 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const filteredTdsOptions = tdsOptions.filter(opt => 
     opt.name.toLowerCase().includes(tdsSearchTerm.toLowerCase())
   );
+
+  // Helper to parse vendor's billing address
+  const getVendorBillingAddress = (vendor) => {
+    if (!vendor) return null;
+    try {
+      const addr = vendor.billingAddressJson ? JSON.parse(vendor.billingAddressJson) 
+                 : vendor.billingAddress ? JSON.parse(vendor.billingAddress) 
+                 : null;
+      return addr;
+    } catch { return null; }
+  };
   
-  // ── Context Data ────────────────────────────────────────────────
+  // â”€â”€ Context Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (companyId) {
       purchaseAPI.getVendors(companyId).then(res => setVendors(res.data || []));
@@ -160,21 +175,18 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     setActiveRowForItemModal(null);
   };
 
-  // ── Outside Click Logic ─────────────────────────────────────────
+  // â”€â”€ Outside Click Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(event.target)) {
         setIsVendorDropdownOpen(false);
-      }
-      if (tdsDropdownRef.current && !tdsDropdownRef.current.contains(event.target)) {
-        setIsTDSDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ── Item Dropdown Outside Click ─────────────────────────────────
+  // â”€â”€ Item Dropdown Outside Click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const handleItemClickOutside = (event) => {
       if (itemDropdownRef.current && !itemDropdownRef.current.contains(event.target)) {
@@ -185,7 +197,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     return () => document.removeEventListener('mousedown', handleItemClickOutside);
   }, []);
 
-  // ── Account Dropdown Outside Click ──────────────────────────────
+  // â”€â”€ Account Dropdown Outside Click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const handleAccountClickOutside = (event) => {
       if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target)) {
@@ -196,7 +208,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     return () => document.removeEventListener('mousedown', handleAccountClickOutside);
   }, []);
 
-  // ── Attachment Dropdown Outside Click ───────────────────────────
+  // â”€â”€ Attachment Dropdown Outside Click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const handleAttachmentClickOutside = (event) => {
       if (attachmentRef.current && !attachmentRef.current.contains(event.target)) {
@@ -207,7 +219,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     return () => document.removeEventListener('mousedown', handleAttachmentClickOutside);
   }, []);
 
-  // ── Terms Dropdown Outside Click ────────────────────────────────
+  // â”€â”€ Terms Dropdown Outside Click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const handleTermsClickOutside = (event) => {
       if (termsDropdownRef.current && !termsDropdownRef.current.contains(event.target)) {
@@ -218,31 +230,37 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     return () => document.removeEventListener('mousedown', handleTermsClickOutside);
   }, []);
 
-  // ── Calculations ────────────────────────────────────────────────
+  // â”€â”€ TDS Dropdown Outside Click â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  useEffect(() => {
+    const handleTdsClickOutside = (event) => {
+      if (tdsDropdownRef.current && !tdsDropdownRef.current.contains(event.target)) {
+        setIsTDSDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleTdsClickOutside);
+    return () => document.removeEventListener('mousedown', handleTdsClickOutside);
+  }, []);
+
+  // â”€â”€ Calculations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (item.qty * item.rate), 0);
     const discountAmount = (subtotal * (formData.discount / 100));
     const taxableAmount = subtotal - discountAmount;
     
-    // GST Calculation
-    const taxAmount = (taxableAmount * (formData.taxRate / 100));
-    
-    // TDS Calculation
+    // TDS Calculation (Deduction)
     const tdsAmount = (taxableAmount * (formData.tdsRate / 100));
-    
-    const total = taxableAmount + taxAmount - tdsAmount + parseFloat(formData.adjustment || 0);
+    const total = taxableAmount - tdsAmount + parseFloat(formData.adjustment || 0);
 
     return {
       subtotal,
       discountAmount,
       taxableAmount,
-      taxAmount,
       tdsAmount,
       total
     };
-  }, [items, formData.discount, formData.taxRate, formData.tdsRate, formData.adjustment]);
+  }, [items, formData.discount, formData.tdsRate, formData.adjustment]);
 
-  // ── Handlers ────────────────────────────────────────────────────
+  // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleItemChange = (id, field, value) => {
     setItems(prev => prev.map(item => 
       item.id === id ? { ...item, [field]: value, amount: field === 'qty' ? value * item.rate : field === 'rate' ? value * item.qty : item.amount } : item
@@ -296,16 +314,27 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     setIsSaving(true);
     try {
       const payload = {
-        orderNumber: formData.poNumber,
+        profileName: formData.profileName,
+        repeatEvery: formData.repeatEvery,
+        startDate: formData.startDate,
+        endDate: formData.neverExpires ? null : formData.endDate,
+        neverExpires: formData.neverExpires,
+        vendorId: formData.vendorId,
+        billNumber: formData.billNumber,
         date: formData.date,
         totalAmount: totals.total,
-        status: sendEmail ? 'Sent' : 'Draft',
+        discount: formData.discount,
+        taxRate: formData.taxRate, // Keeping generic taxRate if needed, but primary is TDS
+        tdsRate: formData.tdsRate,
+        tdsName: formData.tdsName,
+        adjustment: formData.adjustment,
+        status: 'Active',
         notes: formData.notes,
-        supplierLedgerId: formData.vendorId,
-        companyId
+        CompanyId: companyId,
+        items
       };
 
-      const res = await purchaseAPI.createOrder(payload);
+      const res = await recurringBillAPI.create(payload);
       const savedData = res.data;
       
       setSavedPO(savedData);
@@ -313,12 +342,12 @@ const PurchaseOrderEntryView = ({ companyId }) => {
       if (sendEmail) {
         setIsEmailModalOpen(true);
       } else {
-        alert('Purchase Order saved successfully');
+        alert('Bill saved successfully');
         window.history.back();
       }
     } catch (err) {
-      console.error('Error saving PO:', err);
-      alert('Failed to save Purchase Order. Please try again.');
+      console.error('Error saving Bill:', err);
+      alert('Failed to save Bill. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -326,22 +355,24 @@ const PurchaseOrderEntryView = ({ companyId }) => {
 
   return (
     <div className="bg-white min-h-screen text-[13px] text-slate-800 font-medium pb-24">
-       {/* ─── Top Bar ──────────────────────────────────────────────── */}
+       {/* ———————————————————————————————————————————————————————————————————————————————— */}
        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
              <ShoppingBag size={20} className="text-slate-800" />
-             <h1 className="text-[18px] text-slate-800">New Purchase Order</h1>
+             <h1 className="text-[18px] text-slate-800">New Recurring Bill</h1>
           </div>
-          <button 
-            onClick={() => window.history.back()}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
-          >
-             <X size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+             <button 
+               onClick={() => window.history.back()}
+               className="text-slate-400 hover:text-slate-600 transition-colors"
+             >
+                <X size={20} />
+             </button>
+          </div>
        </div>
 
-       <div className="flex">
-          {/* ─── Main Form Area ───────────────────────────────────── */}
+       <div className="flex relative">
+          {/* ———————————————————————————————————————————————————————————————————————————————— */}
           <div className="flex-1 px-8 py-6 max-w-[1200px]">
              
              {/* Form Grid */}
@@ -350,32 +381,84 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                 {/* Vendor Name */}
                 <label className="text-red-500 pt-2"><span className="text-slate-700">Vendor Name</span>*</label>
                 <div className="relative" ref={vendorDropdownRef}>
-                   <div className="flex max-w-[400px]">
-                      <div className="relative flex-1">
-                         <input 
-                           type="text"
-                           placeholder="Select a Vendor"
-                           value={formData.vendorName || vendorSearch}
-                           onChange={(e) => {
-                              setVendorSearch(e.target.value);
-                              setIsVendorDropdownOpen(true);
-                           }}
-                           onFocus={() => setIsVendorDropdownOpen(true)}
-                           className="w-full h-9 px-3 border border-slate-300 rounded-l text-slate-800 focus:border-blue-500 outline-none"
-                         />
-                         <ChevronDown 
-                           size={14} 
-                           onClick={(e) => {
-                              e.stopPropagation();
-                              setIsVendorDropdownOpen(!isVendorDropdownOpen);
-                           }}
-                           className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" 
-                         />
+                   <div className="flex items-center gap-3">
+                      <div className="flex max-w-[400px] flex-1">
+                         <div className="relative flex-1">
+                            <input 
+                              type="text"
+                              placeholder="Select a Vendor"
+                              value={formData.vendorName || vendorSearch}
+                              onChange={(e) => {
+                                 setVendorSearch(e.target.value);
+                                 setFormData(prev => ({ ...prev, vendorName: '', vendorId: '' }));
+                                 setSelectedVendor(null);
+                                 setIsVendorDropdownOpen(true);
+                              }}
+                              onFocus={() => setIsVendorDropdownOpen(true)}
+                              className="w-full h-9 px-3 pr-16 border border-slate-300 rounded-l text-slate-800 focus:border-blue-500 outline-none"
+                            />
+                            {formData.vendorName && (
+                               <button
+                                 onClick={() => {
+                                    setFormData(prev => ({ ...prev, vendorName: '', vendorId: '' }));
+                                    setSelectedVendor(null);
+                                    setIsVendorDetailsOpen(false);
+                                 }}
+                                 className="absolute right-8 top-2 text-slate-400 hover:text-slate-600"
+                               >
+                                  <X size={14} />
+                               </button>
+                            )}
+                            <ChevronDown 
+                              size={14} 
+                              onClick={(e) => {
+                                 e.stopPropagation();
+                                 setIsVendorDropdownOpen(!isVendorDropdownOpen);
+                              }}
+                              className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" 
+                            />
+                         </div>
+                         <button className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600">
+                            <Search size={14} />
+                         </button>
                       </div>
-                      <button className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600">
-                         <Search size={14} />
-                      </button>
+                      {/* INR Currency Indicator */}
+                      {formData.vendorName && (
+                         <div className="flex items-center gap-1.5 text-[13px] text-slate-600">
+                            <div className="w-3 h-3 rounded-full border-2 border-green-500 bg-green-500"></div>
+                            <span className="font-medium">INR</span>
+                         </div>
+                      )}
                    </div>
+
+                   {/* Billing Address shown when vendor selected */}
+                   {selectedVendor && (() => {
+                      const addr = getVendorBillingAddress(selectedVendor);
+                      return (
+                         <div className="mt-2 max-w-[400px]">
+                            <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">BILLING ADDRESS</div>
+                            {addr && (addr.street1 || addr.city) ? (
+                               <div className="text-[12px] text-slate-600 leading-relaxed">
+                                  {addr.attention && <div>{addr.attention}</div>}
+                                  {addr.street1 && <div>{addr.street1}</div>}
+                                  {addr.street2 && <div>{addr.street2}</div>}
+                                  {(addr.city || addr.state || addr.pinCode) && (
+                                     <div>{[addr.city, addr.state, addr.pinCode].filter(Boolean).join(', ')}</div>
+                                  )}
+                                  {addr.country && <div>{addr.country}</div>}
+                               </div>
+                            ) : (
+                               <button 
+                                 className="text-[12px] text-blue-500 hover:text-blue-700 hover:underline font-medium"
+                                 onClick={() => setIsAddressModalOpen(true)}
+                               >
+                                  New Address
+                               </button>
+                            )}
+                         </div>
+                      );
+                   })()}
+
                    {isVendorDropdownOpen && (
                       <div className="absolute top-[calc(100%+4px)] left-0 w-[360px] bg-white border border-slate-200 rounded-md shadow-lg z-50 flex flex-col">
                          <div className="max-h-[200px] overflow-y-auto py-1 custom-scrollbar">
@@ -385,6 +468,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                      key={vendor.id}
                                      onClick={() => {
                                         setFormData({ ...formData, vendorId: vendor.id, vendorName: vendor.name });
+                                        setSelectedVendor(vendor);
                                         setVendorSearch('');
                                         setIsVendorDropdownOpen(false);
                                      }}
@@ -414,144 +498,104 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                    )}
                 </div>
 
-                {/* Delivery Address */}
-                <label className="text-red-500 pt-1"><span className="text-slate-700">Delivery Address</span>*</label>
-                <div>
-                   <div className="flex items-center gap-6 mb-3">
-                      {['Organization', 'Customer'].map(type => (
-                         <label key={type} className="flex items-center gap-2 cursor-pointer">
-                            <input 
-                              type="radio" 
-                              name="deliveryAddressType"
-                              checked={formData.deliveryAddress === type}
-                              onChange={() => setFormData({ ...formData, deliveryAddress: type })}
-                              className="w-3.5 h-3.5 text-blue-600 border-slate-300 focus:ring-blue-500 disabled:opacity-50"
-                            />
-                            <span className="text-[13px] text-slate-800">{type}</span>
-                         </label>
-                      ))}
-                   </div>
-                   <div className="bg-white border border-slate-200 rounded p-4 max-w-[500px]">
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                         <div className="col-span-2">
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Attention</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.attention}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, attention: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
+                {/* Profile Name */}
+                <label className="text-red-500 pt-2"><span className="text-slate-700">Profile Name</span>*</label>
+                <input 
+                  type="text"
+                  value={formData.profileName}
+                  onChange={(e) => setFormData({ ...formData, profileName: e.target.value })}
+                  className="w-full max-w-[400px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
+                />
+
+                {/* Repeat Every */}
+                <label className="text-red-500 pt-2"><span className="text-slate-700">Repeat Every</span>*</label>
+                <div className="relative max-w-[400px]">
+                   <select 
+                     value={formData.repeatEvery}
+                     onChange={(e) => setFormData({ ...formData, repeatEvery: e.target.value })}
+                     className="w-full h-9 px-3 pr-8 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none appearance-none"
+                   >
+                      <option value="Week">Week</option>
+                      <option value="2 Weeks">2 Weeks</option>
+                      <option value="Month">Month</option>
+                      <option value="2 Months">2 Months</option>
+                      <option value="3 Months">3 Months</option>
+                      <option value="6 Months">6 Months</option>
+                      <option value="Year">Year</option>
+                      <option value="2 Years">2 Years</option>
+                      <option value="3 Years">3 Years</option>
+                      <option value="Custom">Custom</option>
+                   </select>
+                   <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                </div>
+
+                {/* Start On and Ends On */}
+                <label className="text-slate-700 pt-2">Start On</label>
+                <div className="flex items-center gap-4 max-w-[600px]">
+                   <input 
+                     type="date"
+                     value={formData.startDate}
+                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                     className="w-[180px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
+                   />
+                   
+                   <span className="text-slate-700 text-[13px] ml-2 font-medium">Ends On</span>
+                   <div className="flex items-center gap-3">
+                      <input 
+                        id="ends-on-picker"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                        disabled={formData.neverExpires}
+                        className="w-[140px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none disabled:bg-slate-50 disabled:text-slate-400 placeholder:text-slate-400"
+                        placeholder="dd/MM/yyyy"
+                      />
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                         <div className={`w-[14px] h-[14px] rounded border flex items-center justify-center transition-colors ${formData.neverExpires ? 'bg-blue-600 border-blue-600' : 'border-slate-300 group-hover:border-blue-400'}`}>
+                            {formData.neverExpires && <CheckCircle2 size={10} className="text-white fill-white" />}
                          </div>
-                         <div className="col-span-2">
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Street 1</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.street1}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, street1: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div className="col-span-2">
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Street 2</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.street2}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, street2: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div>
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">City</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.city}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, city: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div>
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">State/Province</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.state}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, state: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div>
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">ZIP</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.zip}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, zip: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div>
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Country</label>
-                            <select 
-                              value={formData.deliveryAddressData.country}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, country: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            >
-                               <option value="" className="text-slate-400">Select country</option>
-                               {COUNTRY_CODES.map((c, i) => (
-                                  <option key={i} value={c.country}>{c.country}</option>
-                               ))}
-                            </select>
-                         </div>
-                         <div className="col-span-2">
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Phone</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.phone}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, phone: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                      </div>
+                         <input 
+                           type="checkbox" 
+                           className="hidden"
+                           checked={formData.neverExpires}
+                           onChange={(e) => {
+                               const checked = e.target.checked;
+                               setFormData({ ...formData, neverExpires: checked, endDate: checked ? '' : formData.endDate });
+                               if (!checked) {
+                                   setTimeout(() => {
+                                       try {
+                                           document.getElementById('ends-on-picker')?.showPicker();
+                                       } catch (e) {
+                                           document.getElementById('ends-on-picker')?.focus();
+                                       }
+                                   }, 50);
+                               }
+                           }}
+                         />
+                         <span className="text-[13px] text-slate-700 font-medium">Never Expires</span>
+                      </label>
                    </div>
                 </div>
 
-                {/* Purchase Order# */}
-                <label className="text-red-500 pt-2"><span className="text-slate-700">Purchase Order#</span>*</label>
-                <input 
-                  type="text"
-                  value={formData.poNumber}
-                  onChange={(e) => setFormData({ ...formData, poNumber: e.target.value })}
-                  className="w-full max-w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
-                />
-
-                {/* Reference# */}
-                <label className="text-slate-700 pt-2">Reference#</label>
-                <input 
-                  type="text"
-                  value={formData.reference}
-                  onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                  className="w-full max-w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
-                />
-
-                {/* Date */}
-                <label className="text-slate-700 pt-2">Date</label>
-                <input 
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full max-w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
-                />
-
-                {/* Delivery Date & Payment Terms */}
-                <label className="text-slate-700 pt-2">Delivery Date</label>
+                {/* Accounts Payable & Payment Terms */}
+                <label className="text-slate-700 flex items-center gap-1 pt-2">
+                   Accounts Payable <HelpCircle size={14} className="text-slate-400" />
+                </label>
                 <div className="flex items-center gap-6 max-w-2xl">
-                   <input 
-                     type="date"
-                     value={formData.deliveryDate}
-                     onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
-                     className="w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-400 focus:border-blue-500 outline-none"
-                   />
+                   <div className="relative w-[280px]">
+                      <select 
+                        value={formData.accountsPayable || 'Accounts Payable'}
+                        onChange={(e) => setFormData({ ...formData, accountsPayable: e.target.value })}
+                        className="w-full h-9 px-3 pr-8 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none appearance-none"
+                      >
+                         <option value="Accounts Payable">Accounts Payable</option>
+                      </select>
+                      <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                   </div>
+                   
                    <div className="flex items-center gap-4">
-                      <span className="text-slate-700 min-w-[100px]">Payment Terms</span>
-                      <div className="relative w-[280px]" ref={termsDropdownRef}>
+                      <span className="text-slate-700 font-medium whitespace-nowrap px-2">Payment Terms</span>
+                      <div className="relative w-[180px]" ref={termsDropdownRef}>
                          <button 
                             type="button"
                             onClick={() => {
@@ -565,7 +609,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                          </button>
                          
                          {isTermsDropdownOpen && (
-                            <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded lg shadow-lg z-50 overflow-hidden">
+                            <div className="absolute top-full left-0 mt-1 w-[280px] bg-white border border-slate-200 rounded lg shadow-lg z-50 overflow-hidden">
                                <div className="p-2 border-b border-slate-100">
                                   <div className="relative">
                                      <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
@@ -604,18 +648,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                    </div>
                 </div>
 
-                {/* Shipment Preference */}
-                <label className="text-slate-700 pt-2">Shipment Preference</label>
-                <div className="relative max-w-[280px]">
-                   <select 
-                     value={formData.shipmentPreference}
-                     onChange={(e) => setFormData({ ...formData, shipmentPreference: e.target.value })}
-                     className="w-full h-9 px-3 pr-8 border border-slate-300 rounded text-slate-400 focus:border-blue-500 outline-none appearance-none"
-                   >
-                      <option value="" disabled>Choose the shipment preference</option>
-                   </select>
-                   <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
-                </div>
+
              </div>
 
              {/* Transaction Level Divider */}
@@ -627,7 +660,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                 </button>
              </div>
 
-             {/* ─── Item Table ───────────────────────────────────────── */}
+             {/* ———————————————————————————————————————————————————————————————————————————————— */}
              <div className="max-w-[1200px] border border-slate-200 rounded-t-md bg-white relative z-10">
                 {/* Table Header */}
                 <div className="flex items-center bg-slate-50/80 border-b border-slate-200 p-2 px-3">
@@ -843,30 +876,6 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                       {/* GST Selection & Rate Row */}
                       <div className="py-3 border-y border-slate-200/50 flex items-center justify-between gap-4">
                          <div className="flex items-center gap-2">
-                            <span className="text-slate-600 text-[13px] font-bold">GST</span>
-                            <div className="flex-1 min-w-[160px]">
-                               <select 
-                                 value={formData.taxRate}
-                                 onChange={(e) => setFormData({ ...formData, taxRate: parseFloat(e.target.value) })}
-                                 className="w-full h-8 px-2 text-[12px] border border-slate-300 rounded focus:border-blue-500 outline-none bg-white transition-all appearance-none cursor-pointer pr-6 text-slate-700"
-                                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.4rem center', backgroundSize: '1em' }}
-                               >
-                                  <option value="0">Select a Tax</option>
-                                  <option value="5">GST @ 5%</option>
-                                  <option value="12">GST @ 12%</option>
-                                  <option value="18">GST @ 18%</option>
-                                  <option value="28">GST @ 28%</option>
-                               </select>
-                            </div>
-                         </div>
-                         <div className="font-medium text-slate-800 text-[13px]">
-                            {totals.taxAmount.toFixed(2)}
-                         </div>
-                      </div>
-
-                      {/* Standardized TDS Dropdown */}
-                      <div className="py-3 border-b border-slate-200/50 flex items-center justify-between gap-4">
-                         <div className="flex items-center gap-2">
                             <span className="text-slate-600 text-[13px] font-bold">TDS</span>
                             <div className="relative min-w-[220px]" ref={tdsDropdownRef}>
                                <div 
@@ -893,11 +902,11 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                              value={tdsSearchTerm}
                                              onChange={(e) => setTdsSearchTerm(e.target.value)}
                                              placeholder="Search"
-                                             className="w-full pl-8 pr-3 py-1.5 text-[12px] outline-none border border-slate-200 rounded focus:border-blue-500" 
+                                             className="w-full pl-8 pr-3 py-1.5 text-[12px] outline-none border border-slate-200 rounded focus:border-blue-500"
                                            />
                                         </div>
                                      </div>
-                                     <div className="max-h-[220px] overflow-y-auto py-1 custom-scrollbar text-left">
+                                     <div className="max-h-[220px] overflow-y-auto py-1 custom-scrollbar">
                                         <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Taxes</div>
                                         {filteredTdsOptions.map((opt, idx) => (
                                            <div 
@@ -912,6 +921,14 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                               {formData.tdsName === opt.name && <CheckCircle2 size={14} className="text-white fill-white" />}
                                            </div>
                                         ))}
+                                        {filteredTdsOptions.length === 0 && (
+                                           <div className="px-4 py-3 text-center text-slate-400 text-[12px]">No taxes found</div>
+                                        )}
+                                     </div>
+                                     <div className="border-t border-slate-100 p-2 bg-slate-50/50">
+                                        <button className="w-full py-1.5 flex items-center justify-start gap-2 text-blue-600 hover:text-blue-800 text-[12px] font-medium transition-colors">
+                                           <Settings size={14} /> Manage TDS
+                                        </button>
                                      </div>
                                   </div>
                                )}
@@ -945,10 +962,9 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                 </div>
              </div>
 
-             {/* ─── Attachments Section ────────────────────────────────── */}
-             <div className="mt-12 pb-10 border-t border-slate-100 pt-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="mt-12 pb-10 border-t border-slate-100 pt-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="flex flex-col gap-4">
-                   <h3 className="text-[14px] font-semibold text-slate-700">Attach File(s) to Purchase Order</h3>
+                   <h3 className="text-[14px] font-semibold text-slate-700">Attach File(s) to Bill</h3>
                    
                    <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
@@ -1001,26 +1017,187 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                 </div>
              </div>
           </div>
+
+           {/* Vendor Details Slide-out Panel - Redesigned */}
+           {isVendorDetailsOpen && selectedVendor && (() => {
+              const addr = getVendorBillingAddress(selectedVendor);
+              const vendorInitial = (selectedVendor.name || '?').charAt(0).toUpperCase();
+              
+              
+              
+              return (
+                 <div className="w-[420px] border-l border-slate-200 bg-[#f5f5f5] overflow-y-auto h-[calc(100vh-65px)] sticky top-[65px] shrink-0 animate-in slide-in-from-right-4 duration-300 flex flex-col">
+
+                    {/* Panel Header */}
+                    <div className="bg-white px-5 pt-5 pb-0 border-b border-slate-200">
+                       <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                             <div className="w-12 h-12 rounded-lg bg-slate-200 flex items-center justify-center text-[18px] font-bold text-slate-600 shrink-0">
+                                {vendorInitial}
+                             </div>
+                             <div>
+                                <div className="text-[11px] text-slate-400 font-medium mb-0.5">Vendor</div>
+                                <div className="flex items-center gap-2">
+                                   <h3 className="text-[17px] font-bold text-slate-800">{selectedVendor.name}</h3>
+                                   <Link size={13} className="text-blue-500 cursor-pointer hover:text-blue-700" />
+                                </div>
+                             </div>
+                          </div>
+                          <button onClick={() => setIsVendorDetailsOpen(false)} className="text-red-400 hover:text-red-600 transition-colors mt-1">
+                             <X size={18} />
+                          </button>
+                       </div>
+
+                       {/* File/Note icons */}
+                       <div className="flex flex-col gap-1 mb-3 text-slate-400">
+                          <div className="flex items-center gap-2 text-[12px]"><FileText size={13} /> -</div>
+                          <div className="flex items-center gap-2 text-[12px]"><Send size={13} /> -</div>
+                       </div>
+
+                       {/* Tabs */}
+                       <div className="flex gap-6 text-[13px] font-medium">
+                          <button
+                            onClick={() => setVendorPanelTab('details')}
+                            className={`pb-2.5 border-b-2 transition-colors ${vendorPanelTab === 'details' ? 'border-blue-600 text-slate-800' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                          >
+                             Details
+                          </button>
+                          <button
+                            onClick={() => setVendorPanelTab('activity')}
+                            className={`pb-2.5 border-b-2 transition-colors ${vendorPanelTab === 'activity' ? 'border-blue-600 text-slate-800' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                          >
+                             Activity Log
+                          </button>
+                       </div>
+                    </div>
+
+                    {/* Panel Body */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                       {vendorPanelTab === 'details' && (
+                          <>
+                             {/* Financials Row */}
+                             <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-white rounded-lg border border-slate-200 p-4 text-center">
+                                   <div className="flex justify-center mb-2">
+                                      <div className="w-8 h-8 bg-orange-50 rounded-full flex items-center justify-center">
+                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="12" y1="9" x2="12" y2="13" stroke="#f97316" strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#f97316" strokeWidth="2" strokeLinecap="round"/></svg>
+                                      </div>
+                                   </div>
+                                   <div className="text-[11px] text-slate-400 mb-1">Outstanding Payables</div>
+                                   <div className="text-[16px] font-bold text-slate-800">₹{(parseFloat(selectedVendor.currentBalance) || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</div>
+                                </div>
+                                <div className="bg-white rounded-lg border border-slate-200 p-4 text-center">
+                                   <div className="flex justify-center mb-2">
+                                      <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center">
+                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2"/><path d="M12 6v6l4 2" stroke="#22c55e" strokeWidth="2" strokeLinecap="round"/></svg>
+                                      </div>
+                                   </div>
+                                   <div className="text-[11px] text-slate-400 mb-1">Unused Credits</div>
+                                   <div className="text-[16px] font-bold text-slate-800">₹0.00</div>
+                                </div>
+                             </div>
+
+                             {/* Contact Details */}
+                             <div className="bg-white rounded-lg border border-slate-200 p-4">
+                                <h4 className="text-[14px] font-bold text-slate-800 mb-4">Contact Details</h4>
+                                <div className="space-y-3 text-[13px]">
+                                   <div className="flex justify-between">
+                                      <span className="text-blue-500">Currency</span>
+                                      <span className="text-[#c47c2b] font-medium">{(selectedVendor.currency || 'INR- Indian Rupee').split('-')[0].trim()}</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                      <span className="text-blue-500">Payment Terms</span>
+                                      <span className="text-[#c47c2b] font-medium">{selectedVendor.paymentTerms || 'Due on Receipt'}</span>
+                                   </div>
+                                   <div className="flex justify-between">
+                                      <span className="text-blue-500">Portal Status</span>
+                                      <span className="text-slate-500">Disabled</span>
+                                   </div>
+                                   <div className="flex justify-between items-center">
+                                      <span className="text-blue-500 flex items-center gap-1">Vendor Language <Info size={12} className="text-slate-400" /></span>
+                                      <span className="text-[#c47c2b] font-medium">English</span>
+                                   </div>
+                                   {selectedVendor.email && (
+                                      <div className="flex justify-between"><span className="text-blue-500">Email</span><span className="text-slate-700">{selectedVendor.email}</span></div>
+                                   )}
+                                   {(selectedVendor.phone || selectedVendor.mobile) && (
+                                      <div className="flex justify-between"><span className="text-blue-500">Phone</span><span className="text-slate-700">{selectedVendor.phone || selectedVendor.mobile}</span></div>
+                                   )}
+                                   {selectedVendor.pan && (
+                                      <div className="flex justify-between"><span className="text-blue-500">PAN</span><span className="text-slate-700 uppercase">{selectedVendor.pan}</span></div>
+                                   )}
+                                </div>
+                             </div>
+
+                             {/* Contact Persons collapsible */}
+                             <div className="bg-white rounded-lg border border-slate-200">
+                                <button
+                                  onClick={() => setIsContactPersonsExpanded(!isContactPersonsExpanded)}
+                                  className="w-full flex items-center justify-between px-4 py-3.5 text-[13px] font-bold text-slate-800 hover:bg-slate-50 transition-colors rounded-lg"
+                                >
+                                   <span className="flex items-center gap-2">
+                                      Contact Persons
+                                      <span className="bg-slate-200 text-slate-600 text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center">0</span>
+                                   </span>
+                                   <ChevronDown size={14} className={`text-slate-400 transition-transform ${isContactPersonsExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                                {isContactPersonsExpanded && (
+                                   <div className="px-4 pb-4 text-[12px] text-slate-400 italic">No contact persons on file.</div>
+                                )}
+                             </div>
+
+                             {/* Address collapsible */}
+                             <div className="bg-white rounded-lg border border-slate-200">
+                                <button
+                                  onClick={() => setIsAddressExpanded(!isAddressExpanded)}
+                                  className="w-full flex items-center justify-between px-4 py-3.5 text-[13px] font-bold text-slate-800 hover:bg-slate-50 transition-colors rounded-lg"
+                                >
+                                   Address
+                                   <ChevronDown size={14} className={`text-slate-400 transition-transform ${isAddressExpanded ? 'rotate-180' : ''}`} />
+                                </button>
+                                {isAddressExpanded && addr && (addr.street1 || addr.city) && (
+                                   <div className="px-4 pb-4 text-[13px] text-slate-600 leading-relaxed space-y-0.5">
+                                      {addr.attention && <div className="font-medium text-slate-700">{addr.attention}</div>}
+                                      {addr.street1 && <div>{addr.street1}</div>}
+                                      {addr.street2 && <div>{addr.street2}</div>}
+                                      {(addr.city || addr.state || addr.pinCode) && <div>{[addr.city, addr.state, addr.pinCode].filter(Boolean).join(', ')}</div>}
+                                      {addr.country && <div>{addr.country}</div>}
+                                   </div>
+                                )}
+                                {isAddressExpanded && (!addr || (!addr.street1 && !addr.city)) && (
+                                   <div className="px-4 pb-4 text-[12px] text-slate-400 italic">No address on file.</div>
+                                )}
+                             </div>
+                          </>
+                       )}
+
+                       {vendorPanelTab === 'activity' && (
+                          <div className="bg-white rounded-lg border border-slate-200 p-6 text-center">
+                             <History size={28} className="text-slate-300 mx-auto mb-2" />
+                             <div className="text-[13px] text-slate-500 font-medium">No activity yet</div>
+                             <div className="text-[12px] text-slate-400 mt-1">Actions taken on this vendor will appear here</div>
+                          </div>
+                       )}
+                    </div>
+                 </div>
+              );
+           })()}
        </div>
 
-       {/* ─── Bottom Actions ────────────────────────────────────── */}
+       {/* â”€â”€â”€ Bottom Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between px-8 z-50">
           <div className="flex items-center gap-3">
              <button 
                onClick={() => handleSaveOrder(false)}
                disabled={isSaving}
-               className="px-4 h-8 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium rounded border border-slate-300 transition-colors disabled:opacity-50"
+               className="px-4 h-8 bg-[#408dfb] hover:bg-[#327ad9] text-white text-[13px] font-medium rounded transition-colors disabled:opacity-50 shadow-sm"
              >
-                {isSaving ? 'Saving...' : 'Save as Draft'}
+                {isSaving ? 'Saving...' : 'Save'}
              </button>
              <button 
-               onClick={() => handleSaveOrder(true)}
-               disabled={isSaving}
-               className="px-4 h-8 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors shadow-sm disabled:opacity-50"
+               onClick={() => window.history.back()} 
+               className="px-3 h-8 bg-[#f5f5f5] hover:bg-[#ebebeb] text-slate-800 text-[13px] font-medium rounded border border-slate-200 transition-colors"
              >
-                {isSaving ? 'Saving...' : 'Save and Send'}
-             </button>
-             <button onClick={() => window.history.back()} className="px-4 h-8 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded border border-slate-200 transition-colors">
                 Cancel
              </button>
           </div>
@@ -1131,4 +1308,4 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   );
 };
 
-export default PurchaseOrderEntryView;
+export default RecurringBillEntryView;

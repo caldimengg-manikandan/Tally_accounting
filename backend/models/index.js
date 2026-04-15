@@ -29,6 +29,11 @@ const DeliveryChallanItem = require('./deliveryChallanItem.model')(sequelize, Da
 const Project = require('./project.model')(sequelize, DataTypes);
 const ProjectTask = require('./projectTask.model')(sequelize, DataTypes);
 const ProjectUser = require('./projectUser.model')(sequelize, DataTypes);
+const RecurringExpense = require('./recurringExpense.model')(sequelize, DataTypes);
+const RecurringBill = require('./recurringBill.model')(sequelize, DataTypes);
+const RecurringBillItem = require('./recurringBillItem.model')(sequelize, DataTypes);
+const VendorCredit = require('./vendorCredit.model')(sequelize, DataTypes);
+const VendorCreditItem = require('./vendorCreditItem.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -122,6 +127,25 @@ Ledger.hasMany(RetainerInvoice, { foreignKey: 'customerLedgerId' });
 Company.hasMany(RecurringInvoice, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 RecurringInvoice.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
+// 10. Recurring Expenses
+Company.hasMany(RecurringExpense, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+RecurringExpense.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+RecurringExpense.belongsTo(Ledger, { as: 'ExpenseAccount', foreignKey: 'expenseAccountId' });
+RecurringExpense.belongsTo(Ledger, { as: 'PaidThrough', foreignKey: 'paidThroughId' });
+RecurringExpense.belongsTo(Ledger, { as: 'Vendor', foreignKey: 'vendorId' });
+RecurringExpense.belongsTo(Ledger, { as: 'Customer', foreignKey: 'customerId' });
+
+// 11. Recurring Bills
+Company.hasMany(RecurringBill, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+RecurringBill.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+RecurringBill.hasMany(RecurringBillItem, { as: 'items', foreignKey: 'RecurringBillId', onDelete: 'CASCADE' });
+RecurringBillItem.belongsTo(RecurringBill, { foreignKey: 'RecurringBillId' });
+
+RecurringBill.belongsTo(Ledger, { as: 'Vendor', foreignKey: 'vendorId' });
+Ledger.hasMany(RecurringBill, { foreignKey: 'vendorId' });
+
 // 10. Retainer Adjustments
 Company.hasMany(RetainerAdjustment, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 RetainerAdjustment.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -191,6 +215,16 @@ ProjectUser.belongsTo(Project, { foreignKey: 'ProjectId' });
 ProjectUser.belongsTo(User, { foreignKey: 'UserId' });
 User.hasMany(ProjectUser, { foreignKey: 'UserId' });
 
+// 16. Vendor Credits
+VendorCredit.hasMany(VendorCreditItem, { as: 'items', foreignKey: 'VendorCreditId', onDelete: 'CASCADE' });
+VendorCreditItem.belongsTo(VendorCredit, { foreignKey: 'VendorCreditId' });
+VendorCredit.belongsTo(Company, { foreignKey: 'CompanyId' });
+Company.hasMany(VendorCredit, { foreignKey: 'CompanyId' });
+VendorCredit.belongsTo(Ledger, { as: 'Vendor', foreignKey: 'vendorLedgerId' });
+VendorCredit.belongsTo(Ledger, { as: 'APAccount', foreignKey: 'accountsPayableId' });
+VendorCreditItem.belongsTo(Item, { foreignKey: 'itemId' });
+VendorCreditItem.belongsTo(Ledger, { as: 'Account', foreignKey: 'accountId' });
+
 module.exports = {
   sequelize,
   User,
@@ -220,5 +254,10 @@ module.exports = {
   DeliveryChallanItem,
   Project,
   ProjectTask,
-  ProjectUser
+  ProjectUser,
+  RecurringExpense,
+  RecurringBill,
+  RecurringBillItem,
+  VendorCredit,
+  VendorCreditItem
 };

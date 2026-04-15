@@ -5,8 +5,9 @@ import {
   Info, AlertCircle, Save, ArrowLeft,
   PlusCircle
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { ledgerAPI, purchaseAPI } from '../../services/api';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ledgerAPI, purchaseAPI, recurringExpenseAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 import CreateAccountModal from './CreateAccountModal';
 import CreateCurrencyModal from './CreateCurrencyModal';
 
@@ -15,7 +16,9 @@ const CURRENCIES = [
 ];
 
 const RecurringExpenseEntryView = ({ companyId }) => {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const { addNotification } = useNotificationStore();
   const [loading, setLoading] = useState(false);
   const [initialDataLoading, setInitialDataLoading] = useState(true);
   
@@ -62,73 +65,119 @@ const RecurringExpenseEntryView = ({ companyId }) => {
   useEffect(() => {
     if (!companyId) return;
     
-    setInitialDataLoading(true);
-    Promise.all([
-      ledgerAPI.getByCompany(companyId),
-      purchaseAPI.getVendors(companyId),
-    ]).then(([ledgersRes, vendorsRes]) => {
-      const allLedgers = ledgersRes.data || [];
-      setLedgers(allLedgers);
-      setVendors(vendorsRes.data || []);
-      
-      // Filter customers from debtors
-      setCustomers(allLedgers.filter(l => l.Group?.name?.includes('Debtor')));
-    })
-    .catch(err => console.error("Failed to fetch form data:", err))
-    .finally(() => setInitialDataLoading(false));
-  }, [companyId]);
+    const fetchData = async () => {
+        try {
+            setInitialDataLoading(true);
+            const [ledgersRes, vendorsRes] = await Promise.all([
+                ledgerAPI.getByCompany(companyId),
+                purchaseAPI.getVendors(companyId),
+            ]);
+            
+            const allLedgers = ledgersRes.data || [];
+            setLedgers(allLedgers);
+            setVendors(vendorsRes.data || []);
+            setCustomers(allLedgers.filter(l => l.Group?.name?.includes('Debtor') || l.Group?.name?.includes('Customer')));
+
+            if (id) {
+                const templatesRes = await recurringExpenseAPI.getByCompany(companyId);
+                const template = templatesRes.data?.find(t => t.id === id);
+                if (template) {
+                    setFormData({
+                        profileName: template.profileName,
+                        repeatEvery: template.frequency,
+                        startDate: new Date(template.startDate).toISOString().split('T')[0],
+                        endsOn: template.endDate ? new Date(template.endDate).toISOString().split('T')[0] : '',
+                        neverExpires: !template.endDate,
+                        expenseAccountId: template.expenseAccountId,
+                        currency: template.currency,
+                        amount: template.amount,
+                        paidThroughId: template.paidThroughId,
+                        vendorId: template.vendorId || '',
+                        notes: template.notes || '',
+                        customerId: template.customerId || '',
+                        tags: []
+                    });
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch form data:", err);
+            addNotification('Failed to load form data', 'error');
+        } finally {
+            setInitialDataLoading(false);
+        }
+    };
+
+    fetchData();
+  }, [companyId, id]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
-    // Validation
     if (!formData.profileName || !formData.expenseAccountId || !formData.amount || !formData.paidThroughId) {
-      alert("Please fill in all required fields marked with *");
-      return;
+       addNotification("Please fill in all required fields marked with *", 'warning');
+       return;
     }
 
     setLoading(true);
     try {
-      // Logic for saving recurring expense would go here
-      // For now, we simulate a success and go back
-      console.log("Saving Recurring Expense:", formData);
-      setTimeout(() => {
-        navigate('/expenses');
-      }, 500);
+      const payload = {
+        ...formData,
+        frequency: formData.repeatEvery,
+        endDate: formData.neverExpires ? null : formData.endsOn,
+        CompanyId: companyId
+      };
+
+      if (id) {
+        await recurringExpenseAPI.update(id, payload);
+        addNotification('Automation profile updated', 'success');
+      } else {
+        await recurringExpenseAPI.create(payload);
+        addNotification('New automation profile created', 'success');
+      }
+      navigate('/recurring-expenses');
     } catch (err) {
       console.error(err);
-      alert("Failed to save recurring expense");
+      addNotification('Failed to save recurring expense', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const ACCOUNT_LIST = [
-    { category: "Cost Of Goods Sold", accounts: ["[ tryhgtrjh ] 24325", "Cost of Goods Sold", "Job Costing", "Labor", "Materials", "Subcontractor"] },
-    { category: "Expense", accounts: ["Advertising And Marketing", "Automobile Expense", "Bad Debt", "Bank Fees and Charges", "Consultant Expense", "Contract Assets", "Credit Card Charges", "Depreciation And Amortisation", "Depreciation Expense", "IT and Internet Expenses", "Janitorial Expense", "Lodging", "Meals and Entertainment", "Merchandise", "Office Supplies", "Other Expenses", "Postage", "Printing and Stationery", "Purchase Discounts", "Raw Materials And Consumables", "Rent Expense", "Repairs and Maintenance", "Salaries and Employee Wages", "Telephone Expense", "Transportation Expense", "Travel Expense"] },
-    { category: "Non Current Liability", accounts: ["Construction Loans", "Mortgages"] },
-    { category: "Other Current Liability", accounts: ["Employee Reimbursements", "Tax Payable", "TDS Payable"] },
-    { category: "Fixed Asset", accounts: ["Furniture and Equipment"] },
-    { category: "Other Current Asset", accounts: ["Advance Tax", "Employee Advance", "Prepaid Expenses", "TDS Receivable"] }
-  ];
+  const expenseAccounts = ledgers.filter(l => 
+    l.Group?.name?.toLowerCase().includes('expense') || 
+    l.Group?.name?.toLowerCase().includes('cost of goods sold') ||
+    l.Group?.name?.toLowerCase().includes('purchase')
+  );
 
-  const paymentAccounts = ledgers.filter(l => l.Group?.name?.includes('Bank') || l.Group?.name?.includes('Cash'));
+  const paymentAccounts = ledgers.filter(l => 
+    l.Group?.name?.includes('Bank') || 
+    l.Group?.name?.includes('Cash') ||
+    l.Group?.name?.includes('Credit Card') ||
+    l.Group?.name?.includes('Liability') ||
+    l.Group?.name?.includes('Equity')
+  );
 
-  const filteredAccountList = ACCOUNT_LIST.map(group => ({
-    ...group,
-    accounts: group.accounts.filter(acc => 
-      acc.toLowerCase().includes(accountSearchTerm.toLowerCase()) || 
-      group.category.toLowerCase().includes(accountSearchTerm.toLowerCase())
-    )
-  })).filter(group => group.accounts.length > 0);
-
-  const handleAccountSelect = (value) => {
-    handleChange('expenseAccountId', value);
+  const handleAccountSelect = (ledger) => {
+    handleChange('expenseAccountId', ledger.id);
     setIsAccountDropdownOpen(false);
     setAccountSearchTerm('');
   };
+
+  const handlePaidThroughSelect = (ledger) => {
+    handleChange('paidThroughId', ledger.id);
+    setIsPaidThroughDropdownOpen(false);
+    setPaidThroughSearchTerm('');
+  };
+
+  const filteredExpenseAccounts = expenseAccounts.filter(acc => 
+    acc.name.toLowerCase().includes(accountSearchTerm.toLowerCase())
+  );
+
+  const filteredPaymentAccounts = paymentAccounts.filter(acc => 
+    acc.name.toLowerCase().includes(paidThroughSearchTerm.toLowerCase())
+  );
 
   const filteredVendors = vendors.filter(v => 
     v.name.toLowerCase().includes(vendorSearchTerm.toLowerCase())
@@ -161,41 +210,15 @@ const RecurringExpenseEntryView = ({ companyId }) => {
   };
 
   const handleNewCurrencyCreated = (newCurrency) => {
-    // In a real app, we'd add it to the available currency list via API
-    // For now, we just select it
     handleCurrencySelect(newCurrency.code);
     setIsCurrencyModalOpen(false);
   };
 
-  const PAYMENT_ACCOUNT_LIST = [
-    { category: "Cash", accounts: ["Cash", "Petty Cash", "Undeposited Funds"] },
-    { category: "Other Current Asset", accounts: ["Other Current Asset", "Advance Tax", "Employee Advance", "Prepaid Expenses", "TDS Receivable"] },
-    { category: "Fixed Asset", accounts: ["Fixed Asset", "Furniture and Equipment"] },
-    { category: "Other Current Liability", accounts: ["Other Current Liability", "Employee Reimbursements", "TDS Payable"] },
-    { category: "Non Current Liability", accounts: ["Non Current Liability", "Construction Loans", "Mortgages"] },
-    { category: "Equity", accounts: ["Equity", "Capital Stock", "Distributions", "Dividends Paid", "Drawings", "Investments", "Opening Balance Offset", "Owner's Equity"] }
-  ];
-
-  const filteredPaymentAccounts = PAYMENT_ACCOUNT_LIST.map(group => ({
-    ...group,
-    accounts: group.accounts.filter(acc => 
-      acc.toLowerCase().includes(paidThroughSearchTerm.toLowerCase()) || 
-      group.category.toLowerCase().includes(paidThroughSearchTerm.toLowerCase())
-    )
-  })).filter(group => group.accounts.length > 0);
-
-  const handlePaidThroughSelect = (value) => {
-    handleChange('paidThroughId', value);
-    setIsPaidThroughDropdownOpen(false);
-    setPaidThroughSearchTerm('');
-  };
-
   const handleNewAccountCreated = (newAccount) => {
-    // In a real app, we'd add it to the ledger list. 
-    // Here we'll just add it to a temporary group in UI for demo
-    // and select it.
-    handleAccountSelect(newAccount.name);
+    handleAccountSelect(newAccount);
     setIsAccountModalOpen(false);
+    // Refresh list
+    ledgerAPI.getByCompany(companyId).then(res => setLedgers(res.data || []));
   };
 
   if (initialDataLoading) {
@@ -215,9 +238,9 @@ const RecurringExpenseEntryView = ({ companyId }) => {
             <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
                <Repeat size={18} strokeWidth={2.5}/>
             </div>
-            <h1 className="text-[18px] font-bold text-slate-800 tracking-tight">New Recurring Expense</h1>
+            <h1 className="text-[18px] font-bold text-slate-800 tracking-tight">{id ? 'Edit' : 'New'} Recurring Expense</h1>
          </div>
-         <button onClick={() => navigate('/expenses')} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-all">
+         <button onClick={() => navigate('/recurring-expenses')} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-all">
             <X size={20} />
          </button>
       </div>
@@ -254,16 +277,10 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                            onChange={e => handleChange('repeatEvery', e.target.value)}
                            className="w-full h-11 pl-4 pr-10 text-[14px] border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none bg-white"
                         >
-                           <option value="Week">Week</option>
-                           <option value="2 Weeks">2 Weeks</option>
-                           <option value="Month">Month</option>
-                           <option value="2 Months">2 Months</option>
-                           <option value="3 Months">3 Months</option>
-                           <option value="6 Months">6 Months</option>
-                           <option value="Year">Year</option>
-                           <option value="2 Years">2 Years</option>
-                           <option value="3 Years">3 Years</option>
-                           <option value="Custom">Custom</option>
+                           <option value="Daily">Daily</option>
+                           <option value="Weekly">Weekly</option>
+                           <option value="Monthly">Monthly</option>
+                           <option value="Yearly">Yearly</option>
                         </select>
                         <ChevronDown size={16} className="absolute right-4 top-3.5 text-slate-400 pointer-events-none" />
                      </div>
@@ -283,7 +300,7 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                            <Calendar size={18} className="absolute left-4 top-3.5 text-slate-400" />
                         </div>
                         <p className="text-[11px] text-slate-400 flex items-center gap-1.5 px-1">
-                           <Info size={12} /> The next expense will be created on {formData.startDate}
+                           <Info size={12} /> The automation will start on {formData.startDate}
                         </p>
                      </div>
                   </div>
@@ -329,21 +346,18 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                   <div className="grid grid-cols-[200px_1fr] items-center gap-8">
                      <label className="text-[14px] font-bold text-slate-700">Expense Account<span className="text-red-500 ml-1">*</span></label>
                      <div className="relative">
-                        {/* Custom Dropdown Trigger */}
                         <div 
                            onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
                            className={`w-full h-11 pl-4 pr-10 flex items-center text-[14px] border border-slate-200 rounded-xl cursor-pointer transition-all bg-white relative ${isAccountDropdownOpen ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-slate-300'}`}
                         >
-                           {formData.expenseAccountId || <span className="text-slate-400">Select an account</span>}
+                           {ledgers.find(l => l.id === formData.expenseAccountId)?.name || <span className="text-slate-400">Select an account</span>}
                            <div className="absolute right-4 top-3.5 flex items-center gap-1">
                               <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isAccountDropdownOpen ? 'rotate-180 text-blue-500' : ''}`} />
                            </div>
                         </div>
 
-                        {/* Custom Dropdown Content */}
                         {isAccountDropdownOpen && (
                            <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 origin-top">
-                              {/* Search Area */}
                               <div className="p-3 border-b border-slate-50">
                                  <div className="relative">
                                     <Search size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -351,63 +365,35 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                                        autoFocus
                                        type="text"
                                        value={accountSearchTerm}
-                                       placeholder="Search accounts..."
+                                       placeholder="Search expense accounts..."
                                        onChange={e => setAccountSearchTerm(e.target.value)}
                                        className="w-full h-9 pl-9 pr-4 text-[13px] bg-slate-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none placeholder:text-slate-400"
                                     />
                                  </div>
                               </div>
-
-                              {/* List Area */}
                               <div className="max-h-[300px] overflow-y-auto py-2 custom-scrollbar">
-                                 {filteredAccountList.length > 0 ? (
-                                    filteredAccountList.map(group => (
-                                       <div key={group.category} className="mb-2">
-                                          <div className="px-4 py-2 text-[11px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">{group.category}</div>
-                                          {group.accounts.map(acc => (
-                                             <div 
-                                                key={acc}
-                                                onClick={() => handleAccountSelect(acc)}
-                                                className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between group
-                                                   ${formData.expenseAccountId === acc ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}
-                                                `}
-                                             >
-                                                <span>{acc}</span>
-                                                {formData.expenseAccountId === acc && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
-                                             </div>
-                                          ))}
-                                       </div>
-                                    ))
-                                 ) : (
-                                    <div className="p-8 text-center">
-                                       <p className="text-[13px] text-slate-400">No accounts found matching "{accountSearchTerm}"</p>
+                                 {filteredExpenseAccounts.map(ledger => (
+                                    <div 
+                                       key={ledger.id}
+                                       onClick={() => handleAccountSelect(ledger)}
+                                       className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between group
+                                          ${formData.expenseAccountId === ledger.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}
+                                       `}
+                                    >
+                                       <span>{ledger.name}</span>
+                                       {formData.expenseAccountId === ledger.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
                                     </div>
-                                 )}
+                                 ))}
                               </div>
-
-                              {/* Dropdown Footer Action */}
                               <div className="border-t border-slate-100 p-2 bg-slate-50/30">
-                                 <button 
-                                    onClick={() => {
-                                       setIsAccountDropdownOpen(false);
-                                       setIsAccountModalOpen(true);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-bold text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all group"
-                                 >
+                                 <button onClick={() => { setIsAccountDropdownOpen(false); setIsAccountModalOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-bold text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all group">
                                     <PlusCircle size={16} className="text-blue-600 group-hover:text-white" />
                                     New Account
                                  </button>
                               </div>
                            </div>
                         )}
-                        
-                        {/* Outside Click Backdrop */}
-                        {isAccountDropdownOpen && (
-                           <div 
-                              className="fixed inset-0 z-40" 
-                              onClick={() => setIsAccountDropdownOpen(false)}
-                           ></div>
-                        )}
+                        {isAccountDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsAccountDropdownOpen(false)}></div>}
                      </div>
                   </div>
 
@@ -416,7 +402,6 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                      <label className="text-[14px] font-bold text-slate-700">Amount<span className="text-red-500 ml-1">*</span></label>
                      <div className="flex">
                         <div className="relative w-[110px] shrink-0">
-                           {/* Custom Currency Trigger */}
                            <div 
                               onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
                               className={`w-full h-11 pl-4 pr-8 flex items-center text-[13px] border border-slate-200 border-r-0 rounded-l-xl cursor-pointer transition-all bg-slate-50 relative font-bold text-slate-600 ${isCurrencyDropdownOpen ? 'border-blue-500 bg-white z-10' : 'hover:bg-white'}`}
@@ -424,65 +409,25 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                               {formData.currency}
                               <ChevronDown size={12} className={`absolute right-3 top-4 text-slate-400 transition-transform duration-200 ${isCurrencyDropdownOpen ? 'rotate-180 text-blue-500' : ''}`} />
                            </div>
-
-                           {/* Custom Currency Dropdown */}
                            {isCurrencyDropdownOpen && (
-                              <div className="absolute top-[calc(100%+8px)] left-0 w-[200px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 origin-top">
-                                 {/* Search Area */}
+                              <div className="absolute top-[calc(100%+8px)] left-0 w-[200px] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
                                  <div className="p-3 border-b border-slate-50">
-                                    <div className="relative">
+                                    <div className="relative font-normal">
                                        <Search size={14} className="absolute left-3 top-3 text-slate-400" />
-                                       <input 
-                                          autoFocus
-                                          type="text"
-                                          value={currencySearchTerm}
-                                          placeholder="Search..."
-                                          onChange={e => setCurrencySearchTerm(e.target.value)}
-                                          className="w-full h-9 pl-9 pr-4 text-[13px] bg-slate-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none placeholder:text-slate-400 font-normal"
-                                       />
+                                       <input autoFocus type="text" value={currencySearchTerm} placeholder="Search..." onChange={e => setCurrencySearchTerm(e.target.value)} className="w-full h-9 pl-9 pr-4 text-[13px] bg-slate-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none placeholder:text-slate-400" />
                                     </div>
                                  </div>
-
-                                 {/* List Area */}
                                  <div className="max-h-[250px] overflow-y-auto py-2 custom-scrollbar">
-                                    {filteredCurrencies.length > 0 ? (
-                                       filteredCurrencies.map(c => (
-                                          <div 
-                                             key={c}
-                                             onClick={() => handleCurrencySelect(c)}
-                                             className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between group
-                                                ${formData.currency === c ? 'bg-blue-600 text-white font-bold' : 'text-slate-600 hover:bg-slate-50'}
-                                             `}
-                                          >
-                                             <span>{c}</span>
-                                             {formData.currency === c && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
-                                          </div>
-                                       ))
-                                    ) : (
-                                       <div className="p-8 text-center text-slate-400 text-[13px]">No results</div>
-                                    )}
-                                 </div>
-
-                                 {/* Footer Action */}
-                                 <div className="border-t border-slate-100 p-2 bg-slate-50/30">
-                                    <button 
-                                       onClick={() => {
-                                          setIsCurrencyDropdownOpen(false);
-                                          setIsCurrencyModalOpen(true);
-                                       }}
-                                       className="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-bold text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all group"
-                                    >
-                                       <PlusCircle size={16} className="text-blue-600 group-hover:text-white" />
-                                       New Currency
-                                    </button>
+                                    {filteredCurrencies.map(c => (
+                                       <div key={c} onClick={() => handleCurrencySelect(c)} className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between ${formData.currency === c ? 'bg-blue-600 text-white font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                          <span>{c}</span>
+                                          {formData.currency === c && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                                       </div>
+                                    ))}
                                  </div>
                               </div>
                            )}
-
-                           {/* Outside Click Backdrop */}
-                           {isCurrencyDropdownOpen && (
-                              <div className="fixed inset-0 z-40" onClick={() => setIsCurrencyDropdownOpen(false)}></div>
-                           )}
+                           {isCurrencyDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsCurrencyDropdownOpen(false)}></div>}
                         </div>
                         <input 
                            type="number"
@@ -494,29 +439,25 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                      </div>
                   </div>
 
-
                   {/* Paid Through */}
                   <div className="grid grid-cols-[200px_1fr] items-center gap-8">
                      <label className="text-[14px] font-bold text-slate-700">Paid Through<span className="text-red-500 ml-1">*</span></label>
                      <div className="relative">
-                        {/* Custom Paid Through Trigger */}
                         <div 
                            onClick={() => setIsPaidThroughDropdownOpen(!isPaidThroughDropdownOpen)}
                            className={`w-full h-11 pl-4 pr-10 flex items-center text-[14px] border border-slate-200 rounded-xl cursor-pointer transition-all bg-white relative ${isPaidThroughDropdownOpen ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-slate-300'}`}
                         >
                            <CreditCard size={18} className="absolute left-4 top-3 text-slate-400" />
                            <div className="pl-8">
-                              {formData.paidThroughId || <span className="text-slate-400">Select an account</span>}
+                              {ledgers.find(l => l.id === formData.paidThroughId)?.name || <span className="text-slate-400">Select payment account</span>}
                            </div>
                            <div className="absolute right-4 top-3.5 flex items-center gap-1">
                               <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${isPaidThroughDropdownOpen ? 'rotate-180 text-blue-500' : ''}`} />
                            </div>
                         </div>
 
-                        {/* Custom Paid Through Dropdown */}
                         {isPaidThroughDropdownOpen && (
                            <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 origin-top">
-                              {/* Search Area */}
                               <div className="p-3 border-b border-slate-50">
                                  <div className="relative">
                                     <Search size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -530,39 +471,23 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                                     />
                                  </div>
                               </div>
-
-                              {/* List Area */}
                               <div className="max-h-[300px] overflow-y-auto py-2 custom-scrollbar">
-                                 {filteredPaymentAccounts.length > 0 ? (
-                                    filteredPaymentAccounts.map(group => (
-                                       <div key={group.category} className="mb-2">
-                                          <div className="px-6 py-2 text-[11px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">{group.category}</div>
-                                          {group.accounts.map(acc => (
-                                             <div 
-                                                key={acc}
-                                                onClick={() => handlePaidThroughSelect(acc)}
-                                                className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between group
-                                                   ${formData.paidThroughId === acc ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}
-                                                `}
-                                             >
-                                                <span>{acc}</span>
-                                                {formData.paidThroughId === acc && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
-                                             </div>
-                                          ))}
-                                       </div>
-                                    ))
-                                 ) : (
-                                    <div className="p-8 text-center text-slate-400 text-[13px]">No accounts found matching "{paidThroughSearchTerm}"</div>
-                                 )}
+                                 {filteredPaymentAccounts.map(ledger => (
+                                    <div 
+                                       key={ledger.id}
+                                       onClick={() => handlePaidThroughSelect(ledger)}
+                                       className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between group
+                                          ${formData.paidThroughId === ledger.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}
+                                       `}
+                                    >
+                                       <span>{ledger.name}</span>
+                                       {formData.paidThroughId === ledger.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
+                                    </div>
+                                 ))}
                               </div>
-
                            </div>
                         )}
-                        
-                        {/* Outside Click Backdrop */}
-                        {isPaidThroughDropdownOpen && (
-                           <div className="fixed inset-0 z-40" onClick={() => setIsPaidThroughDropdownOpen(false)}></div>
-                        )}
+                        {isPaidThroughDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsPaidThroughDropdownOpen(false)}></div>}
                      </div>
                   </div>
 
@@ -581,7 +506,6 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                   <div className="grid grid-cols-[200px_1fr] items-center gap-8">
                      <label className="text-[14px] font-bold text-slate-700">Vendor</label>
                      <div className="relative">
-                        {/* Custom Dropdown Trigger */}
                         <div 
                            onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
                            className={`w-full h-11 pl-12 pr-10 flex items-center text-[14px] border border-slate-200 rounded-xl cursor-pointer transition-all bg-white relative ${isVendorDropdownOpen ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-slate-300'}`}
@@ -593,60 +517,25 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                            </div>
                         </div>
 
-                        {/* Custom Dropdown Content */}
                         {isVendorDropdownOpen && (
                            <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 origin-top">
-                              {/* Search Area */}
                               <div className="p-3 border-b border-slate-50">
                                  <div className="relative">
                                     <Search size={14} className="absolute left-3 top-3 text-slate-400" />
-                                    <input 
-                                       autoFocus
-                                       type="text"
-                                       value={vendorSearchTerm}
-                                       placeholder="Search vendors..."
-                                       onChange={e => setVendorSearchTerm(e.target.value)}
-                                       className="w-full h-9 pl-9 pr-4 text-[13px] bg-slate-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none placeholder:text-slate-400"
-                                    />
+                                    <input autoFocus type="text" value={vendorSearchTerm} placeholder="Search vendors..." onChange={e => setVendorSearchTerm(e.target.value)} className="w-full h-9 pl-9 pr-4 text-[13px] bg-slate-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none placeholder:text-slate-400" />
                                  </div>
                               </div>
-
-                              {/* List Area */}
                               <div className="max-h-[250px] overflow-y-auto py-2 custom-scrollbar">
-                                 {filteredVendors.length > 0 ? (
-                                    filteredVendors.map(v => (
-                                       <div 
-                                          key={v.id}
-                                          onClick={() => handleVendorSelect(v)}
-                                          className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between group
-                                             ${formData.vendorId === v.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}
-                                          `}
-                                       >
-                                          <span>{v.name}</span>
-                                          {formData.vendorId === v.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
-                                       </div>
-                                    ))
-                                 ) : (
-                                    <div className="p-8 text-center">
-                                       <p className="text-[13px] text-slate-400">No vendors found matching "{vendorSearchTerm}"</p>
+                                 {filteredVendors.map(v => (
+                                    <div key={v.id} onClick={() => handleVendorSelect(v)} className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between ${formData.vendorId === v.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                       <span>{v.name}</span>
+                                       {formData.vendorId === v.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
                                     </div>
-                                 )}
-                              </div>
-
-                              {/* Dropdown Footer Action */}
-                              <div className="border-t border-slate-100 p-2 bg-slate-50/30">
-                                 <button className="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-bold text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all group">
-                                    <PlusCircle size={16} className="text-blue-600 group-hover:text-white" />
-                                    New Vendor
-                                 </button>
+                                 ))}
                               </div>
                            </div>
                         )}
-                        
-                        {/* Outside Click Backdrop */}
-                        {isVendorDropdownOpen && (
-                           <div className="fixed inset-0 z-40" onClick={() => setIsVendorDropdownOpen(false)}></div>
-                        )}
+                        {isVendorDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsVendorDropdownOpen(false)}></div>}
                      </div>
                   </div>
 
@@ -680,7 +569,6 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                   <div className="grid grid-cols-[200px_1fr] items-center gap-8">
                      <label className="text-[14px] font-bold text-slate-700">Customer Name</label>
                      <div className="relative">
-                        {/* Custom Dropdown Trigger */}
                         <div 
                            onClick={() => setIsCustomerDropdownOpen(!isCustomerDropdownOpen)}
                            className={`w-full h-11 pl-12 pr-10 flex items-center text-[14px] border border-slate-200 rounded-xl cursor-pointer transition-all bg-white relative ${isCustomerDropdownOpen ? 'border-blue-500 ring-4 ring-blue-500/10' : 'hover:border-slate-300'}`}
@@ -692,60 +580,25 @@ const RecurringExpenseEntryView = ({ companyId }) => {
                            </div>
                         </div>
 
-                        {/* Custom Dropdown Content */}
                         {isCustomerDropdownOpen && (
                            <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 origin-top">
-                              {/* Search Area */}
                               <div className="p-3 border-b border-slate-50">
                                  <div className="relative">
                                     <Search size={14} className="absolute left-3 top-3 text-slate-400" />
-                                    <input 
-                                       autoFocus
-                                       type="text"
-                                       value={customerSearchTerm}
-                                       placeholder="Search customers..."
-                                       onChange={e => setCustomerSearchTerm(e.target.value)}
-                                       className="w-full h-9 pl-9 pr-4 text-[13px] bg-slate-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none placeholder:text-slate-400"
-                                    />
+                                    <input autoFocus type="text" value={customerSearchTerm} placeholder="Search customers..." onChange={e => setCustomerSearchTerm(e.target.value)} className="w-full h-9 pl-9 pr-4 text-[13px] bg-slate-50 border-none rounded-lg focus:ring-2 focus:ring-blue-500/20 outline-none placeholder:text-slate-400" />
                                  </div>
                               </div>
-
-                              {/* List Area */}
                               <div className="max-h-[250px] overflow-y-auto py-2 custom-scrollbar">
-                                 {filteredCustomers.length > 0 ? (
-                                    filteredCustomers.map(c => (
-                                       <div 
-                                          key={c.id}
-                                          onClick={() => handleCustomerSelect(c)}
-                                          className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between group
-                                             ${formData.customerId === c.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}
-                                          `}
-                                       >
-                                          <span>{c.name}</span>
-                                          {formData.customerId === c.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
-                                       </div>
-                                    ))
-                                 ) : (
-                                    <div className="p-8 text-center">
-                                       <p className="text-[13px] text-slate-400">No customers found matching "{customerSearchTerm}"</p>
+                                 {filteredCustomers.map(c => (
+                                    <div key={c.id} onClick={() => handleCustomerSelect(c)} className={`px-6 py-2.5 text-[14px] cursor-pointer transition-colors flex items-center justify-between ${formData.customerId === c.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                       <span>{c.name}</span>
+                                       {formData.customerId === c.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>}
                                     </div>
-                                 )}
-                              </div>
-
-                              {/* Dropdown Footer Action */}
-                              <div className="border-t border-slate-100 p-2 bg-slate-50/30">
-                                 <button className="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-bold text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all group">
-                                    <PlusCircle size={16} className="text-blue-600 group-hover:text-white" />
-                                    New Customer
-                                 </button>
+                                 ))}
                               </div>
                            </div>
                         )}
-                        
-                        {/* Outside Click Backdrop */}
-                        {isCustomerDropdownOpen && (
-                           <div className="fixed inset-0 z-40" onClick={() => setIsCustomerDropdownOpen(false)}></div>
-                        )}
+                        {isCustomerDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsCustomerDropdownOpen(false)}></div>}
                      </div>
                   </div>
 
@@ -777,19 +630,20 @@ const RecurringExpenseEntryView = ({ companyId }) => {
             SAVE
          </button>
          <button 
-            onClick={() => navigate('/expenses')}
+            onClick={() => navigate('/recurring-expenses')}
             disabled={loading}
             className="px-8 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-[14px] font-black rounded-xl active:scale-95 transition-all disabled:opacity-50"
          >
             CANCEL
          </button>
       </div>
+      
       {/* Modals */}
       {isAccountModalOpen && (
          <CreateAccountModal 
             onClose={() => setIsAccountModalOpen(false)}
             onSave={handleNewAccountCreated}
-            accounts={ACCOUNT_LIST}
+            companyId={companyId}
          />
       )}
       {isCurrencyModalOpen && (
@@ -798,7 +652,6 @@ const RecurringExpenseEntryView = ({ companyId }) => {
             onSave={handleNewCurrencyCreated}
          />
       )}
-
     </div>
   );
 };

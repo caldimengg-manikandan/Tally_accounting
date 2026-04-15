@@ -160,16 +160,21 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
     if (loading) return <div className="p-20 text-center font-bold text-slate-400">Loading Credit Note Interface...</div>;
 
     return (
-        <div className="min-h-screen bg-white text-slate-700 font-sans p-6 max-w-5xl mx-auto shadow-2xl rounded-2xl animate-fade-in border border-slate-100 mt-6">
-            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+        <div className="flex flex-col min-h-screen bg-white font-sans text-slate-700 animate-fade-in">
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-8 h-16 border-b border-slate-200 sticky top-0 bg-white z-10 w-full shadow-[0_1px_4px_rgba(0,0,0,0.02)]">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/credit-notes')} className="text-slate-400 hover:text-slate-600 transition-all p-1 hover:bg-slate-50 rounded-full"><ArrowLeft size={20} /></button>
-                    <h1 className="text-xl font-black text-slate-900 tracking-tight">{editId ? 'Edit Credit Note' : 'New Credit Note'}</h1>
+                    <button onClick={() => navigate('/credit-notes')} className="text-slate-400 hover:text-slate-600 transition-all p-1.5 hover:bg-slate-100 rounded-full"><ArrowLeft size={20} /></button>
+                    <h1 className="text-[20px] font-black text-slate-900 tracking-tight">{editId ? 'Edit Credit Note' : 'New Credit Note'}</h1>
                 </div>
-                <X size={18} className="text-slate-300 cursor-pointer hover:text-slate-500" onClick={() => navigate('/credit-notes')} />
+                <button onClick={() => navigate('/credit-notes')} className="text-slate-400 hover:text-slate-600 p-1.5 rounded hover:bg-slate-100 transition-colors">
+                    <X size={20} />
+                </button>
             </div>
 
-            <div className="space-y-6">
+            {/* FORM CONTENT */}
+            <div className="flex-1 overflow-y-auto pb-28 pt-8">
+              <div className="max-w-[1200px] mx-auto px-8 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
                     <div className="space-y-4">
                         <div className="flex items-start gap-4">
@@ -271,11 +276,31 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                     </div>
                 </div>
 
-                <div className="sticky bottom-0 bg-white border-t border-slate-100 py-3 flex gap-3 mt-10 z-[100] -mx-6 px-6 shadow-sm">
-                    <button onClick={() => handleSave('Open')} className="bg-[#008ef0] text-white px-5 py-2 rounded font-bold text-[13px] hover:bg-[#007cd0]">Save as Open</button>
-                    <button onClick={() => handleSave('Draft')} className="px-5 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50">Save as Draft</button>
-                    <button onClick={() => navigate('/credit-notes')} className="px-5 py-2 border border-slate-200 text-slate-500 rounded font-bold text-[13px]">Cancel</button>
-                </div>
+              </div>
+            </div>
+
+            {/* BOTTOM ACTION BAR */}
+            <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#f8f9fa] border-t border-slate-200 px-8 flex items-center gap-3 z-20 shadow-[0_-2px_6px_rgba(0,0,0,0.02)]">
+                <button 
+                  onClick={() => handleSave('Open')} 
+                  disabled={saving}
+                  className="px-5 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-sm transition-colors"
+                >
+                  {saving ? 'Saving...' : 'Save as Open'}
+                </button>
+                <button 
+                  onClick={() => handleSave('Draft')} 
+                  disabled={saving}
+                  className="px-5 py-2 bg-white border border-slate-300 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50 shadow-sm transition-colors"
+                >
+                  Save as Draft
+                </button>
+                <button 
+                  onClick={() => navigate('/credit-notes')} 
+                  className="px-5 py-2 text-slate-600 font-medium hover:text-slate-800 transition-colors text-[13px]"
+                >
+                  Cancel
+                </button>
             </div>
         </div>
     );
