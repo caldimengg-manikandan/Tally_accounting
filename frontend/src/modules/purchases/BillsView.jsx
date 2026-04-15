@@ -1,107 +1,686 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Receipt, RefreshCw, FileText, 
-  ChevronDown, ArrowDownUp, Filter
+  Plus, Receipt, RefreshCw, Search, 
+  ChevronDown, ArrowDownUp, Filter,
+  MoreHorizontal, LayoutGrid, List,
+  Settings, CheckSquare, Square, X,
+  ArrowRight, Printer, Mail, FileText,
+  MoreVertical, AlertCircle, Edit, Trash2,
+  ChevronRight, Hash, Calendar, ArrowLeft
 } from 'lucide-react';
-import { purchaseAPI } from '../../services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { purchaseAPI, voucherAPI, companyAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const BillsView = ({ companyId }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState('All Bills');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedBills, setSelectedBills] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // UI Layout State
+  const [layoutMode, setLayoutMode] = useState('table'); // 'table' or 'split'
+  
+  // Master-Detail State
+  const [selectedBillId, setSelectedBillId] = useState(null);
+  const [billDetail, setBillDetail] = useState(null);
+  const [companyDetail, setCompanyDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [viewMode, setViewMode] = useState('bill'); // 'bill' or 'journal'
+  const [showVoucher, setShowVoucher] = useState(true); // Control Journal visibility
 
   useEffect(() => {
     if (!companyId) return;
-    const fetchBills = async () => {
-      try {
-        setLoading(true);
-        const res = await purchaseAPI.getBills(companyId);
-        setBills(res.data || []);
-      } catch (err) {
-        console.error("Failed to fetch bills:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchBills();
+    fetchCompanyDetail();
   }, [companyId]);
 
+  const fetchCompanyDetail = async () => {
+    try {
+      const res = await companyAPI.getById(companyId);
+      setCompanyDetail(res.data);
+    } catch (err) {
+      console.error("Failed to fetch company detail:", err);
+    }
+  };
+
+  // Handle post-save navigation selection
+  useEffect(() => {
+    if (location.state?.selectedBillId) {
+      setSelectedBillId(location.state.selectedBillId);
+      setLayoutMode('split');
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    if (selectedBillId) {
+      fetchBillDetail(selectedBillId);
+    }
+  }, [selectedBillId]);
+
+  const fetchBillDetail = async (id) => {
+    try {
+      setDetailLoading(true);
+      const res = await voucherAPI.getById(id);
+      setBillDetail(res.data);
+    } catch (err) {
+      console.error("Failed to fetch bill detail:", err);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const fetchBills = async () => {
+    try {
+      setLoading(true);
+      const res = await purchaseAPI.getBills(companyId);
+      setBills(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch bills:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredBills = bills.filter(bill => {
+      const matchesSearch = 
+        bill.voucherNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        bill.Ledger?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (filterType === 'Unpaid Bills') {
+          return matchesSearch && parseFloat(bill.balanceDue || bill.totalAmount || 0) > 0;
+      }
+      return matchesSearch;
+  });
+
+  const toggleSelectAll = () => {
+    if (selectedBills.length === filteredBills.length) {
+      setSelectedBills([]);
+    } else {
+      setSelectedBills(filteredBills.map(b => b.id));
+    }
+  };
+
+  const toggleSelectBill = (id) => {
+    setSelectedBills(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
   if (loading) return (
-    <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
+    <div className="flex-1 flex flex-col items-center justify-center p-20 text-center bg-white h-screen">
       <RefreshCw size={24} className="animate-spin text-[#1e61f0] mb-4" />
-      <p className="text-slate-500 text-[14px]">Loading Bills...</p>
+      <p className="text-slate-400 text-[13px] font-bold uppercase tracking-[0.2em] animate-pulse">Synchronizing Ledger...</p>
     </div>
   );
 
   return (
-    <div className="bg-white min-h-screen">
-       <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-             <h1 className="text-[20px] font-bold text-slate-900">Bills</h1>
-             <ChevronDown size={18} className="text-blue-600 mt-1" />
-          </div>
-          <div className="flex items-center gap-2">
-             <button className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm">
-                <Plus size={18} strokeWidth={2.5}/> New Bill
-             </button>
-          </div>
-       </div>
+    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden animate-fade-in">
+        
+        {/* --- GLOBAL HEADER --- */}
+        <header className="px-6 py-3 flex items-center justify-between border-b border-slate-200 bg-white shadow-sm z-30">
+            <div className="flex items-center gap-4 relative">
+                <div 
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className="flex items-center gap-2 cursor-pointer group px-3 py-1.5 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100"
+                >
+                    <h1 className="text-[18px] font-black text-slate-800 tracking-tight">
+                        {filterType}
+                    </h1>
+                    <ChevronDown size={16} className={`text-blue-600 transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
+                </div>
 
-       <div className="p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-             <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100/50">
-                <p className="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-1">Open Bills</p>
-                <h3 className="text-2xl font-black text-slate-900">₹ 0.00</h3>
-             </div>
-             <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100/50">
-                <p className="text-[11px] font-black text-amber-600 uppercase tracking-widest mb-1">Overdue</p>
-                <h3 className="text-2xl font-black text-slate-900">₹ 0.00</h3>
-             </div>
-             <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100/50">
-                <p className="text-[11px] font-black text-emerald-600 uppercase tracking-widest mb-1">Paid (Last 30 Days)</p>
-                <h3 className="text-2xl font-black text-slate-900">₹ 0.00</h3>
-             </div>
-          </div>
-
-          <table className="w-full text-left">
-             <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                <tr>
-                   <th className="px-6 py-4">Date</th>
-                   <th className="px-6 py-4">Bill#</th>
-                   <th className="px-6 py-4">Vendor Name</th>
-                   <th className="px-6 py-4">Status</th>
-                   <th className="px-6 py-4">Due Date</th>
-                   <th className="px-6 py-4 text-right">Amount</th>
-                </tr>
-             </thead>
-             <tbody className="divide-y divide-slate-100">
-                {bills.length > 0 ? (
-                  bills.map(bill => (
-                    <tr key={bill.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                       <td className="px-6 py-4 text-[14px] text-slate-600">{new Date(bill.date).toLocaleDateString()}</td>
-                       <td className="px-6 py-4 text-[14px] font-medium text-blue-600">{bill.voucherNumber}</td>
-                       <td className="px-6 py-4 text-[14px] text-slate-600">{bill.Ledger?.name || '-'}</td>
-                       <td className="px-6 py-4 text-[14px]">
-                          <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold uppercase">Pending</span>
-                       </td>
-                       <td className="px-6 py-4 text-[14px] text-slate-600">-</td>
-                       <td className="px-6 py-4 text-right text-[14px] font-medium text-slate-900">₹ {parseFloat(bill.totalAmount || 0).toLocaleString()}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                     <td colSpan="6" className="px-6 py-20 text-center">
-                        <div className="flex flex-col items-center justify-center gap-3">
-                           <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
-                              <Receipt size={24} />
-                           </div>
-                           <p className="text-slate-500 text-[14px]">No bills found.</p>
-                        </div>
-                     </td>
-                  </tr>
+                {isFilterOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-100 rounded-xl shadow-2xl z-[100] py-2 animate-in fade-in zoom-in-95 duration-200">
+                        {['Unpaid Bills', 'All Bills', 'Draft', 'Overdue'].map(type => (
+                            <div 
+                                key={type}
+                                onClick={() => { setFilterType(type); setIsFilterOpen(false); }}
+                                className={`px-5 py-2 text-[13px] cursor-pointer transition-colors ${filterType === type ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                {type}
+                            </div>
+                        ))}
+                    </div>
                 )}
-             </tbody>
-          </table>
-       </div>
+                {isFilterOpen && <div className="fixed inset-0 z-[90]" onClick={() => setIsFilterOpen(false)}></div>}
+            </div>
+
+            <div className="flex items-center gap-3">
+                <div className="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-200">
+                    <button 
+                      onClick={() => setLayoutMode('table')}
+                      className={`p-2 rounded-lg transition-all ${layoutMode === 'table' ? 'text-blue-600 bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      title="Table View"
+                    >
+                        <List size={18} />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setLayoutMode('split');
+                        if (!selectedBillId && bills.length > 0) setSelectedBillId(bills[0].id);
+                      }}
+                      className={`p-2 rounded-lg transition-all ${layoutMode === 'split' ? 'text-blue-600 bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      title="Split View"
+                    >
+                        <LayoutGrid size={18} />
+                    </button>
+                </div>
+
+                <div className="w-px h-6 bg-slate-200 mx-1"></div>
+
+                <button 
+                  onClick={() => navigate('/bills/new')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[13px] font-black flex items-center gap-2 transition-all shadow-md active:scale-95"
+                >
+                  <Plus size={16} strokeWidth={3} /> NEW
+                </button>
+                <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200">
+                    <Settings size={18} />
+                </button>
+            </div>
+        </header>
+
+        {/* --- MAIN CONTENT AREA --- */}
+        <div className="flex-1 overflow-hidden">
+            {layoutMode === 'table' ? (
+                /* --- FULL WIDTH TABLE VIEW (Default) --- */
+                <div className="flex flex-col h-full bg-white animate-in fade-in duration-500">
+                    {/* Table Actions Bar */}
+                    <div className="px-8 py-3 bg-slate-50/50 border-b border-slate-200 flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                            {selectedBills.length > 0 && (
+                                <div className="flex items-center gap-3 animate-in slide-in-from-left duration-300">
+                                    <span className="text-[12px] font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full">{selectedBills.length} Selected</span>
+                                    <button className="text-[12px] font-bold text-slate-500 hover:text-red-500 transition-colors">Delete</button>
+                                    <button className="text-[12px] font-bold text-slate-500 hover:text-blue-600 transition-colors">Print</button>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="relative group">
+                            <Search size={14} className="absolute left-3 top-2.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input 
+                                type="text" 
+                                placeholder="Search bills..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] focus:border-blue-500 outline-none transition-all w-72 shadow-sm"
+                            />
+                        </div>
+                    </div>
+
+                    {/* The Table */}
+                    <div className="flex-1 overflow-auto custom-scrollbar">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-[#fcfdfe] sticky top-0 z-10 border-b border-slate-200">
+                                <tr className="text-[11px] font-black text-slate-500 uppercase tracking-widest leading-none">
+                                    <th className="px-6 py-5 w-12 text-center">
+                                        <button onClick={toggleSelectAll} className="text-slate-300 hover:text-blue-500 transition-colors">
+                                            {selectedBills.length === filteredBills.length && filteredBills.length > 0 ? <CheckSquare size={18} className="text-blue-600" /> : <Square size={18} />}
+                                        </button>
+                                    </th>
+                                    <th className="px-5 py-5 min-w-[120px]">Date</th>
+                                    <th className="px-5 py-5">Bill#</th>
+                                    <th className="px-5 py-5">Reference Number</th>
+                                    <th className="px-5 py-5">Vendor Name</th>
+                                    <th className="px-5 py-5">Status</th>
+                                    <th className="px-5 py-5">Due Date</th>
+                                    <th className="px-5 py-5 text-right">Amount</th>
+                                    <th className="px-5 py-5 text-right">Balance Due</th>
+                                    <th className="px-5 py-5 w-10">
+                                        <Search size={14} className="text-slate-300 hover:text-slate-500 cursor-pointer" />
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filteredBills.map(bill => (
+                                    <tr 
+                                        key={bill.id} 
+                                        onClick={() => {
+                                            setSelectedBillId(bill.id);
+                                            setLayoutMode('split');
+                                        }}
+                                        className={`group hover:bg-blue-50/30 transition-all cursor-pointer ${selectedBills.includes(bill.id) ? 'bg-blue-50/50' : ''}`}
+                                    >
+                                        <td className="px-6 py-5 text-center" onClick={(e) => e.stopPropagation()}>
+                                            <button onClick={() => toggleSelectBill(bill.id)} className="transition-colors">
+                                                {selectedBills.includes(bill.id) ? <CheckSquare size={18} className="text-blue-600" /> : <Square size={18} className="text-slate-200 group-hover:text-slate-300" />}
+                                            </button>
+                                        </td>
+                                        <td className="px-5 py-5 text-[13px] font-bold text-slate-600 whitespace-nowrap">
+                                            {new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'})}
+                                        </td>
+                                        <td className="px-5 py-5 text-[13px] font-black text-blue-600 tracking-tight">
+                                            {bill.voucherNumber}
+                                        </td>
+                                        <td className="px-5 py-5 text-[13px] font-medium text-slate-400 italic">
+                                            {bill.referenceNumber || '---'}
+                                        </td>
+                                        <td className="px-5 py-5 text-[13px] font-bold text-slate-800 uppercase tracking-tight">
+                                            {bill.Ledger?.name || '-'}
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <span className={`text-[10px] font-black px-2.5 py-1 rounded uppercase tracking-widest ${parseFloat(bill.balanceDue || bill.totalAmount) === 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-orange-100 text-orange-600'}`}>
+                                                {parseFloat(bill.balanceDue || bill.totalAmount) === 0 ? 'Paid' : 'Unpaid'}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-5 text-[13px] font-bold text-slate-500">
+                                            {bill.dueDate ? new Date(bill.dueDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short'}) : '---'}
+                                        </td>
+                                        <td className="px-5 py-5 text-right text-[14px] font-black text-slate-900 tabular-nums">
+                                            ₹{parseFloat(bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-5 py-5 text-right text-[14px] font-black text-orange-600 tabular-nums">
+                                            ₹{parseFloat(bill.balanceDue || bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-5 py-5 text-slate-300">
+                                            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:text-blue-500 transition-all transform group-hover:translate-x-1" />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : (
+                /* --- SPLIT PANE VIEW --- */
+                <div className="flex h-full overflow-hidden animate-in zoom-in-95 duration-500">
+                    {/* LEFT MASTER LIST (Narrow) */}
+                    <div className="w-[320px] xl:w-[380px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-[4px_0_15px_rgba(0,0,0,0.02)]">
+                        {/* Master List Header/Search */}
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3">
+                        <div className="relative group">
+                            <Search size={14} className="absolute left-3 top-2.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input 
+                                type="text" 
+                                placeholder="Find in Bills..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] focus:border-blue-500 outline-none transition-all shadow-sm"
+                            />
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                            <span>{filteredBills.length} Bills</span>
+                            <button className="flex items-center gap-1 hover:text-blue-600 transition-colors">
+                                <ArrowDownUp size={12} />
+                                Sort
+                            </button>
+                        </div>
+                        </div>
+
+                        {/* Bill Card List */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            {filteredBills.map(bill => (
+                                <div 
+                                    key={bill.id}
+                                    onClick={() => setSelectedBillId(bill.id)}
+                                    className={`p-4 border-b border-slate-50 cursor-pointer transition-all relative group overflow-hidden ${selectedBillId === bill.id ? 'bg-blue-50/50 border-l-[3px] border-l-blue-600' : 'hover:bg-slate-50/80 border-l-[3px] border-l-transparent'}`}
+                                >
+                                    <div className="flex justify-between items-start mb-1">
+                                        <span className={`text-[13px] font-black ${selectedBillId === bill.id ? 'text-blue-700' : 'text-slate-800'}`}>
+                                            {bill.Ledger?.name}
+                                        </span>
+                                        <span className="text-[13px] font-black text-slate-900 group-hover:scale-110 transition-transform tabular-nums">
+                                            ₹{parseFloat(bill.totalAmount || 0).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[12px] text-slate-400 font-medium">#{bill.voucherNumber}</span>
+                                        <span className="text-[11px] text-slate-400 font-bold">{new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}</span>
+                                    </div>
+                                    <div className="mt-2 flex items-center justify-between">
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-[0.1em] ${parseFloat(bill.balanceDue) === 0 ? 'bg-emerald-100/80 text-emerald-600' : 'bg-orange-100/80 text-orange-600'}`}>
+                                            {parseFloat(bill.balanceDue) === 0 ? 'Paid' : 'Unpaid'}
+                                        </span>
+                                        <ChevronRight size={14} className={`transition-all duration-300 ${selectedBillId === bill.id ? 'translate-x-0 opacity-100 text-blue-500' : '-translate-x-2 opacity-0 text-slate-200'}`} />
+                                    </div>
+                                    
+                                    {/* Selected Pulse indicator */}
+                                    {selectedBillId === bill.id && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full mr-2 shadow-[0_0_8px_rgba(37,99,235,0.4)] animate-pulse" />}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* RIGHT DETAIL PANE (Fluid) */}
+                    <div className="flex-1 bg-white overflow-y-auto custom-scrollbar flex flex-col relative">
+                        {selectedBillId ? (
+                            detailLoading ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-[40]">
+                                    <RefreshCw size={32} className="animate-spin text-blue-600 mb-4" />
+                                    <p className="text-[13px] font-black text-slate-400 uppercase tracking-widest">Loading Bill Details...</p>
+                                </div>
+                            ) : (
+                                <div className="animate-in fade-in duration-500 flex flex-col min-h-full">
+                                    
+                                    {/* A. Detail Action Bar */}
+                                    <div className="sticky top-0 bg-white border-b border-slate-100 p-4 flex items-center justify-between px-8 z-30 shadow-[0_1px_5px_rgba(0,0,0,0.02)]">
+                                        <div className="flex items-center gap-4">
+                                            <h2 className="text-[18px] font-black text-slate-800">{billDetail?.voucherNumber}</h2>
+                                            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${parseFloat(billDetail?.balanceDue) > 0 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                                            {parseFloat(billDetail?.balanceDue) > 0 ? 'Open' : 'Settled'}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            {/* Unified Actions Toolbar to match screenshot */}
+                                            <div className="flex items-center bg-slate-50/50 border border-slate-200 rounded-xl p-1 gap-1">
+                                                <button 
+                                                    onClick={() => billDetail && navigate('/bills/edit/' + billDetail.id)}
+                                                    className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-black"
+                                                >
+                                                    <Edit size={14} /> Edit
+                                                </button>
+                                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                                                <button className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-black">
+                                                    <Printer size={14} /> PDF/Print
+                                                </button>
+                                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                                                <button 
+                                                    onClick={() => billDetail && navigate('/payments-made/new', { state: { 
+                                                        vendorId: billDetail.Transactions?.find(t => t.type === 'Cr')?.LedgerId,
+                                                        billDetail: billDetail 
+                                                    } })}
+                                                    className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-black"
+                                                >
+                                                    <Plus size={14} /> Record Payment
+                                                </button>
+                                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                                                <button className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors">
+                                                    <MoreHorizontal size={14} />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-center gap-3 ml-4 border-l border-slate-200 pl-6">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Journal View</span>
+                                                    <button 
+                                                        onClick={() => setShowVoucher(!showVoucher)}
+                                                        className={`w-10 h-5 rounded-full relative transition-colors ${showVoucher ? 'bg-blue-600' : 'bg-slate-200'}`}
+                                                    >
+                                                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showVoucher ? 'left-6' : 'left-1'}`} />
+                                                    </button>
+                                                </div>
+                                                <button 
+                                                    onClick={() => setLayoutMode('table')}
+                                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                >
+                                                    <X size={20} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* B. "What's Next" Banner */}
+                                    {(parseFloat(billDetail?.balanceDue) > 0) && (
+                                        <div className="mx-8 mt-6 p-5 bg-gradient-to-r from-blue-50 to-white border border-blue-100 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-700">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                                                    <AlertCircle size={24} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">WHAT'S NEXT?</h4>
+                                                    <p className="text-[13px] text-slate-600 mt-0.5">This bill is in the <b>open</b> status. You can now record payment for this bill.</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                            onClick={() => billDetail && navigate('/purchases/payments-made', { state: { vendorId: billDetail.Transactions?.find(t => t.type === 'Cr')?.LedgerId } })}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-[12px] font-black transition-all shadow-lg shadow-blue-100 active:scale-95"
+                                            >
+                                                Record Payment
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* C. NAVIGATION REMOVED - Using Unified Scroll View */}
+
+                                    {/* D. CONTENT AREA */}
+                                    {/* D. UNIFIED CONTENT AREA */}
+                                    <div className="p-8 flex-1 bg-[#fcfdfe] space-y-12">
+                                        {/* --- REAL BILL PREVIEW CARD --- */}
+                                        <div className="max-w-4xl mx-auto bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+                                            {/* Status Ribbon */}
+                                            <div className="h-1.5 w-full bg-blue-600" />
+                                            
+                                            <div className="p-12">
+                                                <div className="flex justify-between items-start border-b border-slate-100 pb-10 mb-10">
+                                                    <div className="space-y-4">
+                                                        {companyDetail?.logoUrl ? (
+                                                            <img src={companyDetail.logoUrl} alt="Logo" className="w-16 h-16 object-contain rounded-xl shadow-sm" />
+                                                        ) : (
+                                                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-[24px]">
+                                                                {companyDetail?.name?.charAt(0) || 'B'}
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <h3 className="text-[18px] font-black text-slate-800">{companyDetail?.name || 'Company Name'}</h3>
+                                                            <p className="text-[13px] text-slate-400 font-medium">{companyDetail?.city || 'City'}, {companyDetail?.state || 'State'}</p>
+                                                            <p className="text-[12px] text-slate-400 font-medium">{companyDetail?.location || 'India'}</p>
+                                                            {companyDetail?.email && <p className="text-[12px] text-blue-500 font-medium mt-1">{companyDetail.email}</p>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <h1 className="text-[42px] font-black text-slate-200 tracking-[0.1em] uppercase leading-none mb-6">Bill</h1>
+                                                        
+                                                        <div className="space-y-1 mt-4">
+                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill Date:</span><span className="font-black text-slate-800">{billDetail?.date ? new Date(billDetail.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill#:</span><span className="font-black text-slate-800">{billDetail?.voucherNumber}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Due Date:</span><span className="font-black text-slate-800">{billDetail?.dueDate ? new Date(billDetail.dueDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3 pt-2 text-blue-600"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Balance Due:</span><span className="font-black">₹{parseFloat(billDetail?.balanceDue || billDetail?.totalAmount || billDetail?.Transactions?.find(t => t.type === 'Cr')?.credit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-12">
+                                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Bill From</h4>
+                                                    <h3 className="text-[16px] font-black text-blue-600">{billDetail?.Ledger?.name || 'Vendor Name'}</h3>
+                                                    <p className="text-[13px] text-slate-500 font-medium mt-1 italic">Reference#: {billDetail?.referenceNumber || '---'}</p>
+                                                </div>
+
+                                                <table className="w-full mb-12 border-collapse">
+                                                    <thead>
+                                                        <tr className="border-b-2 border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                            <th className="py-4 text-left w-12 text-slate-800">#</th>
+                                                            <th className="py-4 text-left">Item & Description</th>
+                                                            <th className="py-4 text-right px-4">Qty</th>
+                                                            <th className="py-4 text-right px-4">Rate</th>
+                                                            <th className="py-4 text-right">Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="text-[13px] font-bold text-slate-700">
+                                                        {(() => {
+                                                            let items = [];
+                                                            let parsedNarration = null;
+                                                            try {
+                                                                if (billDetail?.narration) {
+                                                                    // Try parsing as JSON first (New Format)
+                                                                    if (billDetail.narration.startsWith('{')) {
+                                                                        parsedNarration = JSON.parse(billDetail.narration);
+                                                                        items = parsedNarration.items || [];
+                                                                    } 
+                                                                    // Try legacy split format (|| delimiter)
+                                                                    else if (billDetail.narration.includes('||')) {
+                                                                        const parts = billDetail.narration.split('||');
+                                                                        const itemData = parts.find(p => p.startsWith('items:'));
+                                                                        if (itemData) {
+                                                                            items = JSON.parse(itemData.replace('items:', ''));
+                                                                        }
+                                                                    }
+                                                                }
+                                                            } catch (e) {
+                                                                console.error("Narration parse error:", e);
+                                                            }
+
+                                                            if (items && items.length > 0) {
+                                                                return items.map((item, idx) => (
+                                                                    <tr key={idx} className="border-b border-slate-50">
+                                                                        <td className="py-5 text-slate-400">{idx + 1}</td>
+                                                                        <td className="py-5">
+                                                                            <span className="text-slate-900 font-black truncate max-w-[300px] inline-block">{item.itemName || item.name || 'Service/Item'}</span>
+                                                                            {item.notes && <p className="text-[11px] text-slate-400 font-medium mt-0.5">{item.notes}</p>}
+                                                                        </td>
+                                                                        <td className="py-5 text-right px-4 tabular-nums">{item.quantity || item.qty || '1.00'}</td>
+                                                                        <td className="py-5 text-right px-4 tabular-nums">₹{parseFloat(item.rate || 0).toLocaleString()}</td>
+                                                                        <td className="py-5 text-right font-black tabular-nums">₹{parseFloat(item.amount || item.total || 0).toLocaleString()}</td>
+                                                                    </tr>
+                                                                ));
+                                                            }
+                                                            
+                                                            // Fallback if no structured data
+                                                            // Calculate total from Cr transaction if billDetail.totalAmount is missing
+                                                            const derivedTotal = billDetail?.totalAmount || 
+                                                                               billDetail?.Transactions?.find(t => t.type === 'Cr')?.credit || 0;
+
+                                                            return (
+                                                                <tr className="border-b border-slate-50">
+                                                                    <td className="py-5 text-slate-400">1</td>
+                                                                    <td className="py-5">
+                                                                        <span className="text-slate-900 font-black">{billDetail?.Ledger?.name || 'Vendor'} Service/Supply</span>
+                                                                        <p className="text-[11px] text-slate-400 mt-1">{(() => { try { const p = JSON.parse(billDetail?.narration || '{}'); return p.notes || 'No details'; } catch(e) { return billDetail?.narration?.split('||')[0] || 'No details'; } })()}</p>
+                                                                    </td>
+                                                                    <td className="py-5 text-right px-4">1.00</td>
+                                                                    <td className="py-5 text-right px-4">₹{parseFloat(derivedTotal).toLocaleString()}</td>
+                                                                    <td className="py-5 text-right font-black">₹{parseFloat(derivedTotal).toLocaleString()}</td>
+                                                                </tr>
+                                                            );
+                                                        })()}
+                                                    </tbody>
+                                                </table>
+
+                                                <div className="flex justify-between items-end border-t border-slate-100 pt-10">
+                                                    <div className="space-y-4">
+                                                        <div className="text-[12px] flex items-center gap-2"><span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Terms:</span><span className="font-bold text-slate-600 italic">Net 30 Days</span></div>
+                                                        <div className="text-[12px] flex items-center gap-2 max-w-sm">
+                                                            <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Narration:</span>
+                                                            <span className="text-slate-600 text-[11px] truncate">{(() => { try { const p = JSON.parse(billDetail?.narration || '{}'); return p.notes || p.reference || '---'; } catch(e) { return billDetail?.narration?.split('||')[0] || '---'; } })()}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="w-[320px] space-y-4">
+                                                        {(() => {
+                                                            const derivedTotal = billDetail?.totalAmount || 
+                                                                               billDetail?.Transactions?.find(t => t.type === 'Cr')?.credit || 0;
+                                                            return (
+                                                                <>
+                                                                    <div className="flex justify-between text-[13px] py-1 border-b border-slate-50">
+                                                                        <span className="text-slate-400 font-bold">Sub Total</span>
+                                                                        <span className="font-bold text-slate-800 tabular-nums">₹{parseFloat(derivedTotal).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-[18px] py-3 bg-slate-900 text-white px-6 rounded-xl items-center shadow-lg shadow-slate-200">
+                                                                        <span className="font-black tracking-tight uppercase text-[12px]">Total Amount</span>
+                                                                        <span className="font-black tabular-nums">₹{parseFloat(derivedTotal).toLocaleString()}</span>
+                                                                    </div>
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="mt-20 flex justify-between items-end grayscale opacity-50">
+                                                    <div>
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Authorized Signature</p>
+                                                        <div className="mt-4 w-48 h-px bg-slate-200" />
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-[9px] text-slate-300 font-medium">Generated on {new Date().toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* --- JOURNAL SECTION (Conditional) --- */}
+                                        {showVoucher && (
+                                            <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-700">
+                                                <div className="flex items-center gap-3 mb-6 px-2">
+                                                    <h3 className="text-[16px] font-black text-slate-800 uppercase tracking-tighter">Journal</h3>
+                                                    <div className="flex-1 h-px bg-slate-100"></div>
+                                                    <span className="text-[11px] font-black text-slate-400 bg-slate-50 px-3 py-1 rounded-full">#{billDetail?.voucherNumber}</span>
+                                                </div>
+                                                
+                                                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                                                    <table className="w-full text-left">
+                                                        <thead>
+                                                            <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                                                <th className="px-10 py-5">Account / Ledger</th>
+                                                                <th className="px-10 py-5 text-right">Debit (Dr)</th>
+                                                                <th className="px-10 py-5 text-right">Credit (Cr)</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-50">
+                                                            {billDetail?.Transactions?.map((tx, idx) => (
+                                                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className={`px-10 py-5 text-[14px] font-black ${tx.debit > 0 ? 'text-blue-600' : 'text-slate-800 pl-16'}`}>
+                                                                    {tx.Ledger?.name || 'Unknown Ledger'}
+                                                                </td>
+                                                                <td className="px-10 py-5 text-right text-[14px] font-black text-slate-900 tabular-nums">
+                                                                    {tx.debit > 0 ? `₹${tx.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '---'}
+                                                                </td>
+                                                                <td className="px-10 py-5 text-right text-[14px] font-black text-slate-900 tabular-nums">
+                                                                    {tx.credit > 0 ? `₹${tx.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '---'}
+                                                                </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                        <tfoot className="bg-slate-50/80">
+                                                            <tr className="text-[14px] font-black text-slate-900">
+                                                                <td className="px-10 py-6">Total</td>
+                                                                <td className="px-10 py-6 text-right tabular-nums">₹{parseFloat(billDetail?.Transactions?.filter(t => t.type === 'Dr').reduce((s,t) => s+t.debit, 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                                <td className="px-10 py-6 text-right tabular-nums text-blue-600">₹{parseFloat(billDetail?.Transactions?.filter(t => t.type === 'Cr').reduce((s,t) => s+t.credit, 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    </div>
+                            )
+                        ) : (
+                            /* --- EMPTY STATE (Nothing Selected) --- */
+                            <div className="flex-1 flex flex-col items-center justify-center p-20 text-center animate-in zoom-in-95 duration-700 bg-slate-50/20">
+                                <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center text-slate-200 mb-8 border border-slate-200 shadow-xl">
+                                    <Receipt size={48} />
+                                </div>
+                                <h3 className="text-[24px] font-black text-slate-800 tracking-tighter mb-2">Select a bill to view details</h3>
+                                <p className="text-slate-400 text-[14px] max-w-sm mx-auto leading-relaxed">
+                                    Click on a bill from the left-side list to see its full document visualization and accounting history.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+
+        {/* --- GLOBAL FOOTER (Totals Summary) --- */}
+        <footer className="px-6 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-30 shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-6">
+                 <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">Total Unpaid</span>
+                    <span className="text-[16px] font-black text-orange-600 tabular-nums">
+                        ₹{filteredBills.reduce((acc, b) => acc + parseFloat(b.balanceDue || b.totalAmount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                 </div>
+                 <div className="w-px h-8 bg-slate-100"></div>
+                 <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">Grand Total</span>
+                    <span className="text-[16px] font-black text-slate-900 tabular-nums">
+                        ₹{bills.reduce((acc, b) => acc + parseFloat(b.totalAmount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                 </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[11px] font-black">
+                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                   Synced Live
+                </div>
+            </div>
+        </footer>
     </div>
   );
 };
