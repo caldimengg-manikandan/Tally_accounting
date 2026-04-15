@@ -217,6 +217,7 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
                   <div className="space-y-4">
                     <StatRow label="Ledger Entries" value={liveStats?.ledgerCount || 0} />
                     <StatRow label="Voucher Records" value={liveStats?.voucherCount || 0} />
+                    <StatRow label="Active Projects" value={liveStats?.projectCount || 0} />
                     <div className="h-[1px] bg-slate-800 my-2"></div>
                     <StatRow label="Net Profit" value={fmt(liveStats?.netProfit)} hl="text-blue-400" />
                     <StatRow label="Liquidity" value={fmt(liveStats?.cashBalance)} hl="text-emerald-400" />

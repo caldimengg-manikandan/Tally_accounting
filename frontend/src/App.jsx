@@ -121,8 +121,8 @@ const NAV = [
     group: 'Time Tracking',
     icon: Activity,
     items: [
-      { label: 'Projects', path: '/time-tracking/projects', icon: Target },
-      { label: 'Timesheet', path: '/time-tracking/timesheet', icon: Clock },
+      { label: 'Projects', path: '/time-tracking/projects', icon: Target, showPlus: true, plusPath: '/time-tracking/projects/new' },
+      { label: 'Timesheet', path: '/time-tracking/timesheet', icon: Clock, showPlus: true, plusPath: '/time-tracking/timesheet/new' },
     ]
   },
   {
@@ -699,6 +699,7 @@ function AuthenticatedApp() {
       <Route path="/time-tracking/projects"      element={shell(ProjectsView)} />
       <Route path="/time-tracking/projects/new"  element={shell(ProjectsView)} />
       <Route path="/time-tracking/projects/edit/:id" element={shell(ProjectsView)} />
+      <Route path="/time-tracking/projects/view/:id" element={shell(ProjectsView)} />
 
       {/* Operations */}
       <Route path="/inventory"          element={shell(InventoryView)} />
