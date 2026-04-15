@@ -51,13 +51,39 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
   const formatDescription = (v) => {
     const val = v.narration;
     const type = v.voucherType;
-    if (!val) return type === 'Payment' ? 'Outgoing Payment' : type === 'Receipt' ? 'Incoming Receipt' : 'General Transaction';
+    if (!val) {
+      if (type === 'Payment') return 'Outgoing Payment';
+      if (type === 'Receipt') return 'Incoming Receipt';
+      if (type === 'Purchase' || type === 'Bill' || type === 'PURCHASE' || type === 'BILL') return 'Vendor Supply';
+      return 'General Transaction';
+    }
+
     try {
       if (typeof val === 'string' && val.trim().startsWith('{')) {
         const parsed = JSON.parse(val);
-        if (type === 'Payment' && parsed.vendor) return `Payment to ${parsed.vendor}`;
-        if (type === 'Receipt' && (parsed.customer || parsed.customerName)) return `Receipt from ${parsed.customer || parsed.customerName}`;
+        
+        // Handle explicit notes if present
         if (parsed.notes) return parsed.notes;
+
+        // Type specific formatting
+        if ((type === 'Payment' || type === 'PAYMENT') && parsed.vendor) return `Payment to ${parsed.vendor}`;
+        if ((type === 'Receipt' || type === 'RECEIPT') && (parsed.customer || parsed.customerName)) return `Receipt from ${parsed.customer || parsed.customerName}`;
+        
+        // Purchases / Bills
+        if (type === 'Purchase' || type === 'Bill' || type === 'PURCHASE' || type === 'BILL') {
+          if (parsed.items && parsed.items.length > 0) {
+            const firstItem = parsed.items[0].itemName || parsed.items[0].description || 'Items';
+            const count = parsed.items.length;
+            return `Purchase: ${firstItem}${count > 1 ? ` + ${count - 1} more` : ''}`;
+          }
+          if (parsed.vendorName || parsed.vendor) return `Purchase from ${parsed.vendorName || parsed.vendor}`;
+          return 'Inventory Purchase';
+        }
+
+        // Vendor Credits
+        if (type === 'VENDOR_CREDIT' || type === 'Vendor Credit') {
+          return `Credit Note: ${parsed.vendorName || 'Vendor'}`;
+        }
       }
       return val;
     } catch (e) {

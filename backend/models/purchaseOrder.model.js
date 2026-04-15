@@ -8,16 +8,16 @@ module.exports = (sequelize, DataTypes) => {
     },
     orderNumber: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true
     },
     date: {
       type: DataTypes.DATEONLY,
-      allowNull: false,
+      allowNull: true,
       defaultValue: DataTypes.NOW
     },
     totalAmount: {
       type: DataTypes.DECIMAL(15, 2),
-      allowNull: false,
+      allowNull: true,
       defaultValue: 0.00
     },
     status: {
