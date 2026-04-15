@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ledgerAPI, quoteAPI, companyAPI, priceListAPI } from '../../services/api';
+import { ledgerAPI, quoteAPI, companyAPI, priceListAPI, projectAPI } from '../../services/api';
 import { 
   Plus, MoreHorizontal, ChevronDown, Settings, 
   X, Info, Upload as UploadIcon, Search, Tag, Paperclip, RefreshCw,
@@ -29,10 +29,12 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filtered = items.filter(it => 
-        it.name.toLowerCase().includes(search.toLowerCase()) ||
-        (it.salesDescription && it.salesDescription.toLowerCase().includes(search.toLowerCase()))
-    );
+    const filtered = (items || []).filter(it => {
+        const n = it.name || '';
+        const d = it.salesDescription || '';
+        const s = search.toLowerCase();
+        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+    });
 
     return (
         <div className="relative w-full" ref={containerRef}>
@@ -64,33 +66,53 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder }) => {
                             />
                         </div>
                     </div>
-                    <div className="max-h-[300px] overflow-y-auto no-scrollbar py-1">
+                    <div className="max-h-[300px] overflow-y-auto no-scrollbar py-1 flex flex-col">
                         {filtered.length > 0 ? (
-                            filtered.map(it => (
-                                <div 
-                                    key={it.id}
-                                    onClick={() => {
-                                        onChange(it);
-                                        setIsOpen(false);
-                                        setSearch('');
-                                    }}
-                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-lg"
-                                >
-                                    <div className="flex justify-between items-start mb-0.5">
-                                        <div className="text-[14px] font-black text-slate-800 tracking-tight flex items-center gap-2">
-                                            <Package size={14} className="text-blue-500 opacity-50" />
-                                            {it.name}
+                            <div className="flex-1">
+                                {filtered.map(it => (
+                                    <div 
+                                        key={it.id}
+                                        onClick={() => {
+                                            onChange(it);
+                                            setIsOpen(false);
+                                            setSearch('');
+                                        }}
+                                        className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-lg"
+                                    >
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <div className="text-[14px] font-black text-slate-800 tracking-tight flex items-center gap-2">
+                                                <Package size={14} className="text-blue-500 opacity-50" />
+                                                {it.name}
+                                            </div>
+                                            <div className="text-[13px] font-black text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
                                         </div>
-                                        <div className="text-[13px] font-black text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                        <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
+                                            {it.salesDescription || 'No description provided'}
+                                        </div>
                                     </div>
-                                    <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
-                                        {it.salesDescription || 'No description provided'}
-                                    </div>
-                                </div>
-                            ))
+                                ))}
+                            </div>
                         ) : (
-                            <div className="py-10 text-center text-slate-400 text-[13px] font-medium">No items found.</div>
+                            <div className="py-12 text-center flex flex-col items-center justify-center border-b border-slate-50">
+                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                                    <Package size={20} className="text-slate-300" />
+                                </div>
+                                <div className="text-slate-500 text-[14px] font-bold mb-1">No Items Found</div>
+                                <div className="text-slate-400 text-[12px] font-medium max-w-[200px] leading-snug">It looks like this inventory repository is empty.</div>
+                            </div>
                         )}
+                        <div className="pt-2 px-2 sticky bottom-0 bg-white">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    window.open('/inventory/new', '_blank'); 
+                                }}
+                                className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-50/50 hover:bg-blue-600 text-blue-600 hover:text-white font-black text-[12px] uppercase tracking-widest rounded-lg transition-all"
+                            >
+                                <Plus strokeWidth={3} size={14} /> Add New Item
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -373,12 +395,12 @@ const QuotesList = ({ quotes, loading, navigate, onDelete, onRefresh, selectedId
                     </div>
                 ) : (
                     <>
-                        <div className="bg-slate-50 border-b border-slate-100 flex items-center px-6 py-3 sticky top-0 z-10">
-                            <div className="w-24 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</div>
-                            <div className="flex-1 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-4">Customer Details</div>
-                            <div className="w-24 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</div>
-                            <div className="w-24 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</div>
-                            <div className="w-20 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actions</div>
+                        <div className="bg-slate-50 border-b border-slate-100 grid grid-cols-[120px_1fr_150px_120px_100px] items-center px-6 py-3 sticky top-0 z-10">
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</div>
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Customer Details</div>
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-2">Amount</div>
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</div>
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Actions</div>
                         </div>
 
                         {sortedQuotes.length === 0 ? (
@@ -393,32 +415,32 @@ const QuotesList = ({ quotes, loading, navigate, onDelete, onRefresh, selectedId
                                     <div 
                                         key={q.id} 
                                         onClick={() => onSelect(q.id)}
-                                        className={`px-6 py-4 cursor-pointer transition-all border-l-[4px] flex items-center group
+                                        className={`px-6 py-4 cursor-pointer transition-all border-l-[4px] grid grid-cols-[120px_1fr_150px_120px_100px] items-center group
                                             ${String(q.id) === String(selectedId) ? 'bg-[#f0f5ff] border-l-[#1e61f0]' : 'hover:bg-slate-50 border-l-transparent'}`}
                                     >
-                                        <div className="w-24 text-[12px] font-bold text-slate-400">
-                                             {new Date(q.quoteDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                        <div className="text-[12px] font-bold text-slate-400">
+                                            {new Date(q.quoteDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                                         </div>
 
-                                        <div className="flex-1 pl-4">
-                                            <div className={`text-[13px] font-black ${String(q.id) === String(selectedId) ? 'text-[#1e61f0]' : 'text-slate-800'} transition-colors`}>
+                                        <div className="pl-2 min-w-0">
+                                            <div className={`text-[13px] font-black truncate ${String(q.id) === String(selectedId) ? 'text-[#1e61f0]' : 'text-slate-800'} transition-colors`}>
                                                 {q.customerName}
                                             </div>
                                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">#{q.quoteNumber}</div>
                                         </div>
 
-                                        <div className="w-24 text-right pr-2">
-                                             <div className="text-[14px] font-black text-slate-900 tracking-tight">₹{parseFloat(q.totalAmount || 0).toLocaleString()}</div>
+                                        <div className="text-[14px] font-black text-slate-900 tracking-tight text-right pr-2">
+                                            ₹{parseFloat(q.totalAmount || 0).toLocaleString()}
                                         </div>
 
-                                        <div className="w-24 flex justify-center">
+                                        <div className="flex justify-center">
                                             <span className={`px-2 py-0.5 rounded uppercase text-[8px] font-black tracking-widest border ${q.status === 'Accepted' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
                                                 {q.status || 'Draft'}
                                             </span>
                                         </div>
 
-                                        <div className="w-20 flex justify-center gap-1">
-                                             <button 
+                                        <div className="flex justify-center gap-1">
+                                            <button 
                                                 onClick={(e) => { e.stopPropagation(); navigate(`/quotes/edit/${q.id}`); }} 
                                                 className="p-1.5 hover:bg-white rounded text-slate-400 hover:text-blue-600 transition-all border border-transparent hover:border-slate-100"
                                                 title="Edit"
@@ -836,6 +858,135 @@ const EmailSendView = ({ quote, onCancel, onSend }) => {
 };
 
 // ─────────────────────────────────────────────────
+// MANAGE SALESPERSONS MODAL
+// ─────────────────────────────────────────────────
+const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSelect }) => {
+    const [search, setSearch] = useState('');
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newEmail, setNewEmail] = useState('');
+
+    if (!isOpen) return null;
+
+    const filtered = salespersons.filter(s =>
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.email && s.email.toLowerCase().includes(search.toLowerCase()))
+    );
+
+    const handleSaveAndSelect = () => {
+        if (!newName.trim()) return;
+        const entry = { id: Date.now(), name: newName.trim(), email: newEmail.trim() };
+        const updated = [...salespersons, entry];
+        localStorage.setItem('tally_salespersons', JSON.stringify(updated));
+        onSave(updated);
+        onSelect(entry.name);
+        setNewName('');
+        setNewEmail('');
+        setShowAddForm(false);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden animate-scale-up">
+                {/* Modal Header */}
+                <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-[18px] font-black text-slate-900 tracking-tight">Manage Salespersons</h3>
+                    <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"><X size={18}/></button>
+                </div>
+
+                {/* Search + New Button */}
+                <div className="px-6 py-4 flex items-center gap-3 border-b border-slate-100">
+                    <div className="relative flex-1">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            autoFocus
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Search Salesperson"
+                            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-500 transition-all"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowAddForm(true)}
+                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-black rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100"
+                    >
+                        <Plus size={14}/> New Salesperson
+                    </button>
+                </div>
+
+                {/* Inline Add Form */}
+                {showAddForm && (
+                    <div className="mx-6 my-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
+                                <input
+                                    value={newName}
+                                    onChange={e => setNewName(e.target.value)}
+                                    className="w-full h-9 px-3 border border-slate-300 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
+                                <input
+                                    type="email"
+                                    value={newEmail}
+                                    onChange={e => setNewEmail(e.target.value)}
+                                    className="w-full h-9 px-3 border border-slate-300 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleSaveAndSelect}
+                                disabled={!newName.trim()}
+                                className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-black rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm"
+                            >
+                                Save and Select
+                            </button>
+                            <button
+                                onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }}
+                                className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-black rounded hover:bg-slate-50 transition-all"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Table */}
+                <div className="px-6">
+                    <div className="grid grid-cols-2 py-3 border-b border-slate-100">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salesperson Name</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</span>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto no-scrollbar">
+                        {filtered.length === 0 ? (
+                            <div className="py-12 text-center text-slate-400 text-[13px] font-medium italic">No salespersons found.</div>
+                        ) : (
+                            filtered.map(s => (
+                                <div
+                                    key={s.id}
+                                    onClick={() => { onSelect(s.name); onClose(); }}
+                                    className="grid grid-cols-2 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer rounded transition-colors"
+                                >
+                                    <span className="text-[13px] font-bold text-[#1e61f0]">{s.name}</span>
+                                    <span className="text-[13px] text-slate-500 font-medium">{s.email || '—'}</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className="px-6 py-4" />
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────
 // NEW QUOTE FORM
 // ─────────────────────────────────────────────────
 const NewQuoteForm = ({ companyId, navigate, editId }) => {
@@ -849,13 +1000,24 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
     const [isSavingCustomer, setIsSavingCustomer] = useState(false);
     const customerDropdownRef = useRef(null);
+    const salespersonDropdownRef = useRef(null);
     const [quoteNo, setQuoteNo] = useState('QT-000001');
     const [showQuoteSettings, setShowQuoteSettings] = useState(false);
     const [refNo, setRefNo] = useState('');
     const [quoteDate, setQuoteDate] = useState(new Date().toISOString().split('T')[0]);
     const [expiryDate, setExpiryDate] = useState('');
     const [salesperson, setSalesperson] = useState('');
+    const [salespersons, setSalespersons] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('tally_salespersons') || '[]'); } catch { return []; }
+    });
+    const [showSalespersonDropdown, setShowSalespersonDropdown] = useState(false);
+    const [salespersonSearch, setSalespersonSearch] = useState('');
+    const [showManageSalespersons, setShowManageSalespersons] = useState(false);
     const [project, setProject] = useState('');
+    const [projects, setProjects] = useState([]);
+    const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+    const [projectSearch, setProjectSearch] = useState('');
+    const projectDropdownRef = useRef(null);
     const [priceList, setPriceList] = useState('');
     const [subject, setSubject] = useState('');
     const [selectedTax, setSelectedTax] = useState('');
@@ -877,6 +1039,33 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [isPriceListDropdownOpen, setIsPriceListDropdownOpen] = useState(false);
     const [priceListSearch, setPriceListSearch] = useState('');
     const priceListRef = useRef(null);
+
+    // Restore draft state
+    useEffect(() => {
+        if (!editId) {
+            try {
+                const draft = localStorage.getItem('quote_draft');
+                if (draft) {
+                    const parsed = JSON.parse(draft);
+                    if (parsed.customerName) { setCustomerName(parsed.customerName); setCustomerSearch(parsed.customerName); }
+                    if (parsed.quoteNo) setQuoteNo(parsed.quoteNo);
+                    if (parsed.refNo) setRefNo(parsed.refNo);
+                    if (parsed.quoteDate) setQuoteDate(parsed.quoteDate);
+                    if (parsed.expiryDate) setExpiryDate(parsed.expiryDate);
+                    if (parsed.salesperson) setSalesperson(parsed.salesperson);
+                    if (parsed.subject) setSubject(parsed.subject);
+                    if (parsed.discount) setDiscount(parsed.discount);
+                    if (parsed.adjustment) setAdjustment(parsed.adjustment);
+                    if (parsed.selectedTax) setSelectedTax(parsed.selectedTax);
+                    if (parsed.customerNotes) setCustomerNotes(parsed.customerNotes);
+                    if (parsed.terms) setTerms(parsed.terms);
+                    if (parsed.items) setItems(parsed.items);
+                    if (parsed.project) setProject(parsed.project);
+                    localStorage.removeItem('quote_draft');
+                }
+            } catch(e) {}
+        }
+    }, [editId]);
 
     const bulkFileRef = useRef(null);
 
@@ -997,9 +1186,10 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
         Promise.all([
             ledgerAPI.getByCompany(activeCoId),
             inventoryAPI.getByCompany(activeCoId),
-            priceListAPI.getByCompany(activeCoId)
+            priceListAPI.getByCompany(activeCoId),
+            projectAPI.getByCompany(activeCoId).catch(() => ({ data: [] }))
         ])
-        .then(([ledgersRes, invRes, priceRes]) => {
+        .then(([ledgersRes, invRes, priceRes, projRes]) => {
             const allLedgers = ledgersRes.data || [];
             setCustomers(allLedgers.filter(l => {
                 const g = l.Group?.name || '';
@@ -1007,6 +1197,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
             }));
             setInventoryItems(invRes.data || []);
             setPriceLists(priceRes.data || []);
+            setProjects(projRes.data || []);
         })
         .catch(err => console.error("DATA HYDRATION FAILED:", err));
     }, [companyId]);
@@ -1087,6 +1278,9 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
             }
             if (priceListRef.current && !priceListRef.current.contains(event.target)) {
                 setIsPriceListDropdownOpen(false);
+            }
+            if (salespersonDropdownRef.current && !salespersonDropdownRef.current.contains(event.target)) {
+                setShowSalespersonDropdown(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -1176,6 +1370,14 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 items={inventoryItems}
             />
 
+            <ManageSalespersonsModal
+                isOpen={showManageSalespersons}
+                onClose={() => setShowManageSalespersons(false)}
+                salespersons={salespersons}
+                onSave={setSalespersons}
+                onSelect={(name) => { setSalesperson(name); }}
+            />
+
             {/* Header */}
             <header className="px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-white z-50">
                 <div className="flex items-center gap-3">
@@ -1234,11 +1436,17 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                         <div 
                                                             key={c.id}
                                                             onClick={() => { setCustomerName(c.name); setCustomerSearch(c.name); setShowCustomerDropdown(false); }}
-                                                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] text-slate-700 font-medium"
+                                                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] text-slate-700 font-medium border-b border-slate-50 last:border-0"
                                                         >
                                                             {c.name}
                                                         </div>
                                                     ))}
+                                                    <div 
+                                                        onClick={() => { setIsQuickAddOpen(true); setShowCustomerDropdown(false); }}
+                                                        className="px-4 py-2.5 bg-blue-50/50 hover:bg-blue-600 text-blue-600 hover:text-white font-black text-[12px] uppercase tracking-widest cursor-pointer transition-colors"
+                                                    >
+                                                        + Add New Customer
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -1295,36 +1503,132 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                         {/* Salesperson */}
                         <div className="flex items-center gap-8">
                             <label className="w-40 text-[13px] font-bold text-slate-600">Salesperson</label>
-                            <select 
-                                value={salesperson}
-                                onChange={(e) => {
-                                    if (e.target.value === 'ADD_NEW') {
-                                        navigate('/customers/new');
-                                    } else {
-                                        setSalesperson(e.target.value);
-                                    }
-                                }}
-                                className="flex-1 h-9 px-3 border border-slate-300 rounded text-[14px] bg-white font-medium italic text-slate-400 shadow-sm max-w-md"
-                            >
-                                <option value="">Select or Add Salesperson</option>
-                                <option value="ADD_NEW">+ Add New Salesperson</option>
-                                <option value="Internal Team">Internal Team</option>
-                                <option value="Direct Sales">Direct Sales</option>
-                            </select>
+                            <div className="flex-1 max-w-md relative" ref={salespersonDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowSalespersonDropdown(prev => !prev); setSalespersonSearch(''); }}
+                                    className={`w-full h-9 px-3 pr-9 border rounded text-[14px] font-medium text-left shadow-sm flex items-center justify-between transition-colors
+                                        ${showSalespersonDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-300 bg-white'}
+                                        ${salesperson ? 'text-slate-800' : 'text-slate-400 italic'}`}
+                                >
+                                    <span>{salesperson || 'Select or Add Salesperson'}</span>
+                                    <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {showSalespersonDropdown && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in">
+                                        {/* Search */}
+                                        <div className="p-2 border-b border-slate-100">
+                                            <div className="relative">
+                                                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                <input
+                                                    autoFocus
+                                                    value={salespersonSearch}
+                                                    onChange={e => setSalespersonSearch(e.target.value)}
+                                                    placeholder="Search"
+                                                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* List */}
+                                        <div className="max-h-48 overflow-y-auto no-scrollbar">
+                                            {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).length === 0 ? (
+                                                <div className="py-6 text-center text-[12px] text-slate-400 font-medium italic">NO RESULTS FOUND</div>
+                                            ) : (
+                                                salespersons
+                                                    .filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase()))
+                                                    .map(s => (
+                                                        <div
+                                                            key={s.id}
+                                                            onClick={() => { setSalesperson(s.name); setShowSalespersonDropdown(false); }}
+                                                            className={`px-4 py-2.5 cursor-pointer text-[13px] font-medium hover:bg-blue-50 transition-colors
+                                                                ${salesperson === s.name ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
+                                                        >
+                                                            {s.name}
+                                                        </div>
+                                                    ))
+                                            )}
+                                        </div>
+
+                                        {/* Manage Link */}
+                                        <div className="border-t border-slate-100">
+                                            <button
+                                                onClick={() => { setShowSalespersonDropdown(false); setShowManageSalespersons(true); }}
+                                                className="w-full flex items-center gap-2 px-4 py-3 text-[13px] font-bold text-[#1e61f0] hover:bg-blue-50 transition-colors"
+                                            >
+                                                <Plus size={14} /> Manage Salespersons
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Project Name */}
                         <div className="flex items-center gap-8">
                             <label className="w-40 text-[13px] font-bold text-slate-600">Project Name</label>
-                            <div className="flex-1 max-w-md">
-                                <select 
-                                    value={project}
-                                    onChange={(e) => setProject(e.target.value)}
-                                    className="w-full h-9 px-3 border border-slate-300 rounded text-[14px] bg-white font-medium italic text-slate-400 shadow-sm"
+                            <div className="flex-1 max-w-md relative" ref={projectDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowProjectDropdown(prev => !prev); setProjectSearch(''); }}
+                                    className={`w-full h-9 px-3 pr-9 border rounded text-[14px] font-medium text-left shadow-sm flex items-center justify-between transition-colors
+                                        ${showProjectDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-300 bg-white'}
+                                        ${project ? 'text-slate-800' : 'text-slate-400 italic'}`}
                                 >
-                                    <option value="">Select a project</option>
-                                </select>
-                                <p className="text-[11px] text-slate-400 mt-1">Select a customer to associate a project.</p>
+                                    <span>{project || 'Select a project'}</span>
+                                    <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showProjectDropdown ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {showProjectDropdown && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in">
+                                        <div className="p-2 border-b border-slate-100">
+                                            <div className="relative">
+                                                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                <input
+                                                    autoFocus
+                                                    value={projectSearch}
+                                                    onChange={e => setProjectSearch(e.target.value)}
+                                                    placeholder="Search"
+                                                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="max-h-48 overflow-y-auto no-scrollbar">
+                                            {projects.filter(p => !projectSearch || (p.name||'').toLowerCase().includes(projectSearch.toLowerCase())).length === 0 && !projectSearch ? (
+                                                <div className="py-5 text-center text-[12px] text-slate-400 font-medium italic">No projects found</div>
+                                            ) : (
+                                                projects
+                                                    .filter(p => !projectSearch || (p.name||'').toLowerCase().includes(projectSearch.toLowerCase()))
+                                                    .map(p => (
+                                                        <div
+                                                            key={p.id}
+                                                            onClick={() => { setProject(p.name); setShowProjectDropdown(false); }}
+                                                            className={`px-4 py-2.5 cursor-pointer text-[13px] font-medium hover:bg-blue-50 transition-colors
+                                                                ${project === p.name ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
+                                                        >
+                                                            {p.name}
+                                                        </div>
+                                                    ))
+                                            )}
+                                        </div>
+                                        <div className="border-t border-slate-100">
+                                            <button
+                                                type="button"
+                                                onClick={() => { 
+                                                    localStorage.setItem('quote_draft', JSON.stringify({
+                                                        customerName, quoteNo, refNo, quoteDate, expiryDate, salesperson, subject, discount, adjustment, selectedTax, customerNotes, terms, items, project
+                                                    }));
+                                                    setShowProjectDropdown(false); 
+                                                    navigate('/time-tracking/projects/new', { state: { returnTo: location.pathname + location.search } }); 
+                                                }}
+                                                className="w-full flex items-center gap-2 px-4 py-3 text-[13px] font-bold text-[#1e61f0] hover:bg-blue-50 transition-colors cursor-pointer"
+                                            >
+                                                <Plus size={14}/> Add New Project
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -1408,7 +1712,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                     </div>
 
                     {/* Table Section */}
-                    <div className="border-x border-b border-slate-200 rounded-b overflow-hidden shadow-sm">
+                    <div className="border-x border-b border-slate-200 rounded-b overflow-visible shadow-sm">
                         <table className="w-full border-collapse bg-white">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">
@@ -1425,11 +1729,14 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                 {items.map((item, index) => (
                                     <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors">
                                         <td className="px-6 py-4">
-                                            <input 
+                                            <ItemSearchSelector 
+                                                items={inventoryItems}
                                                 value={item.itemDetails}
-                                                onChange={(e) => updateItem(index, 'itemDetails', e.target.value)}
+                                                onChange={(selected) => {
+                                                    updateItem(index, 'itemDetails', selected.name);
+                                                    updateItem(index, 'rate', selected.sellingPrice || 0);
+                                                }}
                                                 placeholder="Type or click to select an item."
-                                                className="w-full bg-transparent border-none outline-none text-[14px] font-medium text-slate-700 placeholder:text-slate-400 focus:bg-white focus:px-2 rounded transition-all"
                                             />
                                         </td>
                                         <td className="px-6 py-4 align-top">
@@ -1452,7 +1759,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                             <span className="text-[14px] font-bold text-slate-900 font-mono">{parseFloat(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </td>
                                         <td className="px-4 py-4 text-center align-top">
-                                            <button onClick={() => removeItem(index)} className="mt-1 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                            <button onClick={() => removeItem(index)} className="mt-1 text-slate-300 hover:text-red-500 transition-colors">
                                                 <X size={16} />
                                             </button>
                                         </td>
@@ -1585,7 +1892,17 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Mobile Contact</label>
                                  <div className="relative">
                                     <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                    <input type="text" value={quickAddForm.mobile} onChange={e => setQuickAddForm({...quickAddForm, mobile: e.target.value})} className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 outline-none focus:border-blue-500" placeholder="+91 XXXXX XXXXX" />
+                                    <input 
+                                        type="text" 
+                                        value={quickAddForm.mobile} 
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                            setQuickAddForm({...quickAddForm, mobile: val});
+                                        }} 
+                                        maxLength={10}
+                                        className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 outline-none focus:border-blue-500" 
+                                        placeholder="10-digit mobile number" 
+                                    />
                                  </div>
                               </div>
                            </div>

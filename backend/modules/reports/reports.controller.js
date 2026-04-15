@@ -1,4 +1,4 @@
-const { Ledger, Group, Transaction, Voucher, sequelize } = require('../../models');
+const { Ledger, Group, Transaction, Voucher, Project, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 
 /**
@@ -283,9 +283,10 @@ exports.getDashboardStats = async (req, res) => {
       try { return await model.count({ where }); } catch { return 0; }
     };
 
-    const [voucherCount, ledgerCount] = await Promise.all([
+    const [voucherCount, ledgerCount, projectCount] = await Promise.all([
       Voucher.count({ where: { CompanyId: companyId } }).catch(err => { console.error("Voucher count err:", err); return 0; }),
       Ledger.count({ where: { CompanyId: companyId } }).catch(err => { console.error("Ledger count err:", err); return 0; }),
+      Project.count({ where: { CompanyId: companyId } }).catch(err => { console.error("Project count err:", err); return 0; }),
     ]);
 
     // Get all ledgers with their transaction sums
@@ -329,6 +330,7 @@ exports.getDashboardStats = async (req, res) => {
       totalExpenses: Math.max(0, totalExpenses),
       netProfit: totalIncome - totalExpenses,
       cashBalance,
+      projectCount,
       receivables: 0,
       payables: 0,
     });

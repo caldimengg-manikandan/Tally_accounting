@@ -256,7 +256,7 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                                     <td className="px-6 py-5 border-l"><input type="number" value={line.quantity} onChange={e => handleUpdateLine(line.id, 'quantity', e.target.value)} className="w-full p-2 text-center text-sm bg-transparent outline-none" /></td>
                                     <td className="px-6 py-5 border-l"><input type="number" value={line.rate} onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)} className="w-full p-2 text-right text-sm bg-transparent outline-none" /></td>
                                     <td className="px-6 py-5 border-l text-right font-black text-slate-900 text-sm">{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                    <td className="px-4 py-3"><button onClick={() => setLineItems(prev => prev.length > 1 ? prev.filter(p => p.id !== line.id) : prev)} className="text-slate-300 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"><X size={14}/></button></td>
+                                    <td className="px-4 py-3"><button onClick={() => setLineItems(prev => prev.length > 1 ? prev.filter(p => p.id !== line.id) : prev)} className="text-slate-300 hover:text-rose-500 transition-all"><X size={14}/></button></td>
                                 </tr>
                             ))}
                         </tbody>

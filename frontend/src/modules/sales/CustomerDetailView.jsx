@@ -72,6 +72,7 @@ const CustomerDetailView = ({ companyId }) => {
   });
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
@@ -212,6 +213,63 @@ const CustomerDetailView = ({ companyId }) => {
        setCustomers(prev => prev.map(c => c.id === customer.id ? { ...c, [field]: value } : c));
     } catch (err) {
       addNotification(`Failed to update ${field}`, 'error');
+    }
+  };
+
+  const openAddressDrawer = (type) => {
+    setAddressType(type);
+    const existing = type === 'billing' ? customer.billingAddress : customer.shippingAddress;
+    if (existing) {
+      try {
+        setAddressForm(JSON.parse(existing));
+      } catch (e) {
+        setAddressForm({ attention: '', country: 'India', address1: '', address2: '', city: '', state: '', zip: '', phone: '', fax: '' });
+      }
+    } else {
+      setAddressForm({ 
+        attention: '', country: 'India', address1: '', address2: '', city: '', state: '', zip: '', phone: '', 
+        fax: '', ...((customer.firstName || customer.name) ? { attention: `${customer.salutation || ''} ${customer.firstName || customer.name}`.trim() } : {})
+      });
+    }
+    setIsAddressDrawerOpen(true);
+  };
+
+  const renderAddress = (type) => {
+    const addrStr = type === 'billing' ? customer.billingAddress : customer.shippingAddress;
+    if (!addrStr || addrStr === '{}') {
+      return (
+        <p className="text-[12px] text-slate-400 italic leading-relaxed">
+          No {type === 'billing' ? 'Billing' : 'Shipping'} Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => openAddressDrawer(type)}>New Address</span>
+        </p>
+      );
+    }
+    try {
+      const addr = JSON.parse(addrStr);
+      const isEmpty = !addr.address1 && !addr.city;
+      if (isEmpty) {
+        return (
+          <p className="text-[12px] text-slate-400 italic leading-relaxed">
+            No {type === 'billing' ? 'Billing' : 'Shipping'} Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => openAddressDrawer(type)}>New Address</span>
+          </p>
+        );
+      }
+      return (
+        <div className="text-[12.5px] text-slate-500 space-y-0.5 relative group/addr pr-10">
+          {addr.attention && <p className="font-black text-slate-800 tracking-tight">{addr.attention}</p>}
+          <p>{addr.address1}</p>
+          {addr.address2 && <p>{addr.address2}</p>}
+          <p>{addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.zip ? `- ${addr.zip}` : ''}</p>
+          {addr.phone && <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest">PH: {addr.phone}</p>}
+          <button 
+            onClick={() => openAddressDrawer(type)} 
+            className="absolute top-0 right-0 p-2 text-blue-600 opacity-0 group-hover/addr:opacity-100 transition-opacity hover:bg-blue-50 rounded"
+          >
+            <Edit size={14}/>
+          </button>
+        </div>
+      );
+    } catch (e) {
+      return <p className="text-red-400 text-[12px]">Invalid address data</p>;
     }
   };
 
@@ -705,10 +763,22 @@ const CustomerDetailView = ({ companyId }) => {
                          <div className="mt-16 flex justify-end">
                             <div className="w-80 space-y-0 text-[13px] font-sans">
                                <div className="bg-slate-100/50 p-2 font-black text-slate-700 border-b border-slate-200 uppercase tracking-tighter">Account Summary</div>
-                               <div className="flex justify-between p-2 border-b border-slate-50"><span>Opening Balance</span><span className="font-bold">₹0.00</span></div>
-                               <div className="flex justify-between p-2 border-b border-slate-50"><span>Invoiced Amount</span><span className="font-bold">₹0.00</span></div>
-                               <div className="flex justify-between p-2 border-b border-slate-50"><span>Amount Received</span><span className="font-bold">₹0.00</span></div>
-                               <div className="flex justify-between p-3 border-b border-slate-200 bg-slate-50/20"><span className="font-black">Balance Due</span><span className="font-black text-[15px]">₹0.00</span></div>
+                               <div className="flex justify-between p-2 border-b border-slate-50">
+                                 <span>Opening Balance</span>
+                                 <span className="font-bold">₹{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               </div>
+                               <div className="flex justify-between p-2 border-b border-slate-50">
+                                 <span>Invoiced Amount</span>
+                                 <span className="font-bold">₹{statementData?.entries?.reduce((sum, e) => sum + (e.debit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               </div>
+                               <div className="flex justify-between p-2 border-b border-slate-50">
+                                 <span>Amount Received</span>
+                                 <span className="font-bold">₹{statementData?.entries?.reduce((sum, e) => sum + (e.credit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               </div>
+                               <div className="flex justify-between p-3 border-b border-slate-200 bg-slate-50/20">
+                                 <span className="font-black">Balance Due</span>
+                                 <span className="font-black text-[15px]">₹{parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               </div>
                             </div>
                          </div>
 
@@ -728,15 +798,25 @@ const CustomerDetailView = ({ companyId }) => {
                                   <td className="px-3 py-4">01/04/2026</td>
                                   <td className="px-3 py-4 font-bold text-slate-900">***Opening Balance***</td>
                                   <td className="px-3 py-4"></td>
-                                  <td className="px-3 py-4 text-right">0.00</td>
                                   <td className="px-3 py-4 text-right"></td>
-                                  <td className="px-3 py-4 text-right font-medium">0.00</td>
+                                  <td className="px-3 py-4 text-right"></td>
+                                  <td className="px-3 py-4 text-right font-medium">{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                </tr>
+                                {statementData?.entries?.map((entry, idx) => (
+                                   <tr key={idx} className="border-b border-slate-50">
+                                      <td className="px-3 py-4">{new Date(entry.date).toLocaleDateString()}</td>
+                                      <td className="px-3 py-4 font-bold text-slate-900">{entry.voucherType} - {entry.voucherNumber}</td>
+                                      <td className="px-3 py-4 italic text-slate-400">{entry.narration}</td>
+                                      <td className="px-3 py-4 text-right">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+                                      <td className="px-3 py-4 text-right">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+                                      <td className="px-3 py-4 text-right font-medium">{entry.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                   </tr>
+                                ))}
                             </tbody>
                             <tfoot>
                                <tr className="font-black text-slate-900 text-[14px]">
                                   <td colSpan={5} className="px-3 py-6 text-right uppercase tracking-tighter">Balance Due</td>
-                                  <td className="px-3 py-6 text-right">₹0.00</td>
+                                  <td className="px-3 py-6 text-right">₹{parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                </tr>
                             </tfoot>
                          </table>
@@ -751,55 +831,66 @@ const CustomerDetailView = ({ companyId }) => {
                   <div className="w-[420px] shrink-0 space-y-12">
                     <div className="flex gap-6 relative">
                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-                       <div className="relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
-                          <div className="w-24 h-24 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 overflow-hidden transition-all hover:border-blue-400 hover:bg-white relative">
-                             {customer.image ? (
-                               <img src={customer.image} className="w-full h-full object-cover" />
-                             ) : (
-                               <div className="flex flex-col items-center gap-1 opacity-40">
-                                 <Camera size={28} strokeWidth={1.5}/>
-                                 <span className="text-[9px] font-black uppercase tracking-widest">Add Photo</span>
-                               </div>
-                             )}
-                             <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                                <ImageIcon size={18} className="text-white" />
-                                <span className="text-[8px] font-black text-white uppercase tracking-tighter">Update</span>
-                             </div>
-                          </div>
-                       </div>
-                       
-                       <div className="space-y-1 pt-1.5 flex-1">
-                          <h3 className="text-[17px] font-black text-slate-900 leading-tight">{customer.salutation} {customer.firstName} {customer.lastName}</h3>
-                          <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{customer.email}</span></div>
-                          <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{customer.mobile || 'No contact'}</span></div>
-                          <button className="text-[12px] font-bold text-blue-600 hover:text-blue-800 underline decoration-blue-200 underline-offset-4 mt-2">Invite to Portal</button>
-                       </div>
+                       <div className="relative group">
+                           <div 
+                              onClick={() => customer.image && setIsPreviewOpen(true)}
+                              className={`w-24 h-24 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 overflow-hidden transition-all hover:border-blue-400 hover:bg-white relative ${customer.image ? 'cursor-zoom-in' : 'cursor-default'}`}
+                           >
+                              {customer.image ? (
+                                <img src={customer.image} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="flex flex-col items-center gap-1 opacity-40">
+                                  <Camera size={28} strokeWidth={1.5}/>
+                                  <span className="text-[9px] font-black uppercase tracking-widest">Add Photo</span>
+                                </div>
+                              )}
+                              
+                              <div 
+                                onClick={(e) => { e.stopPropagation(); fileInputRef.current.click(); }}
+                                className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 cursor-pointer"
+                              >
+                                 <ImageIcon size={18} className="text-white" />
+                                 <span className="text-[8px] font-black text-white uppercase tracking-tighter">Update</span>
+                              </div>
+                           </div>
+                        </div>
+                        
+                        <div className="space-y-1 pt-1.5 flex-1">
+                           <h3 className="text-[17px] font-black text-slate-900 leading-tight">{customer.salutation} {customer.firstName} {customer.lastName}</h3>
+                           <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{customer.email}</span></div>
+                           <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{customer.mobile || 'No contact'}</span></div>
+                           <button className="text-[12px] font-bold text-blue-600 hover:text-blue-800 underline decoration-blue-200 underline-offset-4 mt-2">Invite to Portal</button>
+                        </div>
 
-                       <div className="ml-auto absolute top-0 right-0" ref={settingsRef}>
-                          <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`p-2 rounded-full transition-colors ${isSettingsOpen ? 'bg-slate-100 text-blue-600' : 'hover:bg-slate-100 text-slate-400'}`}><Settings size={20}/></button>
-                          
-                          {isSettingsOpen && (
-                             <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-2 animate-fade-down overflow-hidden">
-                                <div className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Record Actions</div>
-                                <button onClick={() => { setIsSettingsOpen(false); navigate(`/customers/${customer.id}`); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3"><Edit size={16} className="text-blue-500" /> Edit Profile</button>
-                                <button onClick={() => { setIsSettingsOpen(false); handleDeleteCustomer(); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3"><Trash2 size={16} /> Delete Customer</button>
-                             </div>
-                          )}
-                       </div>
+                        <div className="ml-auto absolute top-0 right-0" ref={settingsRef}>
+                           <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className={`p-2 rounded-full transition-colors ${isSettingsOpen ? 'bg-slate-100 text-blue-600' : 'hover:bg-slate-100 text-slate-400'}`}><Settings size={20}/></button>
+                           
+                           {isSettingsOpen && (
+                              <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-2 animate-fade-down overflow-hidden">
+                                 <div className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Record Actions</div>
+                                 <button onClick={() => { setIsSettingsOpen(false); navigate(`/customers/${customer.id}`); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3"><Edit size={16} className="text-blue-500" /> Edit Profile</button>
+                                 <button onClick={() => { setIsSettingsOpen(false); handleDeleteCustomer(); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3"><Trash2 size={16} /> Delete Customer</button>
+                              </div>
+                           )}
+                        </div>
                     </div>
 
                     <div className="space-y-6">
                        <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center"><span>ADDRESS</span> <ChevronDown size={14}/></h4>
-                       <div className="grid grid-cols-2 gap-10 pt-2">
-                          <div className="space-y-3">
-                             <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
-                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => { setAddressType('billing'); setIsAddressDrawerOpen(true); }}>New Address</span></p>
-                          </div>
-                          <div className="space-y-3">
-                             <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
-                             <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => { setAddressType('shipping'); setIsAddressDrawerOpen(true); }}>New Address</span></p>
-                          </div>
-                       </div>
+                        <div className="grid grid-cols-2 gap-10 pt-2">
+                           <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                 <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
+                              </div>
+                              {renderAddress('billing')}
+                           </div>
+                           <div className="space-y-4">
+                              <div className="flex items-center justify-between">
+                                 <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
+                              </div>
+                              {renderAddress('shipping')}
+                           </div>
+                        </div>
                     </div>
 
                     <div className="space-y-6">
@@ -823,11 +914,9 @@ const CustomerDetailView = ({ companyId }) => {
                        <div className="py-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100"><p className="text-[13px] text-slate-400 font-medium italic">No contact persons found.</p></div>
                     </div>
                   </div>
-
-                  {/* Right Column Financials */}
                   <div className="flex-1 space-y-12 border-l border-slate-50 pl-10 pb-20">
-                     <div className="p-8 bg-blue-600 rounded-2xl text-white relative overflow-hidden shadow-2xl shadow-blue-100 group/banner">
-                        <div className="absolute top-[-30px] right-[-30px] w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover/banner:scale-150 transition-transform duration-1000"></div>
+                     <div className="p-8 bg-blue-600 rounded-2xl text-white relative overflow-hidden shadow-2xl shadow-blue-100 group-banner">
+                        <div className="absolute top-[-30px] right-[-30px] w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover-banner:scale-150 transition-transform duration-1000"></div>
                         <div className="relative z-10 flex items-start justify-between gap-10">
                            <div className="space-y-3">
                               <div className="flex items-center gap-2 text-[14px] font-black italic tracking-widest text-blue-100 uppercase"><Sparkles size={16} className="fill-blue-200/50" /> WHAT'S NEXT?</div>
@@ -842,7 +931,7 @@ const CustomerDetailView = ({ companyId }) => {
 
                      <div className="space-y-2 group cursor-pointer max-w-fit" onClick={() => setIsEditingPaymentTerms(true)}>
                         <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em]">Payment due period</p>
-                        {!isEditingPaymentTerms ? <p className="text-[18px] text-slate-900 font-black tracking-tight flex items-center gap-3">{customer.paymentTerms || 'Due on Receipt'} <Edit size={14} className="opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity"/></p> : (
+                        {!isEditingPaymentTerms ? <p className="text-[18px] text-slate-900 font-black tracking-tight flex items-center gap-3">{customer.paymentTerms || 'Due on Receipt'} <Edit size={14} className="text-blue-400 transition-opacity"/></p> : (
                           <div className="flex items-center gap-2 pt-1 animate-fade-in">
                             <input autoFocus type="text" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="px-4 py-2 border-2 border-blue-100 rounded-lg outline-none focus:border-blue-500 shadow-sm font-bold" />
                             <button onClick={() => handleUpdateField('paymentTerms', paymentTerms)} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
@@ -930,7 +1019,17 @@ const CustomerDetailView = ({ companyId }) => {
                   </div>
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Phone</label>
-                    <input type="text" value={addressForm.phone} onChange={e => setAddressForm({...addressForm, phone: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
+                    <input 
+                        type="text" 
+                        value={addressForm.phone} 
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setAddressForm({...addressForm, phone: val});
+                        }} 
+                        maxLength={10}
+                        placeholder="10-digit phone number"
+                        className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" 
+                     />
                   </div>
                </div>
             </div>
@@ -989,7 +1088,17 @@ const CustomerDetailView = ({ companyId }) => {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking_widest block">Mobile Number</label>
                   <div className="relative">
                      <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                     <input type="text" value={quickAddForm.mobile} onChange={e => setQuickAddForm({...quickAddForm, mobile: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="+91 XXXXX XXXXX" />
+                     <input 
+                        type="text" 
+                        value={quickAddForm.mobile} 
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setQuickAddForm({...quickAddForm, mobile: val});
+                        }} 
+                        maxLength={10}
+                        placeholder="10-digit mobile number"
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" 
+                     />
                   </div>
                </div>
 
@@ -1032,6 +1141,23 @@ const CustomerDetailView = ({ companyId }) => {
         title="Delete Customer"
         message="Are you sure you want to permanently delete this customer? This action will remove all transaction history and profile details."
       />
+
+      {isPreviewOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-10">
+          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md animate-fade-in" onClick={() => setIsPreviewOpen(false)} />
+          <button 
+            onClick={() => setIsPreviewOpen(false)}
+            className="absolute top-10 right-10 text-white/50 hover:text-white transition-colors"
+          >
+            <X size={40} strokeWidth={1}/>
+          </button>
+          <img 
+            src={customer.image} 
+            className="relative z-10 max-w-full max-h-full rounded-2xl shadow-2xl animate-zoom-in" 
+            alt="Customer Preview"
+          />
+        </div>
+      )}
     </div>
   );
 };

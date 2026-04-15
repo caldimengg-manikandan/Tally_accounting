@@ -19,6 +19,9 @@ import {
 // PROJECT OVERVIEW (DASHBOARD)
 // ──────────────────────────────────────────────────────────────────────────────
 const ProjectOverview = ({ project, onEdit }) => {
+  const [activeTab, setActiveTab] = useState('Overview');
+  const navigate = useNavigate();
+
   const chartData = [
     { name: '12 Apr', billable: 0, unbilled: 0 },
     { name: '13 Apr', billable: 1.5, unbilled: 0.5 },
@@ -29,162 +32,557 @@ const ProjectOverview = ({ project, onEdit }) => {
     { name: '18 Apr', billable: 0, unbilled: 0 },
   ];
 
+  const Tabs = ['Overview', 'Timesheet', 'Purchases', 'Sales', 'Budget Configuration', 'Journals', 'Activity Logs'];
+
+  const OverviewContent = () => (
+    <div className="flex-1 overflow-y-auto p-6 no-scrollbar space-y-8 animate-fade-in">
+      <div className="grid grid-cols-12 gap-6 items-start">
+        {/* Left Column: Project Info */}
+        <div className="col-span-3 space-y-8">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400"><Briefcase size={20}/></div>
+              <h3 className="text-lg font-bold text-slate-800 tracking-tight">{project.name}</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400"><Users size={20}/></div>
+              <h3 className="text-[15px] font-bold text-blue-600 tracking-tight cursor-pointer hover:underline">{project.Customer?.name || 'Unassigned'}</h3>
+            </div>
+          </div>
+
+          <div className="space-y-5 pt-6 border-t border-slate-100">
+             <div>
+               <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-1.5">Billing Method</p>
+               <p className="text-[13px] font-bold text-slate-700">{project.billingMethod}</p>
+             </div>
+             <div>
+               <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-1.5">Rate Per Hour</p>
+               <p className="text-[13px] font-black text-slate-900 leading-none">₹{parseFloat(project.ratePerHour || 0).toFixed(2)}</p>
+             </div>
+             <div className="pt-2">
+               <p className="text-[12px] text-slate-400 font-bold mb-1">Add to dashboard watchlist.</p>
+               <button className={`text-[11px] font-black uppercase tracking-widest ${project.addToWatchlist ? 'text-emerald-500' : 'text-blue-600'}`}>
+                  {project.addToWatchlist ? 'Enabled' : 'Disabled'}
+               </button>
+             </div>
+          </div>
+        </div>
+
+        {/* Right Column: Chart & Stats */}
+        <div className="col-span-9 border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white">
+           <div className="p-6">
+              <div className="flex items-center justify-between mb-8">
+                 <div className="flex gap-4">
+                   <button className="text-[13px] font-bold text-blue-600 border-b-2 border-blue-600 pb-1">Project Hours</button>
+                   <button className="text-[13px] font-bold text-slate-400 hover:text-slate-700 transition-colors">Profitability Summary</button>
+                 </div>
+                 <button className="flex items-center gap-1.5 text-[12px] font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg">This Week <ChevronDown size={14}/></button>
+              </div>
+
+              <div className="h-[280px]">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} barGap={0}>
+                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 600, fill: '#94a3b8'}} dy={10} />
+                       <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 600, fill: '#94a3b8'}} />
+                       <Tooltip cursor={{fill: '#f8fafc'}} />
+                       <Bar dataKey="billable" fill="#1e61f0" name="Billable Hours" radius={[2, 2, 0, 0]} barSize={20} />
+                       <Bar dataKey="unbilled" fill="#f59e0b" name="Unbilled Hours" radius={[2, 2, 0, 0]} barSize={20} />
+                    </BarChart>
+                 </ResponsiveContainer>
+              </div>
+           </div>
+
+           <div className="grid grid-cols-4 border-t border-slate-50 divide-x divide-slate-50">
+              {[
+                { label: 'Logged Hours', val: '00:00', amt: '₹0.00' },
+                { label: 'Billable Hours', val: '00:00', amt: '₹0.00' },
+                { label: 'Billed Hours', val: '00:00', amt: '₹0.00' },
+                { label: 'Unbilled Hours', val: '00:00', amt: '₹0.00' },
+              ].map(s => (
+                <div key={s.label} className="p-6 text-center">
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] mb-1.5">{s.label}</p>
+                  <h4 className="text-lg font-black text-slate-800 leading-none mb-1">{s.val}</h4>
+                  <p className="text-[13px] font-bold text-slate-400 leading-none">{s.amt}</p>
+                </div>
+              ))}
+           </div>
+        </div>
+      </div>
+
+      {/* Users & Tasks Section */}
+      <div className="space-y-10 pt-10 border-t border-slate-50">
+         <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Users</h3>
+               <button className="text-blue-600 text-[12px] font-black flex items-center gap-1 uppercase tracking-widest hover:text-blue-700">
+                 <Plus size={12} strokeWidth={3} /> Add User
+               </button>
+            </div>
+            <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full">
+                <thead className="bg-slate-50/50">
+                  <tr>
+                    <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Name</th>
+                    <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Logged Hours</th>
+                    <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Billed Hours</th>
+                    <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unbilled Hours</th>
+                    <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 text-[13px]">
+                  {project.ProjectUsers?.map(pu => (
+                    <tr key={pu.id} className="hover:bg-slate-50/50">
+                      <td className="py-3.5 px-6">
+                         <div className="flex flex-col">
+                           <span className="font-bold text-slate-700">{pu.User?.name}</span>
+                           <span className="text-[11px] text-slate-400">{pu.User?.email}</span>
+                         </div>
+                      </td>
+                      <td className="py-3.5 px-6 font-bold text-slate-600">00:00</td>
+                      <td className="py-3.5 px-6 font-bold text-slate-600">00:00</td>
+                      <td className="py-3.5 px-6 font-bold text-slate-600">00:00</td>
+                      <td className="py-3.5 px-6"><span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[11px] font-bold uppercase tracking-tighter">Admin</span></td>
+                    </tr>
+                  ))}
+                  {!project.ProjectUsers?.length && (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-slate-400 italic">No users assigned yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+         </div>
+      </div>
+    </div>
+  );
+
+  const TimesheetContent = () => (
+    <div className="flex-1 p-6 space-y-6 animate-fade-in no-scrollbar overflow-auto">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+           <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">View By:</span>
+           <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600">Status: All <ChevronDown size={14}/></button>
+           <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600">Period: All <ChevronDown size={14}/></button>
+        </div>
+      </div>
+      <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-slate-50/50 border-b border-slate-100">
+              <th className="w-10 px-6 py-3"><input type="checkbox" className="rounded border-slate-300" /></th>
+              <th className="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+              <th className="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Task</th>
+              <th className="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">User</th>
+              <th className="px-6 py-3 text-right text-[11px] font-bold text-slate-400 uppercase tracking-widest">Time</th>
+              <th className="px-6 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest">Billing Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan={6} className="py-40 text-center">
+                 <p className="text-slate-300 font-medium italic">There are no timesheets.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const FinancialTableList = ({ sections }) => (
+    <div className="flex-1 p-6 space-y-10 animate-fade-in no-scrollbar overflow-auto">
+       <div className="flex items-center gap-2">
+          <button className="text-[12px] font-bold text-blue-600 flex items-center gap-1">Go to transactions <ChevronDown size={14}/></button>
+       </div>
+       {sections.map(s => (
+         <div key={s.title} className="space-y-4">
+           <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                 <ChevronDown size={16} className="text-blue-600" />
+                 <h3 className="text-[14px] font-bold text-slate-800">{s.title}</h3>
+              </div>
+              <button className="flex items-center gap-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest"><Filter size={12}/> Status: All <ChevronDown size={12}/></button>
+           </div>
+           <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+             <table className="w-full">
+                <thead className="bg-slate-50/30 border-b border-slate-50">
+                   <tr>
+                      {s.headers.map(h => (
+                        <th key={h} className="px-6 py-3 text-left text-[10px] font-black text-slate-300 uppercase tracking-widest">{h}</th>
+                      ))}
+                   </tr>
+                </thead>
+                <tbody>
+                   <tr>
+                      <td colSpan={s.headers.length} className="py-16 text-center text-slate-400 text-[13px] italic">There are no {s.title.toLowerCase()}</td>
+                   </tr>
+                </tbody>
+             </table>
+           </div>
+         </div>
+       ))}
+    </div>
+  );
+
+  const [showBudgetForm, setShowBudgetForm] = useState(false);
+  const [budgetAccounts, setBudgetAccounts] = useState({
+    income: [], expense: [], asset: [], liability: [], equity: []
+  });
+  const [selectorConfig, setSelectorConfig] = useState(null); // { type: 'income', title: 'Income Accounts' }
+
+  const ActivityLogsContent = () => (
+    <div className="flex-1 p-10 animate-fade-in space-y-8">
+       {[
+         { date: '13/04/2026 03:49 PM', msg: 'User Swathi N added', by: 'Swathi N' },
+         { date: '13/04/2026 03:49 PM', msg: 'Project created', by: 'Swathi N' },
+       ].map((l, i) => (
+         <div key={i} className="flex gap-6 items-start">
+            <div className="text-[12px] font-bold text-slate-400 w-32 pt-1">{l.date}</div>
+            <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shadow-sm">
+               <Settings size={14} />
+            </div>
+            <div className="flex flex-col">
+               <span className="text-[14px] font-bold text-slate-700">{l.msg}</span>
+               <span className="text-[12px] text-slate-400">by {l.by}</span>
+            </div>
+         </div>
+       ))}
+    </div>
+  );
+
+  const BudgetForm = () => (
+     <div className="flex-1 flex flex-col bg-white animate-fade-in no-scrollbar overflow-auto pb-40">
+        <div className="px-8 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+           <h3 className="text-lg font-bold text-slate-800">New Budget</h3>
+           <button onClick={() => setShowBudgetForm(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+        </div>
+        <div className="p-10 max-w-4xl space-y-12">
+           <div className="grid grid-cols-12 gap-y-7 items-center">
+              <label className="col-span-3 text-[13px] font-bold text-slate-500">Name*</label>
+              <div className="col-span-6">
+                 <input className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-500 outline-none text-[13px]" defaultValue={project.name + ' Budget'} />
+              </div>
+
+              <label className="col-span-3 text-[13px] font-bold text-slate-500">Fiscal Year*</label>
+              <div className="col-span-6">
+                 <select className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-500 outline-none text-[13px] appearance-none bg-white">
+                    <option>Apr 2026 - Mar 2027</option>
+                 </select>
+              </div>
+
+              <label className="col-span-3 text-[13px] font-bold text-slate-500">Budget Period*</label>
+              <div className="col-span-6">
+                 <select className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-500 outline-none text-[13px] appearance-none bg-white">
+                    <option>Monthly</option>
+                 </select>
+              </div>
+
+              <label className="col-span-3 text-[13px] font-bold text-slate-500">Project</label>
+              <div className="col-span-6">
+                 <div className="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded text-[14px] font-bold text-slate-700 flex items-center gap-2">
+                    <Briefcase size={14} className="text-emerald-500" /> {project.name}
+                 </div>
+              </div>
+           </div>
+
+           <div className="space-y-8 pt-4">
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Income and Expense Accounts</p>
+              <div className="space-y-6">
+                <AccountRow label="Income Accounts" type="income" count={budgetAccounts.income.length} onAdd={() => setSelectorConfig({ type: 'income', title: 'Income Accounts' })} selected={budgetAccounts.income} />
+                <AccountRow label="Expense Accounts" type="expense" count={budgetAccounts.expense.length} onAdd={() => setSelectorConfig({ type: 'expense', title: 'Expense Accounts' })} selected={budgetAccounts.expense} />
+              </div>
+           </div>
+
+           <div className="space-y-8 pt-4">
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Asset, Liability, and Equity Accounts</p>
+              <div className="space-y-6">
+                <AccountRow label="Asset Accounts" type="asset" count={budgetAccounts.asset.length} onAdd={() => setSelectorConfig({ type: 'asset', title: 'Asset Accounts' })} selected={budgetAccounts.asset} />
+                <AccountRow label="Liability Accounts" type="liability" count={budgetAccounts.liability.length} onAdd={() => setSelectorConfig({ type: 'liability', title: 'Liability Accounts' })} selected={budgetAccounts.liability} />
+                <AccountRow label="Equity Accounts" type="equity" count={budgetAccounts.equity.length} onAdd={() => setSelectorConfig({ type: 'equity', title: 'Equity Accounts' })} selected={budgetAccounts.equity} />
+              </div>
+           </div>
+        </div>
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 flex gap-3 px-12 z-20">
+           <button 
+             onClick={() => {
+                addNotification('Budget created successfully', 'success');
+                setShowBudgetForm(false);
+             }}
+             className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-lg shadow-blue-100"
+           >
+             Create Budget
+           </button>
+           <button onClick={() => setShowBudgetForm(false)} className="px-6 py-2 border border-slate-200 rounded font-bold text-[13px] text-slate-600 hover:bg-slate-50">Cancel</button>
+        </div>
+
+        {selectorConfig && (
+          <LedgerSelectorModal 
+            config={selectorConfig} 
+            onClose={() => setSelectorConfig(null)} 
+            onSelected={(ledgers) => {
+              setBudgetAccounts(prev => ({ ...prev, [selectorConfig.type]: ledgers }));
+              setSelectorConfig(null);
+            }}
+          />
+        )}
+     </div>
+  );
+
+  const AccountRow = ({ label, onAdd, selected }) => (
+    <div className="grid grid-cols-12 items-start gap-4">
+      <label className="col-span-3 text-[13px] font-bold text-slate-500 pt-2">{label}</label>
+      <div className="col-span-7 flex flex-wrap gap-2 min-h-[40px] p-2 border border-dashed border-slate-200 rounded bg-slate-50/20 items-center">
+         {selected.length > 0 ? (
+            selected.map(acc => (
+              <span key={acc.id} className="bg-blue-50 text-blue-700 text-[11px] font-bold px-2 py-1 rounded-full border border-blue-100 flex items-center gap-1">
+                {acc.name} <X size={10} className="cursor-pointer" onClick={(e) => {
+                  e.stopPropagation();
+                  setBudgetAccounts(prev => ({
+                    ...prev,
+                    [type]: prev[type].filter(a => a.id !== acc.id)
+                  }));
+                }}/>
+              </span>
+            ))
+         ) : (
+           <span className="text-[12px] text-slate-300 italic px-2">No accounts selected</span>
+         )}
+      </div>
+      <div className="col-span-2">
+        <button onClick={onAdd} className="w-full py-2 border border-blue-200 rounded text-[11px] font-black text-blue-600 bg-blue-50/30 uppercase tracking-widest hover:bg-blue-100 transition-colors">Add Accounts</button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-hidden animate-fade-in">
+    <div className="flex-1 flex flex-col bg-white overflow-hidden animate-fade-in relative">
       {/* Header */}
       <header className="h-16 px-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-20">
         <div className="flex items-center gap-4">
-          <ArrowLeft size={18} className="text-slate-400 cursor-pointer" />
+          <ArrowLeft onClick={() => navigate('/time-tracking/projects')} size={18} className="text-slate-400 cursor-pointer hover:text-slate-600 transition-colors" />
           <h2 className="text-lg font-bold text-slate-800 tracking-tight">{project.name}</h2>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={onEdit} className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-500 border border-slate-200 text-[12px] font-bold px-3 transition-colors">Edit</button>
-          <button className="bg-blue-600 text-white text-[12px] font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 shadow-sm transition-all">Log Time</button>
-          <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden ml-1">
+          <button onClick={onEdit} className="p-1.5 hover:bg-slate-50 rounded text-slate-500 border border-slate-200 text-[12px] font-bold px-3 transition-colors">Edit</button>
+          <button className="bg-blue-600 text-white text-[12px] font-bold px-3 py-1.5 rounded hover:bg-blue-700 shadow-sm transition-all">Log Time</button>
+          <div className="flex items-center border border-slate-200 rounded overflow-hidden ml-1">
              <button className="px-3 py-1.5 text-[12px] font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-1 border-r border-slate-200">New Transaction <ChevronDown size={14}/></button>
              <button className="p-1.5 hover:bg-slate-50 text-slate-500"><MoreHorizontal size={16}/></button>
           </div>
-          <button className="p-1.5 hover:bg-slate-50 text-slate-400"><X size={18}/></button>
+          <button onClick={() => navigate('/time-tracking/projects')} className="p-1.5 hover:bg-slate-50 text-slate-400"><X size={18}/></button>
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="px-6 border-b border-slate-50 flex items-center gap-8 bg-slate-50/20">
-        {['Overview', 'Timesheet', 'Purchases', 'Sales', 'Budget Configuration', 'Journals', 'Activity Logs'].map((tab, idx) => (
-          <button key={tab} className={`py-2.5 text-[12px] font-bold tracking-tight border-b-2 transition-all ${idx === 0 ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-700'}`}>{tab}</button>
+      <div className="px-6 border-b border-slate-100 flex items-center gap-8 bg-white/50 backdrop-blur sticky top-16 z-20">
+        {Tabs.map((tab) => (
+          <button 
+            key={tab} 
+            onClick={() => { setActiveTab(tab); setShowBudgetForm(false); }}
+            className={`py-3.5 text-[12px] font-bold tracking-tight border-b-2 transition-all ${activeTab === tab ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-700'}`}
+          >
+            {tab}
+          </button>
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 no-scrollbar space-y-8">
-        <div className="grid grid-cols-12 gap-6 items-start">
-          
-          {/* Left Column: Project Info */}
-          <div className="col-span-3 space-y-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400"><Briefcase size={20}/></div>
-                <h3 className="text-lg font-bold text-slate-800 tracking-tight">{project.name}</h3>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400"><Users size={20}/></div>
-                <h3 className="text-[15px] font-bold text-blue-600 tracking-tight cursor-pointer hover:underline">{project.Customer?.name || 'Unassigned'}</h3>
-              </div>
-            </div>
-
-            <div className="space-y-5 pt-6 border-t border-slate-100">
-               <div>
-                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-1.5">Billing Method</p>
-                 <p className="text-[13px] font-bold text-slate-700">{project.billingMethod}</p>
-               </div>
-               <div>
-                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-1.5">Rate Per Hour</p>
-                 <p className="text-[13px] font-black text-slate-900 leading-none">₹{parseFloat(project.ratePerHour || 0).toFixed(2)}</p>
-               </div>
-               <div className="pt-2">
-                 <p className="text-[12px] text-slate-400 font-bold mb-1">Add to dashboard watchlist.</p>
-                 <button className={`text-[11px] font-black uppercase tracking-widest ${project.addToWatchlist ? 'text-emerald-500' : 'text-blue-600'}`}>
-                    {project.addToWatchlist ? 'Enabled' : 'Disabled'}
-                 </button>
-               </div>
-            </div>
+      {activeTab === 'Overview' && <OverviewContent />}
+      {activeTab === 'Timesheet' && <TimesheetContent />}
+      {activeTab === 'Purchases' && (
+        <FinancialTableList sections={[
+          { title: 'Expenses', headers: ['Date', 'Expense Account', 'Reference#', 'Vendor Name', 'Paid Through', 'Customer Name', 'Amount', 'Status'] },
+          { title: 'Bills', headers: ['Date', 'Bill#', 'Reference#', 'Vendor Name', 'Project Cost', 'Amount', 'Balance Due', 'Status'] },
+          { title: 'Purchase Orders', headers: ['Purchase Order#', 'Reference#', 'Date', 'Vendor Name', 'Delivery Date', 'Project Cost', 'Amount', 'Status'] },
+          { title: 'Vendor Credits', headers: ['Date', 'Vendor Credit#', 'Reference#', 'Vendor Name', 'Project Cost', 'Amount', 'Balance Due', 'Status'] }
+        ]} />
+      )}
+      {activeTab === 'Sales' && (
+        <FinancialTableList sections={[
+          { title: 'Invoices', headers: ['Date', 'Invoice#', 'Reference#', 'Project Fee', 'Amount', 'Balance Due', 'Status'] },
+          { title: 'Quotes', headers: ['Date', 'Quote#', 'Reference#', 'Amount', 'Status'] },
+          { title: 'Retainer Invoices', headers: ['Date', 'Retainer Invoice Number', 'Reference#', 'Amount', 'Balance Due', 'Status'] },
+          { title: 'Sales Orders', headers: ['Date', 'Sales Order#', 'Reference#', 'Amount', 'Status'] }
+        ]} />
+      )}
+      {activeTab === 'Budget Configuration' && (
+        showBudgetForm ? <BudgetForm /> : (
+          <div className="flex-1 flex flex-col items-center justify-center p-20 animate-fade-in text-center space-y-6">
+            <h3 className="text-3xl font-black text-slate-800 tracking-tighter">Budget your business finance. Stay on top of your expenses.</h3>
+            <p className="text-[15px] font-medium text-slate-400 max-w-xl">Create budgets for the various activities of your business, compare them with the actuals, and see how your business is performing.</p>
+            <button onClick={() => setShowBudgetForm(true)} className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all">CREATE BUDGET</button>
           </div>
+        )
+      )}
+      {activeTab === 'Journals' && (
+        <div className="flex-1 flex items-center justify-center text-slate-300 italic font-medium animate-fade-in p-20 text-center">
+           There are no journals associated with this project.
+        </div>
+      )}
+      {activeTab === 'Activity Logs' && <ActivityLogsContent />}
+    </div>
+  );
+};
 
-          {/* Right Column: Chart & Stats */}
-          <div className="col-span-9 border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white">
-             <div className="p-6">
-                <div className="flex items-center justify-between mb-8">
-                   <div className="flex gap-4">
-                     <button className="text-[13px] font-bold text-blue-600 border-b-2 border-blue-600 pb-1">Project Hours</button>
-                     <button className="text-[13px] font-bold text-slate-400 hover:text-slate-600 transition-colors">Profitability Summary</button>
-                   </div>
-                   <button className="flex items-center gap-1.5 text-[12px] font-bold text-blue-600 bg-blue-50/50 px-2.5 py-1 rounded-lg">This Week <ChevronDown size={14}/></button>
-                </div>
+// ──────────────────────────────────────────────────────────────────────────────
+// NEW USER MODAL
+// ──────────────────────────────────────────────────────────────────────────────
+const NewUserModal = ({ isOpen, onClose, onSaved }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [saving, setSaving] = useState(false);
 
-                <div className="h-[280px]">
-                   <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} barGap={0}>
-                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 600, fill: '#94a3b8'}} dy={10} />
-                         <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fontWeight: 600, fill: '#94a3b8'}} />
-                         <Tooltip cursor={{fill: '#f8fafc'}} />
-                         <Bar dataKey="billable" fill="#1e61f0" name="Billable Hours" radius={[2, 2, 0, 0]} barSize={20} />
-                         <Bar dataKey="unbilled" fill="#f59e0b" name="Unbilled Hours" radius={[2, 2, 0, 0]} barSize={20} />
-                      </BarChart>
-                   </ResponsiveContainer>
-                </div>
-             </div>
+  if (!isOpen) return null;
 
-             <div className="grid grid-cols-4 border-t border-slate-50 divide-x divide-slate-50">
-                {[
-                  { label: 'Logged Hours', val: '00:00', amt: '₹0.00' },
-                  { label: 'Billable Hours', val: '00:00', amt: '₹0.00' },
-                  { label: 'Billed Hours', val: '00:00', amt: '₹0.00' },
-                  { label: 'Unbilled Hours', val: '00:00', amt: '₹0.00' },
-                ].map(s => (
-                  <div key={s.label} className="p-6 text-center">
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] mb-1.5">{s.label}</p>
-                    <h4 className="text-lg font-black text-slate-800 leading-none mb-1">{s.val}</h4>
-                    <p className="text-[13px] font-bold text-slate-400 leading-none">{s.amt}</p>
-                  </div>
-                ))}
-             </div>
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !password.trim()) return;
+    setSaving(true);
+    try {
+      const res = await authAPI.register(name, email, password, 'DATA_ENTRY');
+      onSaved(res.data?.user || { id: Date.now().toString(), name, email });
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add new user. They may already exist or there is a server error.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md animate-scale-up">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-[16px] font-black text-slate-900">Add New User</h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg text-slate-400"><X size={18}/></button>
+        </div>
+        <form onSubmit={handleSave} className="p-6 space-y-4">
+          <div>
+             <label className="text-[12px] font-bold text-slate-500 mb-1 block">Full Name</label>
+             <input required value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-lg focus:border-blue-500 outline-none" />
           </div>
-        </div>
+          <div>
+             <label className="text-[12px] font-bold text-slate-500 mb-1 block">Email Address</label>
+             <input required type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-lg focus:border-blue-500 outline-none" />
+          </div>
+          <div>
+             <label className="text-[12px] font-bold text-slate-500 mb-1 block">Temporary Password</label>
+             <input required type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 text-[13px] border border-slate-200 rounded-lg focus:border-blue-500 outline-none" />
+          </div>
+          <div className="pt-2 flex gap-3">
+             <button type="submit" disabled={saving} className="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-[13px]">
+               {saving ? 'Adding...' : 'Add User'}
+             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
-        {/* Tables Section */}
-        <div className="space-y-10 pt-10 border-t border-slate-50">
-           {/* Users */}
-           <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Users</h3>
-                 <button className="text-blue-600 text-[12px] font-black flex items-center gap-1 uppercase tracking-widest hover:text-blue-700">
-                   <Plus size={12} strokeWidth={3} /> Add User
-                 </button>
-              </div>
-              <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full">
-                  <thead className="bg-slate-50/50">
-                    <tr>
-                      <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Name</th>
-                      <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Logged Hours</th>
-                      <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Billed Hours</th>
-                      <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unbilled Hours</th>
-                      <th className="text-left py-3 px-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 text-[13px]">
-                    {project.ProjectUsers?.map(pu => (
-                      <tr key={pu.id} className="hover:bg-slate-50/50">
-                        <td className="py-3.5 px-6">
-                           <div className="flex flex-col">
-                             <span className="font-bold text-slate-700">{pu.User?.name}</span>
-                             <span className="text-[11px] text-slate-400">{pu.User?.email}</span>
-                           </div>
-                        </td>
-                        <td className="py-3.5 px-6 font-bold text-slate-600">00:00</td>
-                        <td className="py-3.5 px-6 font-bold text-slate-600">00:00</td>
-                        <td className="py-3.5 px-6 font-bold text-slate-600">00:00</td>
-                        <td className="py-3.5 px-6"><span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[11px] font-bold uppercase tracking-tighter">Admin</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-           </div>
+// ──────────────────────────────────────────────────────────────────────────────
+// LEDGER SELECTOR MODAL (Multi-Select)
+// ──────────────────────────────────────────────────────────────────────────────
+const LedgerSelectorModal = ({ config, onClose, onSelected }) => {
+  const [ledgers, setLedgers] = useState([]);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-           {/* Tasks */}
-           <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Project Tasks</h3>
-                 <button className="text-blue-600 text-[12px] font-black flex items-center gap-1 uppercase tracking-widest hover:text-blue-700">
-                   <Plus size={12} strokeWidth={3} /> Add Task
-                 </button>
-              </div>
-              <div className="p-12 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/30">
-                 <p className="text-slate-400 font-bold text-[13px]">No project tasks have been added.</p>
-              </div>
-           </div>
-        </div>
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const res = await ledgerAPI.getAll();
+        setLedgers(res.data || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, []);
+
+  const filtered = ledgers.filter(l => 
+    l.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggle = (l) => {
+    if (selected.find(s => s.id === l.id)) {
+      setSelected(selected.filter(s => s.id !== l.id));
+    } else {
+      setSelected([...selected, l]);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-up flex flex-col max-h-[80vh]">
+         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-[16px] font-black text-slate-800">Select {config.title}</h3>
+            <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded text-slate-400 transition-colors"><X size={20}/></button>
+         </div>
+         
+         <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <div className="relative">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+               <input 
+                  autoFocus
+                  placeholder="Search accounts..." 
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[13px] outline-none focus:border-blue-500 transition-all font-medium"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+               />
+            </div>
+         </div>
+
+         <div className="flex-1 overflow-y-auto no-scrollbar p-2">
+            {loading ? (
+              <div className="py-20 text-center text-slate-400 italic font-medium">Loading accounts...</div>
+            ) : filtered.length > 0 ? (
+               <div className="space-y-1">
+                  {filtered.map(l => {
+                    const isSelected = selected.find(s => s.id === l.id);
+                    return (
+                      <div 
+                        key={l.id} 
+                        onClick={() => toggle(l)}
+                        className={`px-4 py-3 rounded-xl cursor-pointer flex items-center justify-between transition-all ${isSelected ? 'bg-blue-50 text-blue-700' : 'hover:bg-slate-50 text-slate-600'}`}
+                      >
+                         <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 shadow-md' : 'border-slate-200'}`}>
+                               {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
+                            </div>
+                            <span className="text-[13px] font-bold">{l.name}</span>
+                         </div>
+                         <span className="text-[11px] font-black uppercase tracking-widest text-slate-300">{l.Group?.name}</span>
+                      </div>
+                    );
+                  })}
+               </div>
+            ) : (
+               <div className="py-20 text-center text-slate-400 italic">No accounts found matching "{search}"</div>
+            )}
+         </div>
+
+         <div className="p-4 border-t border-slate-50 bg-slate-50/50 flex items-center justify-between">
+            <span className="text-[12px] font-bold text-slate-500">{selected.length} accounts selected</span>
+            <div className="flex gap-2">
+               <button onClick={onClose} className="px-4 py-2 text-[12px] font-bold text-slate-500 hover:text-slate-700">Cancel</button>
+               <button 
+                  onClick={() => onSelected(selected)}
+                  disabled={selected.length === 0}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-black text-[12px] uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200"
+               >
+                 Associate
+               </button>
+            </div>
+         </div>
       </div>
     </div>
   );
@@ -195,9 +593,12 @@ const ProjectOverview = ({ project, onEdit }) => {
 // ──────────────────────────────────────────────────────────────────────────────
 const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
   const navigate = useNavigate();
+  const addNotification = useNotificationStore(state => state.addNotification);
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [allSystemUsers, setAllSystemUsers] = useState([]);
+  const [showNewUserModal, setShowNewUserModal] = useState(false);
+  const [activeUserIdx, setActiveUserIdx] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -432,12 +833,18 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
                       <td className="py-4 px-6 text-[13px] font-bold text-slate-400">{i + 1}</td>
                       <td className="py-4 px-6">
                         <select value={u.UserId} onChange={e => {
+                          if (e.target.value === 'NEW') {
+                            setActiveUserIdx(i);
+                            setShowNewUserModal(true);
+                            return;
+                          }
                           const newU = [...users];
                           newU[i].UserId = e.target.value;
                           setUsers(newU);
-                        }} className="w-full px-3 py-2 border border-slate-100 rounded-lg text-[13px] focus:border-blue-500 outline-none">
+                        }} className="w-full px-3 py-2 border border-slate-100 rounded-lg text-[13px] font-medium text-slate-700 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer hover:bg-slate-50">
                           <option value="">Select user</option>
                           {allSystemUsers.map(usu => <option key={usu.id} value={usu.id}>{usu.name}</option>)}
+                          <option value="NEW" className="font-bold text-blue-600">➕ Add New User</option>
                         </select>
                       </td>
                       <td className="py-4 px-6 text-[13px] text-slate-500">
@@ -525,6 +932,19 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
           </div>
         </form>
       </div>
+
+      <NewUserModal 
+        isOpen={showNewUserModal} 
+        onClose={() => { setShowNewUserModal(false); setActiveUserIdx(null); }}
+        onSaved={(newUser) => {
+           setAllSystemUsers(prev => [...prev, newUser]);
+           if (activeUserIdx !== null) {
+              const newU = [...users];
+              newU[activeUserIdx].UserId = newUser.id;
+              setUsers(newU);
+           }
+        }} 
+      />
     </div>
   );
 };
@@ -552,9 +972,6 @@ const ProjectsView = ({ companyId }) => {
     try {
       const res = await projectAPI.getByCompany(companyId);
       setProjects(res.data);
-      if (res.data.length > 0 && !selectedId && !isNew) {
-        setSelectedId(res.data[0].id);
-      }
     } catch (err) {
       addNotification('Failed to load projects', 'error');
     } finally {
@@ -566,6 +983,10 @@ const ProjectsView = ({ companyId }) => {
     fetchProjects();
   }, [companyId]);
 
+  useEffect(() => {
+    setSelectedId(id || null);
+  }, [id]);
+
   const filtered = projects.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) || 
     p.Customer?.name?.toLowerCase().includes(search.toLowerCase())
@@ -573,93 +994,136 @@ const ProjectsView = ({ companyId }) => {
 
   const selectedProject = useMemo(() => projects.find(p => p.id === selectedId), [projects, selectedId]);
 
+  const [showNewDropdown, setShowNewDropdown] = useState(false);
+
   if (isNew || isEdit) {
-    return <NewProjectForm companyId={companyId} editId={isEdit ? id : null} onCancel={() => navigate('/time-tracking/projects')} onSave={() => { fetchProjects(); navigate('/time-tracking/projects'); }} />;
+    const returnTo = location.state?.returnTo || '/time-tracking/projects';
+    return <NewProjectForm companyId={companyId} editId={isEdit ? id : null} onCancel={() => navigate(returnTo)} onSave={() => { fetchProjects(); navigate(returnTo); }} />;
   }
 
-  return (
-    <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
-      {/* Search & List Sidebar */}
-      <div className="w-96 border-r border-slate-100 bg-white flex flex-col shrink-0">
-        <div className="p-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight">Projects</h1>
-            <button 
-              onClick={() => navigate('/time-tracking/projects/new')}
-              className="w-9 h-9 bg-blue-600 text-white rounded-lg shadow-md shadow-blue-200 flex items-center justify-center hover:bg-blue-700 transition-all"
-            >
-              <Plus size={20} strokeWidth={3} />
-            </button>
-          </div>
-          <div className="relative group">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={16} />
+  // --- FULL WIDTH TABLE VIEW ---
+  const ProjectsTable = () => (
+    <div className="flex-1 flex flex-col min-h-screen bg-white animate-fade-in no-scrollbar">
+      {/* Header Section */}
+      <header className="px-8 py-5 flex items-center justify-between border-b border-slate-100">
+        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1 rounded transition-all">
+          All Projects <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full text-[12px] font-black ml-1">{projects.length}</span> <ChevronDown size={18} className="text-blue-400 mt-1" />
+        </h1>
+
+        <div className="flex items-center gap-2">
+          <div className="relative group mr-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <input 
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Find a project..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-lg text-[13px] font-medium text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
+               value={search}
+               onChange={e => setSearch(e.target.value)}
+               placeholder="Search..."
+               className="w-48 pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 transition-all"
             />
           </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto no-scrollbar space-y-1 px-4">
-          {loading ? (
-             <div className="py-20 flex flex-col items-center opacity-30">
-               <RefreshCw className="animate-spin mb-4" size={24} />
-               <p className="text-[10px] font-bold uppercase tracking-widest">Loading Projects...</p>
-             </div>
-          ) : filtered.length > 0 ? (
-            filtered.map(p => (
-              <div 
-                key={p.id}
-                onClick={() => setSelectedId(p.id)}
-                className={`p-4 rounded-xl cursor-pointer transition-all flex flex-col gap-1.5 group border
-                  ${selectedId === p.id 
-                    ? 'bg-blue-50/40 border-blue-200 shadow-sm' 
-                    : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-100'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <h4 className={`text-[14px] font-bold tracking-tight ${selectedId === p.id ? 'text-blue-700' : 'text-slate-800'}`}>{p.name}</h4>
-                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest ${p.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                    {p.status}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] text-slate-400 font-medium truncate max-w-[150px]">{p.Customer?.name || 'No Customer'}</span>
-                  <span className="text-[11px] font-bold text-slate-700">₹{parseFloat(p.ratePerHour || 0).toLocaleString()}/hr</span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="py-20 text-center">
-              <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Search size={18} className="text-slate-300" />
-              </div>
-              <p className="text-slate-400 font-medium text-[13px]">No records found</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      {selectedProject ? (
-         <ProjectOverview project={selectedProject} onEdit={() => navigate(`/time-tracking/projects/edit/${selectedId}`)} />
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center bg-white p-20 text-center border-l border-slate-50">
-           <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 shadow-sm">
-             <Briefcase size={32} />
-           </div>
-           <h2 className="text-2xl font-bold text-slate-800 mb-3 tracking-tight">Project Management</h2>
-           <p className="text-slate-400 max-w-sm mx-auto font-medium text-[14px] leading-relaxed mb-8">
-             Select a project from the left to view metrics, manage your team, and track billing progress efficiently.
-           </p>
-           <button 
+          
+          <button 
              onClick={() => navigate('/time-tracking/projects/new')}
-             className="px-8 py-3 bg-blue-600 text-white rounded-lg text-[14px] font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2"
-           >
-             <Plus size={18} strokeWidth={2.5} /> Create Your First Project
-           </button>
+             className="h-8 px-4 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-sm flex items-center gap-2"
+          >
+             <Plus size={16} strokeWidth={3} /> New
+          </button>
+          <button className="h-8 w-8 flex items-center justify-center border border-slate-200 rounded text-slate-400 hover:bg-slate-50 transition-all">
+             <MoreHorizontal size={16} />
+          </button>
         </div>
+      </header>
+
+      {/* Table Section */}
+      <div className="flex-1 p-8">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-slate-50/50 border-y border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+              <th className="px-6 py-3 text-left">Name</th>
+              <th className="px-6 py-4 text-left">Customer Name</th>
+              <th className="px-6 py-4 text-left">Billing Method</th>
+              <th className="px-6 py-4 text-right">Budget</th>
+              <th className="px-6 py-4 text-center">Status</th>
+              <th className="px-6 py-4 text-center w-40">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="py-20 text-center text-slate-400 italic text-[13px]">Loading projects...</td>
+              </tr>
+            ) : filtered.length > 0 ? (
+              filtered.map(p => (
+                <tr 
+                  key={p.id}
+                  className="group hover:bg-blue-50/20 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/time-tracking/projects/view/${p.id}`)}
+                >
+                  <td className="px-6 py-4">
+                     <span className="text-[14px] font-medium text-blue-600 hover:underline">{p.name}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                     <span className="text-[14px] text-slate-600">{p.Customer?.name || '---'}</span>
+                  </td>
+                  <td className="px-6 py-4 text-[13px] text-slate-400">
+                     {p.billingMethod}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                     <span className="text-[14px] text-slate-900 font-medium">₹{parseFloat(p.revenueBudget || 0).toLocaleString()}</span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight ${p.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center" onClick={e => e.stopPropagation()}>
+                     <div className="flex items-center justify-center gap-2">
+                        <button 
+                           onClick={() => navigate(`/time-tracking/projects/edit/${p.id}`)}
+                           className="flex items-center gap-1 px-2 py-1 border border-slate-200 rounded text-slate-600 hover:bg-slate-50 transition-all text-[12px] font-bold"
+                        >
+                           <Edit2 size={12} className="text-slate-400" /> Edit
+                        </button>
+                        <button 
+                           onClick={() => setDeleteId(p.id)}
+                           className="p-1.5 border border-slate-200 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                        >
+                           <Trash2 size={14} />
+                        </button>
+                     </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                 <td colSpan={6} className="py-20 text-center text-slate-400">
+                    <p className="text-[13px]">No records found</p>
+                 </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen bg-white overflow-hidden no-scrollbar">
+      {/* Dynamic Content Display */}
+      {selectedProject ? (
+         <div className="flex-1 overflow-auto bg-white relative no-scrollbar">
+            <button 
+               onClick={() => navigate('/time-tracking/projects')}
+               className="fixed right-6 top-5 text-slate-300 hover:text-slate-600 transition-all z-[100] p-1.5 hover:bg-slate-100 rounded border border-slate-100 bg-white"
+            >
+               <X size={18} />
+            </button>
+            <ProjectOverview 
+               project={selectedProject} 
+               onEdit={() => navigate(`/time-tracking/projects/edit/${selectedId}`)} 
+            />
+         </div>
+      ) : (
+        <ProjectsTable />
       )}
 
       <ConfirmModal 
@@ -675,8 +1139,8 @@ const ProjectsView = ({ companyId }) => {
             addNotification('Failed to delete project', 'error');
           }
         }}
-        title="Destroy Project Record?"
-        message="This will permanently delete the project and all associated time logs. This action cannot be undone."
+        title="Delete Project"
+        message="Are you sure you want to delete this project? This action cannot be undone."
       />
     </div>
   );

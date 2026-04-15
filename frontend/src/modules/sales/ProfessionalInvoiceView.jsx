@@ -410,7 +410,7 @@ export default function ProfessionalInvoiceView() {
                     </div>
                   </td>
                   <td className="px-4 py-4 text-center align-top">
-                    <button onClick={() => removeLine(line.id)} className="mt-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><X size={16}/></button>
+                    <button onClick={() => removeLine(line.id)} className="mt-2 text-slate-300 hover:text-rose-500 transition-all"><X size={16}/></button>
                   </td>
                 </tr>
               ))}

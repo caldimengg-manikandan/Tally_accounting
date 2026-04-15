@@ -196,6 +196,7 @@ export const recurringInvoiceAPI = {
   getByCompany: (companyId) => api.get(`/recurring-invoices/company/${companyId}`),
   update: (id, data) => api.put(`/recurring-invoices/${id}`, data),
   delete: (id) => api.delete(`/recurring-invoices/${id}`),
+  getHistory: (id) => api.get(`/recurring-invoices/history/${id}`),
   processDue: () => api.post('/recurring-invoices/process-due')
 };
 
