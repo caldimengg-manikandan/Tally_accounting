@@ -27,6 +27,18 @@ module.exports = (sequelize, DataTypes) => {
     notes: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    tdsAmount: {
+      type: DataTypes.DECIMAL(20, 2),
+      defaultValue: 0
+    },
+    tdsRate: {
+      type: DataTypes.DECIMAL(20, 2),
+      defaultValue: 0
+    },
+    tdsName: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   });
 

@@ -43,11 +43,17 @@ import VendorsView from './modules/purchases/VendorsView';
 import VendorDetailView from './modules/purchases/VendorDetailView';
 import BillsView from './modules/purchases/BillsView';
 import ExpensesView from './modules/purchases/ExpensesView';
+import RecurringExpensesView from './modules/purchases/RecurringExpensesView';
 import PurchaseOrdersView from './modules/purchases/PurchaseOrdersView';
 import ExpenseEntryView from './modules/purchases/ExpenseEntryView';
 import RecurringExpenseEntryView from './modules/purchases/RecurringExpenseEntryView';
 import PurchaseOrderEntryView from './modules/purchases/PurchaseOrderEntryView';
-import { RecurringExpensesView, RecurringBillsView, PaymentsMadeView, VendorCreditsView } from './modules/purchases/PurchasePlaceholders';
+import BillEntryView from './modules/purchases/BillEntryView';
+import RecurringBillEntryView from './modules/purchases/RecurringBillEntryView';
+import RecurringBillsView from './modules/purchases/RecurringBillsView';
+import PaymentsMadeListView from './modules/purchases/PaymentsMadeListView';
+import PaymentsMadeEntryView from './modules/purchases/PaymentsMadeEntryView';
+import VendorCreditsView from './modules/purchases/VendorCreditsView';
 
 // ── APIs ─────────────────────────────────────────────────────────
 import { companyAPI, reportsAPI, voucherAPI } from './services/api';
@@ -638,15 +644,21 @@ function AuthenticatedApp() {
       <Route path="/vendors/view/:id"    element={shell(VendorDetailView)} />
       <Route path="/vendors/:id"         element={shell(VendorsView)} />
       <Route path="/expenses"            element={shell(ExpensesView)} />
-      <Route path="/expenses/new"        element={shell(ExpenseEntryView)} />
-      <Route path="/recurring-expenses"  element={shell(ExpensesView, { initialTab: 'Recurring Expenses' })} />
+      <Route path="/recurring-expenses" element={shell(RecurringExpensesView)} />
       <Route path="/recurring-expenses/new" element={shell(RecurringExpenseEntryView)} />
+      <Route path="/recurring-expenses/edit/:id" element={shell(RecurringExpenseEntryView)} />
       <Route path="/bills"               element={shell(BillsView)} />
+      <Route path="/bills/new"           element={shell(BillEntryView)} />
       <Route path="/recurring-bills"     element={shell(RecurringBillsView)} />
+      <Route path="/recurring-bills/new" element={shell(RecurringBillEntryView)} />
       <Route path="/purchase-orders"     element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/new" element={shell(PurchaseOrderEntryView)} />
-      <Route path="/payments-made"       element={shell(PaymentsMadeView)} />
+      <Route path="/payments-made"       element={shell(PaymentsMadeListView)} />
+      <Route path="/payments-made/new"   element={shell(PaymentsMadeEntryView)} />
       <Route path="/vendor-credits"      element={shell(VendorCreditsView)} />
+      <Route path="/vendor-credits/new"  element={shell(VendorCreditsView)} />
+      <Route path="/vendor-credits/edit/:id" element={shell(VendorCreditsView)} />
+      <Route path="/vendor-credits/view/:id" element={shell(VendorCreditsView)} />
 
       {/* Sales */}
       <Route path="/customers"          element={shell(CustomersListView)} />

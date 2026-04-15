@@ -79,10 +79,41 @@ export const purchaseAPI = {
   updateOrder: (id, data) => api.put(`/purchases/orders/${id}`, data),
   deleteOrder: (id) => api.delete(`/purchases/orders/${id}`),
   getBills: (companyId) => api.get(`/purchases/bills/${companyId}`),
+  createBill: (data) => api.post('/purchases/bills', data),
   getExpenses: (companyId) => api.get(`/purchases/expenses/${companyId}`),
   // Legacy support
   getByCompany: (companyId) => api.get(`/purchases/orders/${companyId}`),
   delete: (id) => api.delete(`/purchases/orders/${id}`),
+};
+
+export const paymentMadeAPI = {
+  getPayments: (companyId) => api.get(`/purchases/payments-made/${companyId}`),
+  create: (data) => api.post('/purchases/payments-made', data),
+  getUnpaidBills: (vendorId, companyId) => api.get(`/purchases/unpaid-bills/${vendorId}`, { params: { companyId } }),
+};
+
+export const recurringExpenseAPI = {
+  create: (data) => api.post('/purchases/recurring', data),
+  getByCompany: (companyId) => api.get(`/purchases/recurring/${companyId}`),
+  update: (id, data) => api.put(`/purchases/recurring/${id}`, data),
+  delete: (id) => api.delete(`/purchases/recurring/${id}`),
+  processDue: () => api.post('/purchases/recurring/process-due')
+};
+
+export const recurringBillAPI = {
+  create: (data) => api.post('/purchases/recurring-bills', data),
+  getByCompany: (companyId) => api.get(`/purchases/recurring-bills/${companyId}`),
+  update: (id, data) => api.put(`/purchases/recurring-bills/${id}`, data),
+  delete: (id) => api.delete(`/purchases/recurring-bills/${id}`),
+  processDue: () => api.post('/purchases/recurring-bills/process-due')
+};
+
+export const vendorCreditAPI = {
+  create: (data) => api.post('/purchases/vendor-credits', data),
+  getByCompany: (companyId) => api.get(`/purchases/vendor-credits/${companyId}`),
+  getById: (id) => api.get(`/purchases/vendor-credit/${id}`),
+  update: (id, data) => api.put(`/purchases/vendor-credits/${id}`, data),
+  delete: (id) => api.delete(`/purchases/vendor-credits/${id}`)
 };
 
 // ─── Reports ───────────────────────────────────────
