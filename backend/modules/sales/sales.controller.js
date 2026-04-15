@@ -11,7 +11,7 @@ exports.createOrder = async (req, res) => {
       companyId, customerId, orderNumber, referenceNumber, date, 
       expectedShipmentDate, paymentTerms, deliveryMethod, salesperson, 
       customerNotes, termsConditions, subTotal, discount, tax, 
-      adjustment, totalAmount, status, items 
+      adjustment, totalAmount, status, items, attachments 
     } = req.body;
 
     const order = await SalesOrder.create({
@@ -31,7 +31,8 @@ exports.createOrder = async (req, res) => {
       tax,
       adjustment,
       totalAmount,
-      status: status || 'Draft'
+      status: status || 'Draft',
+      attachments
     }, { transaction: t });
 
     if (items && items.length > 0) {
@@ -76,7 +77,7 @@ exports.updateOrder = async (req, res) => {
       customerId, orderNumber, referenceNumber, date, 
       expectedShipmentDate, paymentTerms, deliveryMethod, salesperson, 
       customerNotes, termsConditions, subTotal, discount, tax, 
-      adjustment, totalAmount, status, items 
+      adjustment, totalAmount, status, items, attachments
     } = req.body;
 
     const order = await SalesOrder.findByPk(orderId);
@@ -98,7 +99,8 @@ exports.updateOrder = async (req, res) => {
       tax,
       adjustment,
       totalAmount,
-      status
+      status,
+      attachments
     }, { transaction: t });
 
     if (items) {

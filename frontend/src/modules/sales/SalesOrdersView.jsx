@@ -8,6 +8,7 @@ import {
 import { salesAPI, ledgerAPI, inventoryAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
+import { useRef } from 'react';
 
 // --- Shared Components for the Form ---
 const FormInput = ({ label, value, onChange, placeholder, type = "text", required = false }) => (
@@ -48,6 +49,7 @@ const SalesOrdersView = ({ companyId }) => {
   const [view, setView] = useState('list'); // 'list' or 'form'
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef(null);
   const [status, setStatus] = useState(null);
   const [orders, setOrders] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -73,7 +75,8 @@ const SalesOrdersView = ({ companyId }) => {
     tax: 0,
     adjustment: 0,
     totalAmount: 0,
-    status: 'Draft'
+    status: 'Draft',
+    attachments: []
   });
 
   const fetchData = async (cid) => {
@@ -173,8 +176,38 @@ const SalesOrdersView = ({ companyId }) => {
       referenceNumber: '', date: new Date().toISOString().split('T')[0], expectedShipmentDate: '',
       paymentTerms: 'Due on Receipt', deliveryMethod: '', salesperson: '', customerNotes: '',
       termsConditions: '', items: [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
-      subTotal: 0, discount: 0, tax: 0, adjustment: 0, totalAmount: 0, status: 'Draft'
+      subTotal: 0, discount: 0, tax: 0, adjustment: 0, totalAmount: 0, status: 'Draft',
+      attachments: []
     });
+  };
+
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        setFormData(prev => ({
+          ...prev,
+          attachments: [
+            ...prev.attachments,
+            {
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              data: evt.target.result
+            }
+          ]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveFile = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSave = async (status = 'Draft') => {
@@ -238,7 +271,8 @@ const SalesOrdersView = ({ companyId }) => {
     setFormData({
       ...order,
       customerId: order.LedgerId,
-      items: order.Items?.map(i => ({ ...i, id: i.id })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }]
+      items: order.Items?.map(i => ({ ...i, id: i.id })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
+      attachments: order.attachments || []
     });
     setView('form');
   };
@@ -495,7 +529,7 @@ const SalesOrdersView = ({ companyId }) => {
                     <td className="py-4 px-4 align-top">
                       <button 
                         onClick={() => handleRemoveField(item.id)}
-                        className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                        className="text-gray-300 hover:text-red-500 transition-all"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -616,13 +650,49 @@ const SalesOrdersView = ({ companyId }) => {
         </div>
         <div>
           <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Attach File(s)</label>
-          <div className="border-2 border-dashed border-gray-100 rounded-2xl p-8 flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-gray-50/50 transition-all hover:border-blue-100">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            multiple 
+            className="hidden" 
+            accept=".pdf,image/*"
+          />
+          <div 
+            onClick={() => fileInputRef.current.click()}
+            className="border-2 border-dashed border-gray-100 rounded-2xl p-8 flex flex-col items-center justify-center text-center group cursor-pointer hover:bg-gray-50/50 transition-all hover:border-blue-100"
+          >
             <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-blue-600 group-hover:scale-110 transition-transform">
               <Upload size={24} />
             </div>
             <p className="text-[13px] font-bold text-gray-700">Upload File</p>
             <p className="text-[11px] text-gray-400 mt-1">Accepts images, PDFs up to 5MB.</p>
           </div>
+
+          {/* File List */}
+          {formData.attachments && formData.attachments.length > 0 && (
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              {formData.attachments.map((file, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl group/file hover:border-blue-200 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
+                      {file.type.includes('image') ? <Rows size={18} /> : <FileText size={18} />}
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-bold text-gray-700 truncate max-w-[200px]">{file.name}</p>
+                      <p className="text-[10px] text-gray-400 font-medium">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                  </div>
+                    <button 
+                    onClick={() => handleRemoveFile(idx)}
+                    className="p-2 text-gray-300 hover:text-red-500 transition-all"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

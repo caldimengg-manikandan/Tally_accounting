@@ -10,5 +10,6 @@ router.get('/company/:companyId', recurringController.getByCompany);
 router.put('/:id', recurringController.update);
 router.delete('/:id', recurringController.delete);
 router.post('/process-due', recurringController.processDueInvoices);
+router.get('/history/:id', recurringController.getHistory);
 
 module.exports = router;

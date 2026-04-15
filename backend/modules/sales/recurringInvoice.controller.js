@@ -1,4 +1,5 @@
-const { RecurringInvoice, TaxInvoice, RetainerInvoice, Company } = require('../../models');
+const { RecurringInvoice, TaxInvoice, RetainerInvoice, Company, AuditLog, User } = require('../../models');
+const AuditService = require('../../services/AuditService');
 const moment = require('moment');
 
 exports.create = async (req, res) => {
@@ -14,6 +15,17 @@ exports.create = async (req, res) => {
     }
     
     const template = await RecurringInvoice.create(data);
+
+    await AuditService.log({
+      action: 'RECURRING_CREATED',
+      tableName: 'RecurringInvoice',
+      recordId: template.id,
+      newData: template,
+      companyId: data.CompanyId,
+      userId: req.user.id,
+      req
+    });
+
     res.status(201).json(template);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -42,7 +54,20 @@ exports.update = async (req, res) => {
       data.itemsJson = JSON.stringify(data.items);
     }
     
+    const oldData = { ...template.dataValues };
     await template.update(data);
+
+    await AuditService.log({
+      action: 'RECURRING_UPDATED',
+      tableName: 'RecurringInvoice',
+      recordId: template.id,
+      oldData,
+      newData: template,
+      companyId: template.CompanyId,
+      userId: req.user.id,
+      req
+    });
+
     res.json(template);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -187,12 +212,40 @@ exports.processDueInvoices = async (req, res) => {
       }
 
       await template.update(updateData);
+      
+      await AuditService.log({
+        action: 'INSTANCE_GENERATED',
+        tableName: 'RecurringInvoice',
+        recordId: template.id,
+        newData: { invoiceNumber: createdInvoice?.invoiceNumber, date: now },
+        companyId: template.CompanyId,
+        userId: null // System action
+      });
+
       results.push({ template: template.templateName, invoice: createdInvoice?.invoiceNumber });
     }
 
     res.json({ message: `Processed ${templates.length} templates`, results });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getHistory = async (req, res) => {
+  try {
+    const logs = await AuditLog.findAll({
+      where: {
+        tableName: 'RecurringInvoice',
+        recordId: req.params.id
+      },
+      include: [
+        { model: User, as: 'User', attributes: ['name', 'email'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(logs);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };

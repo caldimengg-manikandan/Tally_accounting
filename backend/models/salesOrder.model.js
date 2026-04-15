@@ -65,6 +65,10 @@ module.exports = (sequelize, DataTypes) => {
     totalAmount: {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0
+    },
+    attachments: {
+      type: DataTypes.JSON,
+      allowNull: true
     }
   });
 

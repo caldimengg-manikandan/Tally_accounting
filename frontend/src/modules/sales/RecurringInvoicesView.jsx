@@ -42,6 +42,8 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
         termsConditions: ''
     });
 
+    const [errors, setErrors] = useState({});
+
     const [lineItems, setLineItems] = useState([
         { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }
     ]);
@@ -121,12 +123,20 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
     };
 
     const handleSave = async () => {
-        if (!formData.templateName || !formData.customerName || lineItems.every(li => !li.itemId)) {
-            addNotification('Please fill in Template Name, Customer and add at least one item.', 'error');
+        const newErrors = {};
+        if (!formData.templateName) newErrors.templateName = true;
+        if (!formData.customerName) newErrors.customerName = true;
+        if (lineItems.every(li => !li.itemId)) newErrors.lineItems = true;
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            if (newErrors.templateName) addNotification('Profile Name is required', 'error');
+            if (newErrors.customerName) addNotification('Customer selection is required', 'error');
+            if (newErrors.lineItems) addNotification('At least one item must be added from the list', 'error');
             return;
         }
         
-        setSaving(true);
+        setErrors({});
         try {
             // Zoho Style Mapping: Ensure we only send what the backend expects
             // and handle empty date strings which crash PostgreSQL
@@ -187,10 +197,17 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                         if (e.target.value === 'NEW_CUSTOMER') {
                                             navigate('/customers/new');
                                         } else {
-                                            setFormData({...formData, customerName: e.target.value});
+                                            const newName = e.target.value;
+                                            setFormData(prev => ({
+                                                ...prev, 
+                                                customerName: newName,
+                                                // Auto-suggest profile name if empty
+                                                templateName: prev.templateName || (newName ? `Subscription - ${newName}` : '')
+                                            }));
+                                            setErrors({...errors, customerName: false});
                                         }
                                     }}
-                                    className="flex-1 p-2 border border-slate-200 rounded text-sm focus:border-blue-500 outline-none"
+                                    className={`flex-1 p-2 border ${errors.customerName ? 'border-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.1)]' : 'border-slate-200'} rounded text-sm focus:border-blue-500 outline-none`}
                                 >
                                     <option value="">Select or add a customer</option>
                                     <option value="NEW_CUSTOMER" className="text-blue-600 font-bold">➕ Add New Customer</option>
@@ -205,9 +222,12 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                             <input 
                                 type="text"
                                 value={formData.templateName} 
-                                onChange={e => setFormData({...formData, templateName: e.target.value})}
+                                onChange={e => {
+                                    setFormData({...formData, templateName: e.target.value});
+                                    setErrors({...errors, templateName: false});
+                                }}
                                 placeholder="e.g., Monthly Service Retainer"
-                                className="flex-1 p-2 border border-slate-200 rounded text-sm outline-none focus:border-blue-500"
+                                className={`flex-1 p-2 border ${errors.templateName ? 'border-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.1)]' : 'border-slate-200'} rounded text-sm outline-none focus:border-blue-500`}
                             />
                         </div>
                     </div>
@@ -275,8 +295,11 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                         <div className="relative group">
                                             <select 
                                                 value={line.itemId} 
-                                                onChange={e => handleItemSelect(line.id, e.target.value)}
-                                                className="w-full p-2 border border-transparent hover:border-slate-200 border-dashed rounded text-sm outline-none bg-transparent appearance-none transition-all"
+                                                onChange={e => {
+                                                    handleItemSelect(line.id, e.target.value);
+                                                    setErrors({...errors, lineItems: false});
+                                                }}
+                                                className={`w-full p-2 border ${errors.lineItems ? 'border-red-400' : 'border-transparent'} hover:border-slate-200 border-dashed rounded text-sm outline-none bg-transparent appearance-none transition-all`}
                                             >
                                                 <option value="">Type or click to select an item.</option>
                                                 {items.map(it => (
@@ -305,7 +328,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                         </div>
                                     </td>
                                     <td className="px-4 py-4 text-center align-top">
-                                        <button onClick={() => setLineItems(prev => prev.filter(p => p.id !== line.id))} className="mt-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"><X size={16}/></button>
+                                        <button onClick={() => setLineItems(prev => prev.filter(p => p.id !== line.id))} className="mt-2 text-slate-300 hover:text-rose-500 transition-all"><X size={16}/></button>
                                     </td>
                                 </tr>
                             ))}
@@ -407,6 +430,8 @@ const RecurringInvoiceDetail = ({ id, companyId, navigate }) => {
     const [template, setTemplate] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('Overview');
+    const [history, setHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
 
     useEffect(() => {
         if (!id || !companyId) return;
@@ -416,6 +441,24 @@ const RecurringInvoiceDetail = ({ id, companyId, navigate }) => {
             setTemplate(found);
         }).finally(() => setLoading(false));
     }, [id, companyId]);
+
+    useEffect(() => {
+        if (activeTab === 'Recent Activities' && id) {
+            setLoadingHistory(true);
+            recurringInvoiceAPI.getHistory(id)
+                .then(res => setHistory(res.data))
+                .finally(() => setLoadingHistory(false));
+        }
+    }, [activeTab, id]);
+
+    const getActivityInfo = (log) => {
+        switch (log.action) {
+            case 'RECURRING_CREATED': return { title: 'Automation Initialized', icon: 'bg-emerald-500', desc: `Created by ${log.User?.name || 'System'}` };
+            case 'RECURRING_UPDATED': return { title: 'Settings Modified', icon: 'bg-blue-500', desc: `Configuration updated by ${log.User?.name || 'System'}` };
+            case 'INSTANCE_GENERATED': return { title: 'Invoice Generated', icon: 'bg-purple-600', desc: `New instance ${log.newData?.invoiceNumber || ''} created automatically.` };
+            default: return { title: log.action.replace('_', ' '), icon: 'bg-slate-400', desc: `Action performed by ${log.User?.name || 'System'}` };
+        }
+    };
 
     if (loading) return <div className="p-32 text-center font-bold text-slate-300 animate-pulse uppercase tracking-[0.3em]">Loading Profile Details...</div>;
     if (!template) return <div className="p-32 text-center text-slate-400">Profile not found.</div>;
@@ -613,30 +656,31 @@ const RecurringInvoiceDetail = ({ id, companyId, navigate }) => {
 
                     {activeTab === 'Recent Activities' && (
                         <div className="max-w-3xl mx-auto py-10">
-                            <div className="relative border-l-2 border-blue-100 ml-48 space-y-12">
-                                <div className="relative">
-                                    <div className="absolute -left-52 top-0 w-48 text-right pr-8">
-                                        <p className="text-[12px] font-black text-slate-800 uppercase tracking-tight">{new Date().toLocaleDateString()}</p>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                                    </div>
-                                    <div className="absolute -left-[11px] top-1.5 w-5 h-5 bg-blue-600 rounded-full border-4 border-white shadow-sm shadow-blue-200"></div>
-                                    <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm ml-8 transition-all hover:border-blue-200 hover:shadow-md">
-                                        <p className="text-[13px] font-bold text-slate-800">Profile Modernized</p>
-                                        <p className="text-[11px] text-slate-400 font-medium mt-1">Automation template updated to full-screen premium layout by <span className="text-blue-600 font-bold uppercase tracking-tighter">{JSON.parse(localStorage.getItem('user') || '{}').email?.split('@')[0] || 'Admin'}</span></p>
-                                    </div>
+                            {loadingHistory ? (
+                                <div className="text-center py-20 text-slate-400 animate-pulse font-bold uppercase tracking-widest">Fetching logs...</div>
+                            ) : history.length === 0 ? (
+                                <div className="text-center py-20 text-slate-400">No activities recorded yet.</div>
+                            ) : (
+                                <div className="relative border-l-2 border-slate-100 ml-48 space-y-12">
+                                    {history.map(log => {
+                                        const info = getActivityInfo(log);
+                                        const date = new Date(log.createdAt);
+                                        return (
+                                            <div key={log.id} className="relative">
+                                                <div className="absolute -left-52 top-0 w-48 text-right pr-8">
+                                                    <p className="text-[12px] font-black text-slate-800 uppercase tracking-tight">{date.toLocaleDateString()}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                                </div>
+                                                <div className={`absolute -left-[11px] top-1.5 w-5 h-5 ${info.icon} rounded-full border-4 border-white shadow-sm`}></div>
+                                                <div className="bg-white border border-slate-100 p-6 rounded-2xl shadow-sm ml-8 transition-all hover:border-blue-200 hover:shadow-md">
+                                                    <p className="text-[13px] font-bold text-slate-800 tracking-tight">{info.title}</p>
+                                                    <p className="text-[11px] text-slate-400 font-medium mt-1 uppercase tracking-tight leading-relaxed">{info.desc}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <div className="relative opacity-60">
-                                    <div className="absolute -left-52 top-0 w-48 text-right pr-8">
-                                        <p className="text-[12px] font-bold text-slate-500 uppercase tracking-tight">{new Date(template.createdAt).toLocaleDateString()}</p>
-                                        <p className="text-[10px] font-medium text-slate-300 uppercase tracking-widest">10:52 AM</p>
-                                    </div>
-                                    <div className="absolute -left-[11px] top-1.5 w-5 h-5 bg-slate-200 rounded-full border-4 border-white"></div>
-                                    <div className="bg-white border border-slate-50 p-6 rounded-2xl ml-8">
-                                        <p className="text-[13px] font-bold text-slate-500">Recurring Invoice created for ₹{parseFloat(template.totalAmount).toLocaleString()}</p>
-                                        <p className="text-[11px] text-slate-400 font-medium mt-1">by System Administrator</p>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     )}
                 </div>

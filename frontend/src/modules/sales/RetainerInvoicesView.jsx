@@ -4,7 +4,7 @@ import {
   Plus, Search, FileText, Download, Edit2, Trash2, 
   ChevronDown, Filter, Loader2, Clock, Mail, Printer, MoreVertical, X, Save, Send, ArrowLeft, ExternalLink, MoreHorizontal, Settings, RefreshCw, RotateCcw, Edit, CheckCircle2
 } from 'lucide-react';
-import { retainerInvoiceAPI, companyAPI, ledgerAPI } from '../../services/api';
+import { retainerInvoiceAPI, companyAPI, ledgerAPI, projectAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import { salesAPI } from '../../services/api';
@@ -326,6 +326,7 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [customers, setCustomers] = useState([]);
+    const [projects, setProjects] = useState([]);
     
     const [formData, setFormData] = useState({
         invoiceNumber: `RET-${Math.floor(10000 + Math.random() * 90000)}`,
@@ -349,6 +350,9 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
                 const res = await ledgerAPI.getByCompany(companyId);
                 const debtors = res.data.filter(l => l.Group?.name?.toLowerCase().includes('debtor') || l.Group?.name?.toLowerCase().includes('customer'));
                 setCustomers(debtors || []);
+
+                const projRes = await projectAPI.getByCompany(companyId);
+                setProjects(projRes.data || []);
 
                 if (editId) {
                     const retRes = await retainerInvoiceAPI.getById(editId);
@@ -470,12 +474,15 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
                                 <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Project Name</label>
                                 <select 
                                     value={formData.project}
-                                    onChange={e => setFormData({...formData, project: e.target.value})}
+                                    onChange={e => {
+                                        if (e.target.value === 'NEW_PROJECT') navigate('/projects/new');
+                                        else setFormData({...formData, project: e.target.value});
+                                    }}
                                     className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
                                 >
                                     <option value="">Select a project</option>
-                                    <option>Internal Development</option>
-                                    <option>Client Consultation</option>
+                                    <option value="NEW_PROJECT" className="text-blue-600 font-bold bg-blue-50 tracking-tight">+ Add New Project</option>
+                                    {projects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -520,7 +527,9 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
                                             />
                                         </td>
                                         <td className="px-4 py-5 border-l border-slate-100 text-center">
-                                            <button onClick={() => setLineItems(lineItems.filter(li => li.id !== item.id))} className="text-slate-200 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"><X size={14}/></button>
+                                            <button onClick={() => setLineItems(lineItems.filter(li => li.id !== item.id))} className="text-slate-200 hover:text-rose-500 transition-all">
+                                                <X size={14}/>
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}

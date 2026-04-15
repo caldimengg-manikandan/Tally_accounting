@@ -41,18 +41,33 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   // Generate Display Name Options
   const displayNameOptions = useMemo(() => {
     const options = new Set();
-    const fullWithSalutation = `${salutation === 'Salutation' || !salutation ? '' : salutation} ${firstName} ${lastName}`.trim();
-    const fullWithoutSalutation = `${firstName} ${lastName}`.trim();
+    const fullName = `${firstName} ${lastName}`.trim();
+    const lastFirst = lastName && firstName ? `${lastName}, ${firstName}` : '';
+    const withSalutation = salutation && salutation !== 'Salutation' && fullName ? `${salutation} ${fullName}` : '';
     
-    if (fullWithSalutation) options.add(fullWithSalutation);
-    if (fullWithoutSalutation) options.add(fullWithoutSalutation);
+    if (withSalutation) options.add(withSalutation);
+    if (fullName) options.add(fullName);
+    if (lastFirst) options.add(lastFirst);
     if (companyName) options.add(companyName);
     if (firstName) options.add(firstName);
     
     return Array.from(options).filter(opt => opt.length > 0);
   }, [salutation, firstName, lastName, companyName]);
 
-  // Auto-sync removed as per user request to allow manual selection
+  // Auto-select first display name option when options change
+  useEffect(() => {
+    if (displayNameOptions.length > 0) {
+      setDisplayName(prev => {
+        // If current value is not in options, reset to first option
+        if (!prev || !displayNameOptions.includes(prev)) {
+          return displayNameOptions[0];
+        }
+        return prev;
+      });
+    } else {
+      setDisplayName('');
+    }
+  }, [displayNameOptions]);
 
   useEffect(() => {
     if (customerToEdit) {
@@ -256,12 +271,16 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             <div className="flex flex-1 max-w-lg gap-4">
                                 <input 
                                     placeholder="Work Phone"
-                                    value={workPhone} onChange={e => setWorkPhone(e.target.value)}
+                                    value={workPhone} 
+                                    onChange={e => setWorkPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                    maxLength={10}
                                     className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium" 
                                 />
                                 <input 
                                     placeholder="Mobile"
-                                    value={mobile} onChange={e => setMobile(e.target.value)}
+                                    value={mobile} 
+                                    onChange={e => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                    maxLength={10}
                                     className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium" 
                                 />
                             </div>
