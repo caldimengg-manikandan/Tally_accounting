@@ -644,6 +644,7 @@ function AuthenticatedApp() {
       <Route path="/vendors/view/:id"    element={shell(VendorDetailView)} />
       <Route path="/vendors/:id"         element={shell(VendorsView)} />
       <Route path="/expenses"            element={shell(ExpensesView)} />
+      <Route path="/expenses/new"        element={shell(ExpenseEntryView)} />
       <Route path="/recurring-expenses" element={shell(RecurringExpensesView)} />
       <Route path="/recurring-expenses/new" element={shell(RecurringExpenseEntryView)} />
       <Route path="/recurring-expenses/edit/:id" element={shell(RecurringExpenseEntryView)} />
