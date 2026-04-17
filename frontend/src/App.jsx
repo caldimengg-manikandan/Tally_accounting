@@ -710,6 +710,7 @@ function AuthenticatedApp() {
       })} />
       <Route path="/price-lists"        element={shell(PriceListView)} />
       <Route path="/price-lists/new"    element={shell(PriceListEntryView)} />
+      <Route path="/price-lists/edit/:id" element={shell(PriceListEntryView)} />
       <Route path="/reconciliation"     element={shell(BankReconciliationView)} />
       <Route path="/payroll"            element={shell(PayrollView)} />
 

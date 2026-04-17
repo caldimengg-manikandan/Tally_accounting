@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Plus, Wallet, RefreshCw, FileText, 
   ChevronDown, ArrowDownUp, Filter, MoreHorizontal,
   Play, CheckCircle2, LayoutList, MapPin, RotateCcw,
   User, Receipt, MousePointer2, ArrowRight, Check,
   ShoppingCart, BarChart3, Globe, Zap, ShieldCheck,
-  CreditCard, Edit2, Printer, X
+  CreditCard, Edit2, Printer, X, UploadCloud, ChevronRight, Paperclip
 } from 'lucide-react';
 import { purchaseAPI, voucherAPI, inventoryAPI } from '../../services/api';
 import MileagePreferencesModal from './MileagePreferencesModal';
@@ -20,6 +20,15 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
   const [expenseDetails, setExpenseDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Handle initial ID from URL for auto-selection
+  useEffect(() => {
+    const idParam = searchParams.get('id');
+    if (idParam) {
+      setSelectedExpenseId(idParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!selectedExpenseId) {
@@ -72,34 +81,33 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
     <>
     <div className="bg-white min-h-screen flex flex-col">
        {/* Tabbed Header */}
-        <div className="flex items-center justify-between px-8 py-0 border-b border-slate-200 bg-white">
-           <div className="flex items-center h-14">
+        <div className="flex items-center justify-between px-6 h-14 border-b border-slate-200 bg-white">
+           <div className="flex items-center gap-6 h-full">
               <button 
                 onClick={() => setActiveTab('Receipts Inbox')}
-                className={`text-[13px] font-semibold px-4 h-full transition-all border-b-2 ${activeTab === 'Receipts Inbox' ? 'text-blue-600 border-blue-600' : 'text-slate-600 border-transparent hover:text-slate-900'}`}
+                className={`text-[13px] font-bold h-full transition-all border-b-2 ${activeTab === 'Receipts Inbox' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-800'}`}
               >
                  Receipts Inbox
               </button>
               <button 
                 onClick={() => setActiveTab('All Expenses')}
-                className={`text-[13px] font-semibold px-4 h-full flex items-center gap-1.5 transition-all border-b-2 ${activeTab === 'All Expenses' ? 'text-blue-600 border-blue-600' : 'text-slate-600 border-transparent hover:text-slate-900'}`}
+                className={`text-[14px] font-black h-full flex items-center gap-2 transition-all border-b-2 ${activeTab === 'All Expenses' ? 'text-slate-800 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-800'}`}
               >
-                 All Expenses <ChevronDown size={14} className="mt-0.5" />
+                 All Expenses <ChevronDown size={14} className="text-blue-600" />
               </button>
            </div>
-           <div className="flex items-center gap-2">
-
-               <div className="flex items-center">
-                  <button 
-                     onClick={() => {
-                        window.location.href = '/expenses/new';
-                     }} 
-                     className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-3 py-1.5 rounded text-[13px] font-bold flex items-center gap-1.5 transition-all shadow-sm"
-                  >
-                     <Plus size={16} strokeWidth={3}/> New
-                  </button>
-               </div>
-            </div>
+           
+           <div className="flex items-center gap-3">
+              <button 
+                 onClick={() => navigate('/expenses/new')}
+                 className="w-8 h-8 bg-[#1e61f0] hover:bg-[#1a54d1] text-white rounded flex items-center justify-center transition-all shadow-sm"
+              >
+                 <Plus size={18} strokeWidth={3}/>
+              </button>
+              <button className="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded flex items-center justify-center transition-all">
+                 <MoreHorizontal size={18} />
+              </button>
+           </div>
         </div>
 
         <div className="flex-1 overflow-auto">
@@ -108,53 +116,92 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
                 {/* LIST PANE */}
                 <div className={`transition-all duration-300 ease-in-out border-r border-slate-200 overflow-y-auto ${selectedExpenseId ? 'w-[380px] shrink-0' : 'w-full'}`}>
                   <table className="w-full text-left">
-                     <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-                        <tr>
-                           <th className="px-6 py-4">Date</th>
-                           <th className="px-6 py-4">Expense Account</th>
-                           {!selectedExpenseId && <th className="px-6 py-4">Reference#</th>}
-                           {!selectedExpenseId && <th className="px-6 py-4">Vendor Name</th>}
-                           {!selectedExpenseId && <th className="px-6 py-4">Paid Through</th>}
-                           {!selectedExpenseId && <th className="px-6 py-4">Customer Name</th>}
-                           {!selectedExpenseId && <th className="px-6 py-4">Status</th>}
-                           <th className="px-6 py-4 text-right">Amount</th>
-                        </tr>
+                     <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] border-b border-slate-200 sticky top-0 z-10">
+                        {selectedExpenseId ? (
+                           <tr>
+                              <th className="px-6 py-3 w-10">
+                                 <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                              </th>
+                              <th className="px-6 py-3">CATEGORY</th>
+                              <th className="px-6 py-3 text-right">AMOUNT</th>
+                           </tr>
+                        ) : (
+                           <tr>
+                              <th className="px-6 py-4 w-10">
+                                 <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                              </th>
+                              <th className="px-6 py-4">DATE</th>
+                              <th className="px-6 py-4">EXPENSE ACCOUNT</th>
+                              <th className="px-6 py-4">REFERENCE#</th>
+                              <th className="px-6 py-4">VENDOR NAME</th>
+                              <th className="px-6 py-4">PAID THROUGH</th>
+                              <th className="px-6 py-4">CUSTOMER NAME</th>
+                              <th className="px-6 py-4">STATUS</th>
+                              <th className="px-6 py-4 text-right">AMOUNT</th>
+                           </tr>
+                        )}
                      </thead>
                      <tbody className="divide-y divide-slate-100">
                         {expenses.map(exp => (
                           <tr 
                             key={exp.id} 
-                            onClick={(e) => {
-                                // If they clicked the Ledger explicitly, let it navigate instead of splitting
-                                if (e.target.tagName.toLowerCase() !== 'span') {
-                                    setSelectedExpenseId(exp.id);
-                                }
-                            }}
+                            onClick={() => setSelectedExpenseId(exp.id)}
                             className={`transition-colors cursor-pointer group ${selectedExpenseId === exp.id ? 'bg-blue-50/50' : 'hover:bg-slate-50'}`}
                           >
-                             <td className="px-6 py-4 text-[14px] text-slate-600 whitespace-nowrap">{new Date(exp.date).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</td>
-                             <td className="px-6 py-4 text-[14px] font-medium text-slate-900 truncate max-w-[200px]">
-                                {exp.Ledger ? (
-                                   <span 
-                                      className="text-[#1e61f0] hover:underline cursor-pointer"
-                                      onClick={() => navigate(`/ledger-statement/${exp.Ledger.id}`)}
-                                   >
-                                      {exp.Ledger.name}
-                                   </span>
+                             <td className="px-6 py-4 w-10 align-top">
+                                <input type="checkbox" className="w-4 h-4 mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500" onClick={e => e.stopPropagation()} />
+                             </td>
+                             <td className="px-6 py-4">
+                                {selectedExpenseId ? (
+                                   <div className="flex flex-col gap-1">
+                                      <div className="flex justify-between items-start gap-4">
+                                         <span className="text-[14px] font-bold text-slate-800 leading-tight">
+                                            {exp.Ledger?.name || 'General Expense'}
+                                         </span>
+                                         <span className="text-[14px] font-bold text-slate-900 whitespace-nowrap">
+                                            ₹{parseFloat(exp.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                         </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-400">
+                                         {new Date(exp.date).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}
+                                         {(exp.vendorName && exp.vendorName !== '-') && (
+                                            <>
+                                               <span className="text-slate-300">•</span>
+                                               <span className="text-slate-500">{exp.vendorName}</span>
+                                            </>
+                                         )}
+                                      </div>
+                                      {exp.narration && JSON.parse(exp.narration || '{}').receiptUrls?.length > 0 && (
+                                         <div className="mt-2 flex justify-end">
+                                            <Paperclip size={12} className="text-slate-400 transform rotate-45" />
+                                         </div>
+                                      )}
+                                   </div>
                                 ) : (
-                                   'General Expense'
+                                   <span className="text-[14px] text-slate-600 whitespace-nowrap">
+                                      {new Date(exp.date).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}
+                                   </span>
                                 )}
                              </td>
+                             {!selectedExpenseId && (
+                                <td className="px-6 py-4 text-[14px] font-medium text-slate-900 truncate max-w-[200px]">
+                                   {exp.Ledger?.name || 'General Expense'}
+                                </td>
+                             )}
                              {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600">{exp.voucherNumber}</td>}
                              {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600 truncate max-w-[150px]">{exp.vendorName || '-'}</td>}
                              {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600">{exp.paidThrough || '-'}</td>}
                              {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600 truncate max-w-[150px]">{exp.customerName || '-'}</td>}
                              {!selectedExpenseId && (
-                               <td className="px-6 py-4 text-[14px]">
-                                  <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[11px] font-bold uppercase">Paid</span>
-                               </td>
+                                <td className="px-6 py-4 text-[14px]">
+                                   <span className="px-2 py-1 rounded-full bg-emerald-100 text-emerald-600 text-[11px] font-bold uppercase">Paid</span>
+                                </td>
                              )}
-                             <td className="px-6 py-4 text-right text-[14px] font-bold text-slate-900 whitespace-nowrap">₹ {parseFloat(exp.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                             {!selectedExpenseId && (
+                                <td className="px-6 py-4 text-right text-[14px] font-bold text-slate-900 whitespace-nowrap">
+                                   ₹ {parseFloat(exp.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                </td>
+                             )}
                           </tr>
                         ))}
                      </tbody>
@@ -167,7 +214,10 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
                      <ExpenseDetailPane 
                         details={expenseDetails} 
                         loading={loadingDetails} 
-                        onClose={() => setSelectedExpenseId(null)} 
+                        onClose={() => {
+                           setSelectedExpenseId(null);
+                           navigate('/expenses');
+                        }} 
                         onUploadSuccess={async () => {
                           try {
                             const res = await voucherAPI.getById(selectedExpenseId);
@@ -314,26 +364,17 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
     try { narration = JSON.parse(details.narration); } catch (e) {}
   }
 
-  // Build array of existing receipts (backwards compatible with single receiptUrl)
   const existingReceipts = narration.receiptUrls || (narration.receiptUrl ? [narration.receiptUrl] : []);
 
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     
-    const totalAfter = existingReceipts.length + files.length;
-    if (totalAfter > 5) {
-      setUploadError(`Max 5 files allowed. You have ${existingReceipts.length}, trying to add ${files.length}.`);
+    if (existingReceipts.length + files.length > 5) {
+      setUploadError(`Max 5 files allowed.`);
       return;
     }
     
-    for (const file of files) {
-      if (file.size > 10 * 1024 * 1024) {
-        setUploadError(`"${file.name}" exceeds 10MB limit.`);
-        return;
-      }
-    }
-
     setUploading(true);
     setUploadError('');
     try {
@@ -349,224 +390,159 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
       await voucherAPI.updateNarration(details.id, updatedNarration);
       if (onUploadSuccess) onUploadSuccess();
     } catch (err) {
-      console.error('Upload error:', err.response?.data || err.message);
-      const errMsg = err.response?.data?.error || 'Upload failed. Please try again.';
-      setUploadError(errMsg);
+      setUploadError('Upload failed.');
     } finally {
       setUploading(false);
-      // Reset input so the same file can be re-selected
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handleRemoveReceipt = async (index) => {
-    const updated = existingReceipts.filter((_, i) => i !== index);
-    const updatedNarration = JSON.stringify({ ...narration, receiptUrls: updated, receiptUrl: updated[0] || '' });
-    try {
-      await voucherAPI.updateNarration(details.id, updatedNarration);
-      if (onUploadSuccess) onUploadSuccess();
-    } catch (err) {
-      console.error('Remove error:', err);
-    }
-  };
-
-  const primaryExpenseTransaction = details.Transactions?.find(t => t.type === 'Dr');
+  const primaryExpenseTransaction = details.Transactions?.find(t => parseFloat(t.debit || 0) > 0);
+  const paidThroughTransaction = details.Transactions?.find(t => parseFloat(t.credit || 0) > 0);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 animate-fade-in relative shadow-[-10px_0_20px_-10px_rgba(0,0,0,0.05)] border-l border-slate-200">
-      <div className="flex items-center justify-between px-8 py-4 border-b border-slate-200 bg-white sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-4">
-          <h2 className="text-[20px] font-black tracking-tight text-slate-800">Expense Details</h2>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[12px] font-bold hover:bg-slate-50 flex items-center gap-1.5 transition-colors shadow-sm">
-            <Edit2 size={14} /> Edit
-          </button>
-          <button className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[12px] font-bold hover:bg-slate-50 flex items-center gap-1.5 transition-colors shadow-sm">
-            <Printer size={14} /> Print
-          </button>
-          <button className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded hover:bg-slate-50 flex items-center justify-center transition-colors shadow-sm ml-2" onClick={onClose}>
-            <X size={16} />
-          </button>
+    <div className="flex flex-col h-full bg-white animate-fade-in relative shadow-[-10px_0_20px_-10px_rgba(0,0,0,0.05)] border-l border-slate-200">
+      {/* Detail Header */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-white">
+        <h2 className="text-[17px] font-black text-slate-800 tracking-tight">Expense Details</h2>
+        <div className="flex items-center gap-2">
+           <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+             <button className="px-3 py-1.5 text-slate-600 text-[12px] font-bold hover:bg-slate-50 flex items-center gap-1.5 border-r border-slate-100 transition-colors">
+               <Edit2 size={13} className="text-slate-400" /> Edit
+             </button>
+             <button className="px-3 py-1.5 text-slate-600 text-[12px] font-bold hover:bg-slate-50 flex items-center gap-1.5 border-r border-slate-100 transition-colors">
+               <RotateCcw size={13} className="text-slate-400" /> Make Recurring
+             </button>
+             <button className="px-3 py-1.5 text-slate-600 text-[12px] font-bold hover:bg-slate-50 flex items-center gap-1.5 transition-colors">
+               <Printer size={13} className="text-slate-400" /> Print
+             </button>
+           </div>
+           <button className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-md transition-colors" onClick={onClose}>
+             <X size={18} />
+           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-           
-          {/* Top Section Split */}
-          <div className="grid grid-cols-2">
-            
-            {/* Left Info Pane */}
-            <div className="p-8 border-r border-slate-100 flex flex-col justify-between">
-              <div>
-                <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1">Expense Amount</p>
-                <div className="flex items-end gap-3 mb-2">
-                  <h3 className="text-[32px] font-black text-red-500 leading-none">
-                    ₹ {parseFloat(details.Transactions?.filter(t => t.type === 'Cr').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0) || 0).toLocaleString()}
-                  </h3>
-                  <span className="text-[13px] font-bold text-slate-400 mb-1">on {new Date(details.date).toLocaleDateString('en-IN')}</span>
-                </div>
-                
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded">
-                  {narration.isBillable ? "BILLABLE" : "NON-BILLABLE"}
-                </span>
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-8">
+           <div className="flex justify-between items-start mb-10">
+              <div className="space-y-4">
+                 <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Expense Amount</label>
+                    <div className="flex items-baseline gap-2">
+                       <h3 className="text-[32px] font-black text-[#e53e3e] leading-none tracking-tight">
+                         ₹ {parseFloat(details.Transactions?.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                       </h3>
+                       <span className="text-[13px] font-bold text-slate-400">on {new Date(details.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                    </div>
+                 </div>
 
-                <div className="mt-8">
-                  <div className="inline-block bg-[#e0f2fe] text-[#0284c7] px-3 py-1.5 rounded-md font-bold text-[12px] mb-8 shadow-sm">
-                    {primaryExpenseTransaction?.Ledger?.name || "General Expense"}
-                  </div>
-                </div>
+                 <div className="flex items-center gap-3">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black tracking-widest bg-orange-100 text-orange-600 uppercase border border-orange-200">
+                      {narration.isBillable ? "BILLABLE" : "NON-BILLABLE"}
+                    </span>
+                 </div>
 
-                <div className="space-y-6">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Paid Through</label>
-                    <p className="text-[14px] font-medium text-slate-800 mt-1">
-                      {details.Transactions?.find(t => t.type === 'Cr')?.Ledger?.name || "Advance Tax"}
-                    </p>
-                  </div>
-                  {(narration.customer || narration.vendor) && (
+                 <div className="pt-2">
+                    <div className="inline-flex items-center bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-black text-[12px] border border-blue-100 shadow-sm">
+                      {primaryExpenseTransaction?.Ledger?.name || "General Expense"}
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-1 gap-6 pt-6">
                     <div>
-                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{narration.customer ? 'Customer' : 'Vendor'}</label>
-                      <p className="text-[14px] font-medium text-blue-600 hover:underline cursor-pointer mt-1">
-                        {narration.customer || narration.vendor}
-                      </p>
+                       <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">Paid Through</label>
+                       <p className="text-[15px] font-black text-slate-700">{paidThroughTransaction?.Ledger?.name || "Undeposited Funds"}</p>
                     </div>
-                  )}
-                  {narration.notes && (
                     <div>
-                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Notes</label>
-                      <p className="text-[13px] text-slate-600 mt-1 italic leading-relaxed">"{narration.notes}"</p>
+                       <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">Paid To</label>
+                       <p className="text-[15px] font-black text-blue-600 hover:underline cursor-pointer transition-all">{narration.vendor || "Rapid"}</p>
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-              {/* Right Receipt Pane - Compact Attach Files */}
-            <div className="p-8 bg-slate-50 flex flex-col justify-start relative">
-              <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                <p className="text-[13px] font-bold text-slate-500 mb-4">Attach File(s) to Expense</p>
-
-                <div className="flex items-center gap-3 mb-3">
-                  {uploading ? (
-                    <div className="flex items-center gap-2 text-blue-600">
-                      <RefreshCw size={14} className="animate-spin" />
-                      <span className="text-[12px] font-bold">Uploading...</span>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
-                      disabled={existingReceipts.length >= 5}
-                    >
-                      <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                      Upload File
-                    </button>
-                  )}
-
-                  {existingReceipts.length > 0 && (
-                    <button
-                      onClick={() => setShowFilesPopover(!showFilesPopover)}
-                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-full text-[11px] font-bold shadow-sm transition-colors cursor-pointer"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                      {existingReceipts.length}
-                    </button>
-                  )}
-                </div>
-
-                <label className="flex items-center gap-2 text-[12px] text-slate-500 cursor-pointer select-none">
-                  <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                  Display attachments in vendor portal and emails
-                </label>
-                <p className="text-[10px] text-blue-500 font-medium mt-2 italic">Max 5 files, 10MB each</p>
-                {uploadError && <p className="text-[11px] text-red-500 font-medium mt-2">{uploadError}</p>}
+                 </div>
               </div>
 
-              {/* Files Popover - shown when blue badge is clicked */}
-              {showFilesPopover && existingReceipts.length > 0 && (
-                <div className="absolute top-[160px] left-4 right-4 z-20 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-fade-in">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50">
-                    <p className="text-[12px] font-bold text-slate-700">Attached Files ({existingReceipts.length})</p>
-                    <button onClick={() => setShowFilesPopover(false)} className="text-slate-400 hover:text-slate-600">
-                      <X size={14} />
+              {/* Receipt Dropzone Area */}
+              <div className="w-[240px]">
+                 <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center group hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer bg-slate-50/50"
+                 >
+                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
+                       <UploadCloud size={24} />
+                    </div>
+                    <p className="text-[13px] font-black text-slate-700 leading-tight">Drag or Drop your Receipts</p>
+                    <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-wider">Maximum file size allowed is 10MB</p>
+                    
+                    <button className="mt-4 flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-black text-slate-600 shadow-sm group-hover:border-blue-200 transition-all">
+                       <Plus size={14} className="text-blue-600" />
+                       Upload your Files
                     </button>
-                  </div>
-                  <div className="p-4 space-y-3 max-h-[350px] overflow-y-auto">
-                    {existingReceipts.map((url, idx) => (
-                      <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-200 bg-white">
-                        <img src={url} alt={`Receipt ${idx + 1}`} className="w-full h-auto object-cover" />
-                        <button
-                          onClick={() => handleRemoveReceipt(idx)}
-                          className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
-                          title="Remove"
-                        >
-                          <X size={12} strokeWidth={3} />
-                        </button>
-                        <div className="p-2 border-t border-slate-100 flex items-center justify-between">
-                          <span className="text-[11px] font-medium text-slate-500">Receipt {idx + 1}</span>
-                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-blue-600 hover:underline">Open</a>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                 </div>
+                 <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} />
+                 {uploading && <p className="text-center text-[11px] font-bold text-blue-500 mt-2">Uploading...</p>}
+                 
+                 {existingReceipts.length > 0 && (
+                    <div className="mt-4 flex justify-center">
+                       <button 
+                          onClick={() => setShowFilesPopover(true)}
+                          className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-all border border-blue-100"
+                       >
+                          View Attachments ({existingReceipts.length})
+                       </button>
+                    </div>
+                 )}
+              </div>
+           </div>
 
-              {/* Hidden file input - multiple allowed */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,application/pdf"
-                className="hidden"
-                multiple
-                onChange={handleUpload}
-              />
-            </div>
-          </div>
-          
-          {/* Journal Section */}
-          <div className="border-t border-slate-200 p-8">
-            <div className="flex items-center gap-4 mb-6">
-               <h3 className="text-[15px] font-black text-slate-800 tracking-tight">Journal</h3>
-               <div className="h-px bg-slate-100 flex-1"></div>
-            </div>
-            
-            <table className="w-full text-left">
-              <thead className="border-b border-slate-200">
-                <tr>
-                  <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">Account</th>
-                  <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none text-right">Debit</th>
-                  <th className="pb-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none text-right">Credit</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 border-b border-slate-200">
-                {details.Transactions?.map(t => (
-                  <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-4 text-[14px] font-medium text-slate-900">{t.Ledger?.name || "Unknown"}</td>
-                    <td className="py-4 text-[14px] font-bold text-slate-900 text-right">
-                       {t.type === 'Dr' ? parseFloat(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
-                    </td>
-                    <td className="py-4 text-[14px] font-bold text-slate-900 text-right">
-                       {t.type === 'Cr' ? parseFloat(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-slate-50/50">
-                <tr>
-                  <td className="py-4 text-[14px] font-black text-slate-800 text-right uppercase tracking-widest pr-4 border-r border-slate-200">Total</td>
-                  <td className="py-4 text-[14px] font-black text-slate-900 text-right border-r border-slate-200 pr-4">
-                    {parseFloat(details.Transactions?.filter(t => t.type === 'Dr').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-4 text-[14px] font-black text-slate-900 text-right">
-                    {parseFloat(details.Transactions?.filter(t => t.type === 'Cr').reduce((sum, t) => sum + parseFloat(t.amount || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+           {/* Journal Section */}
+           <div className="mt-12 pt-8 border-t border-slate-100">
+              <div className="flex items-center gap-4 mb-8">
+                 <h3 className="text-[16px] font-black text-slate-800 tracking-tight">Journal</h3>
+                 <div className="h-px bg-slate-100 flex-1"></div>
+              </div>
+
+              <div className="mb-6 flex items-center gap-2">
+                 <span className="text-[11px] font-bold text-slate-500 italic">Amount is displayed in your base currency</span>
+                 <span className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">INR</span>
+              </div>
+
+              <h4 className="text-[18px] font-black text-slate-800 mb-6 italic underline decoration-slate-200 underline-offset-8">Expense</h4>
+              
+              <div className="overflow-hidden rounded-xl border border-slate-100 shadow-sm">
+                 <table className="w-full text-left">
+                    <thead className="bg-slate-50/50">
+                       <tr className="border-b border-slate-100">
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ACCOUNT</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">DEBIT</th>
+                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">CREDIT</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                       {details.Transactions?.map((t, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
+                             <td className="px-6 py-5 text-[14px] font-bold text-slate-800">{t.Ledger?.name || "Unknown Account"}</td>
+                              <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right">
+                                 {parseFloat(t.debit || 0) > 0 ? parseFloat(t.debit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+                              </td>
+                              <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right">
+                                 {parseFloat(t.credit || 0) > 0 ? parseFloat(t.credit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
+                              </td>
+                          </tr>
+                       ))}
+                    </tbody>
+                    <tfoot className="bg-slate-50/50 border-t border-slate-100">
+                       <tr>
+                          <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right uppercase tracking-widest border-r border-slate-100 pr-10">Total</td>
+                          <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right border-r border-slate-100">
+                             {parseFloat(details.Transactions?.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right">
+                             {parseFloat(details.Transactions?.reduce((sum, t) => sum + parseFloat(t.credit || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                       </tr>
+                    </tfoot>
+                 </table>
+              </div>
+           </div>
         </div>
       </div>
     </div>

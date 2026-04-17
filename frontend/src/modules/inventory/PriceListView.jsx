@@ -128,7 +128,12 @@ const PriceListView = () => {
                   {filteredLists.map(plist => (
                     <tr key={plist.id} className="hover:bg-slate-50/40 transition-colors group">
                       <td className="px-6 py-3.5">
-                        <div className="text-[13px] font-bold text-[#1e61f0] hover:underline cursor-pointer">{plist.name}</div>
+                        <div 
+                          className="text-[13px] font-bold text-[#1e61f0] hover:underline cursor-pointer"
+                          onClick={() => navigate(`/price-lists/edit/${plist.id}`)}
+                        >
+                          {plist.name}
+                        </div>
                         {plist.description && (
                           <div className="text-[11px] text-slate-500 mt-0.5">{plist.description}</div>
                         )}
@@ -146,7 +151,10 @@ const PriceListView = () => {
                         {plist.priceListType === 'All Items' && plist.roundOffTo ? plist.roundOffTo : '-'}
                         {/* Hover Actions */}
                         <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm pl-4">
-                          <button className="p-1.5 text-slate-400 hover:text-[#1e61f0] hover:bg-blue-50 rounded transition-all">
+                          <button 
+                            onClick={() => navigate(`/price-lists/edit/${plist.id}`)}
+                            className="p-1.5 text-slate-400 hover:text-[#1e61f0] hover:bg-blue-50 rounded transition-all"
+                          >
                             <Edit2 size={14} />
                           </button>
                           <button 

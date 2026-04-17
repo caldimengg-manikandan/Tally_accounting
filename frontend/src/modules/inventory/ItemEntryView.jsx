@@ -4,7 +4,7 @@ import {
   Trash2, Search, Check, Plus, RefreshCcw, Save, Package, 
   Coins, ShoppingCart, Upload, ArrowRight, Info, AlertCircle, LayoutList, Receipt, AlertTriangle
 } from 'lucide-react';
-import { inventoryAPI } from '../../services/api';
+import { inventoryAPI, purchaseAPI } from '../../services/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CreateAccountModal from '../../components/accounting/CreateAccountModal';
 
@@ -95,7 +95,15 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
 
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [creationSource, setCreationSource] = useState('Purchase'); 
+  const [vendors, setVendors] = useState([]);
 
+  useEffect(() => {
+    if (companyId) {
+      purchaseAPI.getVendors(companyId)
+        .then(res => setVendors(res.data || []))
+        .catch(err => console.error("Error fetching vendors:", err));
+    }
+  }, [companyId]);
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target)) setIsUnitOpen(false);
@@ -106,6 +114,20 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleSalesToggle = (val) => {
+    setNewItem(prev => ({ ...prev, salesInformation: val }));
+    if (!val && formError.toLowerCase().includes('sales')) {
+      setFormError('');
+    }
+  };
+
+  const handlePurchaseToggle = (val) => {
+    setNewItem(prev => ({ ...prev, purchaseInformation: val }));
+    if (!val && formError.toLowerCase().includes('purchase')) {
+      setFormError('');
+    }
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!newItem.name.trim()) {
@@ -114,25 +136,33 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
       return;
     }
     if (newItem.salesInformation && (!newItem.sellingPrice || parseFloat(newItem.sellingPrice) <= 0)) {
-      setFormError('Selling Price is required and must be greater than zero when Sales Information is enabled.');
+       setFormError('Selling Price is required. Please provide a value in Sales Information.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (newItem.purchaseInformation && (!newItem.costPrice || parseFloat(newItem.costPrice) <= 0)) {
-      setFormError('Cost Price is required and must be greater than zero when Purchase Information is enabled.');
+       setFormError('Cost Price is required. Please provide a value in Purchase Information.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (!companyId) {
+      setFormError('No active company found. Please reload or select a company.');
       return;
     }
     setFormError('');
     setLoading(true);
     try {
+      let savedItem;
       if (isEditMode) {
-        await inventoryAPI.updateItem(editItem.id, { ...newItem, companyId });
+        const res = await inventoryAPI.updateItem(editItem.id, { ...newItem, companyId });
+        savedItem = res.data;
       } else {
-        await inventoryAPI.createItem({ ...newItem, companyId });
+        const res = await inventoryAPI.createItem({ ...newItem, companyId });
+        savedItem = res.data;
       }
-      navigate('/inventory');
+      navigate('/inventory', { state: { openItem: savedItem } });
     } catch (err) {
+      if (err.response?.status === 401) return;
       alert("Error saving item: " + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
@@ -164,6 +194,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
       const res = await inventoryAPI.uploadImage(formData);
       setNewItem({ ...newItem, imageUrl: res.data.imageUrl });
     } catch (err) {
+      if (err.response?.status === 401) return;
       alert("Failed to upload image.");
     } finally {
       setUploading(false);
@@ -371,7 +402,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
               <SectionHeader icon={Coins} title="Sales Information 💰" color="bg-emerald-600" />
               <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
                  <span className="text-[12px] font-black uppercase tracking-widest text-slate-500">Sell this item?</span>
-                 <Toggle enabled={newItem.salesInformation} onChange={(val) => setNewItem({...newItem, salesInformation: val})} />
+                 <Toggle enabled={newItem.salesInformation} onChange={handleSalesToggle} />
               </div>
            </div>
            
@@ -459,7 +490,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
               <SectionHeader icon={ShoppingCart} title="Purchase Information 📦" color="bg-amber-600" />
               <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
                  <span className="text-[12px] font-black uppercase tracking-widest text-slate-500">Buy this item?</span>
-                 <Toggle enabled={newItem.purchaseInformation} onChange={(val) => setNewItem({...newItem, purchaseInformation: val})} />
+                 <Toggle enabled={newItem.purchaseInformation} onChange={handlePurchaseToggle} />
               </div>
            </div>
 
@@ -535,7 +566,10 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                       onChange={e => setNewItem({...newItem, preferredVendor: e.target.value})}
                       className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')] bg-[length:14px] bg-[right_15px_center] bg-no-repeat focus:border-amber-500 transition-all"
                     >
-                       <option>Select Vendor</option>
+                       <option value="">Select Vendor</option>
+                       {vendors.map(v => (
+                         <option key={v.id} value={v.name}>{v.name}</option>
+                       ))}
                     </select>
                  </div>
 

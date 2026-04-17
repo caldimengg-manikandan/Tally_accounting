@@ -7,7 +7,7 @@ import {
   ChevronDown, MessageSquare, History, FileText, Send, HelpCircle,
   Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
   Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2,
-  ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline, Truck, CheckCircle2, AlertCircle
+  ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline, Truck, CheckCircle2, AlertCircle, ChevronUp, Eye, Landmark, EyeOff
 } from 'lucide-react';
 import { 
   ledgerAPI, purchaseAPI, 
@@ -86,11 +86,122 @@ const VendorDetailView = ({ companyId }) => {
   });
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [showAccountNum, setShowAccountNum] = useState(false);
+  const [bankErrors, setBankErrors] = useState([]);
+  const [bankForm, setBankForm] = useState({ 
+    accountHolderName: '', 
+    bankName: '', 
+    accountNumber: '', 
+    reAccountNumber: '', 
+    ifsc: '',
+    branch: '',
+    city: '',
+    district: '',
+    state: '',
+    accountType: 'Current'
+  });
+  const [showFullAccount, setShowFullAccount] = useState(false);
+  const [ifscDetails, setIfscDetails] = useState(null);
+  const [ifscLoading, setIfscLoading] = useState(false);
+  const [ifscError, setIfscError] = useState(false);
+  const [isBankActionsOpen, setIsBankActionsOpen] = useState(false);
+  const [isBankDeleteConfirmOpen, setIsBankDeleteConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    if (bankForm.ifsc && bankForm.ifsc.length === 11) {
+      setIfscLoading(true);
+      setIfscError(false);
+      setIfscDetails(null);
+      
+      fetch(`https://ifsc.razorpay.com/${bankForm.ifsc.toUpperCase()}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Invalid IFSC');
+          return res.json();
+        })
+        .then(data => {
+          setIfscDetails(data);
+          // Auto-populate form fields when IFSC is valid
+          setBankForm(prev => ({
+            ...prev,
+            bankName: data.BANK || prev.bankName,
+            branch: data.BRANCH || prev.branch,
+            city: data.CITY || prev.city,
+            district: data.DISTRICT || prev.district,
+            state: data.STATE || prev.state
+          }));
+        })
+        .catch(() => {
+          setIfscError(true);
+        })
+        .finally(() => {
+          setIfscLoading(false);
+        });
+    } else {
+      setIfscDetails(null);
+      setIfscError(false);
+    }
+  }, [bankForm.ifsc]);
   
   const fileInputRef = useRef(null);
   const settingsRef = useRef(null);
 
   const activeCompanyId = companyId || localStorage.getItem('companyId');
+
+  const handleBankFormReset = () => {
+    setBankForm({
+      accountHolderName: '', 
+      bankName: '', 
+      accountNumber: '', 
+      reAccountNumber: '', 
+      ifsc: '',
+      branch: '',
+      city: '',
+      district: '',
+      state: '',
+      accountType: 'Current'
+    });
+    setIfscDetails(null);
+    setBankErrors([]);
+  };
+
+  const handleEditBank = () => {
+    try {
+      if (vendor.bankDetailsJson) {
+        const existingBank = JSON.parse(vendor.bankDetailsJson);
+        setBankForm({
+          ...existingBank,
+          reAccountNumber: '' // Keep empty during edit to force user re-verification
+        });
+        setIsBankModalOpen(true);
+      }
+    } catch (e) {
+      addNotification('Error loading bank details for edit.', 'error');
+    }
+    setIsBankActionsOpen(false);
+  };
+
+  const handleDeleteBank = async () => {
+    try {
+      setLoading(true);
+      await ledgerAPI.update(vendor.id, { 
+        ...vendor,
+        bankDetailsJson: null 
+      });
+      
+      addNotification('Bank account details removed.', 'success');
+      
+      setAllLedgers(prev => prev.map(v => 
+        v.id === vendor.id ? { ...v, bankDetailsJson: null } : v
+      ));
+      
+      setIsBankDeleteConfirmOpen(false);
+    } catch (err) {
+      addNotification('Failed to remove bank details.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Click outside to close settings
   useEffect(() => {
@@ -767,7 +878,7 @@ const VendorDetailView = ({ companyId }) => {
                     </div>
 
                     <div className="space-y-6">
-                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">ADDRESS</h4>
+                       <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">ADDRESS</h4>
                        <div className="grid grid-cols-2 gap-10 pt-2">
                            {/* Billing Address */}
                            {(() => {
@@ -778,13 +889,13 @@ const VendorDetailView = ({ companyId }) => {
                                 <div className="space-y-3">
                                    <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
                                    {hasAddr ? (
-                                     <div className="text-[12px] text-slate-500 leading-relaxed space-y-0.5">
-                                       {billing.attention && <p className="font-bold text-slate-700">{billing.attention}</p>}
+                                     <div className="text-[13px] text-slate-800 font-semibold leading-relaxed space-y-1">
+                                       {billing.attention && <p className="font-black text-slate-900">{billing.attention}</p>}
                                        {billing.street1 && <p>{billing.street1}</p>}
                                        {billing.street2 && <p>{billing.street2}</p>}
                                        {(billing.city || billing.state || billing.pinCode) && <p>{[billing.city, billing.state, billing.pinCode].filter(Boolean).join(', ')}</p>}
                                        {billing.country && <p>{billing.country}</p>}
-                                       {billing.phone && <p className="mt-1 text-slate-400">Ph: {billing.phone}</p>}
+                                       {billing.phone && <p className="mt-1 text-slate-800">Ph: {billing.phone}</p>}
                                      </div>
                                    ) : (
                                      <p className="text-[12px] text-slate-400 italic leading-relaxed">No Billing Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => navigate(`/vendors/${vendor.id}`)}>New Address</span></p>
@@ -802,13 +913,13 @@ const VendorDetailView = ({ companyId }) => {
                                 <div className="space-y-3">
                                    <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
                                    {hasAddr ? (
-                                     <div className="text-[12px] text-slate-500 leading-relaxed space-y-0.5">
-                                       {shipping.attention && <p className="font-bold text-slate-700">{shipping.attention}</p>}
+                                     <div className="text-[13px] text-slate-800 font-semibold leading-relaxed space-y-1">
+                                       {shipping.attention && <p className="font-black text-slate-900">{shipping.attention}</p>}
                                        {shipping.street1 && <p>{shipping.street1}</p>}
                                        {shipping.street2 && <p>{shipping.street2}</p>}
                                        {(shipping.city || shipping.state || shipping.pinCode) && <p>{[shipping.city, shipping.state, shipping.pinCode].filter(Boolean).join(', ')}</p>}
                                        {shipping.country && <p>{shipping.country}</p>}
-                                       {shipping.phone && <p className="mt-1 text-slate-400">Ph: {shipping.phone}</p>}
+                                       {shipping.phone && <p className="mt-1 text-slate-800">Ph: {shipping.phone}</p>}
                                      </div>
                                    ) : (
                                      <p className="text-[12px] text-slate-400 italic leading-relaxed">No Shipping Address - <span className="text-blue-600 not-italic font-bold hover:underline cursor-pointer" onClick={() => navigate(`/vendors/${vendor.id}`)}>New Address</span></p>
@@ -820,11 +931,113 @@ const VendorDetailView = ({ companyId }) => {
                     </div>
 
                     <div className="space-y-6">
-                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">OTHER DETAILS</h4>
+                       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                          <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em]">OTHER DETAILS</h4>
+                          <ChevronUp size={18} className="text-blue-600 cursor-pointer" />
+                       </div>
                        <div className="space-y-6 pt-2">
                           <DetailRow label="Vendor Type" value={vendor.customerType || 'Business'} />
                           <DetailRow label="Currency" value={vendor.currency || 'INR'} />
                           <DetailRow label="Payment Terms" value={vendor.paymentTerms || 'Due on Receipt'} />
+                       </div>
+                    </div>
+
+
+
+                    <div className="space-y-6">
+                       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                          <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em]">BANK ACCOUNT DETAILS</h4>
+                          <div className="flex items-center gap-2 cursor-pointer">
+                             <Plus onClick={() => { handleBankFormReset(); setIsBankModalOpen(true); }} size={18} className="bg-blue-600 text-white rounded-full p-0.5 shadow-sm hover:scale-105 transition-transform" strokeWidth={2.5} />
+                             <ChevronUp size={18} className="text-blue-600" />
+                          </div>
+                       </div>
+                       <div className="space-y-6 pt-2">
+                          {(() => {
+                             let bank = null;
+                             try { bank = vendor.bankDetailsJson ? JSON.parse(vendor.bankDetailsJson) : null; } catch(e) {}
+                             if (!bank) return <p className="text-center text-slate-400 text-[13px] py-4">No bank account added yet</p>;
+                             
+                             return (
+                               <div className="space-y-5 animate-fade-in pr-2">
+                                  {/* Top section: Icon + Masked Account + Gear */}
+                                  <div className="flex items-center justify-between">
+                                     <div className="flex items-center gap-4">
+                                        <div className="w-[42px] h-[42px] bg-[#f0f5ff] rounded-xl flex items-center justify-center text-blue-600 shrink-0">
+                                           <Landmark size={20} strokeWidth={2} />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                           <span className="text-[15px] font-bold text-slate-900 tracking-tight">
+                                              {showFullAccount ? bank.accountNumber : `********** ${bank.accountNumber?.slice(-4)}`}
+                                           </span>
+                                           <button 
+                                              onClick={() => setShowFullAccount(!showFullAccount)}
+                                              className="text-[13px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                                           >
+                                              {showFullAccount ? 'Hide' : 'View'}
+                                           </button>
+                                        </div>
+                                     </div>
+                                     <div className="relative">
+                                        <button 
+                                           onClick={() => setIsBankActionsOpen(!isBankActionsOpen)}
+                                           className="p-1.5 text-slate-300 hover:text-slate-500 hover:bg-slate-50 rounded transition-colors"
+                                        >
+                                           <Settings size={18} />
+                                        </button>
+                                        
+                                        {isBankActionsOpen && (
+                                           <>
+                                              <div className="fixed inset-0 z-40" onClick={() => setIsBankActionsOpen(false)}></div>
+                                              <div className="absolute right-0 mt-2 w-36 bg-white rounded-xl shadow-2xl border border-slate-100 py-2 z-50 animate-in fade-in zoom-in duration-200">
+                                                 <button 
+                                                    onClick={handleEditBank}
+                                                    className="w-full flex items-center gap-3 px-4 py-2 text-[13px] font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                                 >
+                                                    <Edit size={16} /> Edit
+                                                 </button>
+                                                 <button 
+                                                    onClick={() => { setIsBankDeleteConfirmOpen(true); setIsBankActionsOpen(false); }}
+                                                    className="w-full flex items-center gap-3 px-4 py-2 text-[13px] font-bold text-red-600 hover:bg-red-50 transition-colors"
+                                                 >
+                                                    <Trash2 size={16} /> Delete
+                                                 </button>
+                                              </div>
+                                           </>
+                                        )}
+                                     </div>
+                                  </div>
+
+                                  {/* Bottom Section: Specific 3 fields only */}
+                                  <div className="space-y-2.5 pt-1">
+                                     <div className="flex items-center text-[13px]">
+                                        <span className="w-32 text-slate-400 font-medium">IFSC</span>
+                                        <span className="text-slate-900 font-bold">: {bank.ifsc}</span>
+                                     </div>
+                                     <div className="flex items-center text-[13px]">
+                                        <span className="w-32 text-slate-400 font-medium">Account Holder Name</span>
+                                        <span className="text-slate-900 font-bold">: {bank.accountHolderName || vendor.name}</span>
+                                     </div>
+                                     <div className="flex items-center text-[13px]">
+                                        <span className="w-32 text-slate-400 font-medium">Account Type</span>
+                                        <span className="text-slate-900 font-bold">: {bank.accountType || 'Current'}</span>
+                                     </div>
+                                  </div>
+                               </div>
+                             );
+                          })()}
+                       </div>
+                    </div>
+
+                    <div className="space-y-6">
+                       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                          <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em]">RECORD INFO</h4>
+                          <ChevronUp size={18} className="text-blue-600 cursor-pointer" />
+                       </div>
+                       <div className="space-y-6 pt-2">
+                          <DetailRow label="Vendor ID" value={vendor.id} />
+                          <DetailRow label="Created On" value={new Date(vendor.createdAt).toLocaleDateString('en-GB')} />
+                          <DetailRow label="Created By" value={vendor.createdBy || 'Swathi N'} />
                        </div>
                     </div>
                   </div>
@@ -887,6 +1100,178 @@ const VendorDetailView = ({ companyId }) => {
          title="Delete Vendor"
          message={`Are you sure you want to delete ${vendor?.name}? This action cannot be undone.`}
       />
+
+      <ConfirmModal 
+         isOpen={isBankDeleteConfirmOpen}
+         onClose={() => setIsBankDeleteConfirmOpen(false)}
+         onConfirm={handleDeleteBank}
+         title="Remove Bank Account"
+         message="Are you sure you want to remove these bank details? You will need to re-enter them later."
+      />
+
+      {/* Bank Account Modal */}
+      {isBankModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-[550px] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100 bg-[#fcfdff]">
+              <h2 className="text-[18px] font-normal text-[#2c3e50] tracking-tight">Add Bank Account Details</h2>
+              <button onClick={() => { setIsBankModalOpen(false); setBankErrors([]); }} className="text-red-500 hover:bg-red-50 p-1 rounded-sm transition-colors">
+                <X size={20} strokeWidth={2.5} />
+              </button>
+            </div>
+            
+            <div className="px-8 py-6 space-y-6 overflow-y-auto bg-[#fcfdff] max-h-[70vh]">
+              {bankErrors.length > 0 && (
+                 <div className="bg-[#fff0f0] border border-[#ffd6d6] rounded-xl p-4 flex items-start gap-3 relative">
+                    <ul className="list-disc pl-5 text-[14px] font-medium text-[#2c3e50] space-y-1.5 w-full">
+                       {bankErrors.map((err, i) => <li key={i}>{err}</li>)}
+                    </ul>
+                    <button onClick={() => setBankErrors([])} className="absolute top-4 right-4 text-red-500 hover:bg-red-50 rounded-full p-1"><X size={16} strokeWidth={2.5}/></button>
+                 </div>
+              )}
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-[13px] font-medium text-slate-700">Account Type</label>
+                  <select 
+                    value={bankForm.accountType} 
+                    onChange={e => setBankForm({...bankForm, accountType: e.target.value})}
+                    className="w-full h-[42px] px-3 border border-slate-200 rounded-md text-[14px] bg-white text-slate-800 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all"
+                  >
+                    <option value="Current">Current</option>
+                    <option value="Savings">Savings</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[13px] font-medium text-slate-700">Account Holder Name</label>
+                  <input type="text" defaultValue={vendor?.name || ''} onChange={e => setBankForm({...bankForm, accountHolderName: e.target.value})} className="w-full h-[42px] px-3 border border-slate-200 rounded-md text-[14px] bg-white text-slate-800 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all" />
+                </div>
+                
+                <div className="p-5 border border-slate-100 rounded-xl bg-white shadow-sm flex items-start gap-5">
+                  <div className="w-[60px] h-[60px] bg-[#f2f6ff] rounded-[14px] flex items-center justify-center shrink-0">
+                    <Landmark size={30} className="text-[#3b82f6]" strokeWidth={1.5} />
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <label className="text-[13px] font-medium text-slate-700">Bank Name</label>
+                    <input type="text" value={bankForm.bankName} onChange={e => setBankForm({...bankForm, bankName: e.target.value})} className="w-full h-[42px] px-3 border border-slate-200 rounded-md text-[14px] outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all shadow-sm" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 relative">
+                  <label className="text-[13px] font-medium text-[#ef4444]">Account Number*</label>
+                  <div className="relative">
+                    <input type={showAccountNum ? "text" : "password"} value={bankForm.accountNumber} onChange={e => setBankForm({...bankForm, accountNumber: e.target.value})} className="w-full h-[42px] px-3 pr-10 border border-slate-200 rounded-md text-[14px] outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all font-mono shadow-sm [&::-ms-reveal]:hidden [&::-ms-clear]:hidden" />
+                    <button type="button" onClick={() => setShowAccountNum(!showAccountNum)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors">
+                      {showAccountNum ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[13px] font-medium text-[#ef4444]">Re-enter Account Number*</label>
+                  <input type="text" value={bankForm.reAccountNumber} onChange={e => setBankForm({...bankForm, reAccountNumber: e.target.value})} onPaste={e => e.preventDefault()} onDrop={e => e.preventDefault()} className="w-full h-[42px] px-3 border border-slate-200 rounded-md text-[14px] outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all font-mono shadow-sm" />
+                </div>
+
+                <div className="space-y-1.5 pb-2">
+                  <label className="text-[13px] font-medium text-[#ef4444]">IFSC*</label>
+                  <div className="flex">
+                     <div className="w-[50%] relative z-20 pr-3">
+                        <input type="text" value={bankForm.ifsc} onChange={e => setBankForm({...bankForm, ifsc: e.target.value.toUpperCase()})} className="w-full h-[42px] px-3 border border-slate-200 rounded-md text-[14px] outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all font-mono uppercase shadow-sm" />
+                     </div>
+                     <div className="w-[50%] relative z-10 flex items-center">
+                        {ifscLoading && (
+                          <div className="flex items-center gap-2 pl-4">
+                            <Loader2 size={16} className="animate-spin text-blue-500" />
+                            <span className="text-[13px] text-slate-500">Fetching...</span>
+                          </div>
+                        )}
+                        {ifscError && (
+                          <div className="flex items-center gap-2 pl-4">
+                            <AlertCircle size={16} className="text-red-500" />
+                            <span className="text-[13px] text-red-500 font-medium">Invalid IFSC</span>
+                          </div>
+                        )}
+                     </div>
+                  </div>
+
+                  {/* Auto-filled bank details from IFSC */}
+                  {(bankForm.bankName || bankForm.branch) && (
+                    <div className="grid grid-cols-2 gap-4 p-5 bg-slate-50/50 rounded-xl border border-slate-100 animate-fade-in">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Bank Name</label>
+                        <p className="text-[14px] font-bold text-slate-900">{bankForm.bankName || '---'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Branch</label>
+                        <p className="text-[14px] font-bold text-slate-900">{bankForm.branch || '---'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">City</label>
+                        <p className="text-[13px] font-semibold text-slate-700">{bankForm.city || '---'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">State</label>
+                        <p className="text-[13px] font-semibold text-slate-700">{bankForm.state || '---'}</p>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                         <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">District</label>
+                         <p className="text-[13px] font-semibold text-slate-700">{bankForm.district || '---'}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="px-8 py-5 border-t border-slate-100 bg-white flex items-center justify-start gap-4 rounded-b-xl">
+              <button 
+                 onClick={async () => {
+                    const errors = [];
+                    if (!bankForm.ifsc) errors.push("Enter the IFSC.");
+                    if (!bankForm.accountNumber) errors.push("Please enter the Account Number.");
+                    if (bankForm.accountNumber && bankForm.reAccountNumber && bankForm.accountNumber !== bankForm.reAccountNumber) errors.push("Account Numbers do not match.");
+                    
+                    if (errors.length > 0) {
+                      setBankErrors(errors);
+                      return;
+                    }
+
+                    // Execution: Actually save the bank details to the cloud database
+                    try {
+                      setLoading(true);
+                      const bankData = JSON.stringify(bankForm);
+                      await ledgerAPI.update(vendor.id, { 
+                        ...vendor,
+                        bankDetailsJson: bankData 
+                      });
+                      
+                      addNotification('Bank account details saved successfully!', 'success');
+                      
+                      // Refresh the vendor data locally
+                      setAllLedgers(prev => prev.map(v => 
+                        v.id === vendor.id ? { ...v, bankDetailsJson: bankData } : v
+                      ));
+                      
+                      setIsBankModalOpen(false);
+                      setBankErrors([]);
+                    } catch (err) {
+                      addNotification('Failed to save bank details.', 'error');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }} 
+                  disabled={loading}
+                 className="px-6 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-[4px] text-[14px] font-medium shadow-sm transition-colors"
+                >
+                Save
+              </button>
+              <button onClick={() => { setIsBankModalOpen(false); setBankErrors([]); }} className="px-5 py-2 border border-slate-200 rounded-[4px] text-[14px] font-medium text-slate-900 bg-[#fcfdff] hover:bg-slate-50 transition-colors">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -105,16 +105,6 @@ const RecurringBillsView = ({ companyId }) => {
         />
 
         {/* --- MASTER LIST --- */}
-  return (
-    <div className="flex flex-col h-screen bg-white animate-in fade-in duration-500">
-        <ConfirmModal 
-            isOpen={isDeleteModalOpen}
-            onClose={() => setIsDeleteModalOpen(false)}
-            onConfirm={confirmDelete}
-            title="Terminate Recurring Bill"
-            message="Are you sure you want to delete this recurring bill profile?"
-            type="danger"
-        />
 
         {/* --- Header Area --- */}
         <header className="px-8 py-4 flex items-center justify-between border-b border-slate-100 bg-white sticky top-0 z-20">
@@ -342,8 +332,6 @@ const RecurringBillsView = ({ companyId }) => {
             </div>
           </div>
         )}
-    </div>
-  );}
     </div>
   );
 };

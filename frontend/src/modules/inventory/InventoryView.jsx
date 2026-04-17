@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, ChevronRight, ChevronDown, Plus, MoreVertical, Search, Package, RefreshCcw, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { inventoryAPI } from '../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 import ItemDetailView from './ItemDetailView';
@@ -9,6 +9,7 @@ import ItemEntryView from './ItemEntryView';
 
 const InventoryView = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -25,6 +26,14 @@ const InventoryView = () => {
   useEffect(() => { 
     fetchData(); 
   }, [companyId]);
+
+  useEffect(() => {
+    if (location.state?.openItem) {
+      setSelectedItem(location.state.openItem);
+      setViewMode('split');
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   const fetchData = async () => {
     if (!companyId) return;
@@ -110,9 +119,7 @@ const InventoryView = () => {
               >
                 <Plus size={16} strokeWidth={3}/> New
               </button>
-              <button className="p-1.5 border border-slate-200 rounded-md text-slate-400 hover:bg-slate-50 transition-all">
-                <MoreVertical size={16} />
-              </button>
+
             </div>
           </div>
 
@@ -209,9 +216,7 @@ const InventoryView = () => {
                 >
                    <Plus size={18} strokeWidth={2.5} />
                 </button>
-                <button className="p-2 border border-slate-200 text-slate-400 rounded-xl hover:bg-slate-50 transition-all hover:text-slate-600">
-                   <MoreVertical size={18} />
-                </button>
+
               </div>
             </div>
 
@@ -228,42 +233,33 @@ const InventoryView = () => {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-2 space-y-1">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
               {filteredItems.map(item => (
                 <div 
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
-                  className={`flex items-center justify-between px-4 py-5 cursor-pointer rounded-2xl transition-all group ${
+                  className={`flex items-center justify-between px-6 py-4 cursor-pointer border-b border-slate-50 transition-all ${
                     selectedItem?.id === item.id 
-                      ? 'bg-blue-50/80 shadow-[0_2px_8px_-4px_rgba(30,97,240,0.3)]' 
-                      : 'hover:bg-slate-50'
+                      ? 'bg-blue-50/40' 
+                      : 'hover:bg-slate-50/50'
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-xl transition-colors ${
-                       selectedItem?.id === item.id ? 'bg-[#1e61f0] text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'
-                    }`}>
-                       {item.type === 'Service' ? <RefreshCcw size={14} /> : <Package size={14} />}
-                    </div>
-                    <div className="flex flex-col">
-                       <span className={`text-[13px] font-bold tracking-tight ${selectedItem?.id === item.id ? 'text-[#1e61f0]' : 'text-slate-800'}`}>
+                    <input 
+                       type="checkbox" 
+                       className="w-3.5 h-3.5 rounded border-slate-300 accent-[#1e61f0] shrink-0" 
+                       onClick={(e) => e.stopPropagation()} 
+                    />
+                    <div className="flex flex-col min-w-0">
+                       <span className={`text-[13px] font-medium truncate ${selectedItem?.id === item.id ? 'text-[#1e61f0]' : 'text-slate-700'}`}>
                           {item.name}
-                       </span>
-                       <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">
-                          {item.type || 'Goods'}
                        </span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                     <span className={`text-[12px] font-black tracking-tight ${selectedItem?.id === item.id ? 'text-slate-900' : 'text-slate-700'}`}>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                     <span className="text-[12px] font-bold text-slate-900">
                         {formatCurrency(item.sellingPrice || 0)}
                      </span>
-                     {selectedItem?.id === item.id && (
-                        <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-blue-100 rounded-lg">
-                           <Check size={10} className="text-[#1e61f0]" strokeWidth={3} />
-                           <span className="text-[9px] font-black text-[#1e61f0] uppercase">Selected</span>
-                        </div>
-                     )}
                   </div>
                 </div>
               ))}

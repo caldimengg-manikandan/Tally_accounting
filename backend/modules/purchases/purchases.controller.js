@@ -112,7 +112,7 @@ exports.getBills = async (req, res) => {
             const plainBill = bill.toJSON();
             
             // The Credit transaction is the vendor/supplier
-            const crTx = plainBill.Transactions?.find(t => t.type === 'Cr');
+            const crTx = plainBill.Transactions?.find(t => parseFloat(t.credit || 0) > 0);
             // The total amount is the credit to the vendor
             const totalAmount = crTx ? parseFloat(crTx.credit || 0) : 0;
 
@@ -237,10 +237,10 @@ exports.getExpenses = async (req, res) => {
         
         const mappedExpenses = expenses.map(expense => {
             const totalAmount = expense.Transactions?.reduce((sum, t) => {
-                return t.type === 'Dr' ? sum + parseFloat(t.amount || 0) : sum;
+                return parseFloat(t.debit || 0) > 0 ? sum + parseFloat(t.debit || 0) : sum;
             }, 0) || 0;
             
-            const expenseTransaction = expense.Transactions?.find(t => t.type === 'Dr');
+            const expenseTransaction = expense.Transactions?.find(t => parseFloat(t.debit || 0) > 0);
             
             let customerName = '-';
             let vendorName = '-';
@@ -253,7 +253,7 @@ exports.getExpenses = async (req, res) => {
             } catch (e) {}
 
             // Find the Credit transaction for 'Paid Through'
-            const paymentTransaction = expense.Transactions?.find(t => t.type === 'Cr');
+            const paymentTransaction = expense.Transactions?.find(t => parseFloat(t.credit || 0) > 0);
             const paidThrough = paymentTransaction?.Ledger?.name || 'Cash';
 
             return {

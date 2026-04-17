@@ -92,6 +92,8 @@ const ExpenseEntryView = ({ companyId }) => {
     id: Date.now() + Math.random(),
     date: new Date().toISOString().split('T')[0],
     expenseAccountId: '',
+    paidThroughId: '',
+    vendorId: '',
     amount: '',
     currency: 'INR',
     isTaxInclusive: true,
@@ -237,6 +239,8 @@ const ExpenseEntryView = ({ companyId }) => {
           };
           await voucherAPI.create(payload);
         }
+        navigate('/expenses'); // Return to list for bulk adds
+        return;
       } else {
         if (!formData.paidThroughId) {
           throw new Error("Please select a Paid Through account.");
@@ -288,29 +292,32 @@ const ExpenseEntryView = ({ companyId }) => {
           narration: JSON.stringify(narrationData),
           entries: entries
         };
-        await voucherAPI.create(payload);
-      }
+        const res = await voucherAPI.create(payload);
+        const newId = res.data.voucher?.id;
 
-      setSuccessMessage("Expense recorded successfully!");
-      setShowValidation(false);
-      setTimeout(() => setSuccessMessage(''), 5000);
+        setSuccessMessage("Expense recorded successfully!");
+        setShowValidation(false);
+        setTimeout(() => setSuccessMessage(''), 5000);
 
-      if (isNew) {
-        // Reset states
-        setFormData(prev => ({
-          ...prev,
-          date: new Date().toISOString().split('T')[0],
-          expenseAccountId: '',
-          amount: '',
-          invoiceNumber: '',
-          notes: '',
-          customerId: ''
-        }));
-        setItemizedRows([{ id: Date.now(), expenseAccountId: '', notes: '', amount: '' }]);
-        setBulkRows(Array(5).fill(null).map((_, i) => ({ ...initialBulkRow(), id: i + 1 })));
-        window.scrollTo(0, 0);
-      } else {
-        navigate('/expenses');
+        if (isNew) {
+          // Reset states for "Save and New"
+          setFormData(prev => ({
+            ...prev,
+            date: new Date().toISOString().split('T')[0],
+            expenseAccountId: '',
+            amount: '',
+            invoiceNumber: '',
+            notes: '',
+            customerId: ''
+          }));
+          setItemizedRows([{ id: Date.now(), expenseAccountId: '', notes: '', amount: '' }]);
+          setBulkRows(Array(5).fill(null).map((_, i) => ({ ...initialBulkRow(), id: i + 1 })));
+          window.scrollTo(0, 0);
+        } else {
+          // Redirect to the newly created expense detail view
+          navigate(`/expenses?id=${newId}`);
+        }
+        return;
       }
     } catch (err) {
       console.error(err);
@@ -455,7 +462,16 @@ const ExpenseEntryView = ({ companyId }) => {
     })))
   ].filter((v, i, a) => a.findIndex(t => t.name.toLowerCase() === v.name.toLowerCase()) === i);
 
-  const customerLedgers = ledgers.filter(l => l.Group?.name?.includes('Debtor'));
+  const customerLedgers = ledgers.filter(l => 
+    l.Group?.name?.toLowerCase().includes('debtor') || 
+    l.groupName?.toLowerCase().includes('debtor') ||
+    l.Group?.name?.toLowerCase().includes('customer') ||
+    l.groupName?.toLowerCase().includes('customer')
+  );
+
+  const itemizedTotal = React.useMemo(() => {
+    return itemizedRows.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0);
+  }, [itemizedRows]);
 
   // Grouped and filtered account list for searchable dropdown
   const filteredAccountList = getGroupedLedgers(
@@ -742,7 +758,7 @@ const ExpenseEntryView = ({ companyId }) => {
                                     className="w-[180px] h-9 px-2 text-[13px] border border-slate-200 rounded focus:border-blue-500 outline-none appearance-none"
                                  >
                                     <option value=""></option>
-                                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    {customerLedgers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                  </select>
                               </td>
                               <td className="p-2 align-top">

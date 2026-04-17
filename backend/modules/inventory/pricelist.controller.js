@@ -31,6 +31,10 @@ const pricelistController = {
         markupType,
         percentage: percentage || 0,
         roundOffTo,
+        pricingScheme: pricingScheme || 'Unit Pricing',
+        currency: currency || 'INR - Indian Rupee',
+        includeDiscount: includeDiscount || false,
+        itemRates: itemRates || {},
         CompanyId
       });
 
