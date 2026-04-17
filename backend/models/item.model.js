@@ -65,6 +65,14 @@ module.exports = (sequelize, DataTypes) => {
     gstRate: {
       type: DataTypes.DECIMAL(5, 2),
       defaultValue: 18
+    },
+    salesInformation: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
+    },
+    purchaseInformation: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
     }
   });
 

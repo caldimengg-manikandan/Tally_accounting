@@ -160,7 +160,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
       if (onSaveSuccess) {
         onSaveSuccess(result.data);
       } else if (standalone) {
-        navigate('/vendors');
+        navigate(`/vendors/view/${result.data.id}`);
       }
     } catch (err) {
       console.error(err.response?.data);
@@ -334,12 +334,18 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
                                 <input value={billingAddress.pinCode} onChange={e => setBillingAddress({...billingAddress, pinCode: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px]" />
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-slate-400">State</label>
-                            <select value={billingAddress.state} onChange={e => setBillingAddress({...billingAddress, state: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] bg-white">
-                                <option value="">Select State</option>
-                                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[11px] font-medium text-slate-400">State</label>
+                                <select value={billingAddress.state} onChange={e => setBillingAddress({...billingAddress, state: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] bg-white">
+                                    <option value="">Select State</option>
+                                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[11px] font-medium text-slate-400">Phone</label>
+                                <input value={billingAddress.phone} onChange={e => setBillingAddress({...billingAddress, phone: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none focus:border-blue-300" placeholder="Phone Number" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -379,12 +385,18 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
                                 <input value={shippingAddress.pinCode} onChange={e => setShippingAddress({...shippingAddress, pinCode: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px]" />
                             </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-slate-400">State</label>
-                            <select value={shippingAddress.state} onChange={e => setShippingAddress({...shippingAddress, state: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] bg-white">
-                                <option value="">Select State</option>
-                                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[11px] font-medium text-slate-400">State</label>
+                                <select value={shippingAddress.state} onChange={e => setShippingAddress({...shippingAddress, state: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] bg-white">
+                                    <option value="">Select State</option>
+                                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[11px] font-medium text-slate-400">Phone</label>
+                                <input value={shippingAddress.phone} onChange={e => setShippingAddress({...shippingAddress, phone: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none focus:border-blue-300" placeholder="Phone Number" />
+                            </div>
                         </div>
                     </div>
                 </div>

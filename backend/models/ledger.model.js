@@ -161,6 +161,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    bankDetailsJson: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     image: {
       type: DataTypes.TEXT,
       allowNull: true

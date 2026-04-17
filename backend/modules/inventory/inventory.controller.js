@@ -13,7 +13,8 @@ exports.createItem = async (req, res) => {
     const { 
       name, unit, openingStock, standardRate, companyId,
       type, sellingPrice, salesAccount, salesDescription,
-      costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl
+      costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl,
+      salesInformation, purchaseInformation
     } = req.body;
     
     const item = await Item.create({
@@ -31,6 +32,8 @@ exports.createItem = async (req, res) => {
       purchaseDescription,
       preferredVendor,
       imageUrl,
+      salesInformation: salesInformation !== undefined ? salesInformation : true,
+      purchaseInformation: purchaseInformation !== undefined ? purchaseInformation : true,
       CompanyId: companyId
     });
 
@@ -100,7 +103,8 @@ exports.updateItem = async (req, res) => {
     const oldData = { ...item.dataValues };
     const {
       name, unit, type, sellingPrice, salesAccount, salesDescription,
-      costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl
+      costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl,
+      salesInformation, purchaseInformation
     } = req.body;
 
     await item.update({
@@ -112,7 +116,9 @@ exports.updateItem = async (req, res) => {
       purchaseAccount: purchaseAccount || 'Cost of Goods Sold',
       purchaseDescription,
       preferredVendor,
-      imageUrl
+      imageUrl,
+      salesInformation: salesInformation !== undefined ? salesInformation : true,
+      purchaseInformation: purchaseInformation !== undefined ? purchaseInformation : true
     });
 
     await AuditService.log({

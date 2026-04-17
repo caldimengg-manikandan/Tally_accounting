@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown, Check, Search, Database, Upload, RefreshCw, Layers, Plus, Download } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { priceListAPI, inventoryAPI } from '../../services/api';
 import * as XLSX from 'xlsx';
 
-const PriceListEntryView = () => {
+const PriceListEntryView = ({ companyId: propCompanyId }) => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = !!id;
+  
+  // State-based companyId to ensure reactivity across refreshes and company switches
+  const [activeCompanyId, setActiveCompanyId] = useState(propCompanyId || localStorage.getItem('companyId'));
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -19,7 +24,8 @@ const PriceListEntryView = () => {
     currency: 'INR - Indian Rupee',
     includeDiscount: false,
     itemRates: {}, // { itemId: customRate } for Unit Pricing
-    volumeRates: {}, // { itemId: [{ start: 1, end: '', rate: '' }] } for Volume Pricing
+    itemDiscounts: {}, // { itemId: discountPercentage } for Unit Pricing
+    volumeRates: {}, // { itemId: [{ start: 1, end: '', rate: '', discount: '' }] } for Volume Pricing
     showImportSection: false,
     selectedItemIds: [],
     isBulkUpdateMode: false,
@@ -70,22 +76,66 @@ const PriceListEntryView = () => {
     opt.toLowerCase().includes(currencySearch.toLowerCase())
   );
 
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(itemSearch.toLowerCase())
-  );
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(itemSearch.toLowerCase());
+    
+    // Relaxed filtering: Allow ₹0 items so users can set their first prices here
+    const isSales = !!item.salesInformation;
+    const isPurchase = !!item.purchaseInformation;
+
+    const matchesTransactionType = formData.transactionType === 'Sales' ? isSales : isPurchase;
+    
+    return matchesSearch && matchesTransactionType;
+  });
+
+  console.log(`[DEBUG] Price List Rendering: Type=${formData.transactionType}, Showing ${filteredItems.length}/${items.length} items`);
+
+  // Periodically check for company ID if it was missing initially
+  useEffect(() => {
+    if (!activeCompanyId) {
+      const storedId = localStorage.getItem('companyId');
+      if (storedId) setActiveCompanyId(storedId);
+    }
+  }, [activeCompanyId]);
 
   useEffect(() => {
-    if (formData.priceListType === 'Individual Items' && items.length === 0) {
+    if (activeCompanyId) {
       fetchItems();
     }
-  }, [formData.priceListType]);
+  }, [activeCompanyId]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      fetchPriceListDetails();
+    }
+  }, [id]);
+
+  const fetchPriceListDetails = async () => {
+    try {
+      const res = await priceListAPI.getById(id);
+      if (res.data) {
+        setFormData(prev => ({
+          ...prev,
+          ...res.data,
+          // Ensure nested objects are handled if they come back from API differently
+          itemRates: res.data.itemRates || {},
+          volumeRates: res.data.volumeRates || {},
+        }));
+      }
+    } catch (err) {
+      console.error('Fetch price list failed:', err);
+      alert('Failed to load price list details.');
+    }
+  };
 
   const fetchItems = async () => {
-    setLoadingItems(true);
+    // If we're already loading or have items, don't show the "Loading..." flash unless we have none
+    if (items.length === 0) setLoadingItems(true);
+    
     try {
-      const companyId = localStorage.getItem('companyId');
-      if (companyId) {
-        const res = await inventoryAPI.getByCompany(companyId);
+      const targetCompanyId = activeCompanyId || localStorage.getItem('companyId');
+      if (targetCompanyId) {
+        const res = await inventoryAPI.getByCompany(targetCompanyId);
         setItems(res.data || []);
       }
     } catch (err) {
@@ -105,8 +155,18 @@ const PriceListEntryView = () => {
     });
   };
 
+  const handleDiscountChange = (itemId, val) => {
+    setFormData({
+      ...formData,
+      itemDiscounts: {
+        ...formData.itemDiscounts,
+        [itemId]: val
+      }
+    });
+  };
+
   const addVolumeRange = (itemId) => {
-    const currentRanges = formData.volumeRates[itemId] || [{ start: 1, end: '', rate: '' }];
+    const currentRanges = formData.volumeRates[itemId] || [{ start: 1, end: '', rate: '', discount: '' }];
     const lastRange = currentRanges[currentRanges.length - 1];
     const newStart = lastRange.end ? parseInt(lastRange.end) + 1 : '';
 
@@ -114,13 +174,13 @@ const PriceListEntryView = () => {
       ...formData,
       volumeRates: {
         ...formData.volumeRates,
-        [itemId]: [...currentRanges, { start: newStart, end: '', rate: '' }]
+        [itemId]: [...currentRanges, { start: newStart, end: '', rate: '', discount: '' }]
       }
     });
   };
 
   const updateVolumeRange = (itemId, index, field, value) => {
-    const currentRanges = [...(formData.volumeRates[itemId] || [{ start: 1, end: '', rate: '' }])];
+    const currentRanges = [...(formData.volumeRates[itemId] || [{ start: 1, end: '', rate: '', discount: '' }])];
     currentRanges[index] = { ...currentRanges[index], [field]: value };
     
     setFormData({
@@ -154,24 +214,34 @@ const PriceListEntryView = () => {
       }
 
       // Format data for Excel
-      const excelData = items.map(item => ({
-        'Item Name': item.name,
-        'Start Quantity': 1,
-        'End Quantity': '',
-        'PriceList Rate': item.sellingPrice || 0
-      }));
+      const excelData = items.map(item => {
+        const row = {
+          'Item Name': item.name,
+          'Start Quantity': 1,
+          'End Quantity': '',
+          'PriceList Rate': (formData.transactionType === 'Sales' ? item.sellingPrice : item.costPrice) || 0
+        };
+        if (formData.includeDiscount) {
+          row['Discount (%)'] = 0;
+        }
+        return row;
+      });
 
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Price List Items');
 
       // Add column widths
-      worksheet['!cols'] = [
+      const cols = [
         { wch: 30 }, // Item Name
         { wch: 15 }, // Start Qty
         { wch: 15 }, // End Qty
         { wch: 15 }  // Rate
       ];
+      if (formData.includeDiscount) {
+        cols.push({ wch: 15 }); // Discount
+      }
+      worksheet['!cols'] = cols;
 
       XLSX.writeFile(workbook, `PriceList_Template_${new Date().toLocaleDateString()}.xlsx`);
     } catch (err) {
@@ -187,20 +257,26 @@ const PriceListEntryView = () => {
         return;
       }
 
-      const excelData = filteredItems.map(item => ({
-        'Item Name': item.name,
-        'Start Quantity': 1,
-        'End Quantity': '',
-        'PriceList Rate': item.sellingPrice || 0
-      }));
+      const excelData = filteredItems.map(item => {
+        const row = {
+          'Item Name': item.name,
+          'Start Quantity': 1,
+          'End Quantity': '',
+          'PriceList Rate': (formData.transactionType === 'Sales' ? item.sellingPrice : item.costPrice) || 0
+        };
+        if (formData.includeDiscount) {
+          row['Discount (%)'] = 0;
+        }
+        return row;
+      });
 
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Items');
 
-      worksheet['!cols'] = [
-        { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
-      ];
+      const cols = [{ wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+      if (formData.includeDiscount) cols.push({ wch: 15 });
+      worksheet['!cols'] = cols;
 
       XLSX.writeFile(workbook, `Filtered_PriceList_${new Date().toLocaleDateString()}.xlsx`);
     } catch (err) {
@@ -232,6 +308,7 @@ const PriceListEntryView = () => {
         }
 
         const newItemRates = { ...formData.itemRates };
+        const newItemDiscounts = { ...formData.itemDiscounts };
         const newVolumeRates = { ...formData.volumeRates };
 
         // Process data
@@ -242,6 +319,9 @@ const PriceListEntryView = () => {
           if (matchedItem) {
             if (formData.pricingScheme === 'Unit Pricing') {
               newItemRates[matchedItem.id] = row['PriceList Rate'] || 0;
+              if (formData.includeDiscount) {
+                newItemDiscounts[matchedItem.id] = row['Discount (%)'] || 0;
+              }
             } else {
               // Volume Pricing - Grouping by item
               if (!newVolumeRates[matchedItem.id]) {
@@ -250,7 +330,8 @@ const PriceListEntryView = () => {
               newVolumeRates[matchedItem.id].push({
                 start: row['Start Quantity'] || 1,
                 end: row['End Quantity'] || '',
-                rate: row['PriceList Rate'] || 0
+                rate: row['PriceList Rate'] || 0,
+                discount: row['Discount (%)'] || 0
               });
             }
           }
@@ -259,6 +340,7 @@ const PriceListEntryView = () => {
         setFormData({
           ...formData,
           itemRates: newItemRates,
+          itemDiscounts: newItemDiscounts,
           volumeRates: newVolumeRates,
           showImportSection: false // Switch back to see the results
         });
@@ -309,7 +391,7 @@ const PriceListEntryView = () => {
       const item = items.find(it => it.id === itemId);
       if (!item) return;
 
-      const basePrice = parseFloat(item.sellingPrice || 0);
+      const basePrice = parseFloat((formData.transactionType === 'Sales' ? item.sellingPrice : item.costPrice) || 0);
 
       if (formData.pricingScheme === 'Unit Pricing') {
         if (mode === 'Fixed') {
@@ -361,19 +443,18 @@ const PriceListEntryView = () => {
         }
       }
 
-      const companyId = localStorage.getItem('companyId');
-      if (!companyId) {
-        alert('Company context missing. Please re-login.');
-        return;
-      }
-
       const payload = {
         ...formData,
-        CompanyId: companyId
+        CompanyId: activeCompanyId
       };
 
-      await priceListAPI.create(payload);
-      alert('Price List saved successfully! ✨');
+      if (isEditMode) {
+        await priceListAPI.update(id, payload);
+        alert('Price List updated successfully! ✨');
+      } else {
+        await priceListAPI.create(payload);
+        alert('Price List saved successfully! ✨');
+      }
       navigate('/price-lists');
     } catch (err) {
       console.error('Save failed:', err);
@@ -385,7 +466,7 @@ const PriceListEntryView = () => {
     <div className="flex flex-col bg-white h-[calc(100vh-80px)] font-sans animate-fade-in relative z-10 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100 shrink-0">
-        <h2 className="text-[18px] font-bold text-slate-900">New Price List</h2>
+        <h2 className="text-[18px] font-bold text-slate-900">{isEditMode ? 'Edit Price List' : 'New Price List'}</h2>
         <button 
           onClick={() => navigate('/price-lists')}
           className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-all"
@@ -412,10 +493,10 @@ const PriceListEntryView = () => {
             </div>
 
             {/* Transaction Type */}
-            <div className="flex items-center">
+            <div className={`flex items-center ${isEditMode ? 'opacity-80' : ''}`}>
               <label className="text-[13px] font-medium text-slate-700 w-[160px]">Transaction Type</label>
               <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 cursor-pointer group">
+                <label className={`flex items-center gap-2 ${isEditMode ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${formData.transactionType === 'Sales' ? 'border-[#1e61f0] bg-[#1e61f0]' : 'border-slate-300 bg-white group-hover:border-slate-400'}`}>
                     {formData.transactionType === 'Sales' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
@@ -423,11 +504,12 @@ const PriceListEntryView = () => {
                     type="radio" 
                     className="hidden" 
                     checked={formData.transactionType === 'Sales'}
-                    onChange={() => setFormData({...formData, transactionType: 'Sales'})}
+                    onChange={() => !isEditMode && setFormData({...formData, transactionType: 'Sales'})}
+                    disabled={isEditMode}
                   />
                   <span className="text-[13px] text-slate-600 font-medium">Sales</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer group">
+                <label className={`flex items-center gap-2 ${isEditMode ? 'cursor-not-allowed' : 'cursor-pointer group'}`}>
                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${formData.transactionType === 'Purchase' ? 'border-[#1e61f0] bg-[#1e61f0]' : 'border-slate-300 bg-white group-hover:border-slate-400'}`}>
                     {formData.transactionType === 'Purchase' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
@@ -435,7 +517,8 @@ const PriceListEntryView = () => {
                     type="radio" 
                     className="hidden" 
                     checked={formData.transactionType === 'Purchase'}
-                    onChange={() => setFormData({...formData, transactionType: 'Purchase'})}
+                    onChange={() => !isEditMode && setFormData({...formData, transactionType: 'Purchase'})}
+                    disabled={isEditMode}
                   />
                   <span className="text-[13px] text-slate-600 font-medium">Purchase</span>
                 </label>
@@ -443,12 +526,12 @@ const PriceListEntryView = () => {
             </div>
 
             {/* Price List Type */}
-            <div className="flex items-start">
+            <div className={`flex items-start ${isEditMode ? 'opacity-80' : ''}`}>
               <label className="text-[13px] font-medium text-slate-700 w-[160px] pt-4">Price List Type</label>
               <div className="flex gap-4">
                 <div 
-                  onClick={() => setFormData({...formData, priceListType: 'All Items'})}
-                  className={`w-[240px] p-3 rounded-lg border-2 transition-all cursor-pointer ${formData.priceListType === 'All Items' ? 'border-blue-200 bg-blue-50/40' : 'border-slate-50 hover:border-slate-100 bg-slate-50/30'}`}
+                  onClick={() => !isEditMode && setFormData({...formData, priceListType: 'All Items'})}
+                  className={`w-[240px] p-3 rounded-lg border-2 transition-all ${isEditMode ? 'cursor-not-allowed' : 'cursor-pointer'} ${formData.priceListType === 'All Items' ? 'border-blue-200 bg-blue-50/40' : 'border-slate-50 hover:border-slate-100 bg-slate-50/30'}`}
                 >
                   <div className="flex items-start gap-2.5">
                     <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 ${formData.priceListType === 'All Items' ? 'bg-[#1e61f0] border-[#1e61f0]' : 'border-slate-300 bg-white'}`}>
@@ -462,8 +545,14 @@ const PriceListEntryView = () => {
                 </div>
 
                 <div 
-                  onClick={() => setFormData({...formData, priceListType: 'Individual Items'})}
-                  className={`w-[240px] p-3 rounded-lg border-2 transition-all cursor-pointer ${formData.priceListType === 'Individual Items' ? 'border-blue-200 bg-blue-50/40' : 'border-slate-50 hover:border-slate-100 bg-slate-50/30'}`}
+                  onClick={() => {
+                    if (!isEditMode) {
+                      setFormData({...formData, priceListType: 'Individual Items'});
+                      // Guarantee a fresh fetch when switching to Individual Items mode
+                      fetchItems();
+                    }
+                  }}
+                  className={`w-[240px] p-3 rounded-lg border-2 transition-all ${isEditMode ? 'cursor-not-allowed' : 'cursor-pointer'} ${formData.priceListType === 'Individual Items' ? 'border-blue-200 bg-blue-50/40' : 'border-slate-50 hover:border-slate-100 bg-slate-50/30'}`}
                 >
                   <div className="flex items-start gap-2.5">
                     <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 ${formData.priceListType === 'Individual Items' ? 'bg-[#1e61f0] border-[#1e61f0]' : 'border-slate-300 bg-white'}`}>
@@ -751,19 +840,9 @@ const PriceListEntryView = () => {
 
                 {/* Bulk Customization Table */}
                 <div className="pt-2">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 text-slate-900 font-bold">
-                      <span className="text-[14px]">Customise Rates in Bulk</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {!formData.isBulkUpdateMode && (
-                        <button 
-                          onClick={() => setFormData({...formData, isBulkUpdateMode: true})}
-                          className="flex items-center gap-1 text-[11px] font-bold text-[#1e61f0] hover:underline uppercase tracking-wider"
-                        >
-                          Update Rates in Bulk
-                        </button>
-                      )}
+                  <div className="flex flex-col gap-1.5 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div className="text-slate-900 font-bold text-[14px]">Customise Rates in Bulk</div>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-slate-500 font-medium uppercase tracking-tighter">Import Price List for Items</span>
                         <div 
@@ -774,6 +853,15 @@ const PriceListEntryView = () => {
                         </div>
                       </div>
                     </div>
+                    {formData.priceListType === 'Individual Items' && !formData.isBulkUpdateMode && (
+                      <button 
+                        onClick={() => setFormData({...formData, isBulkUpdateMode: true})}
+                        className="flex items-center gap-1.5 text-[11px] font-bold text-[#1e61f0] hover:opacity-80 transition-all uppercase tracking-wider w-fit"
+                      >
+                        <RefreshCw size={12} className="text-[#1e61f0]" />
+                        Update Rates in Bulk
+                      </button>
+                    )}
                   </div>
 
                   {/* Bulk Update Bar */}
@@ -812,7 +900,7 @@ const PriceListEntryView = () => {
                                 <Search size={12} className="text-[#1e61f0]" />
                               </div>
                             </th>
-                            <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">SALES RATE</th>
+                            <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">{formData.transactionType === 'Sales' ? 'SALES RATE' : 'PURCHASE RATE'}</th>
                             {formData.pricingScheme === 'Volume Pricing' && (
                               <>
                                 <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-center">START QUANTITY</th>
@@ -820,14 +908,17 @@ const PriceListEntryView = () => {
                               </>
                             )}
                             <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">CUSTOM RATE</th>
+                            {formData.includeDiscount && (
+                              <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">DISCOUNT (%)</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 max-h-[300px] overflow-y-auto">
                           {loadingItems ? (
-                            <tr><td colSpan={formData.pricingScheme === 'Volume Pricing' ? 6 : 4} className="px-4 py-8 text-center text-[12px] text-slate-400 italic">Loading inventory items...</td></tr>
+                            <tr><td colSpan={formData.pricingScheme === 'Volume Pricing' ? (formData.includeDiscount ? 7 : 6) : (formData.includeDiscount ? 5 : 4)} className="px-4 py-8 text-center text-[12px] text-slate-400 italic">Loading inventory items...</td></tr>
                           ) : filteredItems.length > 0 ? (
                             filteredItems.map(item => {
-                              const ranges = formData.volumeRates[item.id] || [{ start: 1, end: '', rate: '' }];
+                              const ranges = formData.volumeRates[item.id] || [{ start: 1, end: '', rate: '', discount: '' }];
                               const isSelected = formData.selectedItemIds.includes(item.id);
                               
                               return (
@@ -850,7 +941,7 @@ const PriceListEntryView = () => {
                                         </td>
                                       )}
                                       <td className="px-4 py-3 text-[13px] font-bold text-slate-900">{item.name}</td>
-                                      <td className="px-4 py-3 text-[13px] text-slate-900 text-right font-medium">₹{parseFloat(item.sellingPrice || 0).toLocaleString()}</td>
+                                      <td className="px-4 py-3 text-[13px] text-slate-900 text-right font-medium">₹{parseFloat((formData.transactionType === 'Sales' ? item.sellingPrice : item.costPrice) || 0).toLocaleString()}</td>
                                       <td className="px-4 py-3 text-right">
                                         <div className="flex items-center justify-end gap-1.5 ml-auto w-[120px]">
                                           <span className="text-slate-900 text-[12px]">₹</span>
@@ -863,6 +954,20 @@ const PriceListEntryView = () => {
                                           />
                                         </div>
                                       </td>
+                                      {formData.includeDiscount && (
+                                        <td className="px-4 py-3 text-right">
+                                          <div className="flex items-center justify-end gap-1.5 ml-auto w-[80px]">
+                                            <input 
+                                              type="number"
+                                              placeholder="0"
+                                              value={formData.itemDiscounts[item.id] || ''}
+                                              onChange={(e) => handleDiscountChange(item.id, e.target.value)}
+                                              className="w-full px-2 py-1 text-right text-[13px] font-medium text-slate-600 border-b border-slate-100 focus:border-[#1e61f0] outline-none transition-colors"
+                                            />
+                                            <span className="text-slate-400 text-[12px]">%</span>
+                                          </div>
+                                        </td>
+                                      )}
                                     </tr>
                                   ) : (
                                     <>
@@ -887,7 +992,7 @@ const PriceListEntryView = () => {
                                             <td rowSpan={ranges.length + 1} className={`px-4 py-3 text-[13px] font-bold text-slate-900 border-r border-slate-50 align-top pt-4 ${formData.isBulkUpdateMode ? '' : 'pl-4'}`}>{item.name}</td>
                                           )}
                                           {idx === 0 && (
-                                            <td rowSpan={ranges.length + 1} className="px-4 py-3 text-[13px] text-slate-900 text-right font-medium border-r border-slate-50 align-top pt-4">₹{parseFloat(item.sellingPrice || 0).toLocaleString()}</td>
+                                            <td rowSpan={ranges.length + 1} className="px-4 py-3 text-[13px] text-slate-900 text-right font-medium border-r border-slate-50 align-top pt-4">₹{parseFloat((formData.transactionType === 'Sales' ? item.sellingPrice : item.costPrice) || 0).toLocaleString()}</td>
                                           )}
                                           <td className="px-4 py-2">
                                             <input 
@@ -926,10 +1031,24 @@ const PriceListEntryView = () => {
                                               )}
                                             </div>
                                           </td>
+                                          {formData.includeDiscount && (
+                                            <td className="px-4 py-2 text-right">
+                                              <div className="flex items-center justify-end gap-1.5 ml-auto w-[100px]">
+                                                <input 
+                                                  type="number"
+                                                  placeholder="0"
+                                                  value={range.discount || ''}
+                                                  onChange={(e) => updateVolumeRange(item.id, idx, 'discount', e.target.value)}
+                                                  className="w-full px-2 py-1 text-right text-[13px] font-medium text-slate-600 border-b border-slate-100 focus:border-[#1e61f0] outline-none transition-colors"
+                                                />
+                                                <span className="text-slate-400 text-[12px]">%</span>
+                                              </div>
+                                            </td>
+                                          )}
                                         </tr>
                                       ))}
                                       <tr className={isSelected ? 'bg-blue-50/30' : ''}>
-                                        <td colSpan={formData.isBulkUpdateMode ? "4" : "3"} className="px-4 py-2">
+                                        <td colSpan={formData.isBulkUpdateMode ? (formData.includeDiscount ? "5" : "4") : (formData.includeDiscount ? "4" : "3")} className="px-4 py-2">
                                           <button 
                                             onClick={() => addVolumeRange(item.id)}
                                             className="flex items-center gap-1.5 text-[#1e61f0] font-bold text-[11px] tracking-wider hover:opacity-80 transition-all ml-8"
@@ -945,7 +1064,24 @@ const PriceListEntryView = () => {
                               );
                             })
                           ) : (
-                            <tr><td colSpan={formData.pricingScheme === 'Volume Pricing' ? 6 : 4} className="px-4 py-8 text-center text-[12px] text-slate-400">No items found in your inventory.</td></tr>
+                            <tr>
+                              <td colSpan={formData.pricingScheme === 'Volume Pricing' ? (formData.includeDiscount ? 7 : 6) : (formData.includeDiscount ? 5 : 4)} className="px-4 py-12 text-center">
+                                <div className="flex flex-col items-center gap-3">
+                                  <Database size={32} className="text-slate-200" />
+                                  <div className="space-y-1">
+                                    <p className="text-[13px] font-bold text-slate-400 tracking-tight">No items found in your inventory.</p>
+                                    <p className="text-[11px] text-slate-400">Items you create in the Inventory module will appear here.</p>
+                                  </div>
+                                  <button 
+                                    onClick={fetchItems}
+                                    className="mt-2 flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 rounded text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
+                                  >
+                                    <RefreshCw size={12} className={loadingItems ? 'animate-spin' : ''} />
+                                    RETRY FETCHING
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
                           )}
                         </tbody>
                       </table>

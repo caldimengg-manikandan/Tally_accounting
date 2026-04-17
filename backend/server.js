@@ -7,7 +7,7 @@ const { sequelize } = require('./models');
 const path = require('path');
 
 // 1. Initial Config (Loaded from backend/.env)
-dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config({ path: path.join(__dirname, '.env') });
 console.log('--- DATABASE CONFIGURATION ENGINE ---');
 if (process.env.DATABASE_URL) {
   console.log('Connecting to CLOUD POSTGRES via DATABASE_URL');

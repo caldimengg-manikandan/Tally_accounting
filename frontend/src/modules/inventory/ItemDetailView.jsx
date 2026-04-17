@@ -253,67 +253,43 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
 
   const tabs = ['Overview', 'Transactions', 'History'];
 
-  const DetailRow = ({ icon: Icon, label, value, color = "text-slate-500" }) => (
-     <div className="flex flex-col gap-1.5 p-4 rounded-2xl hover:bg-slate-50 transition-colors group">
-        <div className="flex items-center gap-2">
-           <div className={`p-1.5 rounded-lg opacity-40 group-hover:opacity-100 transition-opacity bg-slate-100 ${color}`}>
-              <Icon size={14} />
-           </div>
-           <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
-        </div>
-        <span className="text-[13px] font-bold text-slate-800 ml-9 lowercase first-letter:uppercase">{value}</span>
+  const SimpleDetailRow = ({ label, value, isLink = false }) => (
+     <div className="grid grid-cols-[180px_1fr] py-2 text-[13px]">
+        <span className="text-slate-400 font-medium">{label}</span>
+        <span className={`font-medium ${isLink ? 'text-[#1e61f0] cursor-pointer hover:underline' : 'text-slate-700'}`}>
+           {value || '—'}
+        </span>
      </div>
   );
+
+  const getItemTypeLabel = () => {
+    if (item.salesInformation && item.purchaseInformation) return 'Sales and Purchase Item';
+    if (item.salesInformation) return 'Sales Item';
+    if (item.purchaseInformation) return 'Purchase Item';
+    return item.type === 'Service' ? 'Service' : 'Inventory Part';
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#F9FAFB] animate-fade-in overflow-hidden">
       
       {/* ── HEADER ─────────────────────────────────────── */}
-      <div className="bg-white px-8 py-6 border-b border-slate-100 shadow-sm z-30">
-        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">
-           <span>Items</span>
-           <ChevronRight size={10} strokeWidth={4} />
-           <span className="text-blue-600 italic">Product Detail</span>
-        </div>
+      <div className="bg-white px-8 py-4 flex items-center justify-between border-b border-slate-150">
+        <h1 className="text-[20px] font-bold text-slate-900">{item.name}</h1>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-             <div className="w-14 h-14 rounded-3xl bg-blue-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
-                {item.type === 'Service' ? <RefreshCcw size={24} strokeWidth={2.5} /> : <Package size={24} strokeWidth={2.5} />}
-             </div>
-             <div>
-                <h1 className="text-[26px] font-black text-slate-900 tracking-tight leading-tight italic">{item.name}</h1>
-                <div className="flex items-center gap-4 mt-1">
-                   <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-lg">
-                      <Layers size={10} className="text-slate-400" />
-                      <span className="text-[10px] font-black text-slate-500 uppercase">{item.type || 'Goods'}</span>
-                   </div>
-                   {item.salesInformation && (
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 rounded-lg">
-                         <CheckCircle2 size={10} className="text-emerald-600" />
-                         <span className="text-[10px] font-black text-emerald-600 uppercase">Sales Enabled</span>
-                      </div>
-                   )}
-                </div>
-             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => onEdit(item)}
-              className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-2 shadow-sm"
-            >
-              <Edit2 size={14} className="text-blue-600" />
-              Edit Item
-            </button>
-
-            <button
-              onClick={onClose}
-              className="p-2.5 bg-white border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-100 hover:bg-rose-50 rounded-xl transition-all shadow-sm"
-            >
-              <X size={20} />
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+           <button
+             onClick={() => onEdit(item)}
+             className="p-2 border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-all shadow-sm"
+             title="Edit Item"
+           >
+             <Edit2 size={16} />
+           </button>
+           <button
+             onClick={onClose}
+             className="p-2 border border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all shadow-sm ml-2"
+           >
+             <X size={18} />
+           </button>
         </div>
       </div>
 
@@ -340,67 +316,56 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
 
         {/* Overview Tab Content */}
         {activeTab === 'Overview' && (
-          <div className="max-w-5xl space-y-8 animate-slide-up">
-            
-            {/* CARD 1: BASIC INFORMATION */}
-            <div className="bg-white rounded-[24px] p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] ring-1 ring-slate-100 border-t-4 border-blue-600">
-               <div className="flex items-center gap-3 mb-8">
-                  <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
-                     <Package size={18} />
-                  </div>
-                  <h3 className="text-[16px] font-bold text-slate-900 tracking-tight lowercase first-letter:uppercase">Basic Information 🧾</h3>
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <DetailRow icon={Tag} label="Item Name" value={item.name} color="text-indigo-600" />
-                  <DetailRow icon={Layers} label="Item Type" value={item.type || 'Goods'} color="text-blue-500" />
-                  <DetailRow icon={Box} label="Usage Unit" value={item.unit || 'Nos'} color="text-emerald-500" />
-               </div>
+          <div className="max-w-4xl space-y-12 animate-fade-in py-5">
+            <div className="space-y-1">
+               <SimpleDetailRow label="Item Type" value={getItemTypeLabel()} />
+               <SimpleDetailRow label="Unit" value={item.unit || 'Nos'} />
+               <SimpleDetailRow label="Created Source" value="User" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               {/* CARD 2: SALES INFORMATION */}
-               <div className="bg-white rounded-[24px] p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] ring-1 ring-slate-100 border-t-4 border-emerald-500 self-start">
-                  <div className="flex items-center justify-between mb-8">
-                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
-                           <Coins size={18} />
-                        </div>
-                        <h3 className="text-[16px] font-bold text-slate-900 tracking-tight lowercase first-letter:uppercase">Sales Details 💰</h3>
-                     </div>
-                     <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full uppercase tracking-tighter">Active</span>
-                  </div>
-                  <div className="space-y-4">
-                     <div className="flex items-baseline justify-between p-4 bg-emerald-50/30 rounded-2xl ring-1 ring-emerald-50">
-                        <span className="text-[12px] font-black text-emerald-700 uppercase tracking-widest opacity-70">Selling Price</span>
-                        <span className="text-[20px] font-black text-slate-900 tracking-tight">{formatCurrency(item.sellingPrice)}</span>
-                     </div>
-                     <div className="pt-4 border-t border-slate-50">
-                        <DetailRow icon={ArrowUpRight} label="Income Account" value={item.salesAccount || 'Sales'} color="text-emerald-500" />
-                      </div>
-                  </div>
-               </div>
+            {/* SALES INFORMATION */}
+            {item.salesInformation && (
+              <div className="space-y-4 pt-4">
+                 <h3 className="text-[16px] font-bold text-slate-800">Sales Information</h3>
+                 <div className="space-y-1">
+                    <SimpleDetailRow label="Selling Price" value={formatCurrency(item.sellingPrice)} />
+                    <SimpleDetailRow label="Income Account" value={item.salesAccount || 'Sales'} />
+                    {item.salesDescription && (
+                      <SimpleDetailRow label="Sales Description" value={item.salesDescription} />
+                    )}
+                 </div>
+              </div>
+            )}
 
-               {/* CARD 3: PURCHASE INFORMATION */}
-               <div className="bg-white rounded-[24px] p-8 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] ring-1 ring-slate-100 border-t-4 border-amber-500 self-start">
-                  <div className="flex items-center justify-between mb-8">
-                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
-                           <ShoppingCart size={18} />
-                        </div>
-                        <h3 className="text-[16px] font-bold text-slate-900 tracking-tight lowercase first-letter:uppercase">Purchase Details 📦</h3>
-                     </div>
-                     <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-3 py-1 rounded-full uppercase tracking-tighter">Active</span>
-                  </div>
-                  <div className="space-y-4">
-                     <div className="flex items-baseline justify-between p-4 bg-amber-50/30 rounded-2xl ring-1 ring-amber-50">
-                        <span className="text-[12px] font-black text-amber-700 uppercase tracking-widest opacity-70">Cost Price</span>
-                        <span className="text-[20px] font-black text-slate-900 tracking-tight">{formatCurrency(item.costPrice)}</span>
-                     </div>
-                     <div className="pt-4 border-t border-slate-50">
-                        <DetailRow icon={ArrowDownLeft} label="Expense Account" value={item.purchaseAccount || 'Cost of Goods Sold'} color="text-amber-500" />
-                      </div>
-                  </div>
-               </div>
+            {/* PURCHASE INFORMATION */}
+            {item.purchaseInformation && (
+              <div className={`space-y-4 pt-4 ${item.salesInformation ? 'border-t border-slate-100' : ''}`}>
+                 <h3 className="text-[16px] font-bold text-slate-800">Purchase Information</h3>
+                 <div className="space-y-1">
+                    <SimpleDetailRow label="Cost Price" value={formatCurrency(item.costPrice)} />
+                    <SimpleDetailRow label="Purchase Account" value={item.purchaseAccount || 'Cost of Goods Sold'} />
+                    {item.preferredVendor && (
+                      <SimpleDetailRow label="Preferred Vendor" value={item.preferredVendor} isLink={true} />
+                    )}
+                    {item.purchaseDescription && (
+                      <SimpleDetailRow label="Purchase Description" value={item.purchaseDescription} />
+                    )}
+                 </div>
+              </div>
+            )}
+
+            {/* REPORTING TAGS */}
+            <div className={`space-y-4 pt-4 ${(item.salesInformation || item.purchaseInformation) ? 'border-t border-slate-100' : ''}`}>
+               <h3 className="text-[16px] font-bold text-slate-800">Reporting Tags</h3>
+               <p className="text-[13px] text-slate-500">No reporting tag has been associated with this item.</p>
+            </div>
+
+            {/* ASSOCIATED PRICE LISTS */}
+            <div className="pt-2">
+               <button className="text-[13px] font-bold text-[#1e61f0] hover:underline flex items-center gap-1">
+                  Associated Price Lists
+                  <ChevronRight size={14} className="mt-0.5" />
+               </button>
             </div>
 
           </div>
