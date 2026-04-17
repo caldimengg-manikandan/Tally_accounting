@@ -22,6 +22,9 @@ import InventoryView from './modules/inventory/InventoryView';
 import ItemEntryView from './modules/inventory/ItemEntryView';
 import PriceListView from './modules/inventory/PriceListView';
 import PriceListEntryView from './modules/inventory/PriceListEntryView';
+import BankingView from './modules/banking/BankingView';
+import BankEntryView from './modules/banking/BankEntryView';
+import BankDetailView from './modules/banking/BankDetailView';
 import BankReconciliationView from './modules/reconciliation/BankReconciliationView';
 import CostCenterView from './modules/accounting/CostCenterView';
 import CustomersView from './modules/sales/CustomersView';
@@ -54,6 +57,10 @@ import RecurringBillsView from './modules/purchases/RecurringBillsView';
 import PaymentsMadeListView from './modules/purchases/PaymentsMadeListView';
 import PaymentsMadeEntryView from './modules/purchases/PaymentsMadeEntryView';
 import VendorCreditsView from './modules/purchases/VendorCreditsView';
+import { BudgetsView, TransactionLockingView } from './modules/accountant/AccountantSubModules';
+import BulkUpdateView from './modules/accountant/BulkUpdateView';
+import CurrencyAdjustmentsView from './modules/accountant/CurrencyAdjustmentsView';
+import ManualJournalEntryView from './modules/accountant/ManualJournalEntryView';
 
 // ── APIs ─────────────────────────────────────────────────────────
 import { companyAPI, reportsAPI, voucherAPI } from './services/api';
@@ -66,7 +73,7 @@ import {
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
   PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
-  PanelLeftClose, PanelLeftOpen
+  RefreshCw, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -129,16 +136,21 @@ const NAV = [
     group: 'Banking',
     icon: Landmark,
     items: [
-      { label: 'Banking',          path: '/reconciliation', icon: Landmark },
+      { label: 'Banking Overview', path: '/banking', icon: Landmark, showPlus: true, plusPath: '/banking/new' },
+      { label: 'Reconciliation',   path: '/reconciliation', icon: RefreshCw },
     ]
   },
   {
     group: 'Accountant',
     icon: UserCheck,
     items: [
-      { label: 'Vouchers',         path: '/vouchers', icon: BookOpen },
-      { label: 'Ledgers',          path: '/ledgers', icon: BookOpen },
-      { label: 'Cost Centers',     path: '/cost-centers', icon: Target },
+      { label: 'Manual Journals',   path: '/accountant/journals', icon: BookOpen, showPlus: true, plusPath: '/accountant/journals/new' },
+      { label: 'Bulk Update',       path: '/accountant/bulk-update', icon: RefreshCw },
+      { label: 'Currency Adjustments', path: '/accountant/currency-adjustments', icon: ArrowLeftRight },
+      { label: 'Chart of Accounts', path: '/ledgers', icon: ClipboardList, showPlus: true, plusPath: '/ledgers/new' },
+      { label: 'Budgets',           path: '/accountant/budgets', icon: Target, showPlus: true, plusPath: '/accountant/budgets/new' },
+      { label: 'Transaction Locking', path: '/accountant/locking', icon: Shield },
+      { label: 'Cost Centers',      path: '/cost-centers', icon: Target },
     ]
   },
   {
@@ -634,9 +646,32 @@ function AuthenticatedApp() {
         onSaveSuccess: () => navigate('/vouchers'),
         onCancel: () => navigate('/vouchers')
       })} />
+      <Route path="/accountant/journals" element={
+        <AppShell onLogout={handleLogout}>
+          <VoucherListView 
+            defaultType="Journal"
+            onCreateNew={() => navigate('/accountant/journals/new')} 
+            onEdit={(v) => navigate(`/accountant/journals/edit/${v.id}`)}
+            onDelete={async (id) => {
+              try {
+                await voucherAPI.delete(id);
+                window.location.reload();
+              } catch (err) { alert('Delete failed'); }
+            }}
+          />
+        </AppShell>
+      } />
+      <Route path="/accountant/journals/new" element={shell(ManualJournalEntryView)} />
+      <Route path="/accountant/journals/edit/:id" element={shell(ManualJournalEntryView)} />
       <Route path="/ledgers"              element={shell(LedgersView)} />
       <Route path="/ledger-statement/:id" element={shell(LedgerStatementView)} />
       <Route path="/cost-centers"          element={shell(CostCenterView)} />
+      
+      {/* Accountant Expanded */}
+      <Route path="/accountant/bulk-update"          element={shell(BulkUpdateView)} />
+      <Route path="/accountant/currency-adjustments" element={shell(CurrencyAdjustmentsView)} />
+      <Route path="/accountant/budgets"             element={shell(BudgetsView)} />
+      <Route path="/accountant/locking"             element={shell(TransactionLockingView)} />
       
       {/* Purchases */}
       <Route path="/vendors"             element={shell(VendorsListView)} />
@@ -711,6 +746,10 @@ function AuthenticatedApp() {
       <Route path="/price-lists"        element={shell(PriceListView)} />
       <Route path="/price-lists/new"    element={shell(PriceListEntryView)} />
       <Route path="/price-lists/edit/:id" element={shell(PriceListEntryView)} />
+      <Route path="/banking"            element={shell(BankingView)} />
+      <Route path="/banking/new"        element={shell(BankEntryView)} />
+      <Route path="/banking/edit/:id"   element={shell(BankEntryView)} />
+      <Route path="/banking/view/:id"   element={shell(BankDetailView)} />
       <Route path="/reconciliation"     element={shell(BankReconciliationView)} />
       <Route path="/payroll"            element={shell(PayrollView)} />
 

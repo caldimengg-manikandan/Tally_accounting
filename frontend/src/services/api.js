@@ -40,6 +40,7 @@ export const companyAPI = {
   getAll: () => api.get('/companies'),
   getById: (id) => api.get(`/companies/${id}`),
   update: (id, data) => api.put(`/companies/${id}`, data),
+  getCompanyUsers: () => api.get('/users'),
 };
 
 // ─── Groups ────────────────────────────────────────

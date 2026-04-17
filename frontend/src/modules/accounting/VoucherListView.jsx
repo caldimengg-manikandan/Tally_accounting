@@ -16,11 +16,11 @@ const TYPE_COLORS = {
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
-const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete }) => {
+const VoucherListView = ({ onCreateNew, onEdit, onView, onDelete, defaultType = '' }) => {
   const [allData, setAllData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState(defaultType);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const companyId = localStorage.getItem('companyId');

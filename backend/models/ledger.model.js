@@ -26,6 +26,23 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    // Banking Specific Fields
+    accountNumber: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    bankName: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    ifsc: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    accountCode: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     // Customer/Vendor Specific Fields
     customerType: {
       type: DataTypes.ENUM('Business', 'Individual'),
