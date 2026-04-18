@@ -18,6 +18,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
+    customerLedgerId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     referenceNumber: { type: DataTypes.STRING, allowNull: true },
     quoteDate: { type: DataTypes.DATEONLY, allowNull: false },
     expiryDate: { type: DataTypes.DATEONLY, allowNull: true },

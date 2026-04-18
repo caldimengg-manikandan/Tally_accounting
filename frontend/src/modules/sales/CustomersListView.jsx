@@ -19,6 +19,7 @@ const CustomersListView = ({ companyId }) => {
   const [deleteId, setDeleteId] = useState(null);
   const [deleteName, setDeleteName] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [error, setError] = useState(null);
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
 
   const handleSort = (key) => {
@@ -80,17 +81,17 @@ const CustomersListView = ({ companyId }) => {
         const allLedgers = Array.isArray(res.data) ? res.data : [];
         console.log("Total ledgers fetched:", allLedgers.length);
         
-        const customerLedgers = allLedgers.filter(l => 
-          l.Group?.name?.toLowerCase().includes('debtor') || 
-          l.groupName?.toLowerCase().includes('debtor') ||
-          l.Group?.name?.toLowerCase().includes('customer') ||
-          l.groupName?.toLowerCase().includes('customer')
-        );
+        const customerLedgers = allLedgers.filter(l => {
+          const groupName = l.Group?.name?.toLowerCase() || l.groupName?.toLowerCase() || "";
+          return groupName.includes('debtor') || groupName.includes('customer');
+        });
         
         console.log("Filtered customers:", customerLedgers.length);
         setCustomers(customerLedgers);
+        setError(null);
       } catch (err) {
         console.error("Failed to fetch customers:", err);
+        setError("Unable to load customers. There might be a database synchronization issue. Please check the backend server.");
       } finally {
         setLoading(false);
       }
@@ -325,7 +326,7 @@ const CustomersListView = ({ companyId }) => {
                            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
                               <User size={24} />
                            </div>
-                           <p className="text-slate-500 text-[14px]">No customers found.</p>
+                           <p className={`${error ? 'text-red-500 font-medium' : 'text-slate-500'} text-[14px]`}>{error || "No customers found."}</p>
                            <button 
                              onClick={() => navigate('/customers/new')}
                              className="text-blue-600 text-[13px] font-medium hover:underline"

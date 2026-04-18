@@ -234,6 +234,107 @@ class PDFService {
             doc.end();
         });
     }
+
+    static async generateInvoice(invoice, items, company) {
+        return new Promise((resolve, reject) => {
+            const doc = new PDFDocument({ margin: 50, size: 'A4' });
+            let buffers = [];
+            doc.on('data', buffers.push.bind(buffers));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+            // --- HEADER ---
+            doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold').text(company?.name || 'Indus CAI private Ltd', 50, 50);
+            doc.fontSize(10).font('Helvetica').text(company?.state || 'Tamil Nadu', 50, 68).text('India', 50, 81).text(company?.email || 'support@induscai.com', 50, 94);
+            doc.fontSize(36).font('Helvetica-Bold').text('TAX INVOICE', 250, 50, { align: 'right' });
+            doc.fontSize(12).text(`Invoice# ${invoice.invoiceNumber}`, 250, 95, { align: 'right' });
+
+            // --- BILL TO ---
+            doc.fillColor('#888888').fontSize(10).text('Bill To', 50, 200);
+            doc.fillColor('#000000').fontSize(12).font('Helvetica-Bold').text(invoice.CustomerLedger?.name || 'Customer Name', 50, 215);
+            
+            // Format Address for PDF
+            let addrStr = '';
+            const rawAddr = invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address;
+            if (rawAddr) {
+                try {
+                    const parsed = typeof rawAddr === 'string' ? JSON.parse(rawAddr) : rawAddr;
+                    addrStr = [parsed.street1, parsed.street2, parsed.city, parsed.state, parsed.pinCode].filter(Boolean).join(', ');
+                } catch (e) {
+                    addrStr = rawAddr;
+                }
+            }
+            doc.font('Helvetica').fontSize(10).text(addrStr, 50, 230, { width: 250 });
+
+            doc.font('Helvetica').fontSize(10).text('Invoice Date :', 350, 215).text(new Date(invoice.date).toLocaleDateString('en-GB'), 500, 215, { align: 'right' });
+            doc.text('Due Date :', 350, 230).text(new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB'), 500, 230, { align: 'right' });
+
+            // --- TABLE HEADER ---
+            const tableTop = 280;
+            doc.rect(50, tableTop, 500, 25).fill('#333333');
+            doc.fillColor('#ffffff').fontSize(10).font('Helvetica-Bold').text('#', 60, tableTop + 8).text('Item & Description', 100, tableTop + 8).text('Qty', 350, tableTop + 8, { width: 50, align: 'center' }).text('Rate', 400, tableTop + 8, { width: 70, align: 'right' }).text('Amount', 470, tableTop + 8, { width: 80, align: 'right' });
+
+            // --- TABLE ITEMS ---
+            let currentCursor = tableTop + 25;
+            doc.fillColor('#000000').font('Helvetica');
+            items.forEach((item, index) => {
+                const itemName = item.Item?.name || 'Service Item';
+                doc.text(index + 1, 60, currentCursor + 10).text(`${itemName}\n${item.description || ''}`, 100, currentCursor + 10, { width: 240 }).text(item.quantity, 350, currentCursor + 10, { width: 50, align: 'center' }).text(parseFloat(item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 400, currentCursor + 10, { width: 70, align: 'right' }).text(parseFloat(item.amount || (item.quantity * item.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, currentCursor + 10, { width: 80, align: 'right' });
+                currentCursor += 40;
+                doc.moveTo(50, currentCursor).lineTo(550, currentCursor).strokeColor('#eeeeee').stroke();
+            });
+
+            // --- TOTALS ---
+            const totalStart = Math.max(currentCursor + 20, 500);
+            doc.fillColor('#555555').fontSize(10).text('Sub Total', 350, totalStart).fillColor('#000000').text(parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, totalStart, { width: 80, align: 'right' });
+            doc.text(`GST (18%)`, 350, totalStart + 20).text(parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, totalStart + 20, { width: 80, align: 'right' });
+            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 50).text(`₹${parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 470, totalStart + 50, { width: 80, align: 'right' });
+
+            doc.end();
+        });
+    }
+
+    static async generateDeliveryChallan(challan, items, company) {
+        return new Promise((resolve, reject) => {
+            const doc = new PDFDocument({ margin: 50, size: 'A4' });
+            let buffers = [];
+            doc.on('data', buffers.push.bind(buffers));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+            // --- HEADER ---
+            doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold').text(company?.name || 'Indus CAI private Ltd', 50, 50);
+            doc.fontSize(10).font('Helvetica').text(company?.state || 'Tamil Nadu', 50, 68).text('India', 50, 81).text(company?.email || 'support@induscai.com', 50, 94);
+            doc.fontSize(36).font('Helvetica-Bold').text('DELIVERY CHALLAN', 100, 50, { align: 'right' });
+            doc.fontSize(12).text(`Challan# ${challan.challanNumber}`, 250, 95, { align: 'right' });
+
+            // --- BILL TO ---
+            doc.fillColor('#888888').fontSize(10).text('Deliver To', 50, 200);
+            doc.fillColor('#000000').fontSize(12).font('Helvetica-Bold').text(challan.Customer?.name || 'Customer Name', 50, 215);
+
+            doc.font('Helvetica').fontSize(10).text('Challan Date :', 350, 215).text(new Date(challan.date).toLocaleDateString('en-GB'), 500, 215, { align: 'right' });
+
+            // --- TABLE HEADER ---
+            const tableTop = 260;
+            doc.rect(50, tableTop, 500, 25).fill('#333333');
+            doc.fillColor('#ffffff').fontSize(10).font('Helvetica-Bold').text('#', 60, tableTop + 8).text('Item & Description', 100, tableTop + 8).text('Qty', 350, tableTop + 8, { width: 50, align: 'center' }).text('Rate', 400, tableTop + 8, { width: 70, align: 'right' }).text('Amount', 470, tableTop + 8, { width: 80, align: 'right' });
+
+            // --- TABLE ITEMS ---
+            let currentCursor = tableTop + 25;
+            doc.fillColor('#000000').font('Helvetica');
+            items.forEach((item, index) => {
+                const itemName = item.Item?.name || 'Product Item';
+                doc.text(index + 1, 60, currentCursor + 10).text(`${itemName}\n${item.description || ''}`, 100, currentCursor + 10, { width: 240 }).text(item.quantity, 350, currentCursor + 10, { width: 50, align: 'center' }).text(parseFloat(item.rate).toLocaleString('en-IN'), 400, currentCursor + 10, { width: 70, align: 'right' }).text(parseFloat(item.amount).toLocaleString('en-IN'), 470, currentCursor + 10, { width: 80, align: 'right' });
+                currentCursor += 40;
+                doc.moveTo(50, currentCursor).lineTo(550, currentCursor).strokeColor('#eeeeee').stroke();
+            });
+
+            // --- TOTALS ---
+            const totalStart = Math.max(currentCursor + 20, 500);
+            doc.fillColor('#555555').fontSize(10).text('Sub Total', 350, totalStart).fillColor('#000000').text(parseFloat(challan.subTotal || 0).toLocaleString('en-IN'), 470, totalStart, { width: 80, align: 'right' });
+            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 25).text(`₹${parseFloat(challan.totalAmount || 0).toLocaleString('en-IN')}`, 470, totalStart + 25, { width: 80, align: 'right' });
+
+            doc.end();
+        });
+    }
 }
 
 module.exports = PDFService;

@@ -116,6 +116,8 @@ AuditLog.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.U
 // 7. Quotes
 Company.hasMany(Quote, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 Quote.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+Quote.belongsTo(Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
+Ledger.hasMany(Quote, { foreignKey: 'customerLedgerId' });
 
 // 8. Retainer Invoices
 Company.hasMany(RetainerInvoice, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });

@@ -1,4 +1,4 @@
-const { Quote, Company } = require('../../models');
+const { Quote, Company, Ledger } = require('../../models');
 const PDFService = require('../../services/PDFService');
 const nodemailer = require('nodemailer');
 
@@ -18,7 +18,9 @@ exports.getQuotes = async (req, res) => {
 // GET /quotes/detail/:id
 exports.getQuoteById = async (req, res) => {
   try {
-    const quote = await Quote.findByPk(req.params.id);
+    const quote = await Quote.findByPk(req.params.id, {
+      include: [{ model: Ledger, as: 'Customer' }]
+    });
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
     res.json(quote);
   } catch (err) {
@@ -30,7 +32,7 @@ exports.getQuoteById = async (req, res) => {
 exports.createQuote = async (req, res) => {
   try {
     const {
-      companyId, quoteNumber, customerName, referenceNumber,
+      companyId, quoteNumber, customerName, customerLedgerId, referenceNumber,
       quoteDate, expiryDate, salesperson, subject,
       items, discount, taxType, selectedTax, taxAmount,
       adjustment, subTotal, totalAmount, customerNotes, termsConditions
@@ -56,6 +58,7 @@ exports.createQuote = async (req, res) => {
       quoteNumber: finalQuoteNumber,
       status: 'Draft',
       customerName,
+      customerLedgerId,
       referenceNumber,
       quoteDate,
       expiryDate,
@@ -124,8 +127,15 @@ exports.sendEmail = async (req, res) => {
     const { id } = req.params;
     const { subject, body, toEmail } = req.body;
 
-    const quote = await Quote.findByPk(id);
+    const quote = await Quote.findByPk(id, {
+        include: [{ model: Ledger, as: 'Customer' }]
+    });
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
+
+    const finalToEmail = toEmail || quote.Customer?.email;
+    if (!finalToEmail) {
+        return res.status(400).json({ error: 'Recipient email is missing. Please provide one or update the customer ledger.' });
+    }
 
     const items = JSON.parse(quote.itemsJson || '[]');
     const pdfBuffer = await PDFService.generateQuote(quote, items);
@@ -133,14 +143,19 @@ exports.sendEmail = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'naveenswathi1811@gmail.com',
-        pass: 'your-app-password' 
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
+      },
+      tls: {
+          rejectUnauthorized: false
       }
     });
 
+    const fromEmail = process.env.MAIL_USER;
+
     const mailOptions = {
-      from: `"Indus CAI" <naveenswathi1811@gmail.com>`,
-      to: toEmail || 'thejathangavel05@gmail.com',
+      from: `"Indus CAI" <${fromEmail}>`,
+      to: finalToEmail,
       subject: subject || `Quote ${quote.quoteNumber} from Indus CAI`,
       text: body,
       attachments: [{ filename: `${quote.quoteNumber}.pdf`, content: pdfBuffer }]

@@ -77,12 +77,13 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
        setLastName(customerToEdit.lastName || '');
        setCustomerType(customerToEdit.customerType || 'Business');
        setEmail(customerToEdit.email || '');
-       setWorkPhone(customerToEdit.phone || '');
+       setWorkPhone(customerToEdit.workPhone || customerToEdit.phone || '');
        setMobile(customerToEdit.mobile || '');
        setWebsite(customerToEdit.website || '');
        setPan(customerToEdit.pan || '');
        setCurrency(customerToEdit.currency || 'INR- Indian Rupee');
        setPaymentTerms(customerToEdit.paymentTerms || 'Due on Receipt');
+       setCompanyName(customerToEdit.companyName || '');
        
        if (customerToEdit.billingAddressJson) setBillingAddress(JSON.parse(customerToEdit.billingAddressJson));
        else if (customerToEdit.billingAddress) {
@@ -115,8 +116,9 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         firstName,
         lastName,
         customerType,
+        companyName,
         email,
-        phone: workPhone,
+        workPhone,
         mobile,
         website,
         pan,

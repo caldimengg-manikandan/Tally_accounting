@@ -143,3 +143,59 @@ exports.deleteChallan = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+const nodemailer = require('nodemailer');
+const PDFService = require('../../services/PDFService');
+
+exports.sendEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const challan = await DeliveryChallan.findByPk(id, {
+        include: [{ model: Ledger, as: 'Customer' }]
+    });
+    if (!challan) return res.status(404).json({ error: 'Challan not found' });
+
+    const items = await DeliveryChallanItem.findAll({ 
+        where: { DeliveryChallanId: id },
+        include: [{ model: Item }]
+    });
+
+    const { subject, body, toEmail } = req.body;
+
+    const pdfBuffer = await PDFService.generateDeliveryChallan(challan, items);
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+
+    const fromEmail = process.env.MAIL_USER;
+    const finalToEmail = toEmail || challan.Customer?.email;
+    if (!finalToEmail) {
+        return res.status(400).json({ error: 'Customer email address missing. Please update the customer ledger.' });
+    }
+
+    const mailOptions = {
+      from: `"Indus CAI" <${fromEmail}>`,
+      to: finalToEmail,
+      subject: subject || `Delivery Challan ${challan.challanNumber} from Indus CAI`,
+      text: body || `Dear ${challan.Customer?.name || 'Customer'},\n\nPlease find attached Delivery Challan ${challan.challanNumber}.\n\nBest regards,\nIndus CAI Team`,
+      attachments: [{
+        filename: `Challan_${challan.challanNumber}.pdf`,
+        content: pdfBuffer
+      }]
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ message: `Email sent successfully to ${toEmail}` });
+
+  } catch (err) {
+    console.error('Email error:', err);
+    res.status(500).json({ error: 'Failed to send email' });
+  }
+};

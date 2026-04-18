@@ -12,6 +12,135 @@ import {
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 
+// ─────────────────────────────────────────────────
+// MANAGE SALESPERSONS MODAL
+// ─────────────────────────────────────────────────
+const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSelect }) => {
+    const [search, setSearch] = useState('');
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newEmail, setNewEmail] = useState('');
+
+    if (!isOpen) return null;
+
+    const filtered = salespersons.filter(s =>
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.email && s.email.toLowerCase().includes(search.toLowerCase()))
+    );
+
+    const handleSaveAndSelect = () => {
+        if (!newName.trim()) return;
+        const entry = { id: Date.now(), name: newName.trim(), email: newEmail.trim() };
+        const updated = [...salespersons, entry];
+        localStorage.setItem('tally_salespersons', JSON.stringify(updated));
+        onSave(updated);
+        onSelect(entry.name);
+        setNewName('');
+        setNewEmail('');
+        setShowAddForm(false);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden animate-scale-up">
+                {/* Modal Header */}
+                <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="text-[18px] font-black text-slate-900 tracking-tight">Manage Salespersons</h3>
+                    <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"><X size={18}/></button>
+                </div>
+
+                {/* Search + New Button */}
+                <div className="px-6 py-4 flex items-center gap-3 border-b border-slate-100">
+                    <div className="relative flex-1">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            autoFocus
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Search Salesperson"
+                            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-500 transition-all"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowAddForm(true)}
+                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-black rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100"
+                    >
+                        <Plus size={14}/> New Salesperson
+                    </button>
+                </div>
+
+                {/* Inline Add Form */}
+                {showAddForm && (
+                    <div className="mx-6 my-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
+                                <input
+                                    value={newName}
+                                    onChange={e => setNewName(e.target.value)}
+                                    className="w-full h-9 px-3 border border-slate-300 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
+                                <input
+                                    type="email"
+                                    value={newEmail}
+                                    onChange={e => setNewEmail(e.target.value)}
+                                    className="w-full h-9 px-3 border border-slate-300 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={handleSaveAndSelect}
+                                disabled={!newName.trim()}
+                                className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-black rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm"
+                            >
+                                Save and Select
+                            </button>
+                            <button
+                                onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }}
+                                className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-black rounded hover:bg-slate-50 transition-all"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Table */}
+                <div className="px-6">
+                    <div className="grid grid-cols-2 py-3 border-b border-slate-100">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salesperson Name</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</span>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto no-scrollbar">
+                        {filtered.length === 0 ? (
+                            <div className="py-12 text-center text-slate-400 text-[13px] font-medium italic">No salespersons found.</div>
+                        ) : (
+                            filtered.map(s => (
+                                <div
+                                    key={s.id}
+                                    onClick={() => { onSelect(s.name); onClose(); }}
+                                    className="grid grid-cols-2 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer rounded transition-colors"
+                                >
+                                    <span className="text-[13px] font-bold text-[#1e61f0]">{s.name}</span>
+                                    <span className="text-[13px] text-slate-500 font-medium">{s.email || '—'}</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className="px-6 py-4" />
+            </div>
+        </div>
+    );
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // RECURRING INVOICE FORM (ZOHO STYLE)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -38,9 +167,18 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
         discount: 0,
         adjustment: 0,
         taxPercent: 18, // Default 18% GST
+        salesperson: '',
         customerNotes: 'Thanks for your business.',
         termsConditions: ''
     });
+
+    const [salespersons, setSalespersons] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('tally_salespersons') || '[]'); } catch { return []; }
+    });
+    const [showSalespersonDropdown, setShowSalespersonDropdown] = useState(false);
+    const [salespersonSearch, setSalespersonSearch] = useState('');
+    const [showManageSalespersons, setShowManageSalespersons] = useState(false);
+    const salespersonDropdownRef = React.useRef(null);
 
     const [errors, setErrors] = useState({});
 
@@ -78,6 +216,14 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                 }
             });
         }
+
+        const handleClickOutside = (event) => {
+            if (salespersonDropdownRef.current && !salespersonDropdownRef.current.contains(event.target)) {
+                setShowSalespersonDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [companyId, editId]);
 
     // Calculations
@@ -154,8 +300,9 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                 taxAmount: totals.taxAmt,
                 totalAmount: totals.total,
                 itemsJson: JSON.stringify(lineItems),
-                CompanyId: companyId,
-                nextGenerationDate: formData.startDate 
+                 CompanyId: companyId,
+                 nextGenerationDate: formData.startDate,
+                 salesperson: formData.salesperson
             };
 
             if (editId) {
@@ -181,8 +328,16 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
             {/* Header */}
             <div className="flex items-center gap-4 mb-10">
                 <button onClick={() => navigate('/recurring-invoices')} className="text-slate-400 hover:text-slate-600"><ArrowLeft size={24} /></button>
-                <h1 className="text-2xl font-semibold text-slate-900">{editId ? 'Edit Recurring Invoice' : 'New Recurring Invoice'}</h1>
+                 <h1 className="text-2xl font-semibold text-slate-900">{editId ? 'Edit Recurring Invoice' : 'New Recurring Invoice'}</h1>
             </div>
+
+            <ManageSalespersonsModal
+                isOpen={showManageSalespersons}
+                onClose={() => setShowManageSalespersons(false)}
+                salespersons={salespersons}
+                onSave={setSalespersons}
+                onSelect={(name) => { setFormData(prev => ({ ...prev, salesperson: name })); }}
+            />
 
             <div className="space-y-8">
                 {/* Main Form Fields */}
@@ -229,6 +384,68 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                 placeholder="e.g., Monthly Service Retainer"
                                 className={`flex-1 p-2 border ${errors.templateName ? 'border-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.1)]' : 'border-slate-200'} rounded text-sm outline-none focus:border-blue-500`}
                             />
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <label className="w-32 text-sm text-slate-500 font-bold tracking-tight">Salesperson</label>
+                            <div className="flex-1 relative" ref={salespersonDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowSalespersonDropdown(prev => !prev); setSalespersonSearch(''); }}
+                                    className={`w-full h-11 px-3 pr-9 border rounded text-[13px] font-bold text-left shadow-sm flex items-center justify-between transition-colors
+                                        ${showSalespersonDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 bg-white'}
+                                        ${formData.salesperson ? 'text-slate-800' : 'text-slate-400 font-medium'}`}
+                                >
+                                    <span>{formData.salesperson || 'Select or Add Salesperson'}</span>
+                                    <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {showSalespersonDropdown && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in shadow-blue-900/10">
+                                        <div className="p-2 border-b border-slate-100">
+                                            <div className="relative">
+                                                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                <input
+                                                    autoFocus
+                                                    value={salespersonSearch}
+                                                    onChange={e => setSalespersonSearch(e.target.value)}
+                                                    placeholder="Search"
+                                                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all font-bold"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="max-h-40 overflow-y-auto no-scrollbar">
+                                            {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).length === 0 ? (
+                                                <div className="py-6 text-center text-[12px] text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
+                                            ) : (
+                                                salespersons
+                                                    .filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase()))
+                                                    .map(s => (
+                                                        <div
+                                                            key={s.id}
+                                                            onClick={() => { setFormData(prev => ({ ...prev, salesperson: s.name })); setShowSalespersonDropdown(false); }}
+                                                            className={`px-4 py-2.5 cursor-pointer text-[13px] font-black hover:bg-blue-50 transition-colors
+                                                                ${formData.salesperson === s.name ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
+                                                        >
+                                                            {s.name}
+                                                        </div>
+                                                    ))
+                                            )}
+                                        </div>
+
+                                        <div className="border-t border-slate-100">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setShowSalespersonDropdown(false); setShowManageSalespersons(true); }}
+                                                className="w-full flex items-center gap-2 px-4 py-3 text-[12px] font-black text-[#1e61f0] hover:bg-blue-50 transition-colors uppercase tracking-widest"
+                                            >
+                                                <Plus size={14} strokeWidth={3} /> Manage Salespersons
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -455,7 +672,8 @@ const RecurringInvoiceDetail = ({ id, companyId, navigate }) => {
         switch (log.action) {
             case 'RECURRING_CREATED': return { title: 'Automation Initialized', icon: 'bg-emerald-500', desc: `Created by ${log.User?.name || 'System'}` };
             case 'RECURRING_UPDATED': return { title: 'Settings Modified', icon: 'bg-blue-500', desc: `Configuration updated by ${log.User?.name || 'System'}` };
-            case 'INSTANCE_GENERATED': return { title: 'Invoice Generated', icon: 'bg-purple-600', desc: `New instance ${log.newData?.invoiceNumber || ''} created automatically.` };
+            case 'RECURRING_DELETED': return { title: 'Automation Terminated', icon: 'bg-rose-500', desc: `Profile deleted by ${log.User?.name || 'System'}` };
+            case 'INVOICE_GENERATED': return { title: 'Invoice Generated', icon: 'bg-purple-600', desc: log.newData?.message || `New instance ${log.newData?.invoiceNumber || ''} created automatically.` };
             default: return { title: log.action.replace('_', ' '), icon: 'bg-slate-400', desc: `Action performed by ${log.User?.name || 'System'}` };
         }
     };

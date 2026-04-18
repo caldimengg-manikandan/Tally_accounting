@@ -1,4 +1,4 @@
-const { RetainerInvoice, Company } = require('../../models');
+const { RetainerInvoice, Company, Ledger } = require('../../models');
 const PDFService = require('../../services/PDFService');
 const nodemailer = require('nodemailer');
 
@@ -7,8 +7,15 @@ exports.sendEmail = async (req, res) => {
     const { id } = req.params;
     const { subject, body, toEmail } = req.body;
 
-    const retainer = await RetainerInvoice.findByPk(id);
+    const retainer = await RetainerInvoice.findByPk(id, {
+      include: [{ model: Ledger, as: 'CustomerLedger' }]
+    });
     if (!retainer) return res.status(404).json({ error: 'Invoice not found' });
+
+    const finalToEmail = toEmail || retainer.CustomerLedger?.email;
+    if (!finalToEmail) {
+        return res.status(400).json({ error: 'Recipient email is missing. Please provide one or update the customer ledger.' });
+    }
 
     const items = JSON.parse(retainer.itemsJson || '[]');
     const pdfBuffer = await PDFService.generateRetainerInvoice(retainer, items);
@@ -16,16 +23,22 @@ exports.sendEmail = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'naveenswathi1811@gmail.com',
-        pass: 'your-app-password' 
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS
+      },
+      tls: {
+          rejectUnauthorized: false
       }
     });
 
+    const fromEmail = process.env.MAIL_USER;
+    if (!finalToEmail) return res.status(400).json({ error: 'Recipient email is required' });
+
     const mailOptions = {
-      from: `"Indus CAI" <naveenswathi1811@gmail.com>`,
-      to: toEmail || 'thejathangavel05@gmail.com',
+      from: `"Indus CAI" <${fromEmail}>`,
+      to: finalToEmail,
       subject: subject || `Retainer Invoice ${retainer.invoiceNumber}`,
-      text: body,
+      text: body || `Dear Customer,\n\nPlease find attached Retainer Invoice ${retainer.invoiceNumber}.`,
       attachments: [{ filename: `${retainer.invoiceNumber}.pdf`, content: pdfBuffer }]
     };
 
@@ -74,7 +87,9 @@ exports.getById = async (req, res) => {
        return res.status(400).json({ error: 'Invalid ID provided' });
     }
 
-    const retainer = await RetainerInvoice.findByPk(id);
+    const retainer = await RetainerInvoice.findByPk(id, {
+        include: [{ model: Ledger, as: 'CustomerLedger' }]
+    });
     if (!retainer) {
         console.error(`[RetainerInvoice] NO RECORD FOUND for ID: ${id}`);
         return res.status(404).json({ error: `Retainer Invoice with ID ${id} was not found in database.` });

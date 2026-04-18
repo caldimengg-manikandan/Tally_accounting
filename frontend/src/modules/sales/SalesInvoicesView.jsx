@@ -7,10 +7,34 @@ import {
   Check, AlertCircle, File, Mail, Printer,
   Share2, History, X, ChevronRight, Download,
   Send, Loader2, ArrowLeft, DollarSign, Clock,
-  Tag, Info
+  Tag, Info, Paperclip
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
+
+const formatAddress = (address) => {
+    if (!address) return '';
+    try {
+        // Check if it's a JSON string
+        if (typeof address === 'string' && (address.startsWith('{') || address.startsWith('['))) {
+            const parsed = JSON.parse(address);
+            if (typeof parsed === 'object') {
+                return [
+                    parsed.attention,
+                    parsed.street1,
+                    parsed.street2,
+                    parsed.city,
+                    parsed.state,
+                    parsed.country,
+                    parsed.pinCode
+                ].filter(Boolean).join(', ');
+            }
+        }
+        return address;
+    } catch (e) {
+        return address;
+    }
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INVOICE LIST (SIDEBAR STYLE)
@@ -132,6 +156,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                 body,
                 companyId: invoice.CompanyId,
                 ledgerId: invoice.customerLedgerId,
+                documentId: invoice.id,
                 type: 'Invoice'
             });
             if (onSent) onSent();
@@ -162,7 +187,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                             <div className="flex items-center gap-4">
                                 <label className="w-20 text-[11px] font-black text-slate-400 uppercase tracking-widest">From</label>
                                 <div className="flex-1 p-2 bg-slate-50 border border-slate-100 rounded text-[13px] font-bold text-slate-500 italic">
-                                    {senderName} &lt;{user.email}&gt;
+                                    Organization &lt;calbuy160@gmail.com&gt;
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
@@ -195,10 +220,19 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                              />
                              
                              <div className="pt-4 border-t border-slate-100 bg-slate-50 -mx-6 -mb-6 p-6">
-                                 <div className="flex items-center gap-3">
+                                 <div className="flex flex-wrap items-center gap-3">
+                                    <div className="bg-white border border-slate-200 rounded-lg p-2 pr-4 flex items-center gap-3 shadow-sm group hover:border-blue-200 transition-all">
+                                        <div className="w-8 h-10 bg-rose-50 rounded flex items-center justify-center text-rose-500 font-black text-[8px] uppercase tracking-tighter shadow-inner">
+                                            PDF
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[11px] font-black text-slate-700 tracking-tight">Invoice_{invoice.invoiceNumber}.pdf</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Automatic Attachment</p>
+                                        </div>
+                                    </div>
                                     <div className="w-px h-10 bg-slate-200 mx-2" />
                                     <button className="text-[12px] font-black text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-2">
-                                       <Paperclip size={14} /> Attachments
+                                       <Plus size={14} /> Add More
                                     </button>
                                  </div>
                              </div>
@@ -376,7 +410,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                                     {invoice.CustomerLedger?.name || 'Customer Name'}
                                 </h4>
                                 <div className="text-[12px] text-slate-500 font-medium leading-relaxed max-w-[320px] whitespace-pre-wrap">
-                                    {invoice.CustomerLedger?.address || invoice.CustomerLedger?.billingAddress || 'No billing address provided.'}
+                                    {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
                                 </div>
                             </div>
                         </div>

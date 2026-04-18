@@ -1,5 +1,6 @@
 const { RecurringInvoice, TaxInvoice, RetainerInvoice, Company, AuditLog, User } = require('../../models');
 const AuditService = require('../../services/AuditService');
+const AccountingService = require('../../services/AccountingService');
 const moment = require('moment');
 
 exports.create = async (req, res) => {
@@ -78,7 +79,20 @@ exports.delete = async (req, res) => {
    try {
      const template = await RecurringInvoice.findByPk(req.params.id);
      if (!template) return res.status(404).json({ error: 'Template not found' });
+     const oldData = { ...template.dataValues };
+     const companyId = template.CompanyId;
      await template.destroy();
+
+     await AuditService.log({
+       action: 'RECURRING_DELETED',
+       tableName: 'RecurringInvoice',
+       recordId: template.id,
+       oldData,
+       companyId: companyId,
+       userId: req.user.id,
+       req
+     });
+
      res.json({ message: 'Template deleted' });
    } catch (err) {
      res.status(500).json({ error: err.message });
@@ -147,12 +161,27 @@ exports.processDueInvoices = async (req, res) => {
 
         // Create line items for the invoice
         const items = JSON.parse(template.itemsJson || '[]');
-        if (items.length > 0) {
-          await SalesInvoiceItem.bulkCreate(items.map(it => ({
-            ...it,
-            SalesInvoiceId: createdInvoice.id,
-            amount: it.quantity * it.rate
-          })));
+        const validItems = items.filter(it => it.itemId && it.itemId !== '');
+        if (validItems.length > 0) {
+          await SalesInvoiceItem.bulkCreate(validItems.map(it => {
+            const { id, ...itemData } = it; // Strip IDs from template items
+            return {
+              ...itemData,
+              SalesInvoiceId: createdInvoice.id,
+              amount: it.quantity * it.rate
+            };
+          }));
+
+          // Trigger Accounting Logic
+          await AccountingService.recordTaxInvoice({
+            companyId: template.CompanyId,
+            customerLedgerId: customer?.id,
+            date: now,
+            narration: `Recurring Invoice ${createdInvoice.invoiceNumber}`,
+            items: validItems,
+            type: 'Sales',
+            userId: null // System generated
+          });
         }
       }
 
@@ -214,10 +243,14 @@ exports.processDueInvoices = async (req, res) => {
       await template.update(updateData);
       
       await AuditService.log({
-        action: 'INSTANCE_GENERATED',
+        action: 'INVOICE_GENERATED',
         tableName: 'RecurringInvoice',
         recordId: template.id,
-        newData: { invoiceNumber: createdInvoice?.invoiceNumber, date: now },
+        newData: { 
+            message: `Generated Invoice ${createdInvoice?.invoiceNumber} from template`,
+            invoiceNumber: createdInvoice?.invoiceNumber, 
+            date: now 
+        },
         companyId: template.CompanyId,
         userId: null // System action
       });

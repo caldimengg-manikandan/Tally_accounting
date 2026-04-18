@@ -36,12 +36,18 @@ exports.createOrder = async (req, res) => {
     }, { transaction: t });
 
     if (items && items.length > 0) {
-      const orderItems = items.map(it => ({
-        ...it,
-        SalesOrderId: order.id,
-        amount: (it.quantity || 0) * (it.rate || 0)
-      }));
-      await SalesOrderItem.bulkCreate(orderItems, { transaction: t });
+      const validItems = items.filter(it => it.itemId && it.itemId !== '');
+      const orderItems = validItems.map(it => {
+        const { id, ...itemData } = it;
+        return {
+          ...itemData,
+          SalesOrderId: order.id,
+          amount: (it.quantity || 0) * (it.rate || 0)
+        };
+      });
+      if (orderItems.length > 0) {
+        await SalesOrderItem.bulkCreate(orderItems, { transaction: t });
+      }
     }
 
     await t.commit();
@@ -105,12 +111,18 @@ exports.updateOrder = async (req, res) => {
 
     if (items) {
       await SalesOrderItem.destroy({ where: { SalesOrderId: orderId }, transaction: t });
-      const orderItems = items.map(it => ({
-        ...it,
-        SalesOrderId: orderId,
-        amount: (it.quantity || 0) * (it.rate || 0)
-      }));
-      await SalesOrderItem.bulkCreate(orderItems, { transaction: t });
+      const validItems = items.filter(it => it.itemId && it.itemId !== '');
+      const orderItems = validItems.map(it => {
+        const { id, ...itemData } = it;
+        return {
+          ...itemData,
+          SalesOrderId: orderId,
+          amount: (it.quantity || 0) * (it.rate || 0)
+        };
+      });
+      if (orderItems.length > 0) {
+        await SalesOrderItem.bulkCreate(orderItems, { transaction: t });
+      }
     }
 
     await t.commit();
@@ -142,12 +154,18 @@ exports.createInvoice = async (req, res) => {
 
     // 2. Create line items
     if (items && items.length > 0) {
-      const invoiceItems = items.map(it => ({
-        ...it,
-        SalesInvoiceId: invoice.id,
-        amount: it.quantity * it.rate
-      }));
-      await SalesInvoiceItem.bulkCreate(invoiceItems, { transaction: t });
+      const validItems = items.filter(it => it.itemId && it.itemId !== '');
+      const invoiceItems = validItems.map(it => {
+        const { id, ...itemData } = it;
+        return {
+          ...itemData,
+          SalesInvoiceId: invoice.id,
+          amount: (it.quantity || 0) * (it.rate || 0)
+        };
+      });
+      if (invoiceItems.length > 0) {
+        await SalesInvoiceItem.bulkCreate(invoiceItems, { transaction: t });
+      }
     }
 
     // 3. If "Confirmed", record in accounts
@@ -192,7 +210,10 @@ exports.getInvoiceById = async (req, res) => {
   try {
     const { id } = req.params;
     const invoice = await SalesInvoice.findByPk(id, {
-      include: [{ model: SalesInvoiceItem, as: 'items' }]
+      include: [
+        { model: SalesInvoiceItem, as: 'items', include: [{ model: Item }] },
+        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'email', 'billingAddress', 'address'] }
+      ]
     });
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     res.json(invoice);
@@ -230,12 +251,18 @@ exports.updateInvoice = async (req, res) => {
     // Update items
     if (items) {
       await SalesInvoiceItem.destroy({ where: { SalesInvoiceId: id }, transaction: t });
-      const invoiceItems = items.map(it => ({
-        ...it,
-        SalesInvoiceId: id,
-        amount: it.quantity * it.rate
-      }));
-      await SalesInvoiceItem.bulkCreate(invoiceItems, { transaction: t });
+      const validItems = items.filter(it => it.itemId && it.itemId !== '');
+      const invoiceItems = validItems.map(it => {
+        const { id, ...itemData } = it;
+        return {
+          ...itemData,
+          SalesInvoiceId: id,
+          amount: (it.quantity || 0) * (it.rate || 0)
+        };
+      });
+      if (invoiceItems.length > 0) {
+        await SalesInvoiceItem.bulkCreate(invoiceItems, { transaction: t });
+      }
     }
 
     // If changing from Draft to Confirmed, record in accounts

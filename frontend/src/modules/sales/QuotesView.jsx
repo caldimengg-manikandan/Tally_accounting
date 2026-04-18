@@ -7,10 +7,11 @@ import {
   X, Info, Upload as UploadIcon, Search, Tag, Paperclip, RefreshCw,
   Edit2, Trash2, ChevronRight, ArrowDownUp, Download, RotateCcw,
   ArrowUp, ArrowDown, ArrowLeft, FileText, Building, Package, Check,
-  Mail, Phone, Send, HelpCircle
+  Mail, Phone, Send, HelpCircle, ShieldCheck
 } from 'lucide-react';
 import { inventoryAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
+import EmailSendModal from '../../components/EmailSendModal';
 import ConfirmModal from '../../components/ConfirmModal';
 
 // ─────────────────────────────────────────────────
@@ -508,7 +509,21 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
     );
 
     if (view === 'email') {
-        return <EmailSendView quote={quote} onCancel={() => setView('detail')} onSend={() => navigate('/quotes')} />;
+        return (
+            <EmailSendModal 
+                isOpen={true}
+                onClose={() => setView('detail')}
+                documentData={{
+                    id: quote.id,
+                    number: quote.quoteNumber,
+                    customerName: quote.customerName,
+                    Customer: quote.Customer
+                }}
+                documentType="Quote"
+                onSend={() => navigate('/quotes')}
+                apiFunc={quoteAPI.sendEmail}
+            />
+        );
     }
 
     const items = typeof quote.itemsJson === 'string' ? JSON.parse(quote.itemsJson) : (quote.itemsJson || []);
@@ -714,8 +729,8 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                             </div>
 
                             <div className="mt-6 px-4 text-right">
-                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1 italic">Total Amount in Words</p>
-                                <p className="text-[12px] font-bold text-slate-500 italic max-w-[320px] ml-auto leading-tight">
+                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Total Amount in Words</p>
+                                <p className="text-[12px] font-bold text-slate-500 max-w-[320px] ml-auto leading-tight">
                                     {numberToWords(Math.round(quote.totalAmount || 0))} Rupees Only
                                 </p>
                             </div>
@@ -727,7 +742,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                         <div className="space-y-4">
                             <div>
                                 <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">Terms & Conditions</h5>
-                                <p className="text-[12px] text-slate-500 font-medium max-w-[400px] leading-relaxed italic">
+                                <p className="text-[12px] text-slate-500 font-medium max-w-[400px] leading-relaxed">
                                     {quote.termsConditions || "Standard terms apply. This quote is valid for 30 days from the date of issue."}
                                 </p>
                             </div>
@@ -756,106 +771,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
     );
 };
 
-// ─────────────────────────────────────────────────
-// EMAIL SEND VIEW
-// ─────────────────────────────────────────────────
-const EmailSendView = ({ quote, onCancel, onSend }) => {
-    const addNotification = useNotificationStore(state => state.addNotification);
-    const [customerEmail, setCustomerEmail] = useState(quote.customerEmail || "thejathangavel5@gmail.com"); 
-    const userEmail = "thejathangal5@gmail.com"; 
-    const userName = "Administrator";
-    const companyName = "Indus CAI private Ltd";
-
-    const [subject, setSubject] = useState(`Quote from ${companyName} (${quote.quoteNumber})`);
-    const [body, setBody] = useState(`Dear Customer,\n\nThanks for your business.\n\nThe quote ${quote.quoteNumber} is attached with this email.\n\nRegards,\n${userName}\n${companyName}`);
-    const [isSending, setIsSending] = useState(false);
-
-    const handleSend = async () => {
-        setIsSending(true);
-        try {
-            await quoteAPI.sendEmail(quote.id, {
-                subject,
-                body,
-                toEmail: customerEmail
-            });
-            addNotification('Email sent successfully!', 'success');
-            onSend();
-        } catch (err) {
-            console.error(err);
-            addNotification('Failed to send email: ' + (err.response?.data?.error || err.message), 'error');
-        } finally {
-            setIsSending(false);
-        }
-    };
-
-    return (
-        <div className="bg-[#f8fafc] min-h-screen pt-28 pb-20 px-10 animate-fade-in print:bg-white print:p-0 print:pt-0">
-            <div className="max-w-3xl mx-auto">
-                <div className="mb-8 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-3xl font-black italic text-slate-900 uppercase tracking-tighter">Compose Message</h2>
-                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">Proposal to {quote.customerName}</p>
-                    </div>
-                    <button onClick={onCancel} className="p-3 hover:bg-white rounded-full text-slate-400 hover:text-slate-900 transition-all">
-                        <X size={24}/>
-                    </button>
-                </div>
-
-                <div className="bg-white p-10 rounded-xl shadow-2xl shadow-slate-200 border border-slate-100">
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-12 items-center gap-4">
-                            <label className="col-span-2 text-[11px] font-black text-slate-300 uppercase tracking-widest">Recipient</label>
-                            <div className="col-span-10 relative">
-                                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                                <input type="text" value={customerEmail} readOnly className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-lg text-[14px] font-bold text-slate-500 outline-none italic" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-12 items-center gap-4 border-t border-slate-50 pt-6">
-                            <label className="col-span-2 text-[11px] font-black text-slate-300 uppercase tracking-widest">Subject</label>
-                            <input type="text" value={subject} onChange={e => setSubject(e.target.value)} className="col-span-10 px-4 py-3 bg-white border border-slate-100 rounded-lg text-[14px] font-bold text-slate-900 outline-none focus:border-blue-500 focus:shadow-lg focus:shadow-blue-50 transition-all italic" />
-                        </div>
-
-                        <div className="border-t border-slate-50 pt-6">
-                            <label className="block text-[11px] font-black text-slate-300 uppercase tracking-widest mb-4">Message Body</label>
-                            <textarea 
-                                value={body} 
-                                onChange={e => setBody(e.target.value)} 
-                                rows="10" 
-                                className="w-full px-6 py-6 bg-slate-50/30 border border-slate-100 rounded-xl text-[14px] font-medium text-slate-700 outline-none focus:border-blue-500 focus:bg-white transition-all italic leading-relaxed" 
-                            />
-                        </div>
-
-                        <div className="bg-blue-50/50 p-4 rounded-lg flex items-center justify-between border border-blue-100">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 text-blue-600 rounded">
-                                    <FileText size={18}/>
-                                </div>
-                                <div>
-                                    <p className="text-[12px] font-black text-slate-900 uppercase tracking-tight">{quote.quoteNumber}.pdf</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Auto-generated attachment</p>
-                                </div>
-                            </div>
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Ready to attach</span>
-                        </div>
-
-                        <div className="flex justify-end items-center gap-4 pt-8">
-                            <button onClick={onCancel} className="px-6 py-2.5 text-slate-400 font-bold text-[13px] hover:text-slate-900 uppercase tracking-widest transition-all">Discard</button>
-                            <button 
-                                onClick={handleSend} 
-                                disabled={isSending} 
-                                className="bg-[#1e61f0] text-white px-10 py-3 rounded-lg font-black text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isSending ? <RefreshCw className="animate-spin" size={18}/> : <Send size={18}/>}
-                                {isSending ? 'Transmitting...' : 'Send Proposal'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
+// Replaced by unified EmailSendModal
 
 // ─────────────────────────────────────────────────
 // MANAGE SALESPERSONS MODAL
@@ -1038,6 +954,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     const [isPriceListDropdownOpen, setIsPriceListDropdownOpen] = useState(false);
     const [priceListSearch, setPriceListSearch] = useState('');
+    const [customerLedgerId, setCustomerLedgerId] = useState('');
     const priceListRef = useRef(null);
 
     // Restore draft state
@@ -1330,7 +1247,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 companyId,
                 quoteNumber: quoteNo,
                 customerName,
-                customerEmail: customers.find(c => c.name === customerName)?.email || '',
+                customerLedgerId,
                 referenceNumber: refNo,
                 quoteDate,
                 expiryDate: expiryDate || null,
@@ -1386,16 +1303,6 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                     </div>
                     <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">{editId ? 'Edit Quote' : 'New Quote'}</h2>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/quotes')} className="text-[13px] font-bold text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest">Discard</button>
-                    <button 
-                        onClick={handleSave} 
-                        disabled={loading}
-                        className="px-8 py-2 bg-[#1e61f0] text-white text-[13px] font-black rounded shadow-lg shadow-blue-100 hover:bg-[#1a56d9] transition-all uppercase tracking-widest"
-                    >
-                        {loading ? 'Saving...' : 'Confirm Quote'}
-                    </button>
-                </div>
             </header>
 
             <div className="flex-1 overflow-y-auto p-8 max-w-[1200px] w-full mx-auto">
@@ -1435,7 +1342,12 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                     {filteredCustomers.map(c => (
                                                         <div 
                                                             key={c.id}
-                                                            onClick={() => { setCustomerName(c.name); setCustomerSearch(c.name); setShowCustomerDropdown(false); }}
+                                                            onClick={() => { 
+                                                                setCustomerName(c.name); 
+                                                                setCustomerSearch(c.name); 
+                                                                setCustomerLedgerId(c.id);
+                                                                setShowCustomerDropdown(false); 
+                                                            }}
                                                             className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] text-slate-700 font-medium border-b border-slate-50 last:border-0"
                                                         >
                                                             {c.name}
@@ -1509,7 +1421,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                     onClick={() => { setShowSalespersonDropdown(prev => !prev); setSalespersonSearch(''); }}
                                     className={`w-full h-9 px-3 pr-9 border rounded text-[14px] font-medium text-left shadow-sm flex items-center justify-between transition-colors
                                         ${showSalespersonDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-300 bg-white'}
-                                        ${salesperson ? 'text-slate-800' : 'text-slate-400 italic'}`}
+                                        ${salesperson ? 'text-slate-800' : 'text-slate-400 font-medium'}`}
                                 >
                                     <span>{salesperson || 'Select or Add Salesperson'}</span>
                                     <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
@@ -1534,7 +1446,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                         {/* List */}
                                         <div className="max-h-48 overflow-y-auto no-scrollbar">
                                             {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).length === 0 ? (
-                                                <div className="py-6 text-center text-[12px] text-slate-400 font-medium italic">NO RESULTS FOUND</div>
+                                                <div className="py-6 text-center text-[12px] text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
                                             ) : (
                                                 salespersons
                                                     .filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase()))
@@ -1574,7 +1486,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                     onClick={() => { setShowProjectDropdown(prev => !prev); setProjectSearch(''); }}
                                     className={`w-full h-9 px-3 pr-9 border rounded text-[14px] font-medium text-left shadow-sm flex items-center justify-between transition-colors
                                         ${showProjectDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-300 bg-white'}
-                                        ${project ? 'text-slate-800' : 'text-slate-400 italic'}`}
+                                        ${project ? 'text-slate-800' : 'text-slate-400 font-medium'}`}
                                 >
                                     <span>{project || 'Select a project'}</span>
                                     <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showProjectDropdown ? 'rotate-180' : ''}`} />
@@ -1654,7 +1566,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                     <div className="relative" ref={priceListRef}>
                         <div 
                             onClick={() => setIsPriceListDropdownOpen(!isPriceListDropdownOpen)}
-                            className="flex items-center gap-3 text-[13px] font-bold text-slate-500 pt-6 border-t border-slate-100 italic cursor-pointer hover:text-blue-600 transition-all select-none"
+                            className="flex items-center gap-3 text-[13px] font-bold text-slate-500 pt-6 border-t border-slate-100 cursor-pointer hover:text-blue-600 transition-all select-none"
                         >
                             <FileText size={14} />
                             <span>{priceList ? priceLists.find(p => p.id === priceList)?.name || 'Select Price List' : 'Select Price List'}</span>
@@ -1845,11 +1757,30 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                             </div>
 
                             <div className="pt-6 border-t border-slate-200 flex justify-between items-center">
-                                <span className="text-[15px] font-black text-slate-900 uppercase tracking-tight italic">Total ( ₹ )</span>
-                                <span className="text-[22px] font-black text-slate-900 tracking-tighter italic font-mono">{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-[15px] font-black text-slate-900 uppercase tracking-tight">Total ( ₹ )</span>
+                                <span className="text-[22px] font-black text-slate-900 tracking-tighter font-mono">{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
 
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Action Bar Footer */}
+            <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-[60]">
+                <div className="max-w-[1200px] mx-auto px-8 py-4 flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
+                        <ShieldCheck size={14} className="text-[#1e61f0]" /> Encrypted & Secure Record Storage
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => navigate('/quotes')} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded transition-all">Discard</button>
+                        <button 
+                            onClick={handleSave} 
+                            disabled={loading}
+                            className="px-10 py-2.5 bg-[#1e61f0] text-white rounded font-black text-[13px] hover:bg-blue-700 shadow-xl shadow-blue-500/10 transition-all uppercase tracking-widest disabled:opacity-50"
+                        >
+                            {loading ? 'Processing...' : (editId ? 'Update Quote' : 'Confirm Quote')}
+                        </button>
                     </div>
                 </div>
             </div>

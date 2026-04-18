@@ -24,6 +24,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+
 // 3. Authentication Engine (Passport)
 require('./config/passport');
 app.use(passport.initialize());
@@ -81,7 +82,7 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
 // Using alter:true to apply new company profile fields;
-const syncOptions = { alter: false };
+const syncOptions = { alter: false }; // Disable automatic sync to prevent constraint errors
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');

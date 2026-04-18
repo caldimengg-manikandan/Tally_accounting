@@ -206,7 +206,8 @@ export const deliveryChallanAPI = {
   getByCompany: (companyId) => api.get(`/delivery-challans/company/${companyId}`),
   getById: (id) => api.get(`/delivery-challans/${id}`),
   update: (id, data) => api.put(`/delivery-challans/${id}`, data),
-  delete: (id) => api.delete(`/delivery-challans/${id}`)
+  delete: (id) => api.delete(`/delivery-challans/${id}`),
+  sendEmail: (id) => api.post(`/delivery-challans/send-email/${id}`)
 };
 
 export const creditNoteAPI = {
