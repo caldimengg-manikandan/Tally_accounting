@@ -8,7 +8,14 @@ let sequelize;
 
 // 1. Check for Production Connection String (Standard for Render/Vercel Postgres)
 if (process.env.DATABASE_URL) {
-  sequelize = new Sequelize(process.env.DATABASE_URL, {
+  let dbUrl = process.env.DATABASE_URL;
+  // Fix Render internal URLs that cause ENOTFOUND by appending the external region suffix
+  if (dbUrl.includes('dpg-') && !dbUrl.includes('.render.com')) {
+    dbUrl = dbUrl.replace(/(dpg-[a-z0-9-]+)(\/)/, '$1.singapore-postgres.render.com$2');
+    console.log('🔄 Converted internal Render DB URL to external to bypass DNS issues.');
+  }
+
+  sequelize = new Sequelize(dbUrl, {
     dialect: 'postgres',
     protocol: 'postgres',
     dialectOptions: {
