@@ -93,18 +93,36 @@ cron.schedule('0 0 * * *', async () => {
   await recurringController.processDueInvoices({}, { json: (r) => console.log('Cron Result:', r), status: () => ({ json: (r) => console.error('Cron Error:', r) }) });
 });
 
-sequelize.sync(syncOptions).then(() => {
-  const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
-  console.log(`✅ Ledger Database Synced [${connectedTo}]`);
-  app.listen(PORT, () => {
-    console.log(`🚀 Tally Enterprise Hub online at PORT: ${PORT}`);
-  });
-}).catch(err => {
-  console.error('❌ Critical Hub Entry Failure:', err.message);
-  if (err.errors) {
-    err.errors.forEach(e => console.error(`  - Field: ${e.path}, Message: ${e.message}, Value: ${e.value}`));
-  } else {
-    console.error(err);
+const startServer = async () => {
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      await sequelize.authenticate();
+      console.log('✅ Database connection authenticated.');
+      await sequelize.sync(syncOptions);
+      const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
+      console.log(`✅ Ledger Database Synced [${connectedTo}]`);
+      app.listen(PORT, () => {
+        console.log(`🚀 Tally Enterprise Hub online at PORT: ${PORT}`);
+      });
+      break; // Success, exit retry loop
+    } catch (err) {
+      console.error('❌ Database connection/sync failed:', err.message);
+      retries -= 1;
+      console.log(`Retries left: ${retries}. Waiting 5 seconds before retrying...`);
+      if (retries === 0) {
+        console.error('❌ Critical Hub Entry Failure: Could not connect to database after multiple attempts.');
+        if (err.errors) {
+          err.errors.forEach(e => console.error(`  - Field: ${e.path}, Message: ${e.message}, Value: ${e.value}`));
+        } else {
+          console.error(err);
+        }
+        process.exit(1);
+      }
+      // Wait for 5 seconds before retrying
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   }
-  process.exit(1);
-});
+};
+
+startServer();
