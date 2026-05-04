@@ -15,7 +15,14 @@ if (process.env.DATABASE_URL) {
       ssl: {
         require: true,
         rejectUnauthorized: false // Essential for Render/Supabase free tiers
-      }
+      },
+      keepAlive: true,
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 60000,
+      idle: 10000
     },
     logging: false,
   });
