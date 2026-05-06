@@ -38,7 +38,9 @@ const AccountantSubModule = ({ title, icon: Icon, description }) => {
   );
 };
 
-export const BudgetsView = () => <AccountantSubModule title="Budgeting" icon={Target} description="Create department-wise or project-wise budgets and monitor real-time variance analysis against actual spending." />;
+import BudgetsView from './BudgetsView';
+
+export { BudgetsView };
 export const TransactionLockingView = () => <AccountantSubModule title="Transaction Locking" icon={Shield} description="Freeze transactions for specific periods to ensure data integrity during audits or financial closures." />;
 
 export default AccountantSubModule;
