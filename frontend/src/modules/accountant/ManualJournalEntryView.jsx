@@ -66,7 +66,16 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   const [currencySearchQuery, setCurrencySearchQuery] = useState('');
   
+  const [isJournalSettingsOpen, setIsJournalSettingsOpen] = useState(false);
+  const [journalPrefix, setJournalPrefix] = useState('');
+  const [journalNextNumber, setJournalNextNumber] = useState('1');
+  const [journalRestartNumbering, setJournalRestartNumbering] = useState(false);
+  const [journalNumberingType, setJournalNumberingType] = useState('auto');
+  const [isPrefixDropdownOpen, setIsPrefixDropdownOpen] = useState(false);
+  
   const [rows, setRows] = useState([newJournalRow(), newJournalRow()]);
+  const [activeTooltipIdx, setActiveTooltipIdx] = useState(null);
+  
   const [ledgers, setLedgers] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -181,6 +190,7 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
   };
 
   return (
+    <>
     <div className="bg-[#f8fafc] min-h-screen font-sans animate-fade-in pb-40">
       {/* Top Header */}
       <div className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
@@ -251,10 +261,15 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                     <input 
                       type="text" 
                       value={journalNumber} 
-                      onChange={e => setJournalNumber(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] bg-white transition-all font-bold text-slate-700"
+                      readOnly
+                      className="w-full px-3 py-2 border border-slate-200 rounded outline-none text-[13px] bg-slate-50 transition-all font-bold text-slate-500 cursor-not-allowed"
                     />
-                    <Settings size={14} className="absolute right-3 top-2.5 text-blue-500 cursor-pointer" />
+                    <button 
+                      onClick={() => setIsJournalSettingsOpen(true)}
+                      className="absolute right-3 top-2.5 text-blue-500 hover:text-blue-700 transition-colors"
+                    >
+                      <Settings size={14} />
+                    </button>
                  </div>
               </div>
            </div>
@@ -371,7 +386,6 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
            <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                   <th className="w-10 px-4 py-3"></th>
                    <th className="text-left px-4 py-3 min-w-[250px]">Account</th>
                    <th className="text-left px-4 py-3 min-w-[200px]">Description</th>
                    <th className="text-left px-4 py-3 min-w-[200px]">Contact (INR)</th>
@@ -384,17 +398,12 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                 {rows.map((row, idx) => (
                   <tr key={row._id} className="group hover:bg-slate-50/30 transition-colors">
                     <td className="px-4 py-4 align-top">
-                       <div className="flex flex-col gap-1.5 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MoreHorizontal size={14} className="text-slate-300 cursor-grab" />
-                       </div>
-                    </td>
-                    <td className="px-4 py-4 align-top">
                        <div className="space-y-4">
                           <div className="relative">
                              <select 
                                value={row.ledgerId} 
                                onChange={e => updateRow(row._id, 'ledgerId', e.target.value)}
-                               className="w-full p-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 appearance-none bg-white font-medium"
+                               className="w-full px-3 py-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 appearance-none bg-white font-medium h-[38px]"
                              >
                                 <option value="">Select an account</option>
                                 {ACCOUNT_GROUPS.map(g => (
@@ -405,41 +414,43 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                                   </optgroup>
                                 ))}
                              </select>
-                             <ChevronDown size={14} className="absolute right-2 top-2.5 text-slate-300 pointer-events-none" />
+                             <ChevronDown size={14} className="absolute right-2 top-3 text-slate-300 pointer-events-none" />
                           </div>
                           
-                          <div className="flex items-center gap-6 mt-2">
-                             <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors">
-                                <Plus size={12} strokeWidth={3} /> Select a project
-                                <ChevronDown size={10} />
-                             </button>
-                             <div className="relative flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors group">
-                                <FileText size={12} />
-                                <select 
-                                  value={row.tags?.[0] || ''}
-                                  onChange={e => updateRow(row._id, 'tags', e.target.value ? [e.target.value] : [])}
-                                  className="bg-transparent outline-none cursor-pointer appearance-none pr-3 text-slate-400 group-hover:text-blue-600 font-bold"
-                                >
-                                  <option value="">Reporting Tags</option>
-                                  {ACCOUNT_GROUPS.map(g => (
-                                    <optgroup key={g.group} label={g.group}>
-                                      {g.accounts.map(acc => (
-                                        <option key={acc} value={acc}>{acc}</option>
-                                      ))}
-                                    </optgroup>
-                                  ))}
-                                </select>
-                                <ChevronDown size={10} className="absolute right-0 pointer-events-none" />
-                             </div>
-                          </div>
+                          {activeTooltipIdx !== idx && (
+                            <div className="flex items-center gap-6 mt-2 animate-fade-in">
+                               <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors">
+                                  <Plus size={12} strokeWidth={3} /> Select a project
+                                  <ChevronDown size={10} />
+                               </button>
+                               <div className="relative flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors group">
+                                  <FileText size={12} />
+                                  <select 
+                                    value={row.tags?.[0] || ''}
+                                    onChange={e => updateRow(row._id, 'tags', e.target.value ? [e.target.value] : [])}
+                                    className="bg-transparent outline-none cursor-pointer appearance-none pr-3 text-slate-400 group-hover:text-blue-600 font-bold"
+                                  >
+                                    <option value="">Reporting Tags</option>
+                                    {ACCOUNT_GROUPS.map(g => (
+                                      <optgroup key={g.group} label={g.group}>
+                                        {g.accounts.map(acc => (
+                                          <option key={acc} value={acc}>{acc}</option>
+                                        ))}
+                                      </optgroup>
+                                    ))}
+                                  </select>
+                                  <ChevronDown size={10} className="absolute right-0 pointer-events-none" />
+                               </div>
+                            </div>
+                          )}
                        </div>
                     </td>
                     <td className="px-4 py-4 align-top">
-                       <textarea 
-                         rows="2"
+                       <input 
+                         type="text"
                          value={row.description}
                          onChange={e => updateRow(row._id, 'description', e.target.value)}
-                         className="w-full p-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 resize-none"
+                         className="w-full px-3 py-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 h-[38px]"
                          placeholder="Description"
                        />
                     </td>
@@ -448,16 +459,16 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                           <select 
                             value={row.contactId}
                             onChange={e => updateRow(row._id, 'contactId', e.target.value)}
-                            className="w-full p-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 appearance-none bg-white"
+                            className="w-full px-3 py-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 appearance-none bg-white h-[38px]"
                           >
                              <option value="">Select Contact</option>
                              {contacts.map(c => (
                                <option key={`${c.type}-${c.id}`} value={c.id}>
                                  {c.name} ({c.type})
-                               </option>
+                                 </option>
                              ))}
                           </select>
-                          <ChevronDown size={14} className="absolute right-2 top-2.5 text-slate-300 pointer-events-none" />
+                          <ChevronDown size={14} className="absolute right-2 top-3 text-slate-300 pointer-events-none" />
                        </div>
                     </td>
                     <td className="px-4 py-4 align-top">
@@ -465,7 +476,7 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                          type="number" 
                          value={row.debit || ''}
                          onChange={e => updateRow(row._id, 'debit', e.target.value)}
-                         className="w-full p-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 text-right font-bold"
+                         className="w-full px-3 py-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 text-right font-bold h-[38px]"
                          placeholder="0.00"
                        />
                     </td>
@@ -474,14 +485,34 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                          type="number" 
                          value={row.credit || ''}
                          onChange={e => updateRow(row._id, 'credit', e.target.value)}
-                         className="w-full p-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 text-right font-bold"
+                         className="w-full px-3 py-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 text-right font-bold h-[38px]"
                          placeholder="0.00"
                        />
                     </td>
-                    <td className="px-4 py-4 align-top text-center">
-                       <button onClick={() => removeRow(row._id)} className="text-slate-300 hover:text-rose-500 transition-colors mt-2">
-                          <X size={18} />
-                       </button>
+                    <td className="px-4 py-4 align-top">
+                       <div className="flex items-center gap-2 mt-2 relative">
+                          <button 
+                            onClick={() => setActiveTooltipIdx(activeTooltipIdx === idx ? null : idx)}
+                            className={`w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center transition-colors
+                              ${activeTooltipIdx === idx ? 'bg-blue-50 border-blue-200 text-blue-600' : 'text-slate-400 hover:bg-slate-50'}`}
+                          >
+                             <MoreHorizontal size={14} />
+                          </button>
+                          
+                          {activeTooltipIdx === idx && (
+                            <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 z-[100] animate-fade-in">
+                              <div className="bg-slate-800 text-white text-[11px] py-2 px-3 rounded shadow-xl whitespace-nowrap relative">
+                                Click to add additional information for this entry.
+                                {/* Triangle Arrow */}
+                                <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-800 rotate-45" />
+                              </div>
+                            </div>
+                          )}
+
+                          <button onClick={() => removeRow(row._id)} className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-slate-50 transition-colors">
+                             <X size={14} />
+                          </button>
+                       </div>
                     </td>
                   </tr>
                 ))}
@@ -610,7 +641,198 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
             </div>
          </div>
       </div>
-    </div>
+      </div>
+      
+      {isJournalSettingsOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-fade-in" 
+            onClick={() => setIsJournalSettingsOpen(false)}
+          ></div>
+          
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-[650px] animate-slide-up">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 rounded-t-lg bg-white">
+              <h2 className="text-[16px] font-bold text-slate-800">Configure Journal Number Preferences</h2>
+              <button 
+                onClick={() => setIsJournalSettingsOpen(false)}
+                className="text-slate-400 hover:text-rose-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-8">
+              <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                  <LinkIcon size={18} className="text-slate-500" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-[13px] text-slate-600 leading-relaxed">
+                    Configure multiple transaction number series to auto-generate transaction numbers with unique prefixes according to your business needs.
+                  </p>
+                </div>
+                <button className="text-[13px] font-bold text-blue-600 hover:underline flex items-center gap-1">
+                  Configure <span className="text-[15px]">&rarr;</span>
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <p className="text-[14px] text-slate-700">
+                  Auto-generating journal numbers can save your time. Would you like to change your current setting?
+                </p>
+                
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                      <input 
+                        type="radio" 
+                        name="numberingType"
+                        checked={journalNumberingType === 'auto'}
+                        onChange={() => setJournalNumberingType('auto')}
+                        className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-[14px] font-bold text-slate-700 group-hover:text-blue-600 transition-colors">
+                        Auto-generate journal numbers
+                      </span>
+                      <Info size={14} className="text-slate-400" />
+                    </label>
+                    
+                    {journalNumberingType === 'auto' && (
+                      <>
+                        <div className="ml-7 grid grid-cols-2 gap-6 animate-fade-in">
+                          <div className="space-y-2">
+                            <label className="text-[13px] text-slate-500">Prefix</label>
+                            <div className="relative">
+                              <input 
+                                type="text"
+                                value={journalPrefix}
+                                onChange={(e) => setJournalPrefix(e.target.value)}
+                                className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] pr-8"
+                              />
+                              <button 
+                                onClick={() => setIsPrefixDropdownOpen(!isPrefixDropdownOpen)}
+                                className="absolute right-2.5 top-2.5 text-blue-500 hover:text-blue-700 transition-colors z-[230]"
+                              >
+                                <Plus size={14} strokeWidth={3} />
+                              </button>
+                              
+                              {isPrefixDropdownOpen && (
+                                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-xl z-[220] py-2 animate-zoom-in min-w-[180px]">
+                                  <div className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">
+                                    Placeholder
+                                  </div>
+                                  {[
+                                    'Fiscal Year Start',
+                                    'Fiscal Year End',
+                                    'Transaction Year',
+                                    'Transaction Date',
+                                    'Transaction Month'
+                                  ].map((option) => (
+                                    <div 
+                                      key={option}
+                                      onClick={() => {
+                                        setJournalPrefix(prev => prev + `{${option.replace(/\s+/g, '')}}`);
+                                        setIsPrefixDropdownOpen(false);
+                                      }}
+                                      className="px-4 py-2.5 text-[13px] text-slate-700 hover:bg-blue-600 hover:text-white cursor-pointer transition-colors"
+                                    >
+                                      {option}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[13px] text-slate-500">Journal Number</label>
+                            <input 
+                              type="text"
+                              value={journalNextNumber}
+                              onChange={(e) => setJournalNextNumber(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px]"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="ml-7 mt-4">
+                          <label className="flex items-center gap-2 cursor-pointer group w-fit">
+                            <input 
+                              type="checkbox"
+                              checked={journalRestartNumbering}
+                              onChange={(e) => setJournalRestartNumbering(e.target.checked)}
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-[13px] text-slate-600 group-hover:text-slate-900 transition-colors">
+                              Restart numbering for journals at the start of each fiscal year.
+                            </span>
+                          </label>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-3 cursor-pointer group w-fit">
+                      <input 
+                        type="radio" 
+                        name="numberingType"
+                        checked={journalNumberingType === 'manual'}
+                        onChange={() => setJournalNumberingType('manual')}
+                        className="w-4 h-4 border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-[14px] font-bold text-slate-700 group-hover:text-blue-600 transition-colors">
+                        Add journal number manually for this journal
+                      </span>
+                    </label>
+
+                    {journalNumberingType === 'manual' && (
+                      <div className="ml-7 grid grid-cols-12 gap-4 animate-fade-in pr-12">
+                        <div className="col-span-3 space-y-1.5">
+                          <label className="text-[13px] text-slate-500 font-medium">Prefix</label>
+                          <input 
+                            type="text"
+                            value={journalPrefix}
+                            onChange={(e) => setJournalPrefix(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] transition-all"
+                          />
+                        </div>
+                        <div className="col-span-9 space-y-1.5">
+                          <label className="text-[13px] text-slate-500 font-medium">Journal Number</label>
+                          <input 
+                            type="text"
+                            value={journalNextNumber}
+                            onChange={(e) => setJournalNextNumber(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 rounded focus:border-blue-400 outline-none text-[13px] transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="px-6 py-5 bg-slate-50/50 border-t border-slate-100 flex items-center gap-3 rounded-b-lg">
+              <button 
+                onClick={() => {
+                  setJournalNumber(`1${journalPrefix}${journalNextNumber}`);
+                  setIsJournalSettingsOpen(false);
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 transition-all shadow-sm"
+              >
+                Save
+              </button>
+              <button 
+                onClick={() => setIsJournalSettingsOpen(false)}
+                className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
