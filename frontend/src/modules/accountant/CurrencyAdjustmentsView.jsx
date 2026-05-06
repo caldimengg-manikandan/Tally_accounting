@@ -28,7 +28,7 @@ const CurrencyAdjustmentsView = () => {
   const [formData, setFormData] = useState({
     currency: 'AED- UAE Dirham',
     date: '2026-04-17',
-    rate: '22.714582',
+    rate: '',
     notes: ''
   });
 
@@ -38,7 +38,7 @@ const CurrencyAdjustmentsView = () => {
     setFormData({
       ...formData,
       currency: val,
-      rate: curr ? curr.rate : '1.000000'
+      rate: ''
     });
   };
 
@@ -60,79 +60,68 @@ const CurrencyAdjustmentsView = () => {
     <div className="flex-1 flex flex-col bg-white min-h-screen animate-fade-in">
       
       {/* Header */}
-      <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-20">
+      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
          <div>
-            <h1 className="text-[20px] font-bold text-slate-800 tracking-tight">Base Currency Adjustments</h1>
+            <h1 className="text-[18px] font-bold text-slate-800">Base Currency Adjustments</h1>
          </div>
          <div className="flex items-center gap-4">
-            <button className="text-[12px] font-bold text-blue-600 flex items-center gap-1 hover:underline">
-               <Info size={14} /> Find Accountants
+            <button className="text-[12px] text-blue-600 flex items-center gap-1.5 hover:underline">
+               <TrendingUp size={14} className="opacity-70" /> Find Accountants
             </button>
             <button 
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all flex items-center gap-2"
+              className="px-3 py-1.5 bg-[#408dfb] text-white rounded font-medium text-[13px] hover:bg-blue-600 transition-all flex items-center gap-1.5"
             >
-               <Plus size={16} strokeWidth={3} /> New
+               <Plus size={16} /> New
             </button>
          </div>
       </div>
 
       {/* Toolbar */}
-      <div className="px-8 py-4 border-b border-slate-50 bg-[#fcfdfe] flex items-center">
+      <div className="px-6 py-3 border-b border-slate-100 bg-white flex items-center">
          <div className="relative group">
-            <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 bg-white hover:bg-slate-50 transition-all">
-               Filter By: <span className="text-slate-900">{filter}</span>
-               <ChevronDown size={14} className="text-slate-400" />
+            <button className="flex items-center gap-2 px-2 py-1 border border-slate-200 rounded text-[11px] text-slate-600 bg-white hover:bg-slate-50 transition-all">
+               Filter By: <span className="font-medium text-slate-900">{filter}</span>
+               <ChevronDown size={12} className="text-slate-400" />
             </button>
          </div>
       </div>
 
       {/* Table Content */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-auto">
          <table className="w-full text-left border-collapse">
             <thead>
-               <tr className="bg-slate-50/50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  <th className="w-12 px-8 py-3">
-                     <input type="checkbox" className="rounded border-slate-300" />
+               <tr className="bg-slate-50/30 border-b border-slate-100 text-[10px] font-medium text-slate-500 uppercase tracking-tight">
+                  <th className="w-12 px-6 py-2.5">
+                     <input type="checkbox" className="rounded-sm border-slate-300 w-3.5 h-3.5" />
                   </th>
-                  <th className="px-4 py-3">DATE</th>
-                  <th className="px-4 py-3">CURRENCY</th>
-                  <th className="px-4 py-3">EXCHANGE RATE</th>
-                  <th className="px-4 py-3">GAIN OR LOSS</th>
-                  <th className="px-4 py-3">NOTES</th>
+                  <th className="px-2 py-2.5">DATE</th>
+                  <th className="px-2 py-2.5">CURRENCY</th>
+                  <th className="px-2 py-2.5 text-center">EXCHANGE RATE</th>
+                  <th className="px-2 py-2.5 text-right">GAIN OR LOSS</th>
+                  <th className="px-6 py-2.5">NOTES</th>
                </tr>
             </thead>
             <tbody>
                {adjustments.map(adj => (
-                  <tr key={adj.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                     <td className="px-8 py-4"><input type="checkbox" className="rounded border-slate-300" /></td>
-                     <td className="px-4 py-4 text-[13px] font-medium text-slate-600">
+                  <tr key={adj.id} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                     <td className="px-6 py-3"><input type="checkbox" className="rounded-sm border-slate-300 w-3.5 h-3.5" /></td>
+                     <td className="px-2 py-3 text-[13px] text-slate-600">
                         {new Date(adj.date).toLocaleDateString('en-GB')}
                      </td>
-                     <td className="px-4 py-4 text-[13px] font-bold text-slate-800">{adj.currency}</td>
-                     <td className="px-4 py-4 text-[13px] font-medium text-slate-600">1 {adj.currency} = {adj.rate} INR</td>
-                     <td className="px-4 py-4 text-[13px] font-bold text-emerald-600 tracking-tight">₹{adj.gainLoss}</td>
-                     <td className="px-4 py-4 text-[13px] text-slate-400 italic max-w-xs truncate">{adj.notes || '—'}</td>
+                     <td className="px-2 py-3 text-[13px] font-medium text-slate-700">{adj.currency}</td>
+                     <td className="px-2 py-3 text-[13px] text-slate-600 text-center">1 {adj.currency} = {adj.rate} INR</td>
+                     <td className="px-2 py-3 text-[13px] font-bold text-slate-800 text-right">₹{adj.gainLoss}</td>
+                     <td className="px-6 py-3 text-[13px] text-slate-500 max-w-xs truncate">{adj.notes || '—'}</td>
                   </tr>
                ))}
                
                {adjustments.length === 0 && (
                   <tr>
-                     <td colSpan={6} className="py-32 text-center">
-                        <div className="flex flex-col items-center gap-6 max-w-lg mx-auto">
-                           <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
-                              <ArrowLeftRight size={40} strokeWidth={1} />
-                           </div>
-                           <p className="text-[14px] font-medium text-slate-400">
-                              Record a Base Currency Adjustment to correct fluctuations in exchange rates
-                           </p>
-                           <button 
-                             onClick={() => setShowModal(true)}
-                             className="text-blue-600 font-bold hover:underline"
-                           >
-                             Record first adjustment
-                           </button>
-                        </div>
+                     <td colSpan={6} className="py-40 text-center">
+                        <p className="text-[13px] text-slate-400 font-normal">
+                           Record a Base Currency Adjustment to correct fluctuations in exchange rates
+                        </p>
                      </td>
                   </tr>
                )}
@@ -199,7 +188,7 @@ const CurrencyAdjustmentsView = () => {
                         value={formData.rate}
                         onChange={e => setFormData({...formData, rate: e.target.value})}
                         className="flex-1 px-3 py-2 outline-none text-[13px] font-bold text-slate-800"
-                        placeholder="25.281254"
+                        placeholder=""
                       />
                       <div className="bg-slate-50 px-3 py-2 text-[13px] text-slate-500 font-medium border-left border-slate-100">
                          INR

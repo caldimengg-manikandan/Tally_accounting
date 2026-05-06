@@ -189,7 +189,7 @@ content = content.replace(
 // 4. Update the state inside ExpensesView
 content = content.replace(
   "const [showMileageModal, setShowMileageModal] = useState(false);",
-  \`const [showMileageModal, setShowMileageModal] = useState(false);
+  `const [showMileageModal, setShowMileageModal] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState(null);
   const [expenseDetails, setExpenseDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -211,7 +211,7 @@ content = content.replace(
       }
     }
     fetchDetails();
-  }, [selectedExpenseId]);\`
+  }, [selectedExpenseId]);`
 );
 
 // 5. Enhance the table UI to be split view aware
@@ -219,11 +219,11 @@ const existingTableStart = '<table className="w-full text-left">';
 const existingTableEnd = '</table>';
 
 // Extract the table structure exactly
-const tableBlockRegex = /<table className="w-full text-left">([\\s\\S]*?)<\\/tbody>\\s*<\\/table>/;
+const tableBlockRegex = /<table className="w-full text-left">([\s\S]*?)<\/tbody>\s*<\/table>/;
 const match = content.match(tableBlockRegex);
 
 if (match) {
-  const replacementTableJSX = \`
+  const replacementTableJSX = `
               <div className="flex bg-white h-[calc(100vh-140px)] relative overflow-hidden text-left">
                 {/* LIST PANE */}
                 <div className={\`transition-all duration-300 ease-in-out border-r border-slate-200 overflow-y-auto \${selectedExpenseId ? 'w-[380px] shrink-0' : 'w-full'}\`}>
@@ -278,18 +278,18 @@ if (match) {
                   </div>
                 )}
               </div>
-  \`;
+  `;
   
   // Actually replace the table in the content
   content = content.replace(match[0], replacementTableJSX);
   // Remove the <div className="p-8"> wrap around the table so the flex layout consumes the height
   content = content.replace(
-    \`          ) : expenses.length > 0 ? (\\n             <div className="p-8">\\n              <div className="flex bg-white\`,
-    \`          ) : expenses.length > 0 ? (\\n              <div className="flex bg-white\`
+    `          ) : expenses.length > 0 ? (\\n             <div className="p-8">\\n              <div className="flex bg-white`,
+    `          ) : expenses.length > 0 ? (\\n              <div className="flex bg-white`
   );
   content = content.replace(
-    \`              </div>\\n              </div>\\n           ) : (\\n              <div className="flex-1 flex flex-col items-center\`,
-    \`              </div>\\n           ) : (\\n              <div className="flex-1 flex flex-col items-center\`
+    `              </div>\\n              </div>\\n           ) : (\\n              <div className="flex-1 flex flex-col items-center`,
+    `              </div>\\n           ) : (\\n              <div className="flex-1 flex flex-col items-center`
   );
 }
 
