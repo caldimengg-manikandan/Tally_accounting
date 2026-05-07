@@ -41,6 +41,14 @@ module.exports = (sequelize, DataTypes) => {
     createdBy: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    contactId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     paranoid: true

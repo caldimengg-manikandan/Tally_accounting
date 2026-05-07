@@ -5,7 +5,7 @@ const AuditService = require('../../services/AuditService');
 exports.createVoucher = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { companyId, voucherType, date, narration, entries } = req.body;
+    const { companyId, voucherType, date, narration, entries, referenceNumber, reportingMethod, currency } = req.body;
 
     if (!entries || entries.length < 2) {
       return res.status(400).json({ error: 'Minimum 2 entries required for double-entry.' });
@@ -16,13 +16,19 @@ exports.createVoucher = async (req, res) => {
       companyId,
       date,
       narration,
+      reference: referenceNumber,
       voucherType: voucherType || 'Journal',
       entries: entries.map(e => ({
         ledgerId: e.ledgerId,
         debit: parseFloat(e.debit || 0),
-        credit: parseFloat(e.credit || 0)
+        credit: parseFloat(e.credit || 0),
+        description: e.description,
+        contactId: e.contactId
       })),
-      userId: req.user?.id
+      userId: req.user?.id,
+      voucherNumber: req.body.voucherNumber,
+      reportingMethod,
+      currency
     }, t);
 
     await t.commit();
@@ -39,6 +45,53 @@ exports.createVoucher = async (req, res) => {
     });
 
     res.status(201).json({ message: 'Voucher posted successfully.', voucher });
+  } catch (err) {
+    if (t) await t.rollback();
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.updateVoucher = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { companyId, date, narration, entries, referenceNumber, voucherNumber, reportingMethod, currency } = req.body;
+
+    if (!entries || entries.length < 2) {
+      return res.status(400).json({ error: 'Minimum 2 entries required for double-entry.' });
+    }
+
+    const voucher = await AccountingService.updateJournalEntry(id, {
+      companyId,
+      date,
+      narration,
+      reference: referenceNumber,
+      entries: entries.map(e => ({
+        ledgerId: e.ledgerId,
+        debit: parseFloat(e.debit || 0),
+        credit: parseFloat(e.credit || 0),
+        description: e.description,
+        contactId: e.contactId
+      })),
+      userId: req.user?.id,
+      voucherNumber,
+      reportingMethod,
+      currency
+    }, t);
+
+    await t.commit();
+
+    await AuditService.log({
+      action: 'UPDATE_VOUCHER',
+      tableName: 'Vouchers',
+      recordId: voucher.id,
+      newData: voucher,
+      companyId: companyId,
+      userId: req.user?.id,
+      req
+    });
+
+    res.json({ message: 'Voucher updated successfully.', voucher });
   } catch (err) {
     if (t) await t.rollback();
     res.status(400).json({ error: err.message });
