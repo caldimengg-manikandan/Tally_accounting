@@ -35,7 +35,6 @@ import PaymentsReceivedView from './modules/sales/PaymentsReceivedView';
 import ProfessionalInvoiceView from './modules/sales/ProfessionalInvoiceView';
 import SalesInvoicesView from './modules/sales/SalesInvoicesView';
 import QuotesView from './modules/sales/QuotesView';
-import RetainerInvoicesView from './modules/sales/RetainerInvoicesView';
 import RecurringInvoicesView from './modules/sales/RecurringInvoicesView';
 import DeliveryChallansView from './modules/sales/DeliveryChallansView';
 import CreditNotesView from './modules/sales/CreditNotesView';
@@ -102,9 +101,8 @@ const NAV = [
     items: [
       { icon: Users,           label: 'Customers',        path: '/customers', showPlus: true, plusPath: '/customers/new' },
       { icon: FileText,        label: 'Quotes',           path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
-      { icon: FileStack,       label: 'Retainer Invoices', path: '/retainer-invoices', showPlus: true, plusPath: '/retainer-invoices/new' },
       { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders', showPlus: true, plusPath: '/sales-orders/new' },
-      { icon: Receipt,         label: 'Invoices',         path: '/sales-invoices', showPlus: true, plusPath: '/sales/new-invoice' },
+      { icon: Receipt,         label: 'Invoices',         path: '/sales-invoices', showPlus: true, plusPath: '/sales-invoices/new' },
       { icon: Repeat,          label: 'Recurring Invoices', path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
       { icon: Truck,           label: 'Delivery Challans', path: '/delivery-challans', showPlus: true, plusPath: '/delivery-challans/new' },
       { icon: Wallet,          label: 'Payments Received', path: '/payments', showPlus: true, plusPath: '/payments/new' },
@@ -173,7 +171,7 @@ const NAV = [
     ]
   },
   {
-    group: 'APP SETUP',
+    group: 'Settings',
     icon: Settings,
     items: [
       { label: 'Payroll',          path: '/payroll', icon: UserCheck },
@@ -218,7 +216,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
             className="absolute left-[84px] top-0 w-[240px] bg-white rounded-r-2xl shadow-[10px_0_30px_rgba(0,0,0,0.12)] border-y border-r border-slate-100 py-6 px-4 z-[100] animate-fade-in-right"
             style={{ minHeight: '100%' }}
           >
-            <div className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] mb-4 pl-2">
+            <div className="text-[11px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-4 pl-2">
               {group}
             </div>
             <div className="space-y-1">
@@ -279,7 +277,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
             <div className={`transition-transform duration-300 ${expanded ? 'rotate-0' : '-rotate-90'}`}>
               <ChevronDown size={14} className="text-slate-400" />
             </div>
-            <span className={`text-[11px] font-black text-slate-800 uppercase tracking-[0.2em]`}>{group}</span>
+            <span className={`text-[11px] font-bold text-slate-800 uppercase tracking-[0.2em]`}>{group}</span>
           </div>
         </button>
       )}
@@ -421,9 +419,9 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             <Building2 size={22} color="#fff" strokeWidth={2.5} />
           </div>
           {!collapsed && (
-            <div className="leading-tight animate-fade-in">
-              <div className="text-[14px] font-black text-slate-900 tracking-tighter">TALLY REPLICA</div>
-              <div className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-0.5 whitespace-nowrap">Commercial Hub</div>
+            <div className="flex flex-col items-start leading-[1.1] animate-fade-in">
+              <div className="text-[15px] font-black text-slate-900 tracking-tight uppercase">Tally Replica</div>
+              <div className="text-[10px] font-bold text-blue-600/70 uppercase tracking-[0.15em] mt-1 whitespace-nowrap">Cloud Accounting Suite</div>
             </div>
           )}
         </div>
@@ -466,13 +464,13 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             onClick={onLogout}
             className={`flex items-center gap-3 w-full p-2.5 rounded-2xl border border-slate-50 hover:border-red-100 hover:bg-red-50 transition-all group ${collapsed ? 'justify-center' : ''}`}
           >
-            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-lg shadow-slate-900/10">
+            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-lg shadow-slate-900/10">
                {user.email?.substring(0, 1).toUpperCase() || 'A'}
             </div>
             {!collapsed && (
                 <div className="flex-1 min-w-0 text-left">
-                  <div className="text-[13px] font-black text-slate-900 truncate tracking-tight">{user.email || 'Administrator'}</div>
-                  <div className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em] group-hover:text-red-700">Sign Out</div>
+                  <div className="text-[13px] font-bold text-slate-900 truncate tracking-tight">{user.email || 'Administrator'}</div>
+                  <div className="text-[9px] font-bold text-red-500 uppercase tracking-[0.2em] group-hover:text-red-700">Sign Out</div>
                 </div>
             )}
           </button>
@@ -486,10 +484,10 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 relative z-40 shrink-0 no-print">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
-               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Workspace</span>
+               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Workspace</span>
                <ChevronRight size={12} className="text-slate-300" />
                <select 
-                 className="bg-transparent text-[11px] font-black text-slate-900 uppercase tracking-widest outline-none cursor-pointer"
+                 className="bg-transparent text-[11px] font-bold text-slate-900 uppercase tracking-widest outline-none cursor-pointer"
                  value={currentCompanyId}
                  onChange={(e) => {
                    const selected = companies.find(c => c.id === e.target.value);
@@ -503,7 +501,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
                     {i > 0 && <ChevronRight size={12} className="text-slate-300" />}
                     <span 
                       onClick={() => navigate(crumb.path)}
-                      className={`text-[11px] font-black uppercase tracking-widest cursor-pointer transition-colors ${crumb.isLast ? 'text-[#1e61f0]' : 'text-slate-400 hover:text-slate-900'}`}
+                      className={`text-[11px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${crumb.isLast ? 'text-[#1e61f0]' : 'text-slate-400 hover:text-slate-900'}`}
                     >
                       {crumb.label}
                     </span>
@@ -560,6 +558,8 @@ function AuthenticatedApp() {
      setCompanyId(id);
      window.location.reload();
   };
+
+
 
   useEffect(() => {
     const fetchContext = async () => {
@@ -708,16 +708,12 @@ function AuthenticatedApp() {
       <Route path="/quotes/new"         element={shell(QuotesView)} />
       <Route path="/quotes/edit/:id"    element={shell(QuotesView)} />
       <Route path="/quotes/view/:id"    element={shell(QuotesView)} />
-      <Route path="/retainer-invoices"  element={shell(RetainerInvoicesView)} />
-      <Route path="/retainer-invoices/new" element={shell(RetainerInvoicesView)} />
-      <Route path="/retainer-invoices/view/:id" element={shell(RetainerInvoicesView)} />
-      <Route path="/retainer-invoices/edit/:id" element={shell(RetainerInvoicesView)} />
       <Route path="/sales-orders"       element={shell(SalesOrdersView)} />
             <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
       <Route path="/sales-invoices"     element={shell(SalesInvoicesView)} />
       <Route path="/sales-invoices/:id" element={shell(SalesInvoicesView)} />
-      <Route path="/sales/new-invoice"  element={shell(ProfessionalInvoiceView)} />
-      <Route path="/sales/edit-invoice/:id" element={shell(ProfessionalInvoiceView)} />
+      <Route path="/sales-invoices/new"  element={shell(ProfessionalInvoiceView)} />
+      <Route path="/sales-invoices/edit/:id" element={shell(ProfessionalInvoiceView)} />
       <Route path="/recurring-invoices" element={shell(RecurringInvoicesView)} />
       <Route path="/recurring-invoices/new" element={shell(RecurringInvoicesView)} />
       <Route path="/recurring-invoices/view/:id" element={shell(RecurringInvoicesView)} />

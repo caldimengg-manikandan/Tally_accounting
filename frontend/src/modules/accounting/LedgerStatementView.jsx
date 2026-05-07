@@ -62,9 +62,9 @@ export default function LedgerStatementView() {
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
               <BookOpen size={18} />
             </div>
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Account Statement</span>
+            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Account Statement</span>
           </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tighter">
             {data?.ledger?.name || 'Ledger Statement'}
           </h1>
           {data?.ledger?.group && (
@@ -75,7 +75,7 @@ export default function LedgerStatementView() {
           <button onClick={fetchData} className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm">
             <RefreshCcw size={16} />
           </button>
-          <button onClick={exportCSV} disabled={!data} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 disabled:opacity-40">
+          <button onClick={exportCSV} disabled={!data} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 disabled:opacity-40">
             <Download size={16} /> Export CSV
           </button>
         </div>
@@ -85,16 +85,16 @@ export default function LedgerStatementView() {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-wrap gap-4 items-end">
         <Filter size={16} className="text-slate-400 self-center" />
         <div>
-          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">From Date</label>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">From Date</label>
           <input type="date" value={from} onChange={e => setFrom(e.target.value)}
             className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 transition-all" />
         </div>
         <div>
-          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">To Date</label>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">To Date</label>
           <input type="date" value={to} onChange={e => setTo(e.target.value)}
             className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 transition-all" />
         </div>
-        <button onClick={fetchData} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-wider hover:bg-indigo-700 transition-all">
+        <button onClick={fetchData} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-indigo-700 transition-all">
           Apply Filter
         </button>
       </div>
@@ -111,8 +111,8 @@ export default function LedgerStatementView() {
       {/* Table */}
       <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
         <div className="h-14 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaction Ledger</span>
-          <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Transaction Ledger</span>
+          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
             {data?.entries?.length || 0} entries
           </span>
         </div>
@@ -128,7 +128,7 @@ export default function LedgerStatementView() {
           </div>
         ) : (
           <table className="w-full text-left">
-            <thead className="bg-[#fcfdfe] text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50">
+            <thead className="bg-[#fcfdfe] text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50">
               <tr>
                 <th className="px-8 py-4">Date</th>
                 <th className="px-8 py-4">Voucher No.</th>
@@ -143,11 +143,11 @@ export default function LedgerStatementView() {
               {/* Opening balance row */}
               <tr className="bg-slate-50/50">
                 <td className="px-8 py-3" colSpan={4}>
-                  <span className="text-[11px] font-black uppercase text-slate-400 tracking-widest">Opening Balance</span>
+                  <span className="text-[11px] font-bold uppercase text-slate-400 tracking-widest">Opening Balance</span>
                 </td>
                 <td className="px-8 py-3 text-right" />
                 <td className="px-8 py-3 text-right" />
-                <td className="px-8 py-3 text-right font-black text-slate-700">{fmt(data?.ledger?.openingBalance)}</td>
+                <td className="px-8 py-3 text-right font-bold text-slate-700">{fmt(data?.ledger?.openingBalance)}</td>
               </tr>
               {data?.entries?.length === 0 ? (
                 <tr>
@@ -159,20 +159,20 @@ export default function LedgerStatementView() {
                 data?.entries?.map((e) => (
                   <tr key={e.id} className="hover:bg-indigo-50/20 transition-all">
                     <td className="px-8 py-4">{fmtDate(e.date)}</td>
-                    <td className="px-8 py-4 text-indigo-600 font-black">{e.voucherNumber}</td>
+                    <td className="px-8 py-4 text-indigo-600 font-bold">{e.voucherNumber}</td>
                     <td className="px-8 py-4">
-                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-[10px] font-black uppercase tracking-wide">
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold uppercase tracking-wide">
                         {e.voucherType}
                       </span>
                     </td>
                     <td className="px-8 py-4 text-slate-500 max-w-xs truncate">{e.narration}</td>
-                    <td className="px-8 py-4 text-right font-black text-blue-600">
+                    <td className="px-8 py-4 text-right font-bold text-blue-600">
                       {e.debit > 0 ? fmt(e.debit) : '—'}
                     </td>
-                    <td className="px-8 py-4 text-right font-black text-red-500">
+                    <td className="px-8 py-4 text-right font-bold text-red-500">
                       {e.credit > 0 ? fmt(e.credit) : '—'}
                     </td>
-                    <td className={`px-8 py-4 text-right font-black ${e.balance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
+                    <td className={`px-8 py-4 text-right font-bold ${e.balance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
                       {fmt(Math.abs(e.balance))}{e.balance < 0 ? ' Cr' : ' Dr'}
                     </td>
                   </tr>
@@ -180,7 +180,7 @@ export default function LedgerStatementView() {
               )}
               {/* Closing row */}
               {data && data.entries.length > 0 && (
-                <tr className="bg-slate-900 text-white font-black">
+                <tr className="bg-slate-900 text-white font-bold">
                   <td className="px-8 py-5 text-xs uppercase tracking-widest" colSpan={4}>Closing Balance</td>
                   <td className="px-8 py-5 text-right" />
                   <td className="px-8 py-5 text-right" />
@@ -199,8 +199,8 @@ const SummaryCard = ({ label, value, color, isNum }) => (
   <div className={`p-6 rounded-[2rem] border border-slate-100 shadow-lg flex justify-between items-center
     ${color === 'indigo' ? 'bg-indigo-50/40' : 'bg-slate-50/40'}`}>
     <div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-      <h3 className={`text-2xl font-black tracking-tighter ${color === 'indigo' ? 'text-indigo-600' : 'text-slate-900'}`}>
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+      <h3 className={`text-2xl font-bold tracking-tighter ${color === 'indigo' ? 'text-indigo-600' : 'text-slate-900'}`}>
         {isNum ? value : value}
       </h3>
     </div>

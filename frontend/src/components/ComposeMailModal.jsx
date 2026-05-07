@@ -47,7 +47,7 @@ const ComposeMailModal = ({ isOpen, onClose, recipientEmail, recipientName, ledg
                <Mail size={20} />
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight">Compose Email</h3>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">Compose Email</h3>
               <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">SENDING TO {recipientName}</p>
             </div>
           </div>
@@ -65,13 +65,13 @@ const ComposeMailModal = ({ isOpen, onClose, recipientEmail, recipientName, ledg
           <div className="space-y-4">
             {/* Recipient Field (Read Only focus) */}
             <div className="space-y-1.5 p-4 bg-slate-50 rounded-xl border border-slate-100">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><User size={12}/> Recipient</label>
+               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><User size={12}/> Recipient</label>
                <div className="text-[14px] font-bold text-slate-700">{recipientName} &lt;{recipientEmail}&gt;</div>
             </div>
 
             {/* Subject Field */}
             <div className="space-y-1.5">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Tag size={12}/> Subject</label>
+               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Tag size={12}/> Subject</label>
                <input 
                  type="text" 
                  value={form.subject} 
@@ -83,7 +83,7 @@ const ComposeMailModal = ({ isOpen, onClose, recipientEmail, recipientName, ledg
 
             {/* Message Body */}
             <div className="space-y-1.5">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">Message</label>
+               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">Message</label>
                <textarea 
                  rows={8}
                  value={form.body} 
@@ -99,14 +99,14 @@ const ComposeMailModal = ({ isOpen, onClose, recipientEmail, recipientName, ledg
         <footer className="px-8 py-6 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/20">
           <button 
             onClick={onClose} 
-            className="px-6 py-3 text-slate-500 text-[13px] font-black hover:text-slate-900 transition-colors uppercase tracking-widest"
+            className="px-6 py-3 text-slate-500 text-[13px] font-bold hover:text-slate-900 transition-colors uppercase tracking-widest"
           >
             Cancel
           </button>
           <button 
             onClick={handleSend}
             disabled={loading}
-            className="px-8 py-3 bg-blue-600 text-white rounded-xl text-[13px] font-black hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all flex items-center gap-2 uppercase tracking-widest disabled:opacity-50"
+            className="px-8 py-3 bg-blue-600 text-white rounded-xl text-[13px] font-bold hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all flex items-center gap-2 uppercase tracking-widest disabled:opacity-50"
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : <><Send size={16}/> Send Messages</>}
           </button>

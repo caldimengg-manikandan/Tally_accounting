@@ -314,7 +314,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
           <div className="flex flex-col md:flex-row gap-12">
             <div className="flex-1 space-y-6">
               <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Name <span className="text-rose-500">*</span></label>
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Name <span className="text-rose-500">*</span></label>
                 <div className="relative group">
                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors">
                       <LayoutList size={18} />
@@ -336,23 +336,23 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
 
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Type</label>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Type</label>
                   <div className="flex bg-slate-100 p-1 rounded-xl">
                     <button 
                       type="button"
                       onClick={() => setNewItem({...newItem, type: 'Goods'})}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${newItem.type === 'Goods' ? 'bg-white shadow-md text-[#1e61f0]' : 'text-slate-500 hover:text-slate-800'}`}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${newItem.type === 'Goods' ? 'bg-white shadow-md text-[#1e61f0]' : 'text-slate-500 hover:text-slate-800'}`}
                     >GOODS</button>
                     <button 
                       type="button"
                       onClick={() => setNewItem({...newItem, type: 'Service'})}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-all ${newItem.type === 'Service' ? 'bg-white shadow-md text-[#1e61f0]' : 'text-slate-500 hover:text-slate-800'}`}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${newItem.type === 'Service' ? 'bg-white shadow-md text-[#1e61f0]' : 'text-slate-500 hover:text-slate-800'}`}
                     >SERVICE</button>
                   </div>
                 </div>
 
                 <div className="space-y-2 relative" ref={unitDropdownRef}>
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Unit</label>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Unit</label>
                   <div 
                     onClick={() => setIsUnitOpen(!isUnitOpen)}
                     className="flex items-center justify-between bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-700 cursor-pointer hover:border-blue-300 transition-all"
@@ -390,7 +390,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
             </div>
 
             <div className="w-full md:w-[240px] space-y-3">
-              <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Item Preview</label>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Item Preview</label>
               <div 
                 onClick={() => fileInputRef.current.click()}
                 className="w-full aspect-square border-2 border-dashed border-slate-200 rounded-[24px] bg-slate-50/50 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all group overflow-hidden relative"
@@ -398,7 +398,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                  {uploading ? (
                     <div className="flex flex-col items-center gap-3 animate-pulse">
                       <RefreshCcw size={32} className="animate-spin text-blue-500" />
-                      <span className="text-[10px] font-black uppercase text-blue-400">Syncing...</span>
+                      <span className="text-[10px] font-bold uppercase text-blue-400">Syncing...</span>
                     </div>
                  ) : newItem.imageUrl ? (
                     <img src={newItem.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Item" />
@@ -407,7 +407,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                        <div className="w-12 h-12 rounded-2xl bg-white shadow-md flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                           <Upload size={20} className="text-blue-500" />
                        </div>
-                       <p className="text-[11px] font-black text-slate-400 uppercase leading-relaxed tracking-wider">
+                       <p className="text-[11px] font-bold text-slate-400 uppercase leading-relaxed tracking-wider">
                           Drop your item image or <span className="text-blue-500 underline">Browse</span>
                        </p>
                     </div>
@@ -423,7 +423,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
            <div className="p-8 pb-4 flex justify-between items-center">
               <SectionHeader icon={Coins} title="Sales Information 💰" color="bg-emerald-600" />
               <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-                 <span className="text-[12px] font-black uppercase tracking-widest text-slate-500">Sell this item?</span>
+                 <span className="text-[12px] font-bold uppercase tracking-widest text-slate-500">Sell this item?</span>
                  <Toggle enabled={newItem.salesInformation} onChange={handleSalesToggle} />
               </div>
            </div>
@@ -431,9 +431,9 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
            <div className={`transition-all duration-300 ${newItem.salesInformation ? 'max-h-[1000px] opacity-100 p-8 pt-0' : 'max-h-0 opacity-0 pointer-events-none'}`}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Selling Price <span className="text-rose-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Selling Price <span className="text-rose-500">*</span></label>
                     <div className="relative">
-                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-black text-xs">INR</div>
+                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-bold text-xs">INR</div>
                        <input 
                          type="number" 
                          value={newItem.sellingPrice}
@@ -451,7 +451,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                  </div>
 
                  <div className="space-y-2 relative" ref={salesAccountDropdownRef}>
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Income Account <span className="text-rose-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Income Account <span className="text-rose-500">*</span></label>
                     <div 
                       onClick={() => setIsSalesAccountOpen(!isSalesAccountOpen)}
                       className="flex items-center justify-between bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-700 cursor-pointer hover:border-emerald-300 transition-all"
@@ -476,7 +476,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                            </div>
                            {salesAccounts.map(sec => (
                              <div key={sec.category} className="mb-2">
-                                <div className="px-4 py-1.5 text-[10px] font-black text-slate-400 uppercase bg-slate-50/50">{sec.category}</div>
+                                <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50/50">{sec.category}</div>
                                 {sec.accounts.filter(a => a.toLowerCase().includes(salesAccountSearch.toLowerCase())).map(acc => (
                                   <div key={acc} onClick={() => handleSalesAccountSelect(acc)} className="px-6 py-2 text-[13px] font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors">
                                     {acc}
@@ -487,14 +487,14 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                         </div>
                         <button 
                           onClick={() => openNewAccountModal('Sales')}
-                          className="w-full py-3 bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-colors"
+                          className="w-full py-3 bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-widest hover:bg-emerald-100 transition-colors"
                         >+ New Account</button>
                       </div>
                     )}
                  </div>
 
                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Description</label>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Description</label>
                     <textarea 
                       value={newItem.salesDescription}
                       onChange={e => setNewItem({...newItem, salesDescription: e.target.value})}
@@ -511,7 +511,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
            <div className="p-8 pb-4 flex justify-between items-center">
               <SectionHeader icon={ShoppingCart} title="Purchase Information 📦" color="bg-amber-600" />
               <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-                 <span className="text-[12px] font-black uppercase tracking-widest text-slate-500">Buy this item?</span>
+                 <span className="text-[12px] font-bold uppercase tracking-widest text-slate-500">Buy this item?</span>
                  <Toggle enabled={newItem.purchaseInformation} onChange={handlePurchaseToggle} />
               </div>
            </div>
@@ -519,9 +519,9 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
            <div className={`transition-all duration-300 ${newItem.purchaseInformation ? 'max-h-[1000px] opacity-100 p-8 pt-0' : 'max-h-0 opacity-0 pointer-events-none'}`}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Cost Price <span className="text-rose-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Cost Price <span className="text-rose-500">*</span></label>
                     <div className="relative">
-                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-600 font-black text-xs">INR</div>
+                       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-600 font-bold text-xs">INR</div>
                        <input 
                          type="number" 
                          value={newItem.costPrice}
@@ -539,7 +539,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                  </div>
 
                  <div className="space-y-2 relative" ref={purchaseAccountDropdownRef}>
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Cost Account <span className="text-rose-500">*</span></label>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Cost Account <span className="text-rose-500">*</span></label>
                     <div 
                       onClick={() => setIsPurchaseAccountOpen(!isPurchaseAccountOpen)}
                       className="flex items-center justify-between bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-700 cursor-pointer hover:border-amber-300 transition-all"
@@ -564,7 +564,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                            </div>
                            {purchaseAccounts.map(sec => (
                              <div key={sec.category} className="mb-2">
-                                <div className="px-4 py-1.5 text-[10px] font-black text-slate-400 uppercase bg-slate-50/50">{sec.category}</div>
+                                <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase bg-slate-50/50">{sec.category}</div>
                                 {sec.accounts.filter(a => a.toLowerCase().includes(purchaseAccountSearch.toLowerCase())).map(acc => (
                                   <div key={acc} onClick={() => handlePurchaseAccountSelect(acc)} className="px-6 py-2 text-[13px] font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 cursor-pointer transition-colors">
                                     {acc}
@@ -575,14 +575,14 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                         </div>
                          <button 
                           onClick={() => openNewAccountModal('Purchase')}
-                          className="w-full py-3 bg-amber-50 text-amber-700 text-xs font-black uppercase tracking-widest hover:bg-amber-100 transition-colors"
+                          className="w-full py-3 bg-amber-50 text-amber-700 text-xs font-bold uppercase tracking-widest hover:bg-amber-100 transition-colors"
                         >+ New Account</button>
                       </div>
                     )}
                  </div>
 
                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Preferred Vendor</label>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Preferred Vendor</label>
                     <select 
                       value={newItem.preferredVendor} 
                       onChange={e => setNewItem({...newItem, preferredVendor: e.target.value})}
@@ -596,7 +596,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                  </div>
 
                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Purchase Description</label>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Purchase Description</label>
                     <textarea 
                       value={newItem.purchaseDescription}
                       onChange={e => setNewItem({...newItem, purchaseDescription: e.target.value})}

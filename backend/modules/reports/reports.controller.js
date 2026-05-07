@@ -352,8 +352,30 @@ exports.getLedgerStatement = async (req, res) => {
     });
     if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
 
+    // 1. Calculate Balance Before "From" Date
+    let startBalance = parseFloat(ledger.openingBalance || 0);
+    
+    if (from) {
+      const priorTransactions = await Transaction.findAll({
+        where: {
+          LedgerId: ledgerId,
+          createdAt: { [Op.lt]: new Date(from) }
+        }
+      });
+      priorTransactions.forEach(t => {
+        startBalance += parseFloat(t.debit || 0) - parseFloat(t.credit || 0);
+      });
+    }
+
+    // 2. Fetch Transactions within range
     const where = { LedgerId: ledgerId };
-    if (from && to) where.createdAt = { [Op.between]: [new Date(from), new Date(to)] };
+    if (from && to) {
+      where.createdAt = { [Op.between]: [new Date(from), new Date(to)] };
+    } else if (from) {
+      where.createdAt = { [Op.gte]: new Date(from) };
+    } else if (to) {
+      where.createdAt = { [Op.lte]: new Date(to) };
+    }
 
     const transactions = await Transaction.findAll({
       where,
@@ -364,7 +386,7 @@ exports.getLedgerStatement = async (req, res) => {
       order: [['createdAt', 'ASC']]
     });
 
-    let runningBalance = parseFloat(ledger.openingBalance || 0);
+    let runningBalance = startBalance;
     const entries = transactions.map(t => {
       const debit = parseFloat(t.debit || 0);
       const credit = parseFloat(t.credit || 0);
@@ -387,8 +409,9 @@ exports.getLedgerStatement = async (req, res) => {
         name: ledger.name,
         group: ledger.Group?.name,
         nature: ledger.Group?.nature,
-        openingBalance: parseFloat(ledger.openingBalance || 0),
-        closingBalance: runningBalance,
+        openingBalance: startBalance, // Balance at the start of the period
+        closingBalance: runningBalance, // Balance at the end of the period
+        absoluteOpeningBalance: parseFloat(ledger.openingBalance || 0)
       },
       entries
     });

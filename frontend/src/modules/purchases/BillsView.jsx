@@ -209,7 +209,7 @@ const BillsView = ({ companyId }) => {
                                 <Filter size={14} /> Filter
                             </button>
                             <div className="w-px h-4 bg-slate-200 mx-2" />
-                            <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                            <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
                                 <Settings size={14} /> Settings
                             </button>
                         </div>
@@ -334,10 +334,10 @@ const BillsView = ({ companyId }) => {
                                     className={`p-4 border-b border-slate-50 cursor-pointer transition-all relative group overflow-hidden ${selectedBillId === bill.id ? 'bg-blue-50/50 border-l-[3px] border-l-blue-600' : 'hover:bg-slate-50/80 border-l-[3px] border-l-transparent'}`}
                                 >
                                     <div className="flex justify-between items-start mb-1">
-                                        <span className={`text-[13px] font-black ${selectedBillId === bill.id ? 'text-blue-700' : 'text-slate-800'}`}>
+                                        <span className={`text-[13px] font-bold ${selectedBillId === bill.id ? 'text-blue-700' : 'text-slate-800'}`}>
                                             {bill.Ledger?.name}
                                         </span>
-                                        <span className="text-[13px] font-black text-slate-900 group-hover:scale-110 transition-transform tabular-nums">
+                                        <span className="text-[13px] font-bold text-slate-900 group-hover:scale-110 transition-transform tabular-nums">
                                             ₹{parseFloat(bill.totalAmount || 0).toLocaleString()}
                                         </span>
                                     </div>
@@ -346,7 +346,7 @@ const BillsView = ({ companyId }) => {
                                         <span className="text-[11px] text-slate-400 font-bold">{new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}</span>
                                     </div>
                                     <div className="mt-2 flex items-center justify-between">
-                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-[0.1em] ${parseFloat(bill.balanceDue) === 0 ? 'bg-emerald-100/80 text-emerald-600' : 'bg-orange-100/80 text-orange-600'}`}>
+                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] ${parseFloat(bill.balanceDue) === 0 ? 'bg-emerald-100/80 text-emerald-600' : 'bg-orange-100/80 text-orange-600'}`}>
                                             {parseFloat(bill.balanceDue) === 0 ? 'Paid' : 'Unpaid'}
                                         </span>
                                         <ChevronRight size={14} className={`transition-all duration-300 ${selectedBillId === bill.id ? 'translate-x-0 opacity-100 text-blue-500' : '-translate-x-2 opacity-0 text-slate-200'}`} />
@@ -365,7 +365,7 @@ const BillsView = ({ companyId }) => {
                             detailLoading ? (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-[40]">
                                     <RefreshCw size={32} className="animate-spin text-blue-600 mb-4" />
-                                    <p className="text-[13px] font-black text-slate-400 uppercase tracking-widest">Loading Bill Details...</p>
+                                    <p className="text-[13px] font-bold text-slate-400 uppercase tracking-widest">Loading Bill Details...</p>
                                 </div>
                             ) : (
                                 <div className="animate-in fade-in duration-500 flex flex-col min-h-full">
@@ -373,8 +373,8 @@ const BillsView = ({ companyId }) => {
                                     {/* A. Detail Action Bar */}
                                     <div className="sticky top-0 bg-white border-b border-slate-100 p-4 flex items-center justify-between px-8 z-30 shadow-[0_1px_5px_rgba(0,0,0,0.02)]">
                                         <div className="flex items-center gap-4">
-                                            <h2 className="text-[18px] font-black text-slate-800">{billDetail?.voucherNumber}</h2>
-                                            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${parseFloat(billDetail?.balanceDue) > 0 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                                            <h2 className="text-[18px] font-bold text-slate-800">{billDetail?.voucherNumber}</h2>
+                                            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${parseFloat(billDetail?.balanceDue) > 0 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
                                             {parseFloat(billDetail?.balanceDue) > 0 ? 'Open' : 'Settled'}
                                             </div>
                                         </div>
@@ -383,12 +383,12 @@ const BillsView = ({ companyId }) => {
                                             <div className="flex items-center bg-slate-50/50 border border-slate-200 rounded-xl p-1 gap-1">
                                                 <button 
                                                     onClick={() => billDetail && navigate('/bills/edit/' + billDetail.id)}
-                                                    className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-black"
+                                                    className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold"
                                                 >
                                                     <Edit size={14} /> Edit
                                                 </button>
                                                 <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                                                <button className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-black">
+                                                <button className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold">
                                                     <Printer size={14} /> PDF/Print
                                                 </button>
                                                 <div className="w-px h-4 bg-slate-200 mx-1"></div>
@@ -397,7 +397,7 @@ const BillsView = ({ companyId }) => {
                                                         vendorId: billDetail.Transactions?.find(t => t.type === 'Cr')?.LedgerId,
                                                         billDetail: billDetail 
                                                     } })}
-                                                    className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-black"
+                                                    className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold"
                                                 >
                                                     <Plus size={14} /> Record Payment
                                                 </button>
@@ -409,7 +409,7 @@ const BillsView = ({ companyId }) => {
 
                                             <div className="flex items-center gap-3 ml-4 border-l border-slate-200 pl-6">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Journal View</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Journal View</span>
                                                     <button 
                                                         onClick={() => setShowVoucher(!showVoucher)}
                                                         className={`w-10 h-5 rounded-full relative transition-colors ${showVoucher ? 'bg-blue-600' : 'bg-slate-200'}`}
@@ -435,13 +435,13 @@ const BillsView = ({ companyId }) => {
                                                     <AlertCircle size={24} />
                                                 </div>
                                                 <div>
-                                                    <h4 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">WHAT'S NEXT?</h4>
+                                                    <h4 className="text-[14px] font-bold text-slate-800 uppercase tracking-tight">WHAT'S NEXT?</h4>
                                                     <p className="text-[13px] text-slate-600 mt-0.5">This bill is in the <b>open</b> status. You can now record payment for this bill.</p>
                                                 </div>
                                             </div>
                                             <button 
                                             onClick={() => billDetail && navigate('/purchases/payments-made', { state: { vendorId: billDetail.Transactions?.find(t => t.type === 'Cr')?.LedgerId } })}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-[12px] font-black transition-all shadow-lg shadow-blue-100 active:scale-95"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all shadow-lg shadow-blue-100 active:scale-95"
                                             >
                                                 Record Payment
                                             </button>
@@ -464,38 +464,38 @@ const BillsView = ({ companyId }) => {
                                                         {companyDetail?.logoUrl ? (
                                                             <img src={companyDetail.logoUrl} alt="Logo" className="w-16 h-16 object-contain rounded-xl shadow-sm" />
                                                         ) : (
-                                                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-[24px]">
+                                                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-[24px]">
                                                                 {companyDetail?.name?.charAt(0) || 'B'}
                                                             </div>
                                                         )}
                                                         <div>
-                                                            <h3 className="text-[18px] font-black text-slate-800">{companyDetail?.name || 'Company Name'}</h3>
+                                                            <h3 className="text-[18px] font-bold text-slate-800">{companyDetail?.name || 'Company Name'}</h3>
                                                             <p className="text-[13px] text-slate-400 font-medium">{companyDetail?.city || 'City'}, {companyDetail?.state || 'State'}</p>
                                                             <p className="text-[12px] text-slate-400 font-medium">{companyDetail?.location || 'India'}</p>
                                                             {companyDetail?.email && <p className="text-[12px] text-blue-500 font-medium mt-1">{companyDetail.email}</p>}
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <h1 className="text-[42px] font-black text-slate-200 tracking-[0.1em] uppercase leading-none mb-6">Bill</h1>
+                                                        <h1 className="text-[42px] font-bold text-slate-200 tracking-[0.1em] uppercase leading-none mb-6">Bill</h1>
                                                         
                                                         <div className="space-y-1 mt-4">
-                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill Date:</span><span className="font-black text-slate-800">{billDetail?.date ? new Date(billDetail.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
-                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill#:</span><span className="font-black text-slate-800">{billDetail?.voucherNumber}</span></div>
-                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Due Date:</span><span className="font-black text-slate-800">{billDetail?.dueDate ? new Date(billDetail.dueDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
-                                                            <div className="text-[14px] flex justify-end gap-3 pt-2 text-blue-600"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Balance Due:</span><span className="font-black">₹{parseFloat(billDetail?.balanceDue || billDetail?.totalAmount || billDetail?.Transactions?.find(t => t.type === 'Cr')?.credit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill Date:</span><span className="font-bold text-slate-800">{billDetail?.date ? new Date(billDetail.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill#:</span><span className="font-bold text-slate-800">{billDetail?.voucherNumber}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Due Date:</span><span className="font-bold text-slate-800">{billDetail?.dueDate ? new Date(billDetail.dueDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3 pt-2 text-blue-600"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Balance Due:</span><span className="font-bold">₹{parseFloat(billDetail?.balanceDue || billDetail?.totalAmount || billDetail?.Transactions?.find(t => t.type === 'Cr')?.credit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 <div className="mb-12">
-                                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Bill From</h4>
-                                                    <h3 className="text-[16px] font-black text-blue-600">{billDetail?.Ledger?.name || 'Vendor Name'}</h3>
+                                                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Bill From</h4>
+                                                    <h3 className="text-[16px] font-bold text-blue-600">{billDetail?.Ledger?.name || 'Vendor Name'}</h3>
                                                     <p className="text-[13px] text-slate-500 font-medium mt-1 italic">Reference#: {billDetail?.referenceNumber || '---'}</p>
                                                 </div>
 
                                                 <table className="w-full mb-12 border-collapse">
                                                     <thead>
-                                                        <tr className="border-b-2 border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                        <tr className="border-b-2 border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                                             <th className="py-4 text-left w-12 text-slate-800">#</th>
                                                             <th className="py-4 text-left">Item & Description</th>
                                                             <th className="py-4 text-right px-4">Qty</th>
@@ -532,12 +532,12 @@ const BillsView = ({ companyId }) => {
                                                                     <tr key={idx} className="border-b border-slate-50">
                                                                         <td className="py-5 text-slate-400">{idx + 1}</td>
                                                                         <td className="py-5">
-                                                                            <span className="text-slate-900 font-black truncate max-w-[300px] inline-block">{item.itemName || item.name || 'Service/Item'}</span>
+                                                                            <span className="text-slate-900 font-bold truncate max-w-[300px] inline-block">{item.itemName || item.name || 'Service/Item'}</span>
                                                                             {item.notes && <p className="text-[11px] text-slate-400 font-medium mt-0.5">{item.notes}</p>}
                                                                         </td>
                                                                         <td className="py-5 text-right px-4 tabular-nums">{item.quantity || item.qty || '1.00'}</td>
                                                                         <td className="py-5 text-right px-4 tabular-nums">₹{parseFloat(item.rate || 0).toLocaleString()}</td>
-                                                                        <td className="py-5 text-right font-black tabular-nums">₹{parseFloat(item.amount || item.total || 0).toLocaleString()}</td>
+                                                                        <td className="py-5 text-right font-bold tabular-nums">₹{parseFloat(item.amount || item.total || 0).toLocaleString()}</td>
                                                                     </tr>
                                                                 ));
                                                             }
@@ -551,12 +551,12 @@ const BillsView = ({ companyId }) => {
                                                                 <tr className="border-b border-slate-50">
                                                                     <td className="py-5 text-slate-400">1</td>
                                                                     <td className="py-5">
-                                                                        <span className="text-slate-900 font-black">{billDetail?.Ledger?.name || 'Vendor'} Service/Supply</span>
+                                                                        <span className="text-slate-900 font-bold">{billDetail?.Ledger?.name || 'Vendor'} Service/Supply</span>
                                                                         <p className="text-[11px] text-slate-400 mt-1">{(() => { try { const p = JSON.parse(billDetail?.narration || '{}'); return p.notes || 'No details'; } catch(e) { return billDetail?.narration?.split('||')[0] || 'No details'; } })()}</p>
                                                                     </td>
                                                                     <td className="py-5 text-right px-4">1.00</td>
                                                                     <td className="py-5 text-right px-4">₹{parseFloat(derivedTotal).toLocaleString()}</td>
-                                                                    <td className="py-5 text-right font-black">₹{parseFloat(derivedTotal).toLocaleString()}</td>
+                                                                    <td className="py-5 text-right font-bold">₹{parseFloat(derivedTotal).toLocaleString()}</td>
                                                                 </tr>
                                                             );
                                                         })()}
@@ -582,8 +582,8 @@ const BillsView = ({ companyId }) => {
                                                                         <span className="font-bold text-slate-800 tabular-nums">₹{parseFloat(derivedTotal).toLocaleString()}</span>
                                                                     </div>
                                                                     <div className="flex justify-between text-[18px] py-3 bg-slate-900 text-white px-6 rounded-xl items-center shadow-lg shadow-slate-200">
-                                                                        <span className="font-black tracking-tight uppercase text-[12px]">Total Amount</span>
-                                                                        <span className="font-black tabular-nums">₹{parseFloat(derivedTotal).toLocaleString()}</span>
+                                                                        <span className="font-bold tracking-tight uppercase text-[12px]">Total Amount</span>
+                                                                        <span className="font-bold tabular-nums">₹{parseFloat(derivedTotal).toLocaleString()}</span>
                                                                     </div>
                                                                 </>
                                                             );
@@ -593,7 +593,7 @@ const BillsView = ({ companyId }) => {
                                                 
                                                 <div className="mt-20 flex justify-between items-end grayscale opacity-50">
                                                     <div>
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Authorized Signature</p>
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Authorized Signature</p>
                                                         <div className="mt-4 w-48 h-px bg-slate-200" />
                                                     </div>
                                                     <div className="text-right">
@@ -607,15 +607,15 @@ const BillsView = ({ companyId }) => {
                                         {showVoucher && (
                                             <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-700">
                                                 <div className="flex items-center gap-3 mb-6 px-2">
-                                                    <h3 className="text-[16px] font-black text-slate-800 uppercase tracking-tighter">Journal</h3>
+                                                    <h3 className="text-[16px] font-bold text-slate-800 uppercase tracking-tighter">Journal</h3>
                                                     <div className="flex-1 h-px bg-slate-100"></div>
-                                                    <span className="text-[11px] font-black text-slate-400 bg-slate-50 px-3 py-1 rounded-full">#{billDetail?.voucherNumber}</span>
+                                                    <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full">#{billDetail?.voucherNumber}</span>
                                                 </div>
                                                 
                                                 <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                                                     <table className="w-full text-left">
                                                         <thead>
-                                                            <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                                            <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                                                 <th className="px-10 py-5">Account / Ledger</th>
                                                                 <th className="px-10 py-5 text-right">Debit (Dr)</th>
                                                                 <th className="px-10 py-5 text-right">Credit (Cr)</th>
@@ -624,20 +624,20 @@ const BillsView = ({ companyId }) => {
                                                         <tbody className="divide-y divide-slate-50">
                                                             {billDetail?.Transactions?.map((tx, idx) => (
                                                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                                <td className={`px-10 py-5 text-[14px] font-black ${tx.debit > 0 ? 'text-blue-600' : 'text-slate-800 pl-16'}`}>
+                                                                <td className={`px-10 py-5 text-[14px] font-bold ${tx.debit > 0 ? 'text-blue-600' : 'text-slate-800 pl-16'}`}>
                                                                     {tx.Ledger?.name || 'Unknown Ledger'}
                                                                 </td>
-                                                                <td className="px-10 py-5 text-right text-[14px] font-black text-slate-900 tabular-nums">
+                                                                <td className="px-10 py-5 text-right text-[14px] font-bold text-slate-900 tabular-nums">
                                                                     {tx.debit > 0 ? `₹${tx.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '---'}
                                                                 </td>
-                                                                <td className="px-10 py-5 text-right text-[14px] font-black text-slate-900 tabular-nums">
+                                                                <td className="px-10 py-5 text-right text-[14px] font-bold text-slate-900 tabular-nums">
                                                                     {tx.credit > 0 ? `₹${tx.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '---'}
                                                                 </td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
                                                         <tfoot className="bg-slate-50/80">
-                                                            <tr className="text-[14px] font-black text-slate-900">
+                                                            <tr className="text-[14px] font-bold text-slate-900">
                                                                 <td className="px-10 py-6">Total</td>
                                                                 <td className="px-10 py-6 text-right tabular-nums">₹{parseFloat(billDetail?.Transactions?.filter(t => t.type === 'Dr').reduce((s,t) => s+t.debit, 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                                                 <td className="px-10 py-6 text-right tabular-nums text-blue-600">₹{parseFloat(billDetail?.Transactions?.filter(t => t.type === 'Cr').reduce((s,t) => s+t.credit, 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
@@ -656,7 +656,7 @@ const BillsView = ({ companyId }) => {
                                 <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center text-slate-200 mb-8 border border-slate-200 shadow-xl">
                                     <Receipt size={48} />
                                 </div>
-                                <h3 className="text-[24px] font-black text-slate-800 tracking-tighter mb-2">Select a bill to view details</h3>
+                                <h3 className="text-[24px] font-bold text-slate-800 tracking-tighter mb-2">Select a bill to view details</h3>
                                 <p className="text-slate-400 text-[14px] max-w-sm mx-auto leading-relaxed">
                                     Click on a bill from the left-side list to see its full document visualization and accounting history.
                                 </p>
@@ -671,22 +671,22 @@ const BillsView = ({ companyId }) => {
         <footer className="px-6 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-30 shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
             <div className="flex items-center gap-6">
                  <div className="flex flex-col">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">Total Unpaid</span>
-                    <span className="text-[16px] font-black text-orange-600 tabular-nums">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Total Unpaid</span>
+                    <span className="text-[16px] font-bold text-orange-600 tabular-nums">
                         ₹{filteredBills.reduce((acc, b) => acc + parseFloat(b.balanceDue || b.totalAmount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                  </div>
                  <div className="w-px h-8 bg-slate-100"></div>
                  <div className="flex flex-col">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight">Grand Total</span>
-                    <span className="text-[16px] font-black text-slate-900 tabular-nums">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Grand Total</span>
+                    <span className="text-[16px] font-bold text-slate-900 tabular-nums">
                         ₹{bills.reduce((acc, b) => acc + parseFloat(b.totalAmount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                  </div>
             </div>
             
             <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[11px] font-black">
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[11px] font-bold">
                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
                    Synced Live
                 </div>

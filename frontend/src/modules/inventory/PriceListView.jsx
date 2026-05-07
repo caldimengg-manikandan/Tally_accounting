@@ -114,11 +114,11 @@ const PriceListView = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#fcfdff] border-b border-slate-100">
-                    <th className="px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Name and description</th>
-                    <th className="px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Currency</th>
-                    <th className="px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Details</th>
-                    <th className="px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Pricing Scheme</th>
-                    <th className="px-6 py-3.5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap flex items-center justify-between">
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Name and description</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Currency</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Details</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Pricing Scheme</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap flex items-center justify-between">
                       <span>Round Off Preference</span>
                       <Search size={12} className="text-slate-400 cursor-pointer hover:text-[#1e61f0] transition-colors" />
                     </th>
@@ -186,7 +186,7 @@ const PriceListView = () => {
               
               <button 
                 onClick={() => navigate('/price-lists/new')}
-                className="bg-[#1e61f0] text-white px-8 py-3 rounded-md font-black text-[12px] uppercase tracking-[0.15em] hover:bg-[#1a54d1] shadow-lg shadow-blue-500/20 transition-all hover:scale-105 active:scale-95"
+                className="bg-[#1e61f0] text-white px-8 py-3 rounded-md font-bold text-[12px] uppercase tracking-[0.15em] hover:bg-[#1a54d1] shadow-lg shadow-blue-500/20 transition-all hover:scale-105 active:scale-95"
               >
                 CREATE PRICE LIST
               </button>

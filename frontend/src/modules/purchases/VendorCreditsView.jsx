@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { vendorCreditAPI, ledgerAPI, inventoryAPI, purchaseAPI } from '../../services/api';
+import { vendorCreditAPI, ledgerAPI, inventoryAPI, purchaseAPI, companyAPI, projectAPI } from '../../services/api';
 import { 
   Plus, Calendar, Undo2, MoreHorizontal, Edit2, Trash2, 
   Settings, CheckCircle2, AlertCircle, Clock, ArrowRight,
@@ -54,7 +54,8 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
         tdsRate: 0,
         tdsName: '',
         vendorNotes: 'Will be displayed on the vendor credit',
-        termsConditions: 'Purchase return terms and conditions'
+        termsConditions: 'Purchase return terms and conditions',
+        projectId: ''
     });
 
     const [lineItems, setLineItems] = useState([
@@ -67,6 +68,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
     const tdsDropdownRef = useRef(null);
     const [openItemDropdown, setOpenItemDropdown] = useState(null);
     const itemDropdownRef = useRef(null);
+    const [projects, setProjects] = useState([]);
 
     const tdsOptions = [
         { name: 'Commission or Brokerage', rate: 2 },
@@ -86,11 +88,13 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
         setLoading(true);
         Promise.all([
             ledgerAPI.getByCompany(companyId),
-            inventoryAPI.getByCompany(companyId)
-        ]).then(([ledgersRes, itemsRes]) => {
+            inventoryAPI.getByCompany(companyId),
+            projectAPI.getByCompany(companyId)
+        ]).then(([ledgersRes, itemsRes, projectsRes]) => {
             const allLedgers = ledgersRes.data || [];
             setLedgers(allLedgers);
             setInventoryItems(itemsRes.data || []);
+            setProjects(projectsRes.data || []);
             
             const defaultAP = allLedgers.find(l => l.name === 'Accounts Payable');
             if (defaultAP) setFormData(prev => ({ ...prev, accountsPayableId: defaultAP.id }));
@@ -168,7 +172,8 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                 tdsAmount: totals.tdsAmt,
                 totalAmount: totals.total, 
                 status, 
-                companyId 
+                companyId,
+                projectId: formData.projectId || null
             };
             let savedNote;
             if (editId) {
@@ -226,7 +231,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6 items-start">
                             <div className="space-y-5">
                                 <div className="flex flex-col gap-1.5">
-                                    <label className="text-[11px] font-black uppercase tracking-widest text-rose-500">Vendor Name*</label>
+                                    <label className="text-[11px] font-bold uppercase tracking-widest text-rose-500">Vendor Name*</label>
                                     <div className="relative group">
                                         <select 
                                             value={formData.vendorLedgerId} 
@@ -243,26 +248,42 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[11px] font-black uppercase tracking-widest text-rose-500">Vendor Credit#*</label>
-                                        <input type="text" value={formData.vendorCreditNumber} onChange={e => setFormData({...formData, vendorCreditNumber: e.target.value})} className="w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] font-black focus:border-blue-500 outline-none transition-all shadow-sm" />
+                                        <label className="text-[11px] font-bold uppercase tracking-widest text-rose-500">Vendor Credit#*</label>
+                                        <input type="text" value={formData.vendorCreditNumber} onChange={e => setFormData({...formData, vendorCreditNumber: e.target.value})} className="w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] font-bold focus:border-blue-500 outline-none transition-all shadow-sm" />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">Reference#</label>
+                                        <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Reference#</label>
                                         <input type="text" value={formData.referenceNumber} onChange={e => setFormData({...formData, referenceNumber: e.target.value})} className="w-full h-11 px-4 border border-slate-200 rounded-xl text-[13px] font-bold focus:border-blue-500 outline-none transition-all shadow-sm" />
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[11px] font-black uppercase tracking-widest text-rose-500">Vendor Credit Date*</label>
+                                    <label className="text-[11px] font-bold uppercase tracking-widest text-rose-500">Vendor Credit Date*</label>
                                     <div className="relative">
                                         <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="w-full h-11 px-4 pl-10 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:border-blue-500 transition-all shadow-sm" />
                                         <Calendar size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Project</label>
+                                    <div className="relative group">
+                                        <select 
+                                            value={formData.projectId} 
+                                            onChange={e => setFormData({...formData, projectId: e.target.value})}
+                                            className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm appearance-none"
+                                        >
+                                            <option value="">Select project</option>
+                                            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                            <ChevronDown size={14} />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="space-y-5">
                                 <div className="flex flex-col gap-1.5 text-right md:text-left">
-                                    <label className="text-[11px] font-black uppercase tracking-widest text-rose-500">Account*</label>
+                                    <label className="text-[11px] font-bold uppercase tracking-widest text-rose-500">Account*</label>
                                     <div className="relative group">
                                         <select 
                                             value={formData.accountsPayableId} 
@@ -278,7 +299,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">Subject</label>
+                                    <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Subject</label>
                                     <textarea value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} placeholder="Credit Reason" className="w-full h-[100px] p-4 border border-slate-200 rounded-xl text-[13px] font-bold resize-none outline-none focus:border-blue-500 transition-all shadow-sm" />
                                 </div>
                             </div>
@@ -288,11 +309,11 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                         <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                             <table className="w-full text-[12px]">
                                 <thead>
-                                    <tr className="bg-slate-50/50 text-slate-400 font-black uppercase border-b border-slate-100 tracking-[0.15em]">
-                                        <th className="px-6 py-4 text-left font-black">Item Details</th>
-                                        <th className="px-6 py-4 w-28 text-center border-l font-black">Quantity</th>
-                                        <th className="px-6 py-4 w-36 text-center border-l font-black">Rate</th>
-                                        <th className="px-6 py-4 w-36 text-right border-l font-black">Amount</th>
+                                    <tr className="bg-slate-50/50 text-slate-400 font-bold uppercase border-b border-slate-100 tracking-[0.15em]">
+                                        <th className="px-6 py-4 text-left font-bold">Item Details</th>
+                                        <th className="px-6 py-4 w-28 text-center border-l font-bold">Quantity</th>
+                                        <th className="px-6 py-4 w-36 text-center border-l font-bold">Rate</th>
+                                        <th className="px-6 py-4 w-36 text-right border-l font-bold">Amount</th>
                                         <th className="w-10"></th>
                                     </tr>
                                 </thead>
@@ -336,7 +357,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                             <td className="px-6 py-4 border-l">
                                                 <input type="number" value={line.rate} onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)} className="w-full text-center bg-transparent outline-none font-bold" />
                                             </td>
-                                            <td className="px-6 py-4 border-l text-right font-black text-slate-900">
+                                            <td className="px-6 py-4 border-l text-right font-bold text-slate-900">
                                                 {(parseFloat(line.amount) || 0).toFixed(2)}
                                             </td>
                                             <td className="px-3 text-center">
@@ -351,7 +372,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                             <div className="p-3 bg-slate-50/30 border-t border-slate-100">
                                 <button 
                                     onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', accountId: '', description: '', quantity: 1, rate: 0, amount: 0 }])}
-                                    className="text-[11px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition-all transition-all uppercase tracking-widest pl-3 py-1"
+                                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition-all transition-all uppercase tracking-widest pl-3 py-1"
                                 >
                                     <Plus size={14}/> Add New Row
                                 </button>
@@ -396,7 +417,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                                         </div>
                                                     </div>
                                                     <div className="max-h-[220px] overflow-y-auto py-2 custom-scrollbar text-left">
-                                                        <div className="px-4 py-1 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Taxes</div>
+                                                        <div className="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Taxes</div>
                                                         {filteredTdsOptions.map((opt, idx) => (
                                                             <div key={idx} onClick={() => { setFormData({ ...formData, taxRate: opt.rate, tdsName: opt.name }); setIsTDSDropdownOpen(false); }} className={`px-4 py-2 text-[13px] cursor-pointer flex items-center justify-between transition-colors ${formData.tdsName === opt.name ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
                                                                 <span className="font-bold">{opt.name} [{opt.rate}%]</span>
@@ -405,7 +426,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                                         ))}
                                                     </div>
                                                     <div className="p-3 bg-slate-50 border-t border-slate-100">
-                                                        <button className="flex items-center gap-2 text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">
+                                                        <button className="flex items-center gap-2 text-[11px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">
                                                             <Settings size={14} /> Manage TDS
                                                         </button>
                                                     </div>
@@ -421,8 +442,8 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                     <input type="number" value={formData.adjustment} onChange={e => setFormData({...formData, adjustment: e.target.value})} className="w-24 h-8 px-3 border border-slate-200 rounded-lg text-right font-bold text-slate-900 focus:border-blue-500 outline-none shadow-sm" />
                                 </div>
 
-                                <div className="flex justify-between items-center text-slate-900 pt-6 border-t font-black tracking-tight">
-                                    <span className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">Total ( ₹ )</span>
+                                <div className="flex justify-between items-center text-slate-900 pt-6 border-t font-bold tracking-tight">
+                                    <span className="text-[11px] font-bold uppercase text-slate-400 tracking-[0.2em]">Total ( ₹ )</span>
                                     <span className="text-3xl tracking-tighter">₹{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
@@ -486,7 +507,7 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
     };
 
     if (loading) return <div className="flex-1 flex items-center justify-center text-slate-400 font-bold animate-pulse">Syncing Records...</div>;
-    if (!note) return <div className="flex-1 flex items-center justify-center text-slate-300 font-black text-3xl opacity-20 tracking-tighter uppercase">Document Not Found</div>;
+    if (!note) return <div className="flex-1 flex items-center justify-center text-slate-300 font-bold text-3xl opacity-20 tracking-tighter uppercase">Document Not Found</div>;
 
     return (
         <div className="flex-1 flex flex-col h-full bg-slate-50 animate-fade-in">
@@ -497,7 +518,7 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                        <ChevronDown size={14} className="rotate-90"/> All Vendor Credits
                     </button>
                     <span className="text-slate-300">|</span>
-                    <span className="text-[13px] font-black text-slate-800 tracking-tight">{note.vendorCreditNumber}</span>
+                    <span className="text-[13px] font-bold text-slate-800 tracking-tight">{note.vendorCreditNumber}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button onClick={() => navigate(`/vendor-credits/edit/${note.id}`)} className="h-8 px-4 bg-indigo-600 text-white rounded-lg flex items-center gap-1.5 text-[12px] font-bold hover:bg-indigo-700 shadow-sm transition-all">
@@ -515,34 +536,34 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                 <div className="bg-white shadow-2xl rounded-[2.5rem] w-full max-w-4xl mx-auto p-16 relative border border-slate-100 mb-20">
                     <div className="flex justify-between items-start mb-20">
                         <div>
-                            <div className="w-16 h-16 bg-gradient-to-br from-slate-800 to-indigo-950 rounded-2xl mb-6 flex items-center justify-center text-white font-black text-[32px] shadow-xl">V</div>
-                            <h2 className="text-[24px] font-black text-slate-900 tracking-tighter uppercase mb-2">{localStorage.getItem('companyName')?.toUpperCase() || 'COMPANY'}</h2>
+                            <div className="w-16 h-16 bg-gradient-to-br from-slate-800 to-indigo-950 rounded-2xl mb-6 flex items-center justify-center text-white font-bold text-[32px] shadow-xl">V</div>
+                            <h2 className="text-[24px] font-bold text-slate-900 tracking-tighter uppercase mb-2">{localStorage.getItem('companyName')?.toUpperCase() || 'COMPANY'}</h2>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">Voucher: {note.vendorCreditNumber}</p>
                         </div>
                         <div className="text-right">
-                            <h1 className="text-[42px] font-black text-slate-900 tracking-tighter uppercase -mb-2 opacity-95">Vendor Credit</h1>
+                            <h1 className="text-[42px] font-bold text-slate-900 tracking-tighter uppercase -mb-2 opacity-95">Vendor Credit</h1>
                             <div className="h-1.5 w-32 bg-indigo-600 ml-auto mt-4 rounded-full"></div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 border border-slate-200 mb-16 overflow-hidden rounded-3xl shadow-sm">
                         <div className="p-10 border-r border-slate-200 bg-slate-50/20 flex flex-col gap-3">
-                             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-0.5">Vendor Details</h4>
+                             <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Vendor Details</h4>
                              <div>
-                                <p className="text-[20px] font-black text-indigo-700 tracking-tighter mb-1">{note.Vendor?.name || 'Vendor Not Specified'}</p>
+                                <p className="text-[20px] font-bold text-indigo-700 tracking-tighter mb-1">{note.Vendor?.name || 'Vendor Not Specified'}</p>
                                 <p className="text-[13px] text-slate-500 font-medium">Ref: {note.referenceNumber || 'N/A'}</p>
                              </div>
                         </div>
                         <div className="p-10 flex flex-col justify-center gap-4 bg-slate-50/50">
                              <div className="flex justify-between items-center text-[13px] font-bold"><span className="text-slate-400 uppercase tracking-widest text-[10px]">Credit Number</span><span className="text-slate-900">: {note.vendorCreditNumber}</span></div>
                              <div className="flex justify-between items-center text-[13px] font-bold"><span className="text-slate-400 uppercase tracking-widest text-[10px]">Issue Date</span><span className="text-slate-900">: {new Date(note.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
-                             <div className="flex justify-between items-center text-[13px] font-bold"><span className="text-slate-400 uppercase tracking-widest text-[10px]">Status</span><span className="text-[10px] font-black uppercase bg-indigo-600 text-white px-3 py-1 rounded-full">{note.status}</span></div>
+                             <div className="flex justify-between items-center text-[13px] font-bold"><span className="text-slate-400 uppercase tracking-widest text-[10px]">Status</span><span className="text-[10px] font-bold uppercase bg-indigo-600 text-white px-3 py-1 rounded-full">{note.status}</span></div>
                         </div>
                     </div>
 
                     <table className="w-full border-collapse border border-slate-200 mb-16 rounded-2xl overflow-hidden shadow-sm">
                         <thead>
-                            <tr className="bg-slate-900 text-[11px] font-black text-white uppercase tracking-[0.2em]">
+                            <tr className="bg-slate-900 text-[11px] font-bold text-white uppercase tracking-[0.2em]">
                                 <th className="py-5 px-6 border-r border-slate-700 w-16 text-center">#</th>
                                 <th className="py-5 px-8 text-left">Description</th>
                                 <th className="py-5 px-6 border-l border-slate-700 w-32 text-center">Qty / Rate</th>
@@ -552,16 +573,16 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                         <tbody className="divide-y divide-slate-100">
                             {note.items?.map((item, idx) => (
                                 <tr key={idx} className="text-[14px] font-bold text-slate-800">
-                                    <td className="p-8 border-r border-slate-200 text-center text-slate-400 font-black">{idx + 1}</td>
+                                    <td className="p-8 border-r border-slate-200 text-center text-slate-400 font-bold">{idx + 1}</td>
                                     <td className="p-8">
-                                        <p className="font-black text-slate-950 text-base mb-1">{item.Item?.name || 'Itemized Credit'}</p>
+                                        <p className="font-bold text-slate-950 text-base mb-1">{item.Item?.name || 'Itemized Credit'}</p>
                                         <p className="text-[12px] text-slate-400 italic font-medium">{item.description}</p>
                                     </td>
                                     <td className="p-8 border-l border-slate-200 text-center">
                                         <div className="text-slate-950">{parseFloat(item.quantity).toFixed(2)}</div>
-                                        <div className="text-[11px] text-slate-400 font-black mt-1">@ ₹{formatCurrency(item.rate)}</div>
+                                        <div className="text-[11px] text-slate-400 font-bold mt-1">@ ₹{formatCurrency(item.rate)}</div>
                                     </td>
-                                    <td className="p-8 border-l border-slate-200 text-right font-black text-slate-950 text-lg">₹{formatCurrency(item.amount)}</td>
+                                    <td className="p-8 border-l border-slate-200 text-right font-bold text-slate-950 text-lg">₹{formatCurrency(item.amount)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -571,13 +592,13 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                         <div className="w-[380px] bg-slate-50/50 p-10 rounded-[3rem] border border-slate-200 shadow-xl space-y-6">
                             <div className="flex justify-between text-[13px] font-bold text-slate-400 uppercase tracking-widest">
                                 <span>Sub Total</span>
-                                <span className="text-slate-950 font-black tracking-tight">₹{formatCurrency(note.subTotal)}</span>
+                                <span className="text-slate-950 font-bold tracking-tight">₹{formatCurrency(note.subTotal)}</span>
                             </div>
                             <div className="flex justify-between text-[13px] font-bold text-slate-400 uppercase tracking-widest">
                                 <span>Tax Amount ({note.tdsName})</span>
-                                <span className="text-slate-950 font-black tracking-tight">₹{formatCurrency(note.taxAmount)}</span>
+                                <span className="text-slate-950 font-bold tracking-tight">₹{formatCurrency(note.taxAmount)}</span>
                             </div>
-                            <div className="flex justify-between items-center text-[20px] font-black text-slate-950 pt-8 border-t-2 border-slate-200">
+                            <div className="flex justify-between items-center text-[20px] font-bold text-slate-950 pt-8 border-t-2 border-slate-200">
                                 <span className="text-slate-400 uppercase tracking-[0.2em] text-[10px]">Net Credits</span>
                                 <span className="text-[32px] tracking-tighter leading-none">₹{formatCurrency(note.totalAmount)}</span>
                             </div>
@@ -587,7 +608,7 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                     <div className="mt-24 pt-16 border-t border-slate-100 flex justify-between items-end">
                         <div className="space-y-4">
                             <div className="w-40 h-px bg-slate-300"></div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Authorized Signature</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Authorized Signature</p>
                         </div>
                         <p className="text-[11px] font-bold text-slate-300 tracking-tight italic">Document generated for financial record purposes.</p>
                     </div>
@@ -675,7 +696,7 @@ const VendorCreditsView = ({ companyId }) => {
             {/* Side List (Master) */}
             <div className={`flex-col border-r border-slate-200 bg-white transition-all duration-300 flex no-print ${isDetail ? 'w-[380px]' : 'w-0 opacity-0 overflow-hidden'}`}>
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shadow-sm">
-                    <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest">Vendor Credits</h3>
+                    <h3 className="text-[12px] font-bold text-slate-800 uppercase tracking-widest">Vendor Credits</h3>
                     <button onClick={() => navigate('/vendor-credits/new')} className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md transition-all active:scale-95">
                         <Plus size={16} />
                     </button>
@@ -700,12 +721,12 @@ const VendorCreditsView = ({ companyId }) => {
                             className={`px-6 py-5 cursor-pointer transition-all border-l-4 ${id === n.id ? 'bg-indigo-50/50 border-indigo-600' : 'hover:bg-slate-50 border-transparent'}`}
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <span className={`text-[13px] font-black ${id === n.id ? 'text-indigo-600' : 'text-slate-900'}`}>{n.vendorCreditNumber}</span>
-                                <span className="text-[13px] font-black text-slate-900">₹{parseFloat(n.totalAmount || 0).toLocaleString()}</span>
+                                <span className={`text-[13px] font-bold ${id === n.id ? 'text-indigo-600' : 'text-slate-900'}`}>{n.vendorCreditNumber}</span>
+                                <span className="text-[13px] font-bold text-slate-900">₹{parseFloat(n.totalAmount || 0).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                <span className="text-[11px] font-bold text-slate-400 truncate max-w-[180px]">{n.Vendor?.name}</span>
-                               <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-widest ${n.status === 'Open' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>{n.status}</span>
+                               <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full tracking-widest ${n.status === 'Open' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>{n.status}</span>
                             </div>
                         </div>
                     ))}
@@ -720,10 +741,10 @@ const VendorCreditsView = ({ companyId }) => {
                     <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
                         <div className="bg-white p-10 flex items-center justify-between border-b border-slate-200 shadow-sm">
                             <div>
-                                <h1 className="text-[32px] font-black text-slate-950 tracking-tighter uppercase leading-none">Vendor Credits</h1>
+                                <h1 className="text-[32px] font-bold text-slate-950 tracking-tighter uppercase leading-none">Vendor Credits</h1>
                                 <p className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-3">Purchase returns & supplier adjustments</p>
                             </div>
-                            <button onClick={() => navigate('/vendor-credits/new')} className="px-8 h-12 bg-indigo-600 text-white rounded-2xl font-black text-[13px] hover:bg-indigo-700 shadow-xl transition-all flex items-center gap-3 uppercase tracking-widest active:scale-95">
+                            <button onClick={() => navigate('/vendor-credits/new')} className="px-8 h-12 bg-indigo-600 text-white rounded-2xl font-bold text-[13px] hover:bg-indigo-700 shadow-xl transition-all flex items-center gap-3 uppercase tracking-widest active:scale-95">
                                 <PlusCircle size={20} /> New Record
                             </button>
                         </div>
@@ -745,7 +766,7 @@ const VendorCreditsView = ({ companyId }) => {
                                 </div>
                                 <table className="w-full text-left">
                                     <thead>
-                                        <tr className="border-b border-slate-50 text-[11px] font-black text-slate-300 uppercase tracking-[0.2em] bg-slate-50/20">
+                                        <tr className="border-b border-slate-50 text-[11px] font-bold text-slate-300 uppercase tracking-[0.2em] bg-slate-50/20">
                                             <th className="px-10 py-5">Issue Date</th>
                                             <th className="px-10 py-5">Credit Number</th>
                                             <th className="px-10 py-5">Vendor Name</th>
@@ -759,7 +780,7 @@ const VendorCreditsView = ({ companyId }) => {
                                         ) : filtered.length === 0 ? (
                                             <tr><td colSpan="5" className="py-24 text-center text-slate-300 flex flex-col items-center gap-4">
                                                 <Undo2 size={40} className="opacity-10"/>
-                                                <span className="font-black text-xl opacity-20 uppercase tracking-tighter">No transactions recorded</span>
+                                                <span className="font-bold text-xl opacity-20 uppercase tracking-tighter">No transactions recorded</span>
                                             </td></tr>
                                         ) : filtered.map(n => (
                                             <tr 
@@ -768,17 +789,17 @@ const VendorCreditsView = ({ companyId }) => {
                                                 className="hover:bg-indigo-50/20 transition-all cursor-pointer group"
                                             >
                                                 <td className="px-10 py-7 text-[14px] font-bold text-slate-500">{new Date(n.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                                                <td className="px-10 py-7 text-[15px] font-black text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{n.vendorCreditNumber}</td>
+                                                <td className="px-10 py-7 text-[15px] font-bold text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{n.vendorCreditNumber}</td>
                                                 <td className="px-10 py-7">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[11px] font-black text-slate-500">{(n.Vendor?.name || 'V').charAt(0)}</div>
-                                                        <span className="text-[14px] font-black text-slate-700">{n.Vendor?.name}</span>
+                                                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[11px] font-bold text-slate-500">{(n.Vendor?.name || 'V').charAt(0)}</div>
+                                                        <span className="text-[14px] font-bold text-slate-700">{n.Vendor?.name}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-10 py-7">
-                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${n.status === 'Open' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}>{n.status}</span>
+                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${n.status === 'Open' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}>{n.status}</span>
                                                 </td>
-                                                <td className="px-10 py-7 text-right font-black text-slate-950 text-lg tracking-tighter">₹{parseFloat(n.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                                <td className="px-10 py-7 text-right font-bold text-slate-950 text-lg tracking-tighter">₹{parseFloat(n.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                             </tr>
                                         ))}
                                     </tbody>

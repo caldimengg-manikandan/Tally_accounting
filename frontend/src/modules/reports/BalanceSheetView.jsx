@@ -45,9 +45,9 @@ const BalanceSheetView = () => {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-20 text-slate-400 bg-[#f8fafc]">
         <AlertCircle size={48} className="text-blue-500 mb-4" />
-        <h3 className="text-xl font-black text-slate-900 uppercase">No Company Active</h3>
+        <h3 className="text-xl font-bold text-slate-900 uppercase">No Company Active</h3>
         <p className="text-sm font-bold mt-2">Please select a company in Settings to view the Balance Sheet.</p>
-        <button onClick={() => window.location.href='/settings/company'} className="mt-6 px-8 py-3 bg-slate-900 text-white rounded font-black text-[10px] uppercase tracking-widest shadow-xl">
+        <button onClick={() => window.location.href='/settings/company'} className="mt-6 px-8 py-3 bg-slate-900 text-white rounded font-bold text-[10px] uppercase tracking-widest shadow-xl">
            Go to Settings
         </button>
       </div>
@@ -65,7 +65,7 @@ const BalanceSheetView = () => {
                    <Scale size={20} />
                 </div>
                 <div>
-                   <h2 className="text-xl font-black text-[#0f172a] uppercase tracking-tighter">Balance Sheet</h2>
+                   <h2 className="text-xl font-bold text-[#0f172a] uppercase tracking-tighter">Balance Sheet</h2>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">As on {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                 </div>
              </div>
@@ -73,10 +73,10 @@ const BalanceSheetView = () => {
 
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-2">
-                <button className="h-10 px-4 bg-white border border-slate-200 text-[#0f172a] rounded font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
+                <button className="h-10 px-4 bg-white border border-slate-200 text-[#0f172a] rounded font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
                    <Printer size={16} /> Print
                 </button>
-                <button className="h-10 px-4 bg-white border border-slate-200 text-[#0f172a] rounded font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
+                <button className="h-10 px-4 bg-white border border-slate-200 text-[#0f172a] rounded font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
                    <FileSpreadsheet size={16} /> Excel
                 </button>
              </div>
@@ -92,15 +92,15 @@ const BalanceSheetView = () => {
              <div className="col-span-12 lg:col-span-6 flex flex-col">
                 <div className="h-14 bg-slate-900 text-white px-8 flex items-center justify-between rounded-t-lg">
                    <div className="flex flex-col">
-                      <span className="text-[9px] font-black uppercase opacity-40">Equity & Obligations</span>
-                      <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                      <span className="text-[9px] font-bold uppercase opacity-40">Equity & Obligations</span>
+                      <h3 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                          <Coins size={14} /> Liabilities & Capital
                       </h3>
                    </div>
-                   <span className="text-sm font-black tracking-tighter">₹ {data.totalLiabilities.toLocaleString('en-IN')}</span>
+                   <span className="text-sm font-bold tracking-tighter">₹ {data.totalLiabilities.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="bg-white border-x border-b border-slate-200 rounded-b-lg flex-1 overflow-hidden flex flex-col divide-y divide-slate-100 shadow-sm">
-                   <div className="p-4 flex items-center justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest px-8">
+                   <div className="p-4 flex items-center justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest px-8">
                       <span>Particulars</span>
                       <span>Balance (INR)</span>
                    </div>
@@ -113,14 +113,14 @@ const BalanceSheetView = () => {
                                </div>
                                <span className="text-[13px] font-bold text-slate-700">{item.ledgerName}</span>
                             </div>
-                            <span className="text-sm font-black text-slate-900 tracking-tight">₹ {item.balance.toLocaleString('en-IN')}</span>
+                            <span className="text-sm font-bold text-slate-900 tracking-tight">₹ {item.balance.toLocaleString('en-IN')}</span>
                          </div>
                       ))}
                    </div>
                    {/* GRAND TOTAL ROW */}
                    <div className="p-6 px-8 bg-slate-50 flex items-center justify-between border-t border-slate-200">
-                      <span className="text-xs font-black uppercase text-slate-900 tracking-widest">Grand Total Liabilities</span>
-                      <span className="text-lg font-black text-[#0f172a] tracking-tighter">₹ {data.totalLiabilities.toLocaleString('en-IN')}</span>
+                      <span className="text-xs font-bold uppercase text-slate-900 tracking-widest">Grand Total Liabilities</span>
+                      <span className="text-lg font-bold text-[#0f172a] tracking-tighter">₹ {data.totalLiabilities.toLocaleString('en-IN')}</span>
                    </div>
                 </div>
              </div>
@@ -129,15 +129,15 @@ const BalanceSheetView = () => {
              <div className="col-span-12 lg:col-span-6 flex flex-col">
                 <div className="h-14 bg-[#0f172a] text-white px-8 flex items-center justify-between rounded-t-lg">
                    <div className="flex flex-col">
-                      <span className="text-[9px] font-black uppercase opacity-40">Resources & Holdings</span>
-                      <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                      <span className="text-[9px] font-bold uppercase opacity-40">Resources & Holdings</span>
+                      <h3 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
                          <Landmark size={14} /> Assets & Properties
                       </h3>
                    </div>
-                   <span className="text-sm font-black tracking-tighter">₹ {data.totalAssets.toLocaleString('en-IN')}</span>
+                   <span className="text-sm font-bold tracking-tighter">₹ {data.totalAssets.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="bg-white border-x border-b border-slate-200 rounded-b-lg flex-1 overflow-hidden flex flex-col divide-y divide-slate-100 shadow-sm">
-                   <div className="p-4 flex items-center justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest px-8">
+                   <div className="p-4 flex items-center justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest px-8">
                       <span>Particulars</span>
                       <span>Balance (INR)</span>
                    </div>
@@ -150,14 +150,14 @@ const BalanceSheetView = () => {
                                </div>
                                <span className="text-[13px] font-bold text-slate-700">{item.ledgerName}</span>
                             </div>
-                            <span className="text-sm font-black text-slate-900 tracking-tight">₹ {item.balance.toLocaleString('en-IN')}</span>
+                            <span className="text-sm font-bold text-slate-900 tracking-tight">₹ {item.balance.toLocaleString('en-IN')}</span>
                          </div>
                       ))}
                    </div>
                    {/* GRAND TOTAL ROW */}
                    <div className="p-6 px-8 bg-slate-50 flex items-center justify-between border-t border-slate-200">
-                      <span className="text-xs font-black uppercase text-slate-900 tracking-widest">Grand Total Assets</span>
-                      <span className="text-lg font-black text-[#0f172a] tracking-tighter">₹ {data.totalAssets.toLocaleString('en-IN')}</span>
+                      <span className="text-xs font-bold uppercase text-slate-900 tracking-widest">Grand Total Assets</span>
+                      <span className="text-lg font-bold text-[#0f172a] tracking-tighter">₹ {data.totalAssets.toLocaleString('en-IN')}</span>
                    </div>
                 </div>
              </div>
@@ -171,8 +171,8 @@ const BalanceSheetView = () => {
                    <ShieldCheck size={32} />
                 </div>
                 <div>
-                   <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Sheet Integrity Status</h4>
-                   <p className={`text-xl font-black uppercase tracking-tighter ${Math.abs(data.totalAssets - data.totalLiabilities) < 0.01 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                   <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Sheet Integrity Status</h4>
+                   <p className={`text-xl font-bold uppercase tracking-tighter ${Math.abs(data.totalAssets - data.totalLiabilities) < 0.01 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {Math.abs(data.totalAssets - data.totalLiabilities) < 0.01 ? 'Perfect Equation: Books Balanced' : 'System Discrepancy: Ledger Imbalance'}
                    </p>
                 </div>
@@ -180,12 +180,12 @@ const BalanceSheetView = () => {
              
              <div className="flex items-center gap-8">
                 <div className="text-right">
-                   <span className="block text-[10px] font-black uppercase text-slate-300 mb-1">Variance Differential</span>
-                   <span className="font-black text-sm text-slate-900 tracking-tight">₹ {(data.totalAssets - data.totalLiabilities).toLocaleString('en-IN')}</span>
+                   <span className="block text-[10px] font-bold uppercase text-slate-300 mb-1">Variance Differential</span>
+                   <span className="font-bold text-sm text-slate-900 tracking-tight">₹ {(data.totalAssets - data.totalLiabilities).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="h-10 w-px bg-slate-200" />
                 <div className="text-right">
-                   <div className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-4 py-2 rounded text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all cursor-pointer">
+                   <div className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all cursor-pointer">
                       <TrendingUp size={14}/> Audit Reports
                    </div>
                 </div>

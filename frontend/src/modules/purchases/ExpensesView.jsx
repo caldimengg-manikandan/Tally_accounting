@@ -111,7 +111,7 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
                 {/* LIST PANE */}
                 <div className={`transition-all duration-300 ease-in-out border-r border-slate-200 overflow-y-auto ${selectedExpenseId ? 'w-[380px] shrink-0' : 'w-full'}`}>
                   <table className="w-full text-left">
-                     <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] border-b border-slate-200 sticky top-0 z-10">
+                     <thead className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] border-b border-slate-200 sticky top-0 z-10">
                         {selectedExpenseId ? (
                            <tr>
                               <th className="px-6 py-3 w-10">
@@ -230,7 +230,7 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
                       {/* Red Title Box */}
                       <div className="p-1 items-center justify-center flex">
                         <div className="w-full bg-[#c53030] rounded-xl py-6 flex flex-col items-center justify-center border-4 border-[#e53e3e]/20 shadow-inner">
-                           <h3 className="text-white text-[48px] font-black tracking-[4px] border-b-4 border-white pb-1 italic leading-none">EXPENSES</h3>
+                           <h3 className="text-white text-[48px] font-bold tracking-[4px] border-b-4 border-white pb-1 italic leading-none">EXPENSES</h3>
                         </div>
                       </div>
 
@@ -238,7 +238,7 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
                          {/* Definition Box */}
                          <div className="p-6 bg-white border-2 border-slate-100 rounded-xl relative group hover:border-[#c53030]/20 transition-colors">
                             <p className="text-[18px] text-slate-800 leading-relaxed font-serif italic text-center">
-                               <span className="font-black text-[22px] not-italic font-sans mr-2">Expenses</span> 
+                               <span className="font-bold text-[22px] not-italic font-sans mr-2">Expenses</span> 
                                can be defined as "Any cost that a company bears in an attempt to maximize its revenues, and thereby its profits".
                             </p>
                             <div className="absolute -top-3 -left-3 w-6 h-6 border-l-2 border-t-2 border-slate-200"></div>
@@ -250,36 +250,36 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
                             {/* Types of Expenses */}
                             <div className="space-y-6">
                                <div className="bg-[#fed7d7] rounded-full py-2 px-10 border-2 border-[#f56565] inline-block shadow-sm">
-                                  <h4 className="text-[#c53030] font-black text-[16px] italic uppercase tracking-wider">Types of Expenses</h4>
+                                  <h4 className="text-[#c53030] font-bold text-[16px] italic uppercase tracking-wider">Types of Expenses</h4>
                                </div>
                                
                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-5">
                                   <div className="flex gap-4">
                                      <div className="w-6 h-6 shrink-0 bg-[#c53030] rounded-sm flex items-center justify-center text-white text-[12px] transform rotate-45 mt-1">
-                                        <div className="-rotate-45 font-black">&gt;</div>
+                                        <div className="-rotate-45 font-bold">&gt;</div>
                                      </div>
                                      <div>
-                                        <h5 className="font-black text-slate-900 text-[15px]">Cost of Goods sold (COGS) -</h5>
+                                        <h5 className="font-bold text-slate-900 text-[15px]">Cost of Goods sold (COGS) -</h5>
                                         <p className="text-slate-600 text-[14px] mt-1 italic">Expenses directly related to generating sales revenues</p>
                                      </div>
                                   </div>
 
                                   <div className="flex gap-4">
                                      <div className="w-6 h-6 shrink-0 bg-[#c53030] rounded-sm flex items-center justify-center text-white text-[12px] transform rotate-45 mt-1">
-                                        <div className="-rotate-45 font-black">&gt;</div>
+                                        <div className="-rotate-45 font-bold">&gt;</div>
                                      </div>
                                      <div>
-                                        <h5 className="font-black text-slate-900 text-[15px]">Indirect Expenses –</h5>
+                                        <h5 className="font-bold text-slate-900 text-[15px]">Indirect Expenses –</h5>
                                         <p className="text-slate-600 text-[14px] mt-1 italic">These are the operating expenses</p>
                                      </div>
                                   </div>
 
                                   <div className="flex gap-4">
                                      <div className="w-6 h-6 shrink-0 bg-[#c53030] rounded-sm flex items-center justify-center text-white text-[12px] transform rotate-45 mt-1">
-                                        <div className="-rotate-45 font-black">&gt;</div>
+                                        <div className="-rotate-45 font-bold">&gt;</div>
                                      </div>
                                      <div>
-                                        <h5 className="font-black text-slate-900 text-[15px]">Non Operating Expenses -</h5>
+                                        <h5 className="font-bold text-slate-900 text-[15px]">Non Operating Expenses -</h5>
                                         <p className="text-slate-600 text-[14px] mt-1 italic">those expenses which are not related to "revenue generation for the core business activity"</p>
                                      </div>
                                   </div>
@@ -289,7 +289,7 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
                             {/* P&L Section */}
                             <div className="space-y-6">
                                <div className="bg-[#fed7d7] rounded-full py-2 px-10 border-2 border-[#f56565] inline-block shadow-sm">
-                                  <h4 className="text-[#c53030] font-black text-[16px] italic uppercase tracking-wider">Expenses in P&L A/C</h4>
+                                  <h4 className="text-[#c53030] font-bold text-[16px] italic uppercase tracking-wider">Expenses in P&L A/C</h4>
                                </div>
 
                                <div className="bg-white p-6 rounded-2xl border-2 border-[#fed7d7] grid grid-cols-2 gap-x-12 gap-y-3">
@@ -398,7 +398,7 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
     <div className="flex flex-col h-full bg-white animate-fade-in relative shadow-[-10px_0_20px_-10px_rgba(0,0,0,0.05)] border-l border-slate-200">
       {/* Detail Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-white">
-        <h2 className="text-[17px] font-black text-slate-800 tracking-tight">Expense Details</h2>
+        <h2 className="text-[17px] font-bold text-slate-800 tracking-tight">Expense Details</h2>
         <div className="flex items-center gap-2">
            <div className="flex items-center bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
              <button className="px-3 py-1.5 text-slate-600 text-[12px] font-bold hover:bg-slate-50 flex items-center gap-1.5 border-r border-slate-100 transition-colors">
@@ -422,9 +422,9 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
            <div className="flex justify-between items-start mb-10">
               <div className="space-y-4">
                  <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Expense Amount</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Expense Amount</label>
                     <div className="flex items-baseline gap-2">
-                       <h3 className="text-[32px] font-black text-[#e53e3e] leading-none tracking-tight">
+                       <h3 className="text-[32px] font-bold text-[#e53e3e] leading-none tracking-tight">
                          ₹ {parseFloat(details.Transactions?.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                        </h3>
                        <span className="text-[13px] font-bold text-slate-400">on {new Date(details.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
@@ -432,25 +432,25 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
                  </div>
 
                  <div className="flex items-center gap-3">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black tracking-widest bg-orange-100 text-orange-600 uppercase border border-orange-200">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-widest bg-orange-100 text-orange-600 uppercase border border-orange-200">
                       {narration.isBillable ? "BILLABLE" : "NON-BILLABLE"}
                     </span>
                  </div>
 
                  <div className="pt-2">
-                    <div className="inline-flex items-center bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-black text-[12px] border border-blue-100 shadow-sm">
+                    <div className="inline-flex items-center bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold text-[12px] border border-blue-100 shadow-sm">
                       {primaryExpenseTransaction?.Ledger?.name || "General Expense"}
                     </div>
                  </div>
 
                  <div className="grid grid-cols-1 gap-6 pt-6">
                     <div>
-                       <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">Paid Through</label>
-                       <p className="text-[15px] font-black text-slate-700">{paidThroughTransaction?.Ledger?.name || "Undeposited Funds"}</p>
+                       <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest block mb-1">Paid Through</label>
+                       <p className="text-[15px] font-bold text-slate-700">{paidThroughTransaction?.Ledger?.name || "Undeposited Funds"}</p>
                     </div>
                     <div>
-                       <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest block mb-1">Paid To</label>
-                       <p className="text-[15px] font-black text-blue-600 hover:underline cursor-pointer transition-all">{narration.vendor || "Rapid"}</p>
+                       <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest block mb-1">Paid To</label>
+                       <p className="text-[15px] font-bold text-blue-600 hover:underline cursor-pointer transition-all">{narration.vendor || "Rapid"}</p>
                     </div>
                  </div>
               </div>
@@ -464,10 +464,10 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
                     <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
                        <UploadCloud size={24} />
                     </div>
-                    <p className="text-[13px] font-black text-slate-700 leading-tight">Drag or Drop your Receipts</p>
+                    <p className="text-[13px] font-bold text-slate-700 leading-tight">Drag or Drop your Receipts</p>
                     <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-wider">Maximum file size allowed is 10MB</p>
                     
-                    <button className="mt-4 flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-black text-slate-600 shadow-sm group-hover:border-blue-200 transition-all">
+                    <button className="mt-4 flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 shadow-sm group-hover:border-blue-200 transition-all">
                        <Plus size={14} className="text-blue-600" />
                        Upload your Files
                     </button>
@@ -479,7 +479,7 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
                     <div className="mt-4 flex justify-center">
                        <button 
                           onClick={() => setShowFilesPopover(true)}
-                          className="text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-all border border-blue-100"
+                          className="text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-all border border-blue-100"
                        >
                           View Attachments ({existingReceipts.length})
                        </button>
@@ -491,34 +491,34 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
            {/* Journal Section */}
            <div className="mt-12 pt-8 border-t border-slate-100">
               <div className="flex items-center gap-4 mb-8">
-                 <h3 className="text-[16px] font-black text-slate-800 tracking-tight">Journal</h3>
+                 <h3 className="text-[16px] font-bold text-slate-800 tracking-tight">Journal</h3>
                  <div className="h-px bg-slate-100 flex-1"></div>
               </div>
 
               <div className="mb-6 flex items-center gap-2">
                  <span className="text-[11px] font-bold text-slate-500 italic">Amount is displayed in your base currency</span>
-                 <span className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">INR</span>
+                 <span className="bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter">INR</span>
               </div>
 
-              <h4 className="text-[18px] font-black text-slate-800 mb-6 italic underline decoration-slate-200 underline-offset-8">Expense</h4>
+              <h4 className="text-[18px] font-bold text-slate-800 mb-6 italic underline decoration-slate-200 underline-offset-8">Expense</h4>
               
               <div className="overflow-hidden rounded-xl border border-slate-100 shadow-sm">
                  <table className="w-full text-left">
                     <thead className="bg-slate-50/50">
                        <tr className="border-b border-slate-100">
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ACCOUNT</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">DEBIT</th>
-                          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">CREDIT</th>
+                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">ACCOUNT</th>
+                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-right">DEBIT</th>
+                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-right">CREDIT</th>
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                        {details.Transactions?.map((t, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
                              <td className="px-6 py-5 text-[14px] font-bold text-slate-800">{t.Ledger?.name || "Unknown Account"}</td>
-                              <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right">
+                              <td className="px-6 py-5 text-[14px] font-bold text-slate-900 text-right">
                                  {parseFloat(t.debit || 0) > 0 ? parseFloat(t.debit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
                               </td>
-                              <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right">
+                              <td className="px-6 py-5 text-[14px] font-bold text-slate-900 text-right">
                                  {parseFloat(t.credit || 0) > 0 ? parseFloat(t.credit).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
                               </td>
                           </tr>
@@ -526,11 +526,11 @@ const ExpenseDetailPane = ({ details, loading, onClose, onUploadSuccess }) => {
                     </tbody>
                     <tfoot className="bg-slate-50/50 border-t border-slate-100">
                        <tr>
-                          <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right uppercase tracking-widest border-r border-slate-100 pr-10">Total</td>
-                          <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right border-r border-slate-100">
+                          <td className="px-6 py-5 text-[14px] font-bold text-slate-900 text-right uppercase tracking-widest border-r border-slate-100 pr-10">Total</td>
+                          <td className="px-6 py-5 text-[14px] font-bold text-slate-900 text-right border-r border-slate-100">
                              {parseFloat(details.Transactions?.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-6 py-5 text-[14px] font-black text-slate-900 text-right">
+                          <td className="px-6 py-5 text-[14px] font-bold text-slate-900 text-right">
                              {parseFloat(details.Transactions?.reduce((sum, t) => sum + parseFloat(t.credit || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                        </tr>

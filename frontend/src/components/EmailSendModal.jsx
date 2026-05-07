@@ -41,7 +41,7 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                 <div className="p-8">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h2 className="text-2xl font-black italic text-slate-900 uppercase tracking-tighter">Compose Message</h2>
+                            <h2 className="text-2xl font-bold italic text-slate-900 uppercase tracking-tighter">Compose Message</h2>
                             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">{documentType} to {documentData.customerName}</p>
                         </div>
                         <button onClick={onClose} className="p-3 hover:bg-slate-50 rounded-full text-slate-300 hover:text-slate-900 transition-all">
@@ -51,7 +51,7 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
 
                     <div className="space-y-6">
                         <div className="grid grid-cols-12 items-center gap-4">
-                            <label className="col-span-2 text-[11px] font-black text-slate-300 uppercase tracking-widest">Recipient</label>
+                            <label className="col-span-2 text-[11px] font-bold text-slate-300 uppercase tracking-widest">Recipient</label>
                             <div className="col-span-10 relative">
                                 <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                                 <input 
@@ -65,7 +65,7 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                         </div>
 
                         <div className="grid grid-cols-12 items-center gap-4 border-t border-slate-50 pt-6">
-                            <label className="col-span-2 text-[11px] font-black text-slate-300 uppercase tracking-widest">Subject</label>
+                            <label className="col-span-2 text-[11px] font-bold text-slate-300 uppercase tracking-widest">Subject</label>
                             <input 
                                 type="text" 
                                 value={subject} 
@@ -75,7 +75,7 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                         </div>
 
                         <div className="border-t border-slate-50 pt-6">
-                            <label className="block text-[11px] font-black text-slate-300 uppercase tracking-widest mb-4">Message Body</label>
+                            <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-widest mb-4">Message Body</label>
                             <textarea 
                                 value={body} 
                                 onChange={e => setBody(e.target.value)} 
@@ -90,11 +90,11 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                                     <FileText size={18}/>
                                 </div>
                                 <div>
-                                    <p className="text-[12px] font-black text-slate-900 uppercase tracking-tight">{documentData.number}.pdf</p>
+                                    <p className="text-[12px] font-bold text-slate-900 uppercase tracking-tight">{documentData.number}.pdf</p>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Auto-generated attachment</p>
                                 </div>
                             </div>
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Ready to attach</span>
+                            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Ready to attach</span>
                         </div>
 
                         <div className="flex justify-end items-center gap-4 pt-4">
@@ -102,7 +102,7 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                             <button 
                                 onClick={handleSend} 
                                 disabled={isSending} 
-                                className="bg-[#1e61f0] text-white px-10 py-3 rounded-lg font-black text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
+                                className="bg-[#1e61f0] text-white px-10 py-3 rounded-lg font-bold text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all uppercase tracking-widest flex items-center gap-2 disabled:opacity-50"
                             >
                                 {isSending ? <RefreshCw className="animate-spin" size={18}/> : <Send size={18}/>}
                                 {isSending ? 'Transmitting...' : 'Send Email'}

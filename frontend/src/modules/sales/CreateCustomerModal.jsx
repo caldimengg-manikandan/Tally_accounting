@@ -22,7 +22,7 @@ const CreateCustomerModal = ({ isOpen, onClose, onSuccess, customerToEdit = null
                  <User size={24} strokeWidth={2.5}/>
               </div>
               <div>
-                 <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                 <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                     {customerToEdit ? 'Modify Profile' : 'New Customer'}
                  </h2>
                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Unified CRM Infrastructure</p>

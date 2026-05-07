@@ -43,7 +43,7 @@ exports.create = async (req, res) => {
             vendorCreditNumber, referenceNumber, date, status,
             vendorLedgerId, accountsPayableId, items,
             subTotal, taxAmount, adjustment, totalAmount,
-            vendorNotes, termsConditions, companyId
+            vendorNotes, termsConditions, companyId, projectId
         } = req.body;
 
         const credit = await VendorCredit.create({
@@ -51,7 +51,8 @@ exports.create = async (req, res) => {
             vendorLedgerId, accountsPayableId,
             subTotal, taxAmount, adjustment, totalAmount,
             vendorNotes, termsConditions,
-            CompanyId: companyId
+            CompanyId: companyId,
+            ProjectId: projectId
         });
 
         if (items && items.length > 0) {
@@ -69,10 +70,11 @@ exports.create = async (req, res) => {
         
         const voucher = await Voucher.create({
             date,
-            type: 'Journal', // Credit Notes are often Journal entries
-            number: `VC-VOUCH-${vendorCreditNumber}`,
+            voucherType: 'Journal', // Credit Notes are often Journal entries
+            voucherNumber: `VC-VOUCH-${vendorCreditNumber}`,
             narration: `Vendor Credit ${vendorCreditNumber}`,
-            CompanyId: companyId
+            CompanyId: companyId,
+            ProjectId: projectId || null
         });
 
         // 1. Debit Vendor (AP decreases)
@@ -82,7 +84,8 @@ exports.create = async (req, res) => {
             debit: totalAmount,
             credit: 0,
             date,
-            CompanyId: companyId
+            CompanyId: companyId,
+            ProjectId: projectId || null
         });
 
         // 2. Credit Expense/Return accounts for each item
@@ -93,7 +96,8 @@ exports.create = async (req, res) => {
                 debit: 0,
                 credit: item.amount,
                 date,
-                CompanyId: companyId
+                CompanyId: companyId,
+                ProjectId: projectId || null
              });
         }
 

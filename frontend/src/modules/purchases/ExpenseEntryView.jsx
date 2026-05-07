@@ -5,7 +5,7 @@ import {
   PlusCircle, AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { voucherAPI, ledgerAPI, purchaseAPI, inventoryAPI, costCenterAPI } from '../../services/api';
+import { voucherAPI, ledgerAPI, purchaseAPI, inventoryAPI, costCenterAPI, companyAPI, projectAPI } from '../../services/api';
 import MileagePreferencesModal from './MileagePreferencesModal';
 import VendorModal from './VendorModal';
 import CreateAccountModal from './CreateAccountModal';
@@ -57,6 +57,7 @@ const ExpenseEntryView = ({ companyId }) => {
   const [ledgers, setLedgers] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [costCenters, setCostCenters] = useState([]);
+  const [projects, setProjects] = useState([]);
   
   // Itemize State
   const [isItemized, setIsItemized] = useState(false);
@@ -74,7 +75,8 @@ const ExpenseEntryView = ({ companyId }) => {
     vendorId: '',
     invoiceNumber: '',
     notes: '',            // general notes
-    customerId: ''
+    customerId: '',
+    projectId: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -100,6 +102,7 @@ const ExpenseEntryView = ({ companyId }) => {
     notes: '',
     customerId: '',
     costCenterId: '',
+    projectId: '',
     isBillable: false,
     tags: []
   });
@@ -132,15 +135,17 @@ const ExpenseEntryView = ({ companyId }) => {
   useEffect(() => {
     if (!companyId) return;
     
-    // Fetch Ledgers, Vendors, and Cost Centers
+    // Fetch Ledgers, Vendors, Cost Centers, and Projects
     Promise.all([
       ledgerAPI.getByCompany(companyId),
       purchaseAPI.getVendors(companyId),
-      costCenterAPI.getByCompany(companyId)
-    ]).then(([ledgersRes, vendorsRes, costCentersRes]) => {
+      costCenterAPI.getByCompany(companyId),
+      projectAPI.getByCompany(companyId)
+    ]).then(([ledgersRes, vendorsRes, costCentersRes, projectsRes]) => {
       setLedgers(ledgersRes.data || []);
       setVendors(vendorsRes.data || []);
       setCostCenters(costCentersRes.data || []);
+      setProjects(projectsRes.data || []);
     }).catch(err => console.error("Failed to fetch initial data:", err));
   }, [companyId]);
 
@@ -235,7 +240,8 @@ const ExpenseEntryView = ({ companyId }) => {
             entries: [
               { ledgerId: expenseId, debit: parseFloat(row.amount), credit: 0 },
               { ledgerId: paidThroughId, debit: 0, credit: parseFloat(row.amount) }
-            ]
+            ],
+            projectId: row.projectId || null
           };
           await voucherAPI.create(payload);
         }
@@ -290,7 +296,8 @@ const ExpenseEntryView = ({ companyId }) => {
           voucherType: 'Payment',
           date: formData.date,
           narration: JSON.stringify(narrationData),
-          entries: entries
+          entries: entries,
+          projectId: formData.projectId || null
         };
         const res = await voucherAPI.create(payload);
         const newId = res.data.voucher?.id;
@@ -771,12 +778,12 @@ const ExpenseEntryView = ({ companyId }) => {
                               </td>
                               <td className="p-2 align-top">
                                  <select 
-                                    value={row.costCenterId}
-                                    onChange={e => handleBulkRowChange(row.id, 'costCenterId', e.target.value)}
+                                    value={row.projectId}
+                                    onChange={e => handleBulkRowChange(row.id, 'projectId', e.target.value)}
                                     className="w-[160px] h-9 px-2 text-[13px] border border-slate-200 rounded focus:border-blue-500 outline-none appearance-none"
                                  >
-                                    <option value=""></option>
-                                    {costCenters.map(cc => <option key={cc.id} value={cc.id}>{cc.name}</option>)}
+                                    <option value="">Select project</option>
+                                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                  </select>
                               </td>
                               <td className="p-2 align-top text-center">
@@ -812,6 +819,25 @@ const ExpenseEntryView = ({ companyId }) => {
                <div className="max-w-[1100px] mx-auto grid grid-cols-[1fr_350px] gap-12">
                   {/* ... regular form code ... */}
                   <div className="space-y-6">
+                     {/* Project */}
+                     <div className="grid grid-cols-[160px_1fr] items-center gap-4 mt-2">
+                        <label className="text-[14px] text-slate-800 font-medium whitespace-nowrap">Project</label>
+                        <div className="flex w-[400px]">
+                           <div className="relative flex-1">
+                              <select 
+                                 value={formData.projectId}
+                                 onChange={e => handleChange('projectId', e.target.value)}
+                                 className="w-full h-9 pl-3 pr-8 text-[14px] border border-slate-200 rounded-md focus:border-[#1e61f0] focus:ring-1 focus:ring-[#1e61f0] outline-none appearance-none bg-white text-slate-700"
+                              >
+                                 <option value="">Select or associate project</option>
+                                 {projects.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                 ))}
+                              </select>
+                              <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                           </div>
+                        </div>
+                     </div>
                      {/* Form Section */}
                      {!isItemized ? (
                         <>
@@ -872,7 +898,7 @@ const ExpenseEntryView = ({ companyId }) => {
                                                  {filteredAccountList.length > 0 ? (
                                                     filteredAccountList.map(group => (
                                                        <div key={group.category}>
-                                                          <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">{group.category}</div>
+                                                          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50">{group.category}</div>
                                                           {group.accounts.map(acc => (
                                                              <div 
                                                                 key={acc.id}
@@ -1063,7 +1089,7 @@ const ExpenseEntryView = ({ companyId }) => {
                                              {filteredPaidThroughList.length > 0 ? (
                                                 filteredPaidThroughList.map(group => (
                                                    <div key={group.category}>
-                                                      <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">{group.category}</div>
+                                                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50">{group.category}</div>
                                                       {group.accounts.map(acc => (
                                                          <div 
                                                             key={acc.id}
@@ -1143,7 +1169,7 @@ const ExpenseEntryView = ({ companyId }) => {
                                                        {filteredPaidThroughList.length > 0 ? (
                                                           filteredPaidThroughList.map(group => (
                                                              <div key={group.category}>
-                                                                <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">{group.category}</div>
+                                                                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50">{group.category}</div>
                                                                 {group.accounts.map(acc => (
                                                                    <div 
                                                                       key={acc.id}
@@ -1376,7 +1402,7 @@ const ExpenseEntryView = ({ companyId }) => {
                                                    ${formData.customerId === c.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}
                                                 `}
                                              >
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black shrink-0 ${formData.customerId === c.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 ${formData.customerId === c.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                                                    {c.name.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div className="flex flex-col min-w-0">
@@ -1417,6 +1443,26 @@ const ExpenseEntryView = ({ companyId }) => {
                            <button className="w-9 h-9 bg-[#1e61f0] text-white flex items-center justify-center shrink-0 rounded-r-md border border-[#1e61f0] hover:bg-blue-700 transition-colors">
                               <Search size={16} />
                            </button>
+                        </div>
+                     </div>
+
+                     {/* Project */}
+                     <div className="grid grid-cols-[160px_1fr] items-center gap-4 mt-2">
+                        <label className="text-[14px] text-slate-800 font-medium whitespace-nowrap">Project</label>
+                        <div className="flex w-[400px]">
+                           <div className="relative flex-1">
+                              <select 
+                                 value={formData.projectId}
+                                 onChange={e => handleChange('projectId', e.target.value)}
+                                 className="w-full h-9 pl-3 pr-8 text-[14px] border border-slate-200 rounded-md focus:border-[#1e61f0] focus:ring-1 focus:ring-[#1e61f0] outline-none appearance-none bg-white text-slate-700"
+                              >
+                                 <option value="">Select or associate project</option>
+                                 {projects.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                 ))}
+                              </select>
+                              <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                           </div>
                         </div>
                      </div>
 

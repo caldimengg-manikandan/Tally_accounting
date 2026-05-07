@@ -60,7 +60,7 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
                     </div>
                     <div className="flex items-center gap-2">
                         <button 
-                            onClick={() => navigate('/sales/new-invoice')}
+                            onClick={() => navigate('/sales-invoices/new')}
                             className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
                         >
                             <Plus size={18} />
@@ -366,7 +366,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 
             {/* Sub-Toolbar (Zoho Style) */}
             <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center gap-3 no-print">
-                 <button onClick={() => navigate(`/sales/edit-invoice/${invoice.id}`)} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">Edit</button>
+                 <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">Edit</button>
                  <button onClick={() => setCurrentView('email')} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><Send size={14}/> Send Email</button>
                  <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">PDF/Print <ChevronDown size={14}/></button>
                  <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><DollarSign size={14}/> Record Payment</button>
@@ -481,7 +481,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
                                     <div className="h-px w-6 bg-slate-200" />
-                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Terms & Conditions</span>
+                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Terms & Conditions</span>
                                 </div>
                                 <p className="text-[11px] text-slate-400 italic leading-relaxed pl-9">{invoice.termsConditions || 'Standard business terms apply. Please pay within the due date.'}</p>
                             </div>
@@ -593,7 +593,7 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                 </div>
                 <div className="flex items-center gap-2">
                    <button 
-                      onClick={() => navigate('/sales/new-invoice')}
+                      onClick={() => navigate('/sales-invoices/new')}
                       className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
                    >
                       <Plus size={18} strokeWidth={2.5}/> New Invoice
@@ -662,7 +662,7 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                                              <FileText size={24} />
                                           </div>
                                           <p className="text-slate-500 text-[14px]">No invoices found.</p>
-                                          <button onClick={() => navigate('/sales/new-invoice')} className="text-blue-600 text-[13px] font-medium hover:underline">Create an invoice</button>
+                                          <button onClick={() => navigate('/sales-invoices/new')} className="text-blue-600 text-[13px] font-medium hover:underline">Create an invoice</button>
                                        </div>
                                     </td>
                                 </tr>
@@ -698,7 +698,7 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-center gap-2">
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/sales/edit-invoice/${inv.id}`); }} 
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/sales-invoices/edit/${inv.id}`); }} 
                                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
                                                 >
                                                     <Edit2 size={13} /> Edit

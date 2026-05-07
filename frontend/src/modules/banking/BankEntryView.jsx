@@ -272,17 +272,17 @@ const BankEntryView = () => {
                       </div>
                     )}
                   </div>
-                  {ifscError && <p className="mt-1.5 text-[11px] text-rose-500 font-black">{ifscError}</p>}
+                  {ifscError && <p className="mt-1.5 text-[11px] text-rose-500 font-bold">{ifscError}</p>}
                   
                   {ifscDetails && (
                     <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100 grid grid-cols-2 gap-4 animate-fade-in">
                        <div>
                          <div className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">Bank Name</div>
-                         <div className="text-[12px] font-black text-blue-900">{ifscDetails.BANK}</div>
+                         <div className="text-[12px] font-bold text-blue-900">{ifscDetails.BANK}</div>
                        </div>
                        <div>
                          <div className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">Branch</div>
-                         <div className="text-[12px] font-black text-blue-900">{ifscDetails.BRANCH}</div>
+                         <div className="text-[12px] font-bold text-blue-900">{ifscDetails.BRANCH}</div>
                        </div>
                        <div className="col-span-2">
                          <div className="text-[10px] font-bold text-blue-400 uppercase tracking-tighter">Address</div>

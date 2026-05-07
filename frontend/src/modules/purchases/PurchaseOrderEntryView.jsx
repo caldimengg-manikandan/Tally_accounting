@@ -8,7 +8,7 @@ import {
   Save, Send as SendIcon, UploadCloud, GripVertical, Paperclip,
   Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
-import { purchaseAPI, inventoryAPI, companyAPI } from '../../services/api';
+import { purchaseAPI, inventoryAPI, companyAPI, projectAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
 import VendorForm from './VendorForm';
@@ -47,7 +47,8 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     taxRate: 0,
     tdsRate: 0,
     tdsName: '',
-    tags: []
+    tags: [],
+    projectId: ''
   });
 
   const [items, setItems] = useState([
@@ -106,6 +107,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [isTDSDropdownOpen, setIsTDSDropdownOpen] = useState(false);
   const [tdsSearchTerm, setTdsSearchTerm] = useState('');
   const tdsDropdownRef = useRef(null);
+  const [projects, setProjects] = useState([]);
 
   const tdsOptions = [
     { name: 'Commission or Brokerage', rate: 2 },
@@ -128,6 +130,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
         console.log('Inventory Items Loaded:', res.data?.length);
         setInventoryItems(res.data || []);
       });
+      projectAPI.getByCompany(companyId).then(res => setProjects(res.data || []));
     }
   }, [companyId]);
 
@@ -302,7 +305,8 @@ const PurchaseOrderEntryView = ({ companyId }) => {
         status: sendEmail ? 'Sent' : 'Draft',
         notes: formData.notes,
         supplierLedgerId: formData.vendorId,
-        companyId
+        companyId,
+        projectId: formData.projectId || null
       };
 
       const res = await purchaseAPI.createOrder(payload);
@@ -530,6 +534,22 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                   onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
                   className="w-full max-w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
                 />
+ 
+                 {/* Project */}
+                 <label className="text-slate-700 pt-2">Project</label>
+                 <div className="relative max-w-[280px]">
+                    <select 
+                      value={formData.projectId}
+                      onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                      className="w-full h-9 px-3 pr-8 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none appearance-none bg-white"
+                    >
+                       <option value="">Select project</option>
+                       {projects.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                       ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                 </div>
 
                 {/* Date */}
                 <label className="text-slate-700 pt-2">Date</label>

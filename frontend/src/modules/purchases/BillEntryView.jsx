@@ -9,7 +9,7 @@ import {
   Save, Send as SendIcon, UploadCloud, GripVertical, Paperclip,
   Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
-import { purchaseAPI, inventoryAPI, companyAPI } from '../../services/api';
+import { purchaseAPI, inventoryAPI, companyAPI, projectAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
 import VendorForm from './VendorForm';
@@ -49,7 +49,8 @@ const BillEntryView = ({ companyId }) => {
     taxRate: 0,
     tdsRate: 0,
     tdsName: '',
-    tags: []
+    tags: [],
+    projectId: ''
   });
 
   const [items, setItems] = useState([
@@ -58,6 +59,7 @@ const BillEntryView = ({ companyId }) => {
 
   // ── Search & Dropdown State ─────────────────────────────────────
   const [vendors, setVendors] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
   const [vendorSearch, setVendorSearch] = useState('');
@@ -142,6 +144,7 @@ const BillEntryView = ({ companyId }) => {
   useEffect(() => {
     if (companyId) {
       purchaseAPI.getVendors(companyId).then(res => setVendors(res.data || []));
+      projectAPI.getByCompany(companyId).then(res => setProjects(res.data || []));
       inventoryAPI.getByCompany(companyId).then(res => {
         setInventoryItems(res.data || []);
       });
@@ -272,7 +275,8 @@ const BillEntryView = ({ companyId }) => {
         notes: formData.notes,
         supplierLedgerId: formData.vendorId,
         companyId,
-        items
+        items,
+        projectId: formData.projectId || null
       };
 
       const res = await purchaseAPI.createBill(payload);
@@ -397,6 +401,21 @@ const BillEntryView = ({ companyId }) => {
 
                 <label className="text-slate-700 pt-2">Order Number</label>
                 <input type="text" value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} className="w-full max-w-[400px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none" />
+
+                <label className="text-slate-700 pt-2">Project</label>
+                <div className="relative w-full max-w-[400px]">
+                   <select 
+                     value={formData.projectId} 
+                     onChange={(e) => setFormData({ ...formData, projectId: e.target.value })} 
+                     className="w-full h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none bg-white appearance-none pr-8"
+                   >
+                      <option value="">Select or associate project</option>
+                      {projects.map(p => (
+                         <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                   </select>
+                   <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                </div>
 
                 <label className="text-red-500 pt-2"><span className="text-slate-700">Bill Date</span>*</label>
                 <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full max-w-[400px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none" />

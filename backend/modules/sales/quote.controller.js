@@ -35,7 +35,7 @@ exports.createQuote = async (req, res) => {
       companyId, quoteNumber, customerName, customerLedgerId, referenceNumber,
       quoteDate, expiryDate, salesperson, subject,
       items, discount, taxType, selectedTax, taxAmount,
-      adjustment, subTotal, totalAmount, customerNotes, termsConditions
+      adjustment, subTotal, totalAmount, customerNotes, termsConditions, projectId
     } = req.body;
 
     if (!companyId) return res.status(400).json({ error: 'companyId is required' });
@@ -73,7 +73,8 @@ exports.createQuote = async (req, res) => {
       subTotal: parseFloat(subTotal || 0),
       totalAmount: parseFloat(totalAmount || 0),
       customerNotes,
-      termsConditions
+      termsConditions,
+      ProjectId: projectId
     });
 
     res.status(201).json({ message: 'Quote created successfully.', quote });

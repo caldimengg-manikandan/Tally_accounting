@@ -6,7 +6,7 @@ exports.createCreditNote = async (req, res) => {
     const { 
       companyId, customerLedgerId, accountsReceivableId, creditNoteNumber, referenceNumber, date, 
       salesperson, subject, subTotal, discount, 
-      taxAmount, adjustment, totalAmount, status, items 
+      taxAmount, adjustment, totalAmount, status, items, projectId 
     } = req.body;
 
     const cn = await CreditNote.create({
@@ -23,7 +23,8 @@ exports.createCreditNote = async (req, res) => {
       taxAmount,
       adjustment,
       totalAmount,
-      status: status || 'Draft'
+      status: status || 'Draft',
+      ProjectId: projectId
     }, { transaction: t });
 
     if (items && items.length > 0) {
@@ -93,7 +94,7 @@ exports.updateCreditNote = async (req, res) => {
     const { 
       customerLedgerId, accountsReceivableId, creditNoteNumber, referenceNumber, date, 
       salesperson, subject, subTotal, discount, 
-      taxAmount, adjustment, totalAmount, status, items 
+      taxAmount, adjustment, totalAmount, status, items, projectId 
     } = req.body;
 
     const cn = await CreditNote.findByPk(id);
@@ -112,7 +113,8 @@ exports.updateCreditNote = async (req, res) => {
       taxAmount,
       adjustment,
       totalAmount,
-      status
+      status,
+      ProjectId: projectId
     }, { transaction: t });
 
     if (items) {

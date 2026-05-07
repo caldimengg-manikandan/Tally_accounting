@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus, Search, Filter, Download, Columns, Rows, ChevronLeft, ChevronRight, ChevronDown,
   Settings, X, HelpCircle, Package, User, Calendar, FileText, Trash2,
-  ArrowLeft, Save, Send, Clock, MoreHorizontal, CheckCircle2, AlertCircle, Loader2, Edit2, RefreshCw, ShieldCheck
+  ArrowLeft, Save, Send, Clock, MoreHorizontal, CheckCircle2, AlertCircle, Loader2, Edit2, RefreshCw, ShieldCheck,
+  Printer, History, Share2, Bold, Italic, Underline, ArrowUp, ArrowDown
 } from 'lucide-react';
-import { salesAPI, ledgerAPI, inventoryAPI } from '../../services/api';
+import { salesAPI, ledgerAPI, inventoryAPI, companyAPI, projectAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 
@@ -43,7 +44,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden animate-scale-up">
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-[18px] font-black text-slate-900 tracking-tight">Manage Salespersons</h3>
+          <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Manage Salespersons</h3>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"><X size={18} /></button>
         </div>
         <div className="px-6 py-4 flex items-center gap-3 border-b border-slate-100">
@@ -57,7 +58,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-500 transition-all"
             />
           </div>
-          <button onClick={() => setShowAddForm(true)} className="px-4 py-2 bg-blue-600 text-white text-[13px] font-black rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100">
+          <button onClick={() => setShowAddForm(true)} className="px-4 py-2 bg-blue-600 text-white text-[13px] font-bold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100">
             <Plus size={14} /> New Salesperson
           </button>
         </div>
@@ -65,24 +66,24 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
           <div className="mx-6 my-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
+                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
                 <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full h-9 px-3 border border-slate-300 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white transition-all" />
               </div>
               <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Email</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Email</label>
                 <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="w-full h-9 px-3 border border-slate-300 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white transition-all" />
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={handleSaveAndSelect} disabled={!newName.trim()} className="px-5 py-2 bg-blue-600 text-white text-[12px] font-black rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm">Save and Select</button>
-              <button onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }} className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-black rounded hover:bg-slate-50 transition-all">Cancel</button>
+              <button onClick={handleSaveAndSelect} disabled={!newName.trim()} className="px-5 py-2 bg-blue-600 text-white text-[12px] font-bold rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm">Save and Select</button>
+              <button onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }} className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-bold rounded hover:bg-slate-50 transition-all">Cancel</button>
             </div>
           </div>
         )}
         <div className="px-6">
           <div className="sticky top-0 bg-white grid grid-cols-2 py-3 border-b border-slate-100 z-10">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salesperson Name</span>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Salesperson Name</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
           </div>
           <div className="max-h-56 overflow-y-auto no-scrollbar">
             {filtered.length === 0 ? (
@@ -104,83 +105,84 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
 };
 
 // ─────────────────────────────────────────────────
-// CUSTOM SEARCHABLE SELECTORS
+// CUSTOMER SEARCH SELECTOR
 // ─────────────────────────────────────────────────
-
 const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNewCustomer }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const dropdownRef = useRef(null);
+    const containerRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
+            if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filtered = customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+    const filtered = (customers || []).filter(c => {
+        if (!c || !c.name) return false;
+        return c.name.toLowerCase().includes(search.toLowerCase());
+    });
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative w-full" ref={containerRef}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full h-11 px-4 bg-slate-50 border ${isOpen ? 'border-blue-500 bg-white ring-0' : 'border-slate-200'} rounded-none flex items-center justify-between cursor-pointer transition-all`}
+                className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between cursor-pointer focus-within:bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all appearance-none shadow-sm"
             >
-                <span className={`text-[14px] font-black ${value ? 'text-slate-900' : 'text-slate-400'}`}>
-                    {value || placeholder}
-                </span>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <div className="flex-1 overflow-hidden">
+                    {value ? (
+                        <div className="text-[14px] font-bold text-slate-800 tracking-tight truncate">{value}</div>
+                    ) : (
+                        <div className="text-[14px] font-bold text-slate-400">{placeholder}</div>
+                    )}
+                </div>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-900 shadow-[8px_8px_0px_rgba(15,23,42,0.1)] z-[200] rounded-none animate-fade-in overflow-hidden">
-                    <div className="p-3 border-b border-slate-100 bg-slate-50">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-xl z-[200] overflow-hidden animate-fade-in flex flex-col">
+                    <div className="p-3 border-b border-slate-50 bg-slate-50/50">
                         <div className="relative">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input 
                                 autoFocus
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                placeholder="Filter ledger..."
-                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-none text-[12px] font-black outline-none focus:border-slate-900 transition-all"
+                                placeholder="Search customers..."
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[13px] outline-none focus:border-blue-500 transition-all font-medium"
                             />
                         </div>
                     </div>
-                    <div className="max-h-60 overflow-y-auto no-scrollbar">
-                        {filtered.length === 0 ? (
-                            <div className="p-8 text-center bg-white">
-                                <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mb-4">No matching accounts</p>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); onNewCustomer?.(); }}
-                                    className="px-4 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 transition-all rounded-none"
-                                >
-                                    + Create New Ledger
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                {filtered.map(c => (
-                                    <div 
-                                        key={c.id}
-                                        onClick={() => { onChange(c.id); setIsOpen(false); setSearch(''); }}
-                                        className="px-6 py-3.5 hover:bg-slate-900 hover:text-white cursor-pointer border-b border-slate-50 last:border-0 transition-all group"
-                                    >
-                                        <p className="text-[14px] font-black tracking-tight">{c.name}</p>
-                                        <p className="text-[10px] uppercase font-black tracking-widest mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                                            {c.Group?.name || 'SUNDRY DEBTOR'} • ₹{parseFloat(c.balance || 0).toLocaleString()}
-                                        </p>
-                                    </div>
-                                ))}
+                    <div className="max-h-[250px] overflow-y-auto no-scrollbar py-1">
+                        {filtered.length > 0 ? (
+                            filtered.map(c => (
                                 <div 
-                                    onClick={(e) => { e.stopPropagation(); onNewCustomer?.(); }}
-                                    className="px-6 py-4 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-black text-[11px] uppercase tracking-[0.2em] cursor-pointer transition-all flex items-center gap-2 sticky bottom-0 border-t border-blue-100"
+                                    key={c.id}
+                                    onClick={() => { onChange(c.id); setIsOpen(false); setSearch(''); }}
+                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-lg flex items-center gap-3"
                                 >
-                                    <Plus size={16} strokeWidth={3} /> Add New Customer
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                        <User size={14} />
+                                    </div>
+                                    <div className="text-[14px] font-bold text-slate-800 tracking-tight">{c.name}</div>
                                 </div>
-                            </>
+                            ))
+                        ) : (
+                            <div className="py-8 text-center flex flex-col items-center justify-center">
+                                <User size={20} className="text-slate-300 mb-2" />
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No customers found</p>
+                            </div>
                         )}
+                    </div>
+                    <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
+                        <button 
+                            onClick={() => { setIsOpen(false); onNewCustomer(); }}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-bold text-[13px] hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest"
+                        >
+                            <Plus size={16} strokeWidth={3} /> New Customer
+                        </button>
                     </div>
                 </div>
             )}
@@ -188,80 +190,93 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
     );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ITEM SEARCH SELECTOR
+// ─────────────────────────────────────────────────────────────────────────────
 const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const dropdownRef = useRef(null);
+    const containerRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
+            if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filtered = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
+    const filtered = (items || []).filter(it => {
+        if (!it) return false;
+        const n = it.name || '';
+        const d = it.salesDescription || '';
+        const s = search.toLowerCase();
+        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+    });
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative w-full" ref={containerRef}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full min-h-11 px-4 bg-transparent border-none rounded-none flex items-center justify-between cursor-pointer transition-all`}
+                className="w-full flex items-center justify-between cursor-pointer group"
             >
-                <span className={`text-[14px] font-black ${value ? 'text-slate-900' : 'text-slate-400'}`}>
-                    {value || placeholder}
-                </span>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <div className="flex-1">
+                    {value ? (
+                        <div className="text-[14px] font-bold text-slate-900 tracking-tight">{value}</div>
+                    ) : (
+                        <div className="text-[14px] font-medium text-slate-400 italic">{placeholder}</div>
+                    )}
+                </div>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-900 shadow-[8px_8px_0px_rgba(15,23,42,0.1)] z-[200] rounded-none animate-fade-in overflow-hidden">
-                    <div className="p-3 border-b border-slate-100 bg-slate-50">
+                <div className="absolute top-full left-0 mt-2 w-[350px] bg-white border border-slate-200 shadow-2xl rounded-xl z-[300] overflow-hidden animate-fade-in flex flex-col">
+                    <div className="p-3 border-b border-slate-50 bg-slate-50/50">
                         <div className="relative">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input 
                                 autoFocus
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
-                                placeholder="Filter items..."
-                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-none text-[12px] font-black outline-none focus:border-slate-900 transition-all"
+                                placeholder="Search items..."
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[13px] outline-none focus:border-blue-500 transition-all font-medium"
                             />
                         </div>
                     </div>
-                    <div className="max-h-60 overflow-y-auto no-scrollbar">
-                        {filtered.length === 0 ? (
-                            <div className="p-8 text-center bg-white">
-                                <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest mb-4">No matching items</p>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); onNewItem?.(); }}
-                                    className="px-4 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 transition-all rounded-none"
-                                >
-                                    + Add New Item
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                {filtered.map(it => (
-                                    <div 
-                                        key={it.id}
-                                        onClick={() => { onChange(it); setIsOpen(false); setSearch(''); }}
-                                        className="px-6 py-3.5 hover:bg-slate-900 hover:text-white cursor-pointer border-b border-slate-50 last:border-0 transition-all group"
-                                    >
-                                        <p className="text-[14px] font-black tracking-tight">{it.name}</p>
-                                        <p className="text-[10px] uppercase font-black tracking-widest mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                                            Rate: ₹{parseFloat(it.sellingPrice || 0).toLocaleString()} • Stock: {it.stock || 0}
-                                        </p>
-                                    </div>
-                                ))}
+                    <div className="max-h-[250px] overflow-y-auto no-scrollbar py-1">
+                        {filtered.length > 0 ? (
+                            filtered.map(it => (
                                 <div 
-                                    onClick={(e) => { e.stopPropagation(); onNewItem?.(); }}
-                                    className="px-6 py-4 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-black text-[11px] uppercase tracking-[0.2em] cursor-pointer transition-all flex items-center gap-2 sticky bottom-0 border-t border-blue-100"
+                                    key={it.id}
+                                    onClick={() => { onChange(it); setIsOpen(false); setSearch(''); }}
+                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-lg"
                                 >
-                                    <Plus size={16} strokeWidth={3} /> Create New Item
+                                    <div className="flex justify-between items-start mb-0.5">
+                                        <div className="text-[14px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                            <Package size={14} className="text-blue-500 opacity-50" /> {it.name}
+                                        </div>
+                                        <div className="text-[13px] font-bold text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
+                                        {it.salesDescription || 'No description provided'}
+                                    </div>
                                 </div>
-                            </>
+                            ))
+                        ) : (
+                            <div className="py-8 text-center flex flex-col items-center justify-center">
+                                <Package size={20} className="text-slate-300 mb-2" />
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No matching items</p>
+                            </div>
                         )}
+                    </div>
+                    <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
+                        <button 
+                            onClick={() => { setIsOpen(false); onNewItem(); }}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-bold text-[13px] hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest"
+                        >
+                            <Plus size={16} strokeWidth={3} /> New Item
+                        </button>
                     </div>
                 </div>
             )}
@@ -271,18 +286,26 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
 
 const SalesOrdersView = ({ companyId }) => {
     const navigate = useNavigate();
-    const [view, setView] = useState('list'); // 'list', 'form', 'detail'
+    const location = useLocation();
+    const [view, setView] = useState(location.pathname === '/sales-orders/new' ? 'form' : 'list'); // 'list', 'form', 'detail'
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [orders, setOrders] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [items, setItems] = useState([]);
+    const [projects, setProjects] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteId, setDeleteId] = useState(null);
+    const [salespersons, setSalespersons] = useState([]);
+    const [isSalespersonModalOpen, setIsSalespersonModalOpen] = useState(false);
     const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
     const { addNotification } = useNotificationStore();
+
+    // List view states moved to top level
+    const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+    const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
 
     const [formData, setFormData] = useState({
         id: null,
@@ -302,17 +325,19 @@ const SalesOrdersView = ({ companyId }) => {
         totalAmount: 0,
         status: 'Draft',
         customerNotes: '',
-        termsConditions: ''
+        termsConditions: '',
+        projectId: ''
     });
 
     const fetchData = async () => {
         if (!companyId) return;
         setLoading(true);
         try {
-            const [oRes, cRes, iRes] = await Promise.all([
+            const [oRes, cRes, iRes, projRes] = await Promise.all([
                 salesAPI.getOrders(companyId),
                 ledgerAPI.getByCompany(companyId),
-                inventoryAPI.getByCompany(companyId)
+                inventoryAPI.getByCompany(companyId),
+                projectAPI.getByCompany(companyId)
             ]);
 
             setOrders(Array.isArray(oRes.data) ? oRes.data : []);
@@ -321,6 +346,7 @@ const SalesOrdersView = ({ companyId }) => {
                 l.Group?.name?.toLowerCase().includes('customer')
             ) : []);
             setItems(Array.isArray(iRes.data) ? iRes.data : []);
+            setProjects(Array.isArray(projRes.data) ? projRes.data : []);
         } catch (err) {
             console.error('Fetch error:', err);
             addNotification('Failed to sync sales data.', 'error');
@@ -331,13 +357,17 @@ const SalesOrdersView = ({ companyId }) => {
 
     useEffect(() => {
         fetchData();
+        const saved = localStorage.getItem('tally_salespersons');
+        if (saved) setSalespersons(JSON.parse(saved));
     }, [companyId]);
 
     // Form Calculations
     useEffect(() => {
         const subTotal = formData.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-        const taxAmount = subTotal * (parseFloat(formData.taxPercent || 0) / 100);
-        const total = subTotal - (parseFloat(formData.discount || 0)) + taxAmount + (parseFloat(formData.adjustment || 0));
+        const discountAmt = subTotal * (parseFloat(formData.discount || 0) / 100);
+        const taxableAmount = subTotal - discountAmt;
+        const taxAmount = taxableAmount * (parseFloat(formData.taxPercent || 0) / 100);
+        const total = taxableAmount + taxAmount + (parseFloat(formData.adjustment || 0));
         setFormData(prev => ({ ...prev, subTotal, taxAmount, totalAmount: total }));
     }, [formData.items, formData.discount, formData.taxPercent, formData.adjustment]);
 
@@ -360,6 +390,21 @@ const SalesOrdersView = ({ companyId }) => {
             });
             return { ...prev, items: newItems };
         });
+    };
+
+    const handleAddField = () => {
+        setFormData(prev => ({
+            ...prev,
+            items: [...prev.items, { id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }]
+        }));
+    };
+
+    const handleRemoveField = (id) => {
+        if (formData.items.length === 1) return;
+        setFormData(prev => ({
+            ...prev,
+            items: prev.items.filter(item => item.id !== id)
+        }));
     };
 
     const handleSave = async (statusValue = 'Draft') => {
@@ -419,7 +464,8 @@ const SalesOrdersView = ({ companyId }) => {
             totalAmount: 0,
             status: 'Draft',
             customerNotes: '',
-            termsConditions: ''
+            termsConditions: '',
+            projectId: ''
         });
     };
 
@@ -436,6 +482,17 @@ const SalesOrdersView = ({ companyId }) => {
         setView('form');
     };
 
+    useEffect(() => {
+        if (location.pathname === '/sales-orders/new') {
+            if (view !== 'form') {
+                resetForm();
+                setView('form');
+            }
+        } else if (location.pathname === '/sales-orders') {
+            setView('list');
+        }
+    }, [location.pathname]);
+
     const openDetail = (order) => {
         setSelectedOrder(order);
         setView('detail');
@@ -446,142 +503,190 @@ const SalesOrdersView = ({ companyId }) => {
         o.Customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const renderListView = () => (
-        <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
-            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-[#fcfdfe]">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-900 flex items-center justify-center text-white font-black text-xl rounded-none tracking-tighter">SO</div>
-                    <div>
-                        <h1 className="text-[18px] font-black text-slate-900 tracking-tight uppercase">Sales Orders</h1>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Supply Chain & Fulfillment Tracking</p>
+    const renderListView = () => {
+        const handleSort = (key) => {
+            let direction = 'asc';
+            if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+            setSortConfig({ key, direction });
+            setIsOptionsOpen(false);
+        };
+
+        const sortedOrders = [...filteredOrders].sort((a, b) => {
+            let aValue = a[sortConfig.key] || '';
+            let bValue = b[sortConfig.key] || '';
+            if (sortConfig.key === 'totalAmount') {
+               aValue = parseFloat(aValue || 0);
+               bValue = parseFloat(bValue || 0);
+            } else {
+               aValue = String(aValue).toLowerCase();
+               bValue = String(bValue).toLowerCase();
+            }
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        const SortOption = ({ label, sortKey }) => {
+            const isActive = sortConfig.key === sortKey;
+            return (
+               <div 
+                  onClick={(e) => { e.stopPropagation(); handleSort(sortKey); }}
+                  className={`px-4 py-2 cursor-pointer flex justify-between items-center rounded-sm mx-1 mt-1 ${isActive ? 'bg-[#1e61f0] text-white' : 'hover:bg-[#f4f5f7] text-slate-700'}`}
+               >
+                  {label} 
+                  {isActive && (sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />)}
+               </div>
+            );
+        };
+
+        return (
+            <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
+                <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-[#fcfdfe]">
+                    <div className="flex items-center gap-2 group cursor-pointer">
+                        <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">All Sales Orders</h1>
+                        <ChevronDown size={18} className="text-blue-600 mt-1" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => navigate('/sales-orders/new')}
+                            className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-5 py-2.5 rounded-md font-bold text-[12px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm"
+                        >
+                            <Plus size={18} strokeWidth={2.5} /> New Order
+                        </button>
+                        <div className="relative">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setIsOptionsOpen(!isOptionsOpen); }}
+                                className="p-2.5 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors shadow-sm"
+                            >
+                                <MoreHorizontal size={18} />
+                            </button>
+                            {isOptionsOpen && (
+                                <div className="absolute right-0 top-full mt-2 w-[220px] bg-white rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 z-50 py-1 text-[13px] font-medium text-[#2c3e50] animate-fade-down origin-top-right">
+                                    <div className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50">Sort By</div>
+                                    <SortOption label="Order Number" sortKey="orderNumber" />
+                                    <SortOption label="Date" sortKey="date" />
+                                    <SortOption label="Customer Name" sortKey="Customer.name" />
+                                    <SortOption label="Amount" sortKey="totalAmount" />
+                                    <div className="mt-2 pt-2 border-t border-slate-50">
+                                        <div onClick={() => { setIsOptionsOpen(false); fetchData(); }} className="px-4 py-2 hover:bg-[#f4f5f7] cursor-pointer text-slate-700 flex items-center gap-2 font-medium text-[13px]"><RefreshCw size={14}/> Refresh List</div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => openForm()}
-                        className="bg-slate-900 hover:bg-blue-600 text-white px-6 py-2.5 rounded-none font-black text-[12px] uppercase tracking-[0.2em] flex items-center gap-2 transition-all shadow-xl shadow-slate-200"
-                    >
-                        <Plus size={16} strokeWidth={3} /> New Order
-                    </button>
-                </div>
-            </div>
 
-            <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
-                <div className="relative group w-96">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
-                    <input 
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="SEARCH ORDERS BY NUMBER OR CUSTOMER..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-none text-[11px] font-black text-slate-700 outline-none focus:border-slate-900 shadow-sm transition-all uppercase tracking-widest"
-                    />
+                <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+                    <div className="relative group w-96">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e61f0] transition-colors" />
+                        <input 
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search orders by number or customer..."
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-md text-[13px] font-medium text-slate-700 outline-none focus:border-[#1e61f0] shadow-sm transition-all"
+                        />
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={fetchData} className="p-2.5 text-slate-400 hover:text-slate-900 transition-colors border border-transparent hover:border-slate-200 rounded-none">
-                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                    </button>
-                </div>
-            </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar p-8">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b-2 border-slate-900">
-                            <th className="px-6 py-4">Date</th>
-                            <th className="px-6 py-4">Order Ref</th>
-                            <th className="px-6 py-4">Client Entity</th>
-                            <th className="px-6 py-4 text-center">Fulfillment</th>
-                            <th className="px-6 py-4 text-right">Net Value</th>
-                            <th className="px-6 py-4 text-center w-20">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {loading ? (
-                            Array(5).fill(0).map((_, i) => (
-                                <tr key={i} className="animate-pulse border-b border-slate-50">
-                                    <td colSpan="6" className="px-6 py-8"><div className="h-4 bg-slate-50 rounded-none w-full"></div></td>
-                                </tr>
-                            ))
-                        ) : filteredOrders.length === 0 ? (
+                <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 sticky top-0 z-10">
                             <tr>
-                                <td colSpan="6" className="py-32 text-center">
-                                    <div className="flex flex-col items-center gap-4 opacity-20">
-                                        <Package size={64} strokeWidth={1} />
-                                        <p className="text-[14px] font-black uppercase tracking-[0.3em]">No order records identified</p>
-                                    </div>
-                                </td>
+                                <th className="px-6 py-4">Date</th>
+                                <th className="px-6 py-4">Order Details</th>
+                                <th className="px-6 py-4">Customer</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-right">Amount</th>
+                                <th className="px-6 py-4 text-center w-28">Actions</th>
                             </tr>
-                        ) : (
-                            filteredOrders.map(order => (
-                                <tr 
-                                    key={order.id} 
-                                    onClick={() => openDetail(order)}
-                                    className="hover:bg-slate-50/80 transition-all cursor-pointer group border-b border-slate-50"
-                                >
-                                    <td className="px-6 py-6 text-[13px] font-black text-slate-400 tabular-nums">
-                                        {new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="text-[15px] font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{order.orderNumber}</div>
-                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ref: {order.referenceNumber || 'INTERNAL'}</div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="text-[14px] font-black text-slate-800 uppercase leading-none">{order.Customer?.name || 'GENERIC CLIENT'}</div>
-                                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ledger: {order.LedgerId?.substring(0,8)}...</div>
-                                    </td>
-                                    <td className="px-6 py-6 text-center">
-                                        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] border ${
-                                            order.status === 'Draft' ? 'bg-slate-100 text-slate-500 border-slate-200' :
-                                            order.status === 'Sent' ? 'bg-blue-50 text-blue-600 border-blue-200' :
-                                            'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                        }`}>
-                                            {order.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-6 text-right font-black text-slate-900 tabular-nums text-[15px]">
-                                        ₹{parseFloat(order.totalAmount).toLocaleString()}
-                                    </td>
-                                    <td className="px-6 py-6" onClick={e => e.stopPropagation()}>
-                                        <div className="flex items-center justify-center gap-2">
-                                            <button onClick={() => openForm(order)} className="p-2 hover:bg-white hover:text-blue-600 border border-transparent hover:border-blue-100 transition-all rounded-none text-slate-400">
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button 
-                                                onClick={() => { setDeleteId(order.id); setIsDeleteModalOpen(true); }}
-                                                className="p-2 hover:bg-white hover:text-red-600 border border-transparent hover:border-red-100 transition-all rounded-none text-slate-400"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {loading ? (
+                                Array(5).fill(0).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td colSpan="6" className="px-6 py-8"><div className="h-4 bg-slate-50 rounded-md w-full"></div></td>
+                                    </tr>
+                                ))
+                            ) : sortedOrders.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="py-20 text-center">
+                                        <div className="flex flex-col items-center gap-4 opacity-30">
+                                            <Package size={48} strokeWidth={1.5} className="text-slate-400" />
+                                            <p className="text-[14px] font-bold uppercase tracking-widest text-slate-500">No order records identified</p>
                                         </div>
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ) : (
+                                sortedOrders.map(order => (
+                                    <tr 
+                                        key={order.id} 
+                                        onClick={() => openDetail(order)}
+                                        className="hover:bg-slate-50/80 transition-all cursor-pointer group border-b border-slate-50"
+                                    >
+                                        <td className="px-6 py-6 text-[13px] font-medium text-slate-500 tabular-nums whitespace-nowrap">
+                                            {new Date(order.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="text-[14px] font-bold text-[#1e61f0] group-hover:underline uppercase tracking-tight">{order.orderNumber}</div>
+                                            <div className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ref: {order.referenceNumber || 'INTERNAL'}</div>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="text-[14px] font-medium text-slate-800 uppercase leading-none">{order.Customer?.name || 'GENERIC CLIENT'}</div>
+                                        </td>
+                                        <td className="px-6 py-6 text-center">
+                                            <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-bold tracking-widest border ${
+                                                order.status === 'Draft' ? 'bg-slate-50 text-slate-500 border-slate-100' :
+                                                order.status === 'Sent' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                'bg-green-50 text-green-600 border-green-100'
+                                            }`}>
+                                                {order.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-6 text-right font-medium text-slate-900 tabular-nums text-[14px]">
+                                            ₹{parseFloat(order.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-6" onClick={e => e.stopPropagation()}>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button 
+                                                    onClick={() => openForm(order)} 
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
+                                                >
+                                                    <Edit2 size={13} /> Edit
+                                                </button>
+                                                <button 
+                                                    onClick={() => { setDeleteId(order.id); setIsDeleteModalOpen(true); }}
+                                                    className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderFormView = () => (
-        <div className="flex flex-col h-screen bg-[#f8fafc]">
+        <div className="flex flex-col h-full bg-[#f8fafc] relative">
             {/* Form Header */}
-            <header className="fixed top-0 left-0 right-0 bg-white border-b border-slate-900 px-12 py-4 flex items-center justify-between z-[110] shadow-sm">
+            <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20">
                 <div className="flex items-center gap-6">
                     <button 
-                        onClick={() => setView('list')}
-                        className="p-2 hover:bg-slate-100 rounded-none text-slate-400 hover:text-slate-900 transition-all"
+                        onClick={() => navigate('/sales-orders')}
+                        className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
                     >
                         <ArrowLeft size={22} />
                     </button>
                     <div>
-                        <h2 className="text-[18px] font-black text-slate-900 tracking-[0.05em] uppercase flex items-center gap-2">
-                            {formData.id ? 'Modify Order' : 'Create Sales Order'}
-                            <span className="text-[11px] font-black text-white bg-slate-900 px-2 py-0.5 rounded-none uppercase tracking-[0.2em]">
-                                {formData.orderNumber || 'DRAFT'}
-                            </span>
+                        <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">
+                            {formData.id ? 'Modify Sales Order' : 'Create Sales Order'}
                         </h2>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Official Sales Document Initialization</p>
+                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Orders</div>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -593,80 +698,88 @@ const SalesOrdersView = ({ companyId }) => {
                 </div>
             </header>
 
-            <div className="flex-1 mt-20 pb-32 bg-[#f8fafc] overflow-y-auto no-scrollbar">
+            <div className="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
                 <div className="max-w-[1000px] mx-auto py-10 px-6">
-                    <div className="bg-white rounded-none border border-slate-200 shadow-2xl shadow-slate-200/50 p-12 space-y-12 animate-fade-in">
+                    <div className="bg-white rounded border border-slate-200 shadow-2xl shadow-slate-200/50 p-12 space-y-12 animate-fade-in">
                         
+                        {/* Section Header */}
+                        <div className="flex items-center gap-4 mb-8">
+                            <h3 className="text-[14px] font-bold text-slate-800">Primary Details</h3>
+                            <div className="h-px bg-slate-100 flex-1"></div>
+                        </div>
+
                         {/* Form Section: Core Details */}
-                        <div className="grid grid-cols-2 gap-x-12 gap-y-8">
-                            <div className="space-y-2.5 relative">
-                                <label className="text-[11px] font-black text-red-500 uppercase tracking-[0.2em] ml-1">Customer Selection*</label>
-                                <CustomerSearchSelector 
-                                    value={customers.find(c => c.id === formData.customerId)?.name}
-                                    customers={customers}
-                                    placeholder="Search or select ledger..."
-                                    onChange={(id) => setFormData(p => ({ ...p, customerId: id }))}
-                                    onNewCustomer={() => {
-                                        localStorage.setItem('so_draft', JSON.stringify(formData));
-                                        window.open('/ledger/new', '_blank');
-                                    }}
-                                />
+                        <div className="space-y-6">
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest">Customer Selection*</label>
+                                <div className="flex-1 max-w-2xl">
+                                    <CustomerSearchSelector 
+                                        value={customers.find(c => c.id === formData.customerId)?.name}
+                                        customers={customers}
+                                        placeholder="Search or select ledger..."
+                                        onChange={(id) => setFormData(p => ({ ...p, customerId: id }))}
+                                        onNewCustomer={() => {
+                                            localStorage.setItem('so_draft', JSON.stringify(formData));
+                                            window.open('/ledger/new', '_blank');
+                                        }}
+                                    />
+                                </div>
                             </div>
 
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-red-500 uppercase tracking-[0.2em] ml-1">Sales Order #*</label>
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest">Sales Order #*</label>
                                 <input 
                                     type="text" 
                                     value={formData.orderNumber} 
                                     onChange={e => setFormData(p => ({ ...p, orderNumber: e.target.value }))}
-                                    className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all uppercase tracking-widest"
+                                    className="flex-1 max-w-2xl h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-400 transition-all uppercase tracking-widest"
                                 />
                             </div>
 
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Reference ID</label>
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Reference ID</label>
                                 <input 
                                     type="text" 
                                     value={formData.referenceNumber} 
                                     onChange={e => setFormData(p => ({ ...p, referenceNumber: e.target.value }))}
-                                    placeholder="e.g. PO-12345"
-                                    className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all"
+                                    placeholder="e.g. PO-89021"
+                                    className="flex-1 max-w-2xl h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700 outline-none focus:border-blue-400 transition-all"
                                 />
                             </div>
 
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-red-500 uppercase tracking-[0.2em] ml-1">Order Date*</label>
-                                <div className="relative">
-                                    <Calendar size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest">Order Date*</label>
+                                <div className="flex-1 max-w-2xl relative">
+                                    <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                     <input 
                                         type="date" 
                                         value={formData.date} 
                                         onChange={e => setFormData(p => ({ ...p, date: e.target.value }))}
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all pr-12"
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Expected Shipment</label>
-                                <div className="relative">
-                                    <Calendar size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Expected Shipment</label>
+                                <div className="flex-1 max-w-2xl relative">
+                                    <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                     <input 
                                         type="date" 
                                         value={formData.expectedShipmentDate} 
                                         onChange={e => setFormData(p => ({ ...p, expectedShipmentDate: e.target.value }))}
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all pr-12"
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700 outline-none focus:border-blue-400 transition-all"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Payment Term</label>
-                                <div className="relative group">
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Payment Term</label>
+                                <div className="flex-1 max-w-2xl relative group">
                                     <select 
                                         value={formData.paymentTerms} 
                                         onChange={e => setFormData(p => ({ ...p, paymentTerms: e.target.value }))}
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-900 outline-none focus:bg-white focus:border-slate-900 transition-all appearance-none"
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-400 transition-all appearance-none"
                                     >
                                         <option value="">Due on Receipt</option>
                                         <option value="Net 15">Net 15</option>
@@ -674,7 +787,23 @@ const SalesOrdersView = ({ companyId }) => {
                                         <option value="Net 45">Net 45</option>
                                         <option value="Net 60">Net 60</option>
                                     </select>
-                                    <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                </div>
+                            </div>
+
+                            {/* Project */}
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Project</label>
+                                <div className="flex-1 max-w-2xl relative group">
+                                    <select 
+                                        value={formData.projectId} 
+                                        onChange={e => setFormData(p => ({ ...p, projectId: e.target.value }))}
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-400 transition-all appearance-none"
+                                    >
+                                        <option value="">Select or associate project</option>
+                                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                 </div>
                             </div>
                         </div>
@@ -682,20 +811,20 @@ const SalesOrdersView = ({ companyId }) => {
                         {/* Item Table Section */}
                         <div className="space-y-4 pt-4">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-[14px] font-black text-slate-900 uppercase tracking-[0.1em]">Line Items</h3>
-                                <button className="text-[11px] font-black text-slate-400 flex items-center gap-2 hover:bg-slate-50 px-3 py-1.5 rounded-none border border-slate-100 transition-all">
+                                <h3 className="text-[14px] font-bold text-slate-900 uppercase tracking-[0.1em]">Line Items</h3>
+                                <button className="text-[11px] font-bold text-slate-400 flex items-center gap-2 hover:bg-slate-50 px-3 py-1.5 rounded-none border border-slate-100 transition-all">
                                     <Settings size={14} /> Global Sync
                                 </button>
                             </div>
 
-                            <div className="border border-slate-900 rounded-none overflow-hidden shadow-sm bg-white">
+                            <div className="border border-slate-200 rounded overflow-hidden shadow-sm bg-white">
                                 <table className="w-full border-collapse">
                                     <thead>
-                                        <tr className="bg-slate-900 text-[10px] text-white font-black uppercase tracking-[0.2em]">
-                                            <th className="px-6 py-4 text-left">Item Details</th>
-                                            <th className="px-6 py-4 text-right w-28">Quantity</th>
-                                            <th className="px-6 py-4 text-right w-36">Rate</th>
-                                            <th className="px-6 py-4 text-right w-40">Amount</th>
+                                        <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                            <th className="px-6 py-3 text-left">Item Details</th>
+                                            <th className="px-6 py-3 text-right w-28">Quantity</th>
+                                            <th className="px-6 py-3 text-right w-36">Rate</th>
+                                            <th className="px-6 py-3 text-right w-40">Amount</th>
                                             <th className="w-12"></th>
                                         </tr>
                                     </thead>
@@ -717,7 +846,7 @@ const SalesOrdersView = ({ companyId }) => {
                                                         value={line.description}
                                                         onChange={e => handleItemUpdate(line.id, 'description', e.target.value)}
                                                         placeholder="Add item description..." 
-                                                        className="w-full mt-2 h-10 bg-transparent text-[11px] text-slate-400 outline-none resize-none border-none focus:ring-0 placeholder:italic font-black uppercase tracking-tight opacity-60"
+                                                        className="w-full mt-2 h-10 bg-transparent text-[11px] text-slate-400 outline-none resize-none border-none focus:ring-0 placeholder:italic font-bold uppercase tracking-tight opacity-60"
                                                     />
                                                 </td>
                                                 <td className="px-6 py-5 align-top">
@@ -725,7 +854,7 @@ const SalesOrdersView = ({ companyId }) => {
                                                         type="number" 
                                                         value={line.quantity} 
                                                         onChange={e => handleItemUpdate(line.id, 'quantity', parseFloat(e.target.value))}
-                                                        className="w-full text-right bg-transparent border-none outline-none text-[13px] font-black text-slate-600 focus:bg-white rounded-none transition-all tabular-nums" 
+                                                        className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all tabular-nums" 
                                                     />
                                                 </td>
                                                 <td className="px-6 py-5 align-top font-mono">
@@ -733,11 +862,11 @@ const SalesOrdersView = ({ companyId }) => {
                                                         type="number" 
                                                         value={line.rate} 
                                                         onChange={e => handleItemUpdate(line.id, 'rate', parseFloat(e.target.value))}
-                                                        className="w-full text-right bg-transparent border-none outline-none text-[13px] font-black text-slate-600 focus:bg-white rounded-none transition-all tabular-nums" 
+                                                        className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all tabular-nums" 
                                                     />
                                                 </td>
                                                 <td className="px-6 py-5 text-right align-top">
-                                                    <span className="text-[13px] font-black text-slate-900 tabular-nums">₹{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span className="text-[13px] font-bold text-slate-900 tabular-nums">₹{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 </td>
                                                 <td className="px-4 py-5 text-center align-top">
                                                     <button onClick={() => handleRemoveField(line.id)} className="text-slate-300 hover:text-red-500 transition-colors">
@@ -750,7 +879,7 @@ const SalesOrdersView = ({ companyId }) => {
                                 </table>
                             </div>
                             
-                            <button onClick={handleAddField} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white text-[12px] font-black rounded-none shadow-lg hover:bg-slate-800 transition-all uppercase tracking-[0.2em]">
+                            <button onClick={handleAddField} className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-[12px] font-bold rounded hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all uppercase tracking-widest">
                                 <Plus size={14} strokeWidth={3}/> Add Row
                             </button>
                         </div>
@@ -759,67 +888,71 @@ const SalesOrdersView = ({ companyId }) => {
                         <div className="flex justify-between items-start pt-12 border-t border-slate-100 gap-20">
                              <div className="flex-1 max-w-md space-y-8">
                                     <div className="space-y-3">
-                                         <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Customer Notes</label>
+                                         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Customer Notes</label>
                                          <textarea 
                                                 value={formData.customerNotes} 
                                                 onChange={e => setFormData({ ...formData, customerNotes: e.target.value })} 
                                                 placeholder="Displayed on the document"
-                                                className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded-none text-[13px] font-black text-slate-600 outline-none focus:bg-white focus:border-slate-900 transition-all resize-none shadow-sm" 
+                                                className="w-full h-24 p-4 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-600 outline-none focus:border-blue-400 transition-all resize-none shadow-sm" 
                                          />
                                     </div>
 
                                     <div className="space-y-3">
-                                         <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Terms & Conditions</label>
+                                         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Terms & Conditions</label>
                                          <textarea 
                                                 value={formData.termsConditions} 
                                                 onChange={e => setFormData({ ...formData, termsConditions: e.target.value })} 
                                                 placeholder="Business terms..." 
-                                                className="w-full h-24 bg-slate-50 border border-slate-200 rounded-none text-[13px] font-black text-slate-600 outline-none focus:bg-white focus:border-slate-900 transition-all resize-none shadow-sm" 
+                                                className="w-full h-24 p-4 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-600 outline-none focus:border-blue-400 transition-all resize-none shadow-sm" 
                                          />
                                     </div>
                              </div>
 
-                             <div className="w-80 space-y-4">
-                                    <div className="flex justify-between text-[13px]">
-                                        <span className="font-black text-slate-400 uppercase tracking-[0.2em]">Sub Total</span>
-                                        <span className="font-black text-slate-900 tabular-nums">₹{formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                             <div className="w-96 space-y-4">
+                                    <div className="flex justify-between items-center text-[13px]">
+                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
+                                        <span className="font-bold text-slate-900 tabular-nums">₹{formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <label className="text-slate-400 font-black uppercase tracking-[0.2em]">Discount (%)</label>
-                                        <div className="flex items-center gap-4">
-                                             <input type="number" value={formData.discount} onChange={e => setFormData({ ...formData, discount: parseFloat(e.target.value) })} className="w-20 h-9 px-2 bg-slate-50 border border-slate-200 rounded-none text-right font-black outline-none focus:border-slate-900 transition-all tabular-nums" />
+                                        <label className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</label>
+                                        <input type="number" value={formData.discount} onChange={e => setFormData({ ...formData, discount: parseFloat(e.target.value) })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-[13px]">
+                                        <label className="text-slate-500 font-bold uppercase tracking-widest">Tax (GST)</label>
+                                        <div className="relative w-36">
+                                            <select 
+                                                    value={formData.taxPercent} 
+                                                    onChange={e => {
+                                                        const rate = parseFloat(e.target.value) || 0;
+                                                        setFormData(p => ({ ...p, taxPercent: rate, tax: p.subTotal * (rate/100) }));
+                                                    }}
+                                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[12px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none"
+                                            >
+                                                    <option value="0">GST (0%)</option>
+                                                    <option value="5">GST (5%)</option>
+                                                    <option value="12">GST (12%)</option>
+                                                    <option value="18">GST (18%)</option>
+                                                    <option value="28">GST (28%)</option>
+                                            </select>
+                                            <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <label className="text-slate-400 font-black uppercase tracking-[0.2em]">Tax (GST)</label>
-                                        <select 
-                                                value={formData.taxPercent} 
-                                                onChange={e => {
-                                                    const rate = parseFloat(e.target.value) || 0;
-                                                    setFormData(p => ({ ...p, taxPercent: rate, tax: p.subTotal * (rate/100) }));
-                                                }}
-                                                className="w-36 h-9 px-2 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-black text-slate-700 outline-none focus:border-slate-900 transition-all"
-                                        >
-                                                <option value="0">GST (0%)</option>
-                                                <option value="5">GST (5%)</option>
-                                                <option value="12">GST (12%)</option>
-                                                <option value="18">GST (18%)</option>
-                                                <option value="28">GST (28%)</option>
-                                        </select>
+                                        <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
+                                        <input type="number" value={formData.adjustment} onChange={e => setFormData({ ...formData, adjustment: e.target.value })} className="w-32 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
                                     </div>
 
-                                    <div className="flex justify-between items-center text-[13px]">
-                                        <span className="text-slate-400 font-black uppercase tracking-[0.2em]">Adjustment</span>
-                                        <input type="number" value={formData.adjustment} onChange={e => setFormData({ ...formData, adjustment: e.target.value })} className="w-28 h-9 px-2 bg-slate-50 border border-slate-200 rounded-none text-right font-black outline-none focus:border-slate-900 transition-all tabular-nums" />
-                                    </div>
-
-                                    <div className="pt-6 mt-6 border-t-[3px] border-slate-900">
+                                    <div className="pt-6 mt-6 border-t border-slate-200">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[14px] font-black text-slate-900 uppercase tracking-[0.1em]">Total</span>
-                                            <span className="text-[28px] font-black text-slate-900 tabular-nums">₹{formData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <span className="text-[15px] font-bold text-slate-900 uppercase tracking-widest">Total Amount</span>
+                                            <span className="text-[24px] font-bold text-blue-600 tabular-nums">₹{formData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic flex items-center justify-end gap-1"><ShieldCheck size={12}/> Net Payable Amount</p>
                                     </div>
                              </div>
                         </div>
@@ -828,25 +961,25 @@ const SalesOrdersView = ({ companyId }) => {
             </div>
 
             {/* Form Actions Footer */}
-            <footer className="fixed bottom-0 left-0 right-0 bg-slate-900 text-white px-12 py-4 flex items-center justify-between z-[110] shadow-[0_-5px_25px_rgba(0,0,0,0.1)]">
+            <footer className="bg-white border-t border-slate-200 px-12 py-4 flex items-center justify-between shrink-0 sticky bottom-0 z-20 shadow-[0_-5px_25px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center gap-6">
                     <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Document Status</span>
-                        <span className="text-[13px] font-black text-blue-400 flex items-center gap-2 uppercase tracking-widest"><Clock size={14}/> {formData.status || 'Draft'}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Document Status</span>
+                        <span className="text-[13px] font-bold text-blue-600 flex items-center gap-2 uppercase tracking-widest"><Clock size={14}/> {formData.status || 'Draft'}</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={() => handleSave('Draft')}
                         disabled={saving}
-                        className="px-6 py-2.5 bg-transparent border border-slate-700 text-slate-300 rounded-none text-[12px] font-black hover:bg-slate-800 transition-all uppercase tracking-[0.2em]"
+                        className="px-6 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all uppercase tracking-widest"
                     >
                         {saving ? 'Processing...' : 'Save Draft'}
                     </button>
                     <button 
                         onClick={() => handleSave('Open')}
                         disabled={saving}
-                        className="px-8 py-2.5 bg-blue-600 text-white rounded-none text-[12px] font-black hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2 uppercase tracking-[0.2em]"
+                        className="px-8 py-2.5 bg-blue-600 text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2 uppercase tracking-widest active:scale-95"
                     >
                         {saving ? <Loader2 className="animate-spin" size={16} /> : <Send size={16}/>}
                         Initialize Order
@@ -865,11 +998,11 @@ const SalesOrdersView = ({ companyId }) => {
             <div className="flex-1 flex flex-col h-full bg-[#f8fafc] animate-fade-in shadow-inner overflow-hidden">
                 <div className="bg-[#fcfdfe] border-b border-slate-200 px-8 py-2.5 flex items-center justify-between sticky top-0 z-10 no-print">
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setView('list')} className="text-[13px] font-bold text-blue-600 hover:underline flex items-center gap-1.5 transition-all">
-                           <ChevronDown size={14} className="rotate-90"/> All Orders
+                        <button onClick={() => navigate('/sales-orders')} className="text-[13px] font-bold text-blue-600 hover:underline flex items-center gap-1.5 transition-all">
+                           <ChevronDown size={14} className="rotate-90"/> All Sales Orders
                         </button>
                         <span className="text-slate-300">|</span>
-                        <span className="text-[13px] font-black text-slate-800 uppercase">{order.orderNumber}</span>
+                        <span className="text-[13px] font-bold text-slate-800 uppercase">{order.orderNumber}</span>
                     </div>
                     <div className="flex items-center gap-3">
                        <button className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-none transition-all hover:text-slate-600"><History size={16}/></button>
@@ -887,43 +1020,43 @@ const SalesOrdersView = ({ companyId }) => {
                 <div className="flex-1 overflow-y-auto p-4 md:p-12 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-50/50">
                     <div id="printable-order" className="bg-white shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] rounded-none min-h-[842px] w-full max-w-[800px] mx-auto p-8 md:p-20 relative overflow-hidden border border-slate-100 mb-20 group">
                         <div className="absolute top-16 right-16 rotate-[12deg] opacity-[0.03] no-print pointer-events-none select-none">
-                            <div className="border-[12px] border-slate-900 text-slate-900 px-12 py-6 text-7xl font-black uppercase tracking-[0.2em] rounded-none">ORDER</div>
+                            <div className="border-[12px] border-slate-900 text-slate-900 px-12 py-6 text-7xl font-bold uppercase tracking-[0.2em] rounded-none">ORDER</div>
                         </div>
 
                         <div className="flex justify-between items-start mb-16 border-b border-slate-900 pb-12">
                             <div className="flex gap-4 items-start max-w-[65%]">
-                                <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-black text-xl shrink-0 rounded-none">M</div>
+                                <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-bold text-xl shrink-0 rounded-none">M</div>
                                 <div className="space-y-1 min-w-0">
-                                    <h2 className="text-[18px] font-black text-slate-900 tracking-tight uppercase leading-tight">OFFICIAL SUPPLY CHAIN</h2>
+                                    <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase leading-tight">OFFICIAL SUPPLY CHAIN</h2>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Fulfillment & Operations</p>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <h1 className="text-[18px] font-black text-slate-900 tracking-[0.2em] uppercase leading-none mb-3">SALES ORDER</h1>
+                                <h1 className="text-[18px] font-bold text-slate-900 tracking-[0.2em] uppercase leading-none mb-3">SALES ORDER</h1>
                                 <div className="space-y-1">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order Ref #</p>
-                                    <p className="text-[15px] font-black text-slate-900 tracking-tight uppercase">{order.orderNumber}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Order Ref #</p>
+                                    <p className="text-[15px] font-bold text-slate-900 tracking-tight uppercase">{order.orderNumber}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-20 mb-16">
                             <div className="space-y-4">
-                                <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Bill To Entity</h5>
+                                <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Bill To Entity</h5>
                                 <div className="space-y-1">
-                                    <p className="text-[15px] font-black text-slate-900 leading-tight uppercase">{order.Customer?.name}</p>
+                                    <p className="text-[15px] font-bold text-slate-900 leading-tight uppercase">{order.Customer?.name}</p>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">{order.Customer?.email}</p>
                                 </div>
                             </div>
                             <div className="text-right space-y-6">
                                 <div>
-                                    <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Issue Date</h5>
-                                    <p className="text-[15px] font-black text-slate-900 uppercase">{new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                    <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Issue Date</h5>
+                                    <p className="text-[15px] font-bold text-slate-900 uppercase">{new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                                 </div>
                                 {order.expectedShipmentDate && (
                                     <div>
-                                        <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Target Delivery</h5>
-                                        <p className="text-[15px] font-black text-blue-600 uppercase">{new Date(order.expectedShipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                        <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Target Delivery</h5>
+                                        <p className="text-[15px] font-bold text-blue-600 uppercase">{new Date(order.expectedShipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                                     </div>
                                 )}
                             </div>
@@ -932,7 +1065,7 @@ const SalesOrdersView = ({ companyId }) => {
                         <div className="relative mb-20">
                             <table className="w-full">
                                 <thead>
-                                    <tr className="border-b-[3px] border-slate-900 text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                                    <tr className="border-b-[3px] border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">
                                         <th className="py-6 text-left pb-4">Material / Service Specification</th>
                                         <th className="py-6 text-right w-24 pb-4">Qty</th>
                                         <th className="py-6 text-right w-32 pb-4">Rate</th>
@@ -944,16 +1077,16 @@ const SalesOrdersView = ({ companyId }) => {
                                         <tr key={idx} className="group/row hover:bg-slate-50/50 transition-colors">
                                             <td className="py-8">
                                                 <div className="flex items-start gap-4">
-                                                    <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 group-hover/row:text-slate-900 font-black text-[12px] rounded-none border border-transparent group-hover/row:border-slate-200 transition-all">{idx + 1}</div>
+                                                    <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 group-hover/row:text-slate-900 font-bold text-[12px] rounded-none border border-transparent group-hover/row:border-slate-200 transition-all">{idx + 1}</div>
                                                     <div>
-                                                        <p className="text-[16px] font-black text-slate-900 tracking-tight mb-1 uppercase leading-none">{it.detail}</p>
+                                                        <p className="text-[16px] font-bold text-slate-900 tracking-tight mb-1 uppercase leading-none">{it.detail}</p>
                                                         <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed mt-1">{it.description || 'Standard Fulfillment Unit'}</p>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="py-8 text-right text-[15px] font-black text-slate-500 tabular-nums uppercase">{it.quantity} units</td>
-                                            <td className="py-8 text-right text-[15px] font-black text-slate-500 tabular-nums">₹{parseFloat(it.rate).toLocaleString()}</td>
-                                            <td className="py-8 text-right text-[16px] font-black text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
+                                            <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums uppercase">{it.quantity} units</td>
+                                            <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">₹{parseFloat(it.rate).toLocaleString()}</td>
+                                            <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -963,20 +1096,20 @@ const SalesOrdersView = ({ companyId }) => {
                         <div className="flex justify-end pt-12 border-t-2 border-slate-900">
                             <div className="w-full max-w-md space-y-6">
                                 <div className="flex justify-between items-center px-2">
-                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Net Subtotal</span>
+                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Net Subtotal</span>
                                     <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(order.subTotal).toLocaleString()}</span>
                                 </div>
                                 {parseFloat(order.taxAmount || 0) > 0 && (
                                     <div className="flex justify-between items-center px-2">
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Tax Levy</span>
+                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tax Levy</span>
                                         <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(order.taxAmount).toLocaleString()}</span>
                                     </div>
                                 )}
                                 <div className="bg-slate-900 text-white p-6 md:p-8 shadow-2xl relative overflow-hidden rounded-none">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-none blur-[60px] opacity-20"></div>
                                     <div className="flex justify-between items-center relative z-10">
-                                        <span className="text-[11px] font-black text-blue-300 uppercase tracking-[0.2em]">Order Total</span>
-                                        <span className="text-[24px] md:text-[32px] font-black text-white tracking-tighter tabular-nums leading-none">₹{parseFloat(order.totalAmount).toLocaleString()}</span>
+                                        <span className="text-[11px] font-bold text-blue-300 uppercase tracking-[0.2em]">Order Total</span>
+                                        <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tight tabular-nums leading-none">₹{parseFloat(order.totalAmount).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>
@@ -984,12 +1117,12 @@ const SalesOrdersView = ({ companyId }) => {
 
                         <div className="mt-32 flex justify-between items-end opacity-40">
                              <div className="space-y-1">
-                                 <p className="text-[10px] font-black uppercase tracking-[0.2em]">Validated Order Status: {order.status}</p>
+                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Validated Order Status: {order.status}</p>
                                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Hash ID: {order.id?.substring(0, 16)}</p>
                              </div>
                              <div className="text-right">
                                  <div className="w-32 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
-                                 <p className="text-[10px] font-black uppercase tracking-[0.2em]">Authorized Signatory</p>
+                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Authorized Signatory</p>
                              </div>
                         </div>
                     </div>
@@ -999,14 +1132,14 @@ const SalesOrdersView = ({ companyId }) => {
     };
 
     if (loading && view === 'list') return (
-        <div className="flex flex-col items-center justify-center h-[60vh] text-slate-400 font-black">
+        <div className="flex flex-col items-center justify-center h-[60vh] text-slate-400 font-bold">
             <Loader2 size={40} className="animate-spin text-slate-900 mb-4" />
             <span className="text-[11px] tracking-[0.4em] uppercase">Initializing Supply Chain...</span>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#fcfcfd] p-0 font-sans text-slate-900">
+        <div className="min-h-screen bg-[#fcfcfd] p-0 text-slate-900">
             {view === 'list' && renderListView()}
             {view === 'form' && renderFormView()}
             {view === 'detail' && renderDetailView()}
@@ -1015,8 +1148,8 @@ const SalesOrdersView = ({ companyId }) => {
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleDelete}
-                title="TERMINATE ORDER RECORD"
-                message="Are you certain you wish to terminate this sales order record? This action is irreversible within the current block."
+                title="CONFIRM ORDER DELETION"
+                message="Are you sure you want to permanently delete this sales order? This action cannot be reversed and all history will be lost."
             />
         </div>
     );

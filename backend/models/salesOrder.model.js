@@ -69,8 +69,27 @@ module.exports = (sequelize, DataTypes) => {
     attachments: {
       type: DataTypes.JSON,
       allowNull: true
+    },
+    CompanyId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    LedgerId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
+
+  SalesOrder.associate = (models) => {
+    SalesOrder.belongsTo(models.Company, { foreignKey: 'CompanyId' });
+    SalesOrder.belongsTo(models.Ledger, { as: 'Customer', foreignKey: 'LedgerId' });
+    SalesOrder.belongsTo(models.Project, { foreignKey: 'ProjectId' });
+    SalesOrder.hasMany(models.SalesOrderItem, { as: 'Items', foreignKey: 'SalesOrderId', onDelete: 'CASCADE' });
+  };
 
   return SalesOrder;
 };

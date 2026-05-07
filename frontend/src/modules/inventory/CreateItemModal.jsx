@@ -133,7 +133,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
               <Package size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-[18px] font-black text-slate-900 tracking-tight">Create New Item</h2>
+              <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">Create New Item</h2>
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Inventory Management</p>
             </div>
           </div>
@@ -156,7 +156,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
             <div className="space-y-6">
               {/* Basic Info */}
               <div className="space-y-2">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Item Name *</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Item Name *</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors">
                     <LayoutList size={18} />
@@ -173,21 +173,21 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Type</label>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Type</label>
                   <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
                     <button 
                       onClick={() => setNewItem({...newItem, type: 'Goods'})}
-                      className={`flex-1 py-2 rounded-xl text-[11px] font-black tracking-widest transition-all ${newItem.type === 'Goods' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                      className={`flex-1 py-2 rounded-xl text-[11px] font-bold tracking-widest transition-all ${newItem.type === 'Goods' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
                     >GOODS</button>
                     <button 
                       onClick={() => setNewItem({...newItem, type: 'Service'})}
-                      className={`flex-1 py-2 rounded-xl text-[11px] font-black tracking-widest transition-all ${newItem.type === 'Service' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                      className={`flex-1 py-2 rounded-xl text-[11px] font-bold tracking-widest transition-all ${newItem.type === 'Service' ? 'bg-white shadow-md text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
                     >SERVICE</button>
                   </div>
                 </div>
 
                 <div className="space-y-2 relative" ref={unitDropdownRef}>
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Unit</label>
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Unit</label>
                   <div 
                     onClick={() => setIsUnitOpen(!isUnitOpen)}
                     className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 cursor-pointer hover:border-blue-500 transition-all shadow-sm"
@@ -223,7 +223,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
 
             {/* Image Preview */}
             <div className="flex flex-col items-center">
-               <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 self-start ml-1">Thumbnail</label>
+               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2 self-start ml-1">Thumbnail</label>
                <div 
                  onClick={() => fileInputRef.current.click()}
                  className="w-full aspect-square bg-white border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all group relative overflow-hidden shadow-sm"
@@ -234,7 +234,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
                       <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors mb-2 border border-slate-100">
                         <Upload size={18} />
                       </div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Upload</span>
+                      <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Upload</span>
                     </>
                   )}
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
@@ -252,18 +252,18 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
               
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selling Price (INR)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Selling Price (INR)</label>
                   <input 
                     type="number" 
                     value={newItem.sellingPrice} 
                     onChange={e => setNewItem({...newItem, sellingPrice: e.target.value})}
                     placeholder="0.00"
                     disabled={!newItem.salesInformation}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-emerald-500 focus:bg-white transition-all"
                   />
                 </div>
                 <div className="space-y-1.5 relative" ref={salesAccountDropdownRef}>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Income Account</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Income Account</label>
                   <div 
                     onClick={() => newItem.salesInformation && setIsSalesAccountOpen(!isSalesAccountOpen)}
                     className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 cursor-pointer transition-all"
@@ -276,7 +276,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
                       <div className="max-h-[200px] overflow-y-auto">
                         {SALES_ACCOUNTS_STRUCTURE.map(sec => (
                           <div key={sec.category} className="mb-2">
-                             <div className="px-4 py-1.5 text-[9px] font-black text-slate-400 uppercase bg-slate-50/50 border-y border-slate-100 tracking-wider">{sec.category}</div>
+                             <div className="px-4 py-1.5 text-[9px] font-bold text-slate-400 uppercase bg-slate-50/50 border-y border-slate-100 tracking-wider">{sec.category}</div>
                              {sec.accounts.map(acc => (
                                <div key={acc} onClick={() => {setNewItem({...newItem, salesAccount: acc}); setIsSalesAccountOpen(false);}} className="px-5 py-2 text-[12px] font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer transition-colors border-b border-slate-50 last:border-0">{acc}</div>
                              ))}
@@ -298,18 +298,18 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cost Price (INR)</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cost Price (INR)</label>
                   <input 
                     type="number" 
                     value={newItem.costPrice} 
                     onChange={e => setNewItem({...newItem, costPrice: e.target.value})}
                     placeholder="0.00"
                     disabled={!newItem.purchaseInformation}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-900 outline-none focus:border-amber-500 focus:bg-white transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-amber-500 focus:bg-white transition-all"
                   />
                 </div>
                 <div className="space-y-1.5 relative" ref={purchaseAccountDropdownRef}>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cost Account</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cost Account</label>
                   <div 
                     onClick={() => newItem.purchaseInformation && setIsPurchaseAccountOpen(!isPurchaseAccountOpen)}
                     className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 cursor-pointer transition-all"
@@ -322,7 +322,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
                       <div className="max-h-[200px] overflow-y-auto">
                         {PURCHASE_ACCOUNTS_STRUCTURE.map(sec => (
                           <div key={sec.category} className="mb-2">
-                             <div className="px-4 py-1.5 text-[9px] font-black text-slate-400 uppercase bg-slate-50/50 border-y border-slate-100 tracking-wider">{sec.category}</div>
+                             <div className="px-4 py-1.5 text-[9px] font-bold text-slate-400 uppercase bg-slate-50/50 border-y border-slate-100 tracking-wider">{sec.category}</div>
                              {sec.accounts.map(acc => (
                                <div key={acc} onClick={() => {setNewItem({...newItem, purchaseAccount: acc}); setIsPurchaseAccountOpen(false);}} className="px-5 py-2 text-[12px] font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 cursor-pointer transition-colors border-b border-slate-50 last:border-0">{acc}</div>
                              ))}
@@ -341,7 +341,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
         <div className="px-8 py-6 border-t border-slate-100 bg-white flex items-center justify-between">
           <button 
             onClick={onClose} 
-            className="px-6 py-3 text-sm font-black text-slate-400 uppercase tracking-wider hover:text-slate-700 transition-all border border-transparent hover:border-slate-200 rounded-2xl"
+            className="px-6 py-3 text-sm font-bold text-slate-400 uppercase tracking-wider hover:text-slate-700 transition-all border border-transparent hover:border-slate-200 rounded-2xl"
           >
             Go Back
           </button>
@@ -349,7 +349,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
              <button 
                onClick={handleSave}
                disabled={loading}
-               className="px-10 py-3.5 bg-blue-600 text-white text-xs font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+               className="px-10 py-3.5 bg-blue-600 text-white text-xs font-bold uppercase tracking-[0.2em] rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
              >
                {loading ? <RefreshCcw size={14} className="animate-spin" /> : <Save size={14} />}
                Save and Select

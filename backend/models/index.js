@@ -34,6 +34,7 @@ const RecurringBill = require('./recurringBill.model')(sequelize, DataTypes);
 const RecurringBillItem = require('./recurringBillItem.model')(sequelize, DataTypes);
 const VendorCredit = require('./vendorCredit.model')(sequelize, DataTypes);
 const VendorCreditItem = require('./vendorCreditItem.model')(sequelize, DataTypes);
+const Timesheet = require('./timesheet.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -102,6 +103,8 @@ Item.hasMany(SalesOrderItem, { foreignKey: { name: 'ItemId', type: DataTypes.UUI
 
 Company.hasMany(PurchaseOrder, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 PurchaseOrder.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+PurchaseOrder.belongsTo(Ledger, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
+Ledger.hasMany(PurchaseOrder, { foreignKey: { name: 'LedgerId', type: DataTypes.UUID } });
 
 Company.hasMany(BankTransaction, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 BankTransaction.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -212,10 +215,38 @@ ProjectTask.belongsTo(Project, { foreignKey: 'ProjectId' });
 
 Project.belongsToMany(User, { through: ProjectUser, as: 'users', foreignKey: 'ProjectId' });
 User.belongsToMany(Project, { through: ProjectUser, as: 'assignedProjects', foreignKey: 'UserId' });
-Project.hasMany(ProjectUser, { foreignKey: 'ProjectId' });
+Project.hasMany(ProjectUser, { as: 'ProjectUsers', foreignKey: 'ProjectId' });
 ProjectUser.belongsTo(Project, { foreignKey: 'ProjectId' });
 ProjectUser.belongsTo(User, { foreignKey: 'UserId' });
 User.hasMany(ProjectUser, { foreignKey: 'UserId' });
+
+Project.hasMany(Voucher, { foreignKey: 'ProjectId' });
+Voucher.belongsTo(Project, { foreignKey: 'ProjectId' });
+
+Project.hasMany(SalesInvoice, { foreignKey: 'ProjectId' });
+SalesInvoice.belongsTo(Project, { foreignKey: 'ProjectId' });
+
+Project.hasMany(PurchaseOrder, { foreignKey: 'ProjectId' });
+PurchaseOrder.belongsTo(Project, { foreignKey: 'ProjectId' });
+
+Project.hasMany(VendorCredit, { foreignKey: 'ProjectId' });
+VendorCredit.belongsTo(Project, { foreignKey: 'ProjectId' });
+
+Project.hasMany(AuditLog, { foreignKey: 'ProjectId' });
+AuditLog.belongsTo(Project, { foreignKey: 'ProjectId' });
+
+// 17. Timesheets
+Company.hasMany(Timesheet, { foreignKey: 'CompanyId' });
+Timesheet.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Project.hasMany(Timesheet, { foreignKey: 'ProjectId' });
+Timesheet.belongsTo(Project, { foreignKey: 'ProjectId' });
+
+User.hasMany(Timesheet, { foreignKey: 'UserId' });
+Timesheet.belongsTo(User, { foreignKey: 'UserId' });
+
+ProjectTask.hasMany(Timesheet, { foreignKey: 'ProjectTaskId' });
+Timesheet.belongsTo(ProjectTask, { foreignKey: 'ProjectTaskId' });
 
 // 16. Vendor Credits
 VendorCredit.hasMany(VendorCreditItem, { as: 'items', foreignKey: 'VendorCreditId', onDelete: 'CASCADE' });
@@ -261,5 +292,6 @@ module.exports = {
   RecurringBill,
   RecurringBillItem,
   VendorCredit,
-  VendorCreditItem
+  VendorCreditItem,
+  Timesheet
 };

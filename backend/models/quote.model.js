@@ -37,7 +37,21 @@ module.exports = (sequelize, DataTypes) => {
     totalAmount: { type: DataTypes.DECIMAL(15, 2), defaultValue: 0 },
     customerNotes: { type: DataTypes.TEXT, allowNull: true },
     termsConditions: { type: DataTypes.TEXT, allowNull: true },
+    CompanyId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    }
   }, { paranoid: true });
+
+  Quote.associate = (models) => {
+    Quote.belongsTo(models.Company, { foreignKey: 'CompanyId' });
+    Quote.belongsTo(models.Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
+    Quote.belongsTo(models.Project, { foreignKey: 'ProjectId' });
+  };
 
   return Quote;
 };

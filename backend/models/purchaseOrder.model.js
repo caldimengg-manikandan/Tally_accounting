@@ -39,6 +39,14 @@ module.exports = (sequelize, DataTypes) => {
     tdsName: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    CompanyId: {
+      type: DataTypes.UUID,
+      allowNull: false
+    },
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
 

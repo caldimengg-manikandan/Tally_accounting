@@ -62,7 +62,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false
     },
-    VoucherId: DataTypes.UUID
+    VoucherId: DataTypes.UUID,
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    }
   });
 
   VendorCredit.associate = (models) => {
