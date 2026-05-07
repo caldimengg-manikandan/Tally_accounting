@@ -68,6 +68,7 @@ export const voucherAPI = {
   create: (data) => api.post('/vouchers', data),
   getByCompany: (companyId) => api.get(`/vouchers/${companyId}`),
   getById: (id) => api.get(`/vouchers/detail/${id}`),
+  update: (id, data) => api.put(`/vouchers/${id}`, data),
   updateNarration: (id, narration) => api.put(`/vouchers/${id}/narration`, { narration }),
   delete: (id) => api.delete(`/vouchers/${id}`),
 };

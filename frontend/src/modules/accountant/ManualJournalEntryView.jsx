@@ -52,7 +52,8 @@ const newJournalRow = () => ({
 const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const isEdit = !!id;
+  const isEdit = !!id || window.location.pathname.includes('/edit/');
+  console.log('ManualJournalEntryView - id:', id, 'isEdit:', isEdit);
   const { addNotification } = useNotificationStore();
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -81,9 +82,19 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
   const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState([]);
   
+  const groupedLedgers = useMemo(() => {
+    const groups = {};
+    ledgers.forEach(l => {
+      const groupName = l.Group?.name || 'Uncategorized';
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(l);
+    });
+    return Object.entries(groups).map(([group, accounts]) => ({ group, accounts }));
+  }, [ledgers]);
+  
   const companyId = localStorage.getItem('companyId');
 
-  // Load ledgers
+  // Load ledgers and initial journal number
   useEffect(() => {
     if (companyId) {
       ledgerAPI.getByCompany(companyId).then(res => {
@@ -104,6 +115,18 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
         });
       });
 
+      // Fetch vouchers to determine the next journal number
+      if (!isEdit) {
+        voucherAPI.getByCompany(companyId).then(res => {
+          const vouchers = res.data || [];
+          const journalCount = vouchers.filter(v => v.voucherType === 'Journal').length;
+          setJournalNumber(String(journalCount + 1));
+        }).catch(err => {
+          console.error("Failed to fetch vouchers for numbering:", err);
+          setJournalNumber('1');
+        });
+      }
+
       companyAPI.getCompanyUsers().then(res => {
         const users = res.data?.users || [];
         const salespersons = users.map(u => ({ id: u.id, name: u.name, type: 'Salesperson' }));
@@ -113,7 +136,51 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
         });
       }).catch(() => {});
     }
-  }, [companyId]);
+  }, [companyId, isEdit]);
+  
+  // Load existing journal data for editing
+  useEffect(() => {
+    if (isEdit && id && ledgers.length > 0) {
+      voucherAPI.getById(id).then(res => {
+        const voucher = res.data;
+        if (voucher) {
+          setDate(voucher.date ? voucher.date.split('T')[0] : '');
+          // Remove prefix if it exists to get the number part
+          const numPart = voucher.voucherNumber?.includes('-') ? 
+            voucher.voucherNumber.split('-').pop() : 
+            voucher.voucherNumber;
+          setJournalNumber(numPart ? String(parseInt(numPart, 10)) : '');
+          setReferenceNumber(voucher.reference || voucher.referenceNumber || '');
+          setNotes(voucher.narration || '');
+          
+          if (voucher.reportingMethod) setReportingMethod(voucher.reportingMethod);
+          if (voucher.currency) setCurrency(voucher.currency);
+
+          if (voucher.Transactions && voucher.Transactions.length > 0) {
+            const loadedRows = voucher.Transactions.map(tx => ({
+              _id: _uid++,
+              ledgerId: tx.Ledger?.name || '',
+              description: tx.description || '',
+              contactId: tx.contactId || '',
+              debit: tx.debit || 0,
+              credit: tx.credit || 0,
+              projectId: tx.projectId || '',
+              tags: tx.tags || []
+            }));
+            
+            // Pad to at least 2 rows
+            while (loadedRows.length < 2) {
+              loadedRows.push(newJournalRow());
+            }
+            setRows(loadedRows);
+          }
+        }
+      }).catch(err => {
+        console.error("Failed to fetch journal details:", err);
+        addNotification('Failed to load journal data', 'error');
+      });
+    }
+  }, [id, isEdit, ledgers.length, addNotification]);
 
   // Totals
   const totalDebit = useMemo(() => rows.reduce((acc, row) => acc + (parseFloat(row.debit) || 0), 0), [rows]);
@@ -161,27 +228,73 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
     
     setSaving(true);
     try {
+      // 1. Identify all selected accounts that are missing from the database
+      const missingAccounts = rows
+        .filter(r => r.ledgerId && (r.debit > 0 || r.credit > 0))
+        .filter(r => !ledgers.find(l => l.name === r.ledgerId));
+
+      // 2. Auto-create missing accounts in the background
+      if (missingAccounts.length > 0) {
+        const uniqueMissingNames = [...new Set(missingAccounts.map(r => r.ledgerId))];
+        
+        for (const name of uniqueMissingNames) {
+          // Find which group this account belongs to from our static list
+          const groupInfo = ACCOUNT_GROUPS.find(g => g.accounts.includes(name));
+          const groupName = groupInfo ? groupInfo.group : 'General Expense';
+
+          try {
+            await ledgerAPI.create({
+              companyId,
+              name: name,
+              groupName: groupName, // Backend should handle creating/finding the group
+              description: `Auto-generated for Journal Entry`
+            });
+          } catch (createErr) {
+            console.error(`Failed to auto-create ledger ${name}:`, createErr);
+          }
+        }
+        
+        // Refresh the ledgers list after creation
+        const refreshRes = await ledgerAPI.getByCompany(companyId);
+        const updatedLedgers = refreshRes.data || [];
+        setLedgers(updatedLedgers);
+        
+        // Re-check if we successfully created them
+        const stillMissing = uniqueMissingNames.filter(name => !updatedLedgers.find(l => l.name === name));
+        if (stillMissing.length > 0) {
+           throw new Error(`Could not auto-create accounts: ${stillMissing.join(', ')}`);
+        }
+      }
+
+      // 3. Now proceed with the original save logic using the newly created IDs
+      const freshLedgers = await ledgerAPI.getByCompany(companyId).then(r => r.data || []);
+      
       const payload = {
         companyId,
         voucherType: 'Journal',
         date: new Date(date).toISOString(),
         narration: notes || 'Manual Journal Entry',
-        voucherNumber: `MJ-${journalNumber}`,
+        voucherNumber: journalNumber,
         referenceNumber,
         reportingMethod,
         currency,
-        entries: rows.filter(r => r.ledgerId && (r.debit > 0 || r.credit > 0)).map(r => ({
-          ledgerId: r.ledgerId,
-          debit: parseFloat(r.debit) || 0,
-          credit: parseFloat(r.credit) || 0,
-          description: r.description
-        }))
+        entries: rows.filter(r => r.ledgerId && (r.debit > 0 || r.credit > 0)).map(r => {
+          // Find the actual ledger ID (now guaranteed to exist or handled above)
+          const ledger = freshLedgers.find(l => l.name === r.ledgerId);
+          return {
+            ledgerId: ledger ? ledger.id : r.ledgerId,
+            debit: parseFloat(r.debit) || 0,
+            credit: parseFloat(r.credit) || 0,
+            description: r.description
+          };
+        })
       };
 
-      await voucherAPI.create(payload);
+      const res = isEdit ? await voucherAPI.update(id, payload) : await voucherAPI.create(payload);
+      const savedId = res?.data?.id || res?.data?.voucher?.id || null;
       addNotification(`Journal ${publish ? 'published' : 'saved as draft'} successfully`, 'success');
-      if (onSaveSuccess) onSaveSuccess();
-      else navigate('/accountant/journals');
+      if (onSaveSuccess) onSaveSuccess(savedId);
+      else navigate(savedId ? `/accountant/journals/${savedId}` : '/accountant/journals');
     } catch (err) {
       addNotification(err.response?.data?.error || 'Failed to save journal', 'error');
     } finally {
@@ -198,7 +311,7 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
            <button onClick={() => navigate('/accountant/journals')} className="text-slate-400 hover:text-slate-600 transition-colors">
               <ArrowLeft size={20} />
            </button>
-           <h1 className="text-xl font-bold text-slate-800">New Journal</h1>
+           <h1 className="text-xl font-bold text-slate-800">{isEdit ? 'Edit Journal' : 'New Journal'}</h1>
         </div>
         <div className="flex items-center gap-4">
            <button className="text-[12px] font-bold text-blue-600 hover:underline">Choose Template</button>
@@ -403,7 +516,8 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                              <select 
                                value={row.ledgerId} 
                                onChange={e => updateRow(row._id, 'ledgerId', e.target.value)}
-                               className="w-full px-3 py-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 appearance-none bg-white font-medium h-[38px]"
+                               className={`w-full px-3 py-2 border rounded text-[13px] outline-none appearance-none bg-white font-medium h-[38px] transition-all
+                                 ${row.ledgerId && !ledgers.find(l => l.name === row.ledgerId) ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200 focus:border-blue-400'}`}
                              >
                                 <option value="">Select an account</option>
                                 {ACCOUNT_GROUPS.map(g => (
@@ -425,7 +539,7 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                                </button>
                                <div className="relative flex items-center gap-1.5 text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors group">
                                   <FileText size={12} />
-                                  <select 
+                                   <select 
                                     value={row.tags?.[0] || ''}
                                     onChange={e => updateRow(row._id, 'tags', e.target.value ? [e.target.value] : [])}
                                     className="bg-transparent outline-none cursor-pointer appearance-none pr-3 text-slate-400 group-hover:text-blue-600 font-bold"
@@ -618,20 +732,32 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
             </div>
             
             <div className="flex items-center gap-4">
-               <button 
-                 onClick={() => handleSave(true)}
-                 disabled={saving || !isBalanced}
-                 className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 transition-all disabled:opacity-50"
-               >
-                  {saving ? 'Processing...' : 'Save and Publish'}
-               </button>
-               <button 
-                 onClick={() => handleSave(false)}
-                 disabled={saving || !isBalanced}
-                 className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50 transition-all disabled:opacity-50"
-               >
-                  Save as Draft
-               </button>
+               {isEdit ? (
+                 <button 
+                   onClick={() => handleSave(true)}
+                   disabled={saving || !isBalanced}
+                   className="px-8 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 transition-all disabled:opacity-50"
+                 >
+                    {saving ? 'Processing...' : 'Save'}
+                 </button>
+               ) : (
+                 <>
+                   <button 
+                     onClick={() => handleSave(true)}
+                     disabled={saving || !isBalanced}
+                     className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 transition-all disabled:opacity-50"
+                   >
+                      {saving ? 'Processing...' : 'Save and Publish'}
+                   </button>
+                   <button 
+                     onClick={() => handleSave(false)}
+                     disabled={saving || !isBalanced}
+                     className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50 transition-all disabled:opacity-50"
+                   >
+                      Save as Draft
+                   </button>
+                 </>
+               )}
                <button 
                  onClick={() => navigate('/accountant/journals')}
                  className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded font-bold text-[13px] hover:bg-slate-50 transition-all"

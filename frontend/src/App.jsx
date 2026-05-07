@@ -60,6 +60,7 @@ import { BudgetsView, TransactionLockingView } from './modules/accountant/Accoun
 import BulkUpdateView from './modules/accountant/BulkUpdateView';
 import CurrencyAdjustmentsView from './modules/accountant/CurrencyAdjustmentsView';
 import ManualJournalEntryView from './modules/accountant/ManualJournalEntryView';
+import ManualJournalsListView from './modules/accountant/ManualJournalsListView';
 
 // ── APIs ─────────────────────────────────────────────────────────
 import { companyAPI, reportsAPI, voucherAPI } from './services/api';
@@ -647,26 +648,24 @@ function AuthenticatedApp() {
         onCancel: () => navigate('/vouchers')
       })} />
       <Route path="/accountant/journals" element={
-        <AppShell onLogout={handleLogout}>
-          <VoucherListView 
-            defaultType="Journal"
-            title="Manual Journals"
-            subtitle="Accountant"
-            buttonText="New Journal"
-            hideTabs={true}
-            onCreateNew={() => navigate('/accountant/journals/new')} 
-            onEdit={(v) => navigate(`/accountant/journals/edit/${v.id}`)}
-            onDelete={async (id) => {
-              try {
-                await voucherAPI.delete(id);
-                window.location.reload();
-              } catch (err) { alert('Delete failed'); }
-            }}
-          />
+        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
+          <ManualJournalsListView companyId={companyId} />
         </AppShell>
       } />
-      <Route path="/accountant/journals/new" element={shell(ManualJournalEntryView)} />
-      <Route path="/accountant/journals/edit/:id" element={shell(ManualJournalEntryView)} />
+      {/* IMPORTANT: /new and /edit/:id must come BEFORE /:id so React Router doesn't treat "new" as a journal ID */}
+      <Route path="/accountant/journals/new" element={shell(ManualJournalEntryView, {
+        onSaveSuccess: (savedId) => navigate(savedId ? `/accountant/journals/${savedId}` : '/accountant/journals'),
+        onCancel: () => navigate('/accountant/journals')
+      })} />
+      <Route path="/accountant/journals/edit/:id" element={shell(ManualJournalEntryView, {
+        onSaveSuccess: (savedId) => navigate(savedId ? `/accountant/journals/${savedId}` : '/accountant/journals'),
+        onCancel: () => navigate('/accountant/journals')
+      })} />
+      <Route path="/accountant/journals/:id" element={
+        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
+          <ManualJournalsListView companyId={companyId} />
+        </AppShell>
+      } />
       <Route path="/ledgers"              element={shell(LedgersView)} />
       <Route path="/ledger-statement/:id" element={shell(LedgerStatementView)} />
       <Route path="/cost-centers"          element={shell(CostCenterView)} />

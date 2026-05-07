@@ -8,6 +8,7 @@ router.use(verifyToken, tenantAccess);
 
 // Create voucher (ACCOUNTANT and ADMIN only)
 router.post('/', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.createVoucher);
+router.put('/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.updateVoucher);
 // View vouchers (all roles)
 router.get('/:companyId', voucherController.getVouchers);
 router.get('/detail/:id', voucherController.getVoucherById);

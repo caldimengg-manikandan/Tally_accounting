@@ -21,9 +21,21 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    reference: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     voucherNumber: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    reportingMethod: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    currency: {
+      type: DataTypes.STRING,
+      allowNull: true
     },
     ProjectId: {
       type: DataTypes.UUID,
