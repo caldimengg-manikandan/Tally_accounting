@@ -171,7 +171,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
               <Layers size={18} className="text-white" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900 tracking-tight">
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
                 {ledgerToEdit ? 'Edit Ledger Account' : 'Create New Ledger Account'}
               </h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
@@ -205,7 +205,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
                   <p className="text-xs text-amber-600 mt-0.5">Tally's 28 standard groups need to be initialized for your company.</p>
                 </div>
                 <button type="button" onClick={handleSeedGroups}
-                  className="shrink-0 text-xs font-black px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all">
+                  className="shrink-0 text-xs font-bold px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all">
                   Initialize Groups
                 </button>
               </div>
@@ -220,7 +220,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
 
             {/* ── Row 1: Ledger Name ────────────────────────── */}
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                 Ledger Account Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -239,7 +239,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
 
             {/* ── Row 2: Parent Group ───────────────────────── */}
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                 Under Group (Parent) <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -280,7 +280,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
             {/* ── Row 3: Opening Balance ────────────────────── */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                   Opening Balance (₹)
                 </label>
                 <div className="relative">
@@ -298,7 +298,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                   Balance Type
                 </label>
                 <div className="flex gap-3 h-[46px]">
@@ -307,7 +307,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
                       key={t}
                       type="button"
                       onClick={() => setBalanceType(t)}
-                      className={`flex-1 rounded-xl text-sm font-black tracking-widest border-2 transition-all ${
+                      className={`flex-1 rounded-xl text-sm font-bold tracking-widest border-2 transition-all ${
                         balanceType === t
                           ? t === 'Dr' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-red-600 border-red-600 text-white'
                           : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'
@@ -322,7 +322,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
 
             {/* ── Row 4: GST Applicability ─────────────────── */}
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
                 GST / Tax Applicability
               </label>
               <div className="relative">
@@ -364,7 +364,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
             type="submit"
             onClick={handleSave}
             disabled={saving || saved || seeding}
-            className={`flex items-center gap-2 px-8 py-2.5 rounded-xl font-black text-sm tracking-wide shadow-lg transition-all ${
+            className={`flex items-center gap-2 px-8 py-2.5 rounded-xl font-bold text-sm tracking-wide shadow-lg transition-all ${
               saved ? 'bg-emerald-600 text-white' :
               'bg-slate-900 hover:bg-blue-700 text-white shadow-slate-900/20 hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100'
             }`}

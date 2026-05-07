@@ -47,6 +47,14 @@ module.exports = (sequelize, DataTypes) => {
     userAgent: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    CompanyId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
 

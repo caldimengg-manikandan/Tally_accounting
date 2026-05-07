@@ -694,9 +694,9 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="border-b border-slate-100">
-                              <th className="py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest">Round Off To</th>
-                              <th className="py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Input Value</th>
-                              <th className="py-2 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Rounded Value</th>
+                              <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Round Off To</th>
+                              <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-right">Input Value</th>
+                              <th className="py-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest text-right">Rounded Value</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 text-[13px]">
@@ -768,7 +768,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
                       <span className="text-[13px] text-slate-600 font-medium">Volume Pricing</span>
                     </label>
                     <div className="group relative">
-                      <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 cursor-help hover:border-[#1e61f0] hover:text-[#1e61f0] transition-colors font-black">?</div>
+                      <div className="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-slate-400 cursor-help hover:border-[#1e61f0] hover:text-[#1e61f0] transition-colors font-bold">?</div>
                     </div>
                   </div>
                 </div>
@@ -894,22 +894,22 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
                                 {/* Empty checkbox area as per design in bulk update mode */}
                               </th>
                             )}
-                            <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                            <th className="px-4 py-2.5 text-[10px] font-bold text-slate-900 uppercase tracking-widest">
                               <div className="flex items-center gap-1.5">
                                 ITEM DETAILS
                                 <Search size={12} className="text-[#1e61f0]" />
                               </div>
                             </th>
-                            <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">{formData.transactionType === 'Sales' ? 'SALES RATE' : 'PURCHASE RATE'}</th>
+                            <th className="px-4 py-2.5 text-[10px] font-bold text-slate-900 uppercase tracking-widest text-right">{formData.transactionType === 'Sales' ? 'SALES RATE' : 'PURCHASE RATE'}</th>
                             {formData.pricingScheme === 'Volume Pricing' && (
                               <>
-                                <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-center">START QUANTITY</th>
-                                <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-center">END QUANTITY</th>
+                                <th className="px-4 py-2.5 text-[10px] font-bold text-slate-900 uppercase tracking-widest text-center">START QUANTITY</th>
+                                <th className="px-4 py-2.5 text-[10px] font-bold text-slate-900 uppercase tracking-widest text-center">END QUANTITY</th>
                               </>
                             )}
-                            <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">CUSTOM RATE</th>
+                            <th className="px-4 py-2.5 text-[10px] font-bold text-slate-900 uppercase tracking-widest text-right">CUSTOM RATE</th>
                             {formData.includeDiscount && (
-                              <th className="px-4 py-2.5 text-[10px] font-black text-slate-900 uppercase tracking-widest text-right">DISCOUNT (%)</th>
+                              <th className="px-4 py-2.5 text-[10px] font-bold text-slate-900 uppercase tracking-widest text-right">DISCOUNT (%)</th>
                             )}
                           </tr>
                         </thead>
@@ -1074,7 +1074,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
                                   </div>
                                   <button 
                                     onClick={fetchItems}
-                                    className="mt-2 flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 rounded text-[11px] font-black text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
+                                    className="mt-2 flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 rounded text-[11px] font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
                                   >
                                     <RefreshCw size={12} className={loadingItems ? 'animate-spin' : ''} />
                                     RETRY FETCHING
@@ -1091,7 +1091,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
                       {/* Export Section */}
                       <div className="space-y-4">
                         <div className="space-y-1">
-                          <h4 className="text-[13px] font-black text-slate-900 tracking-tight">1. Export items as XLS file</h4>
+                          <h4 className="text-[13px] font-bold text-slate-900 tracking-tight">1. Export items as XLS file</h4>
                           <p className="text-[12px] text-slate-500 font-medium">Export all items or filter specific items, export them to an XLS file, update the rates, and import the file back to update the price list in Zoho Books.</p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -1115,13 +1115,13 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
                       {/* Import Section */}
                       <div className="space-y-4">
                         <div className="space-y-1">
-                          <h4 className="text-[13px] font-black text-slate-900 tracking-tight">2. Import items as XLS file</h4>
+                          <h4 className="text-[13px] font-bold text-slate-900 tracking-tight">2. Import items as XLS file</h4>
                           <p className="text-[12px] text-slate-500 font-medium">Import the CSV or XLS file that you've exported and updated with the customised rates to update the price list.</p>
                         </div>
                         
                         <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 space-y-4">
                           <div className="space-y-2">
-                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em]">NOTE:</span>
+                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">NOTE:</span>
                             <div className="space-y-3">
                               <div className="flex gap-2">
                                 <span className="text-[12px] text-slate-600">1.</span>
@@ -1143,7 +1143,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
 
                         <button 
                           onClick={handleImportClick}
-                          className="flex items-center gap-2 px-6 py-2.5 border border-slate-200 rounded-xl text-[12px] font-black text-slate-700 hover:bg-slate-50 transition-all bg-white shadow-sm"
+                          className="flex items-center gap-2 px-6 py-2.5 border border-slate-200 rounded-xl text-[12px] font-bold text-slate-700 hover:bg-slate-50 transition-all bg-white shadow-sm"
                         >
                           <Upload size={16} className="text-[#1e61f0]" />
                           Import Items
@@ -1171,13 +1171,13 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
       <div className="px-8 py-4 border-t border-slate-100 bg-[#fbfcfd] flex items-center gap-3 shrink-0">
         <button 
           onClick={handleSave}
-          className="bg-[#1e61f0] text-white px-8 py-2.5 rounded font-black text-[12px] uppercase tracking-widest hover:bg-[#1a54d1] shadow-xl shadow-blue-500/30 transition-all active:scale-95"
+          className="bg-[#1e61f0] text-white px-8 py-2.5 rounded font-bold text-[12px] uppercase tracking-widest hover:bg-[#1a54d1] shadow-xl shadow-blue-500/30 transition-all active:scale-95"
         >
           SAVE
         </button>
         <button 
           onClick={() => navigate('/price-lists')}
-          className="px-8 py-2.5 border border-slate-200 text-slate-500 rounded font-black text-[12px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 bg-white"
+          className="px-8 py-2.5 border border-slate-200 text-slate-500 rounded font-bold text-[12px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95 bg-white"
         >
           CANCEL
         </button>

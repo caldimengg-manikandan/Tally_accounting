@@ -11,7 +11,7 @@ exports.createOrder = async (req, res) => {
       companyId, customerId, orderNumber, referenceNumber, date, 
       expectedShipmentDate, paymentTerms, deliveryMethod, salesperson, 
       customerNotes, termsConditions, subTotal, discount, tax, 
-      adjustment, totalAmount, status, items, attachments 
+      adjustment, totalAmount, status, items, attachments, projectId 
     } = req.body;
 
     const order = await SalesOrder.create({
@@ -32,7 +32,8 @@ exports.createOrder = async (req, res) => {
       adjustment,
       totalAmount,
       status: status || 'Draft',
-      attachments
+      attachments,
+      ProjectId: projectId
     }, { transaction: t });
 
     if (items && items.length > 0) {
@@ -41,6 +42,7 @@ exports.createOrder = async (req, res) => {
         const { id, ...itemData } = it;
         return {
           ...itemData,
+          ItemId: it.itemId,
           SalesOrderId: order.id,
           amount: (it.quantity || 0) * (it.rate || 0)
         };
@@ -83,7 +85,7 @@ exports.updateOrder = async (req, res) => {
       customerId, orderNumber, referenceNumber, date, 
       expectedShipmentDate, paymentTerms, deliveryMethod, salesperson, 
       customerNotes, termsConditions, subTotal, discount, tax, 
-      adjustment, totalAmount, status, items, attachments
+      adjustment, totalAmount, status, items, attachments, projectId
     } = req.body;
 
     const order = await SalesOrder.findByPk(orderId);
@@ -105,8 +107,9 @@ exports.updateOrder = async (req, res) => {
       tax,
       adjustment,
       totalAmount,
-      status,
-      attachments
+      status: status || order.status,
+      attachments,
+      ProjectId: projectId
     }, { transaction: t });
 
     if (items) {
@@ -116,6 +119,7 @@ exports.updateOrder = async (req, res) => {
         const { id, ...itemData } = it;
         return {
           ...itemData,
+          ItemId: it.itemId,
           SalesOrderId: orderId,
           amount: (it.quantity || 0) * (it.rate || 0)
         };
@@ -140,7 +144,7 @@ exports.createInvoice = async (req, res) => {
       companyId, customerLedgerId, invoiceNumber, date, dueDate, 
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount, 
-      customerNotes, termsConditions, status, items 
+      customerNotes, termsConditions, status, items, projectId 
     } = req.body;
 
     // 1. Create the persistent invoice record (Draft or Confirmed)
@@ -149,7 +153,8 @@ exports.createInvoice = async (req, res) => {
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount,
       customerNotes, termsConditions, status: status || 'Draft',
-      balance: totalAmount // Initialize balance
+      balance: totalAmount, // Initialize balance
+      ProjectId: projectId
     }, { transaction: t });
 
     // 2. Create line items
@@ -177,7 +182,8 @@ exports.createInvoice = async (req, res) => {
         narration: subject || `Invoice ${invoiceNumber}`,
         items,
         type: 'Sales',
-        userId: req.user?.id
+        userId: req.user?.id,
+        projectId
       });
       await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Sent' }, { transaction: t });
     }
@@ -230,7 +236,7 @@ exports.updateInvoice = async (req, res) => {
       customerLedgerId, invoiceNumber, date, dueDate, 
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount, 
-      customerNotes, termsConditions, status, items 
+      customerNotes, termsConditions, status, items, projectId 
     } = req.body;
 
     const invoice = await SalesInvoice.findByPk(id);
@@ -245,7 +251,8 @@ exports.updateInvoice = async (req, res) => {
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount,
       customerNotes, termsConditions, status,
-      balance: totalAmount - (invoice.amountPaid || 0) // Recalculate balance
+      balance: totalAmount - (invoice.amountPaid || 0), // Recalculate balance
+      ProjectId: projectId
     }, { transaction: t });
 
     // Update items
@@ -253,7 +260,7 @@ exports.updateInvoice = async (req, res) => {
       await SalesInvoiceItem.destroy({ where: { SalesInvoiceId: id }, transaction: t });
       const validItems = items.filter(it => it.itemId && it.itemId !== '');
       const invoiceItems = validItems.map(it => {
-        const { id, ...itemData } = it;
+        const { id: lineItemId, ...itemData } = it;
         return {
           ...itemData,
           SalesInvoiceId: id,
@@ -274,7 +281,8 @@ exports.updateInvoice = async (req, res) => {
         narration: subject || `Invoice ${invoiceNumber}`,
         items,
         type: 'Sales',
-        userId: req.user?.id
+        userId: req.user?.id,
+        projectId
       });
       await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Sent' }, { transaction: t });
     }
@@ -328,7 +336,7 @@ exports.getOpenInvoices = async (req, res) => {
 exports.recordPayment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { companyId, customerId, paymentDate, amount, depositToId, reference, invoices } = req.body;
+    const { companyId, customerId, paymentDate, amount, depositToId, reference, invoices, projectId } = req.body;
     // invoices: [{ id, amountToApply }]
 
     // 1. Create Receipt Voucher
@@ -342,7 +350,8 @@ exports.recordPayment = async (req, res) => {
         { ledgerId: depositToId, debit: amount, credit: 0 }, // Bank/Cash (Debit)
         { ledgerId: customerId, debit: 0, credit: amount }  // Accounts Receivable (Credit)
       ],
-      userId: req.user?.id
+      userId: req.user?.id,
+      projectId
     }, t);
 
     // 2. Apply to Invoices

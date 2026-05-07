@@ -7,5 +7,8 @@ router.get('/:companyId', projectController.getProjectsByCompany);
 router.get('/detail/:id', projectController.getProjectById);
 router.put('/:id', projectController.updateProject);
 router.delete('/:id', projectController.deleteProject);
+router.get('/:id/purchases', projectController.getProjectPurchases);
+router.get('/:id/sales', projectController.getProjectSales);
+router.get('/:id/activity', projectController.getProjectActivity);
 
 module.exports = router;

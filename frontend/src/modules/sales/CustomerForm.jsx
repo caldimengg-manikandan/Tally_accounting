@@ -173,7 +173,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                     <button 
                         onClick={handleSave} 
                         disabled={loading} 
-                        className="px-8 py-2.5 bg-[#1e61f0] text-white text-sm font-black rounded-xl hover:bg-[#1a54d1] shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                        className="px-8 py-2.5 bg-[#1e61f0] text-white text-sm font-bold rounded-xl hover:bg-[#1a54d1] shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
                     >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                         {customerToEdit ? 'UPDATE CUSTOMER' : 'SAVE CUSTOMER'}
@@ -182,8 +182,9 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
             </header>
         )}
 
-        <div className={`flex-1 overflow-y-auto ${standalone ? 'px-12 py-10 pb-32 max-w-6xl mx-auto w-full' : 'px-8 py-6 pb-24 w-full custom-scrollbar'}`}>
-            <div className="space-y-10">
+        <div className={`flex-1 overflow-y-auto no-scrollbar ${standalone ? 'bg-[#f8fafc]' : 'bg-white custom-scrollbar'}`}>
+            <div className={`${standalone ? 'max-w-[1000px] mx-auto py-10 px-6' : 'px-8 py-6 w-full'}`}>
+                <div className={`${standalone ? 'bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/50 p-12 space-y-12 animate-fade-in' : 'space-y-10'}`}>
                 {/* Section 1: Basic Info */}
                 <section className="space-y-6">
                     <div className="flex items-center gap-4 mb-8">
@@ -194,7 +195,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                     <div className="space-y-6">
                         {/* Customer Type */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Customer Type</label>
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Customer Type</label>
                             <div className="flex gap-4">
                                 {['Business', 'Individual'].map(t => (
                                     <label key={t} className="flex items-center gap-2 cursor-pointer group">
@@ -212,7 +213,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                         {/* Primary Name */}
                         <div className="flex items-start">
-                            <label className="w-48 text-[11px] font-black text-rose-500 uppercase tracking-widest mt-2">Primary Contact*</label>
+                            <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest mt-2">Primary Contact*</label>
                             <div className="flex-1 max-w-2xl space-y-4">
                                 <div className="grid grid-cols-12 gap-3 pb-4">
                                     <div className="col-span-2">
@@ -242,14 +243,14 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                 </div>
                                 <div className="space-y-4">
                                     <div className="flex items-center">
-                                        <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest shrink-0">Company Name</label>
+                                        <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Company Name</label>
                                         <input 
                                             value={companyName} onChange={e => setCompanyName(e.target.value)}
                                             className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium" 
                                         />
                                     </div>
                                     <div className="flex items-center">
-                                        <label className="w-48 text-[11px] font-black text-rose-500 uppercase tracking-widest shrink-0">Display Name*</label>
+                                        <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest shrink-0">Display Name*</label>
                                         <div className="flex-1 relative">
                                             <select 
                                                 value={displayName} 
@@ -271,7 +272,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                         {/* Email */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Customer Email</label>
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Customer Email</label>
                             <input 
                                 type="email" value={email} onChange={e => setEmail(e.target.value)}
                                 className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium" 
@@ -280,7 +281,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                         {/* Phone */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Customer Phone</label>
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Customer Phone</label>
                             <div className="flex flex-1 max-w-lg gap-4">
                                 <input 
                                     placeholder="Work Phone"
@@ -301,7 +302,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                         {/* Website */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Website</label>
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Website</label>
                             <input 
                                 type="text" value={website} onChange={e => setWebsite(e.target.value)}
                                 className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium text-blue-600" 
@@ -320,7 +321,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-20">
                         {/* Billing */}
                         <div className="space-y-6">
-                            <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Billing Address</h4>
+                            <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Billing Address</h4>
                             <div className="space-y-4">
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">Attention</label>
@@ -361,8 +362,8 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                         {/* Shipping */}
                         <div className="space-y-6">
                             <div className="flex justify-between items-center">
-                                <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Shipping Address</h4>
-                                <button type="button" onClick={copyBillingToShipping} className="text-[11px] font-black text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1">
+                                <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Shipping Address</h4>
+                                <button type="button" onClick={copyBillingToShipping} className="text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1">
                                     <Copy size={12}/> Copy Billing
                                 </button>
                             </div>
@@ -414,14 +415,14 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
                     <div className="space-y-6">
                         <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Currency</label>
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Currency</label>
                             <select value={currency} onChange={e => setCurrency(e.target.value)} className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium">
                                 {CURRENCIES.map(c => <option key={c.code} value={c.display}>{c.display}</option>)}
                             </select>
                         </div>
 
                         <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-black text-slate-500 uppercase tracking-widest">Payment Terms</label>
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Payment Terms</label>
                             <select value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium">
                                 <option value="Due on Receipt">Due on Receipt</option>
                                 <option value="Net 15">Net 15</option>
@@ -431,7 +432,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                         </div>
 
                         <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-black text-rose-500 uppercase tracking-widest">PAN Number</label>
+                            <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest">PAN Number</label>
                             <input 
                                 value={pan} onChange={e => setPan(e.target.value)}
                                 className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 capitalize font-bold text-slate-700" 
@@ -442,27 +443,28 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                 </section>
             </div>
         </div>
+    </div>
 
-        {/* Action Bar */}
-        <div className={`${standalone ? 'fixed bottom-0' : 'sticky bottom-0'} left-0 right-0 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-[60]`}>
-            <div className={`max-w-6xl mx-auto ${standalone ? 'px-12 py-4' : 'px-8 py-3'} flex justify-between items-center`}>
-                 <div className="flex items-center gap-2 text-slate-400 text-[11px] font-medium uppercase tracking-wider">
-                    <ShieldCheck size={14} className="text-blue-500" /> Encrypted & Secure Record Storage
-                 </div>
-                 <div className="flex items-center gap-3">
-                    <button onClick={onCancel} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded">Discard</button>
-                    <button 
-                        onClick={handleSave} 
-                        disabled={loading}
-                        className="px-10 py-2 bg-[#1e61f0] text-white rounded font-black text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-500/10 transition-all uppercase tracking-widest disabled:opacity-50"
-                    >
-                        {loading ? 'Processing...' : 'Save Customer Profile'}
-                    </button>
-                 </div>
-            </div>
+    {/* Action Bar */}
+    <div className="sticky bottom-0 bg-white border-t border-slate-100 shadow-[0_-5px_25px_rgba(0,0,0,0.05)] z-[60]">
+        <div className={`max-w-[1000px] mx-auto ${standalone ? 'px-6 py-4' : 'px-8 py-3'} flex justify-between items-center`}>
+             <div className="flex items-center gap-2 text-slate-400 text-[11px] font-medium uppercase tracking-wider">
+                <ShieldCheck size={14} className="text-blue-500" /> Encrypted & Secure Record Storage
+             </div>
+             <div className="flex items-center gap-3">
+                <button onClick={onCancel} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded">Discard</button>
+                <button 
+                    onClick={handleSave} 
+                    disabled={loading}
+                    className="px-10 py-2 bg-[#1e61f0] text-white rounded font-bold text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-500/10 transition-all uppercase tracking-widest disabled:opacity-50"
+                >
+                    {loading ? 'Processing...' : 'Save Customer Profile'}
+                </button>
+             </div>
         </div>
     </div>
-  );
+</div>
+);
 };
 
 export default CustomerForm;

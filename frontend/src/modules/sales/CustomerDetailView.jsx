@@ -58,6 +58,7 @@ const CustomerDetailView = ({ companyId }) => {
   const [isAddressDrawerOpen, setIsAddressDrawerOpen] = useState(false);
   const [addressType, setAddressType] = useState('billing'); // 'billing' or 'shipping'
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [isSideListCollapsed, setIsSideListCollapsed] = useState(false);
   const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
   const [addressForm, setAddressForm] = useState({
     attention: '',
@@ -165,7 +166,7 @@ const CustomerDetailView = ({ companyId }) => {
   const handleEditRow = (type, row) => {
     let path = '';
     const id = row.id;
-    if (type === 'Invoices') path = `/sales/edit-invoice/${id}`;
+    if (type === 'Invoices') path = `/sales-invoices/edit/${id}`;
     else if (type === 'Quotes') path = `/quotes/edit/${id}`;
     else if (type === 'Retainer Invoices') path = `/retainer-invoices/edit/${id}`;
     else if (type === 'Sales Orders') path = `/sales-orders`; // Generic SO view, may need specific SO edit route
@@ -255,7 +256,7 @@ const CustomerDetailView = ({ companyId }) => {
       }
       return (
         <div className="text-[12.5px] text-slate-500 space-y-0.5 relative group/addr pr-10">
-          {addr.attention && <p className="font-black text-slate-800 tracking-tight">{addr.attention}</p>}
+          {addr.attention && <p className="font-bold text-slate-800 tracking-tight">{addr.attention}</p>}
           <p>{addr.address1}</p>
           {addr.address2 && <p>{addr.address2}</p>}
           <p>{addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.zip ? `- ${addr.zip}` : ''}</p>
@@ -398,31 +399,52 @@ const CustomerDetailView = ({ companyId }) => {
       `}</style>
 
       {/* ─── SIDEBAR ─────────────────────────────────────── */}
-      <div className={`${id ? 'w-[350px]' : 'w-full'} border-r border-slate-200 bg-white flex flex-col shrink-0 transition-all duration-300`}>
-        <div className="p-4 border-b border-slate-100 space-y-3">
+      <div className={`${id ? (isSideListCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-[320px]') : 'w-full'} border-r border-slate-200 bg-[#f8fbff] flex flex-col shrink-0 transition-all duration-300 relative`}>
+        {!isSideListCollapsed && id && (
+          <button 
+            onClick={() => setIsSideListCollapsed(true)}
+            className="absolute -right-3 top-24 w-6 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm z-[60] cursor-pointer"
+          >
+            <ChevronLeft size={14} strokeWidth={3} />
+          </button>
+        )}
+        <div className="p-5 border-b border-slate-100 bg-white space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className={`${id ? 'text-[14px]' : 'text-[24px]'} font-bold text-slate-900 transition-all`}>Active Customers</h2>
-            <button onClick={() => setIsQuickAddOpen(true)} className={`${id ? 'w-7 h-7' : 'px-4 py-2'} flex items-center justify-center rounded bg-blue-600 text-white font-bold transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95`}>
-              <Plus size={id ? 16 : 18} className={id ? '' : 'mr-2'}/> {!id && 'New Customer'}
-            </button>
+            <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Active Customers <ChevronDown size={14} className="inline ml-1 text-blue-600"/></h2>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setIsQuickAddOpen(true)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
+                <Plus size={16} strokeWidth={3}/>
+              </button>
+              <button className="p-1.5 text-slate-400 hover:text-slate-600 border border-slate-100 rounded-lg bg-slate-50/50 transition-colors">
+                <MoreHorizontal size={16}/>
+              </button>
+            </div>
           </div>
-          <div className="relative">
-             <Search size={id ? 14 : 18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-             <input type="text" placeholder="Search Customers" className={`w-full ${id ? 'pl-9 pr-3 py-1.5 text-[13px]' : 'pl-12 pr-4 py-3 text-[16px]'} bg-white border border-slate-200 rounded outline-none transition-all focus:border-blue-600`} />
+          <div className="relative group">
+             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+             <input 
+                type="text" 
+                placeholder="Search Customers ( / )" 
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50" 
+             />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+        <div className="flex-1 overflow-y-auto no-scrollbar py-2">
           {customers.length === 0 ? (
-            <div className="p-10 text-center text-[12px] text-slate-400 font-bold uppercase tracking-widest opacity-30 mt-20">NO CUSTOMERS FOUND</div>
+            <div className="p-10 text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest opacity-50 mt-20">EMPTY ARCHIVE</div>
           ) : customers.map(c => (
-            <div key={c.id} onClick={() => handleCustomerSelect(c.id)} className={`px-5 py-4 cursor-pointer border-b border-slate-50 transition-all border-l-[4px] ${String(c.id) === String(selectedId) ? 'bg-[#f0f5ff] border-l-blue-600' : 'hover:bg-slate-50 border-l-transparent'}`}>
-              <div className="flex justify-between items-start mb-2">
-                <span className={`text-[13px] font-black truncate max-w-[140px] ${String(c.id) === String(selectedId) ? 'text-blue-600' : 'text-slate-700'}`}>{c.name}</span>
-                <span className="text-[14px] font-black text-slate-900 tracking-tighter italic">₹{parseFloat(c.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            <div 
+              key={c.id} 
+              onClick={() => handleCustomerSelect(c.id)} 
+              className={`px-6 py-4 cursor-pointer transition-all border-b border-slate-50 flex flex-col gap-1 relative overflow-hidden
+                ${String(c.id) === String(selectedId) ? 'bg-white shadow-xl shadow-slate-100/50 z-10 translate-x-1' : 'hover:bg-white/50'}`}
+            >
+              {String(c.id) === String(selectedId) && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r-full shadow-[2px_0_10px_rgba(37,99,235,0.3)]"></div>}
+              <div className={`text-[13px] font-bold tracking-tight truncate ${String(c.id) === String(selectedId) ? 'text-blue-600' : 'text-slate-700 group-hover:text-blue-600'}`}>
+                {c.name}
               </div>
-              <div className="flex items-center gap-2">
-                 <div className={`w-2 h-2 rounded-full ${parseFloat(c.currentBalance || 0) > 0 ? 'bg-orange-400' : 'bg-green-400'}`}></div>
-                 <div className="text-[11px] text-slate-400 font-bold tracking-widest truncate">{c.email || 'NO_EMAIL_ID'}</div>
+              <div className="text-[12px] font-black text-slate-400 italic tracking-tighter">
+                ₹{parseFloat(c.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
             </div>
           ))}
@@ -433,27 +455,33 @@ const CustomerDetailView = ({ companyId }) => {
       <div className="flex-1 flex flex-col bg-white overflow-hidden shadow-2xl">
         {customer ? (
           <>
-            <header className="px-8 py-5 flex items-center justify-between border-b border-slate-50 bg-[#fbfcff]">
+            <header className="px-8 py-5 flex items-center justify-between border-b border-slate-50 bg-white">
                <div className="flex items-center gap-4">
-                  <button onClick={() => navigate(-1)} className="p-1.5 rounded hover:bg-slate-100"><ChevronLeft size={18}/></button>
+                  {isSideListCollapsed && (
+                    <button 
+                      onClick={() => setIsSideListCollapsed(false)}
+                      className="p-2 -ml-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      title="Show Customer List"
+                    >
+                      <LayoutDashboard size={20} />
+                    </button>
+                  )}
                   <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{customer.name}</h1>
                </div>
-               <div className="flex items-center gap-2.5">
-                  <button onClick={handleSaveProfile} disabled={loading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all flex items-center gap-2 disabled:opacity-50">
-                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16}/>}
-                     {loading ? 'Saving...' : 'Save Profile'}
+               <div className="flex items-center gap-3">
+                  <button onClick={() => navigate(`/customers/${customer.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">Edit</button>
+                  <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600 transition-colors"><Paperclip size={18}/></button>
+                  
+                  <div className="bg-[#1e61f0] text-white rounded-lg flex items-center shadow-lg shadow-blue-100 overflow-hidden transition-all hover:bg-blue-700">
+                     <button className="px-5 py-2.5 text-[13px] font-bold border-r border-blue-500/30">New Transaction</button>
+                     <button className="px-3 py-2.5"><ChevronDown size={16}/></button>
+                  </div>
+
+                  <button className="px-4 py-2 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 shadow-sm transition-all">
+                     More <ChevronDown size={16} className="text-slate-400"/>
                   </button>
                   <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                  <button onClick={() => navigate(`/customers/${customer.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-white shadow-sm">Edit</button>
-                  <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600"><Paperclip size={16}/></button>
-                  <div className="bg-blue-600 text-white rounded-md flex items-center shadow-lg shadow-blue-100 overflow-hidden">
-                     <button className="px-5 py-2 text-[13px] font-bold border-r border-blue-500/30 hover:bg-blue-700">New Transaction</button>
-                     <button className="px-2 py-2 hover:bg-blue-700"><ChevronDown size={16}/></button>
-                  </div>
-                  <button className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 flex items-center gap-1.5 hover:bg-white shadow-sm">
-                     More <ChevronDown size={14}/>
-                  </button>
-                  <button className="p-1.5 text-slate-300 hover:text-slate-500" onClick={() => navigate(-1)}><X size={20}/></button>
+                  <button className="p-2 text-slate-300 hover:text-slate-500 transition-colors" onClick={() => navigate(-1)}><X size={24}/></button>
                </div>
             </header>
 
@@ -506,7 +534,7 @@ const CustomerDetailView = ({ companyId }) => {
                    </div>
 
                    <div className="space-y-6">
-                      <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">ALL COMMENTS</h3>
+                      <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">ALL COMMENTS</h3>
                       {comments.length > 0 ? (
                         <div className="space-y-6">
                            {comments.map(c => (
@@ -557,13 +585,13 @@ const CustomerDetailView = ({ companyId }) => {
                         >
                            <div className="flex items-center gap-3">
                               <ChevronRight size={16} className={`text-slate-400 transition-transform ${openSections.includes(sec.name) ? 'rotate-90' : ''}`} />
-                              <h3 className="text-[15px] font-black text-slate-800 tracking-tight">{sec.name}</h3>
+                              <h3 className="text-[15px] font-bold text-slate-800 tracking-tight">{sec.name}</h3>
                            </div>
                            <button 
                              onClick={(e) => {
                                e.stopPropagation();
                                const routes = {
-                                 'Invoices': '/sales/new-invoice',
+                                 'Invoices': '/sales-invoices/new',
                                  'Customer Payments': '/payments/new',
                                  'Quotes': '/quotes/new',
                                  'Retainer Invoices': '/retainer-invoices/new',
@@ -571,7 +599,7 @@ const CustomerDetailView = ({ companyId }) => {
                                };
                                navigate(routes[sec.name] || '#', { state: { customerId: selectedId } });
                              }}
-                             className="flex items-center gap-1.5 text-[12px] font-black text-blue-600 hover:text-blue-800 bg-white px-2.5 py-1 rounded-full border border-blue-50 shadow-sm"
+                             className="flex items-center gap-1.5 text-[12px] font-bold text-blue-600 hover:text-blue-800 bg-white px-2.5 py-1 rounded-full border border-blue-50 shadow-sm"
                            >
                               <Plus size={14} strokeWidth={3}/> NEW
                            </button>
@@ -581,7 +609,7 @@ const CustomerDetailView = ({ companyId }) => {
                              <table className="w-full text-left">
                                 <thead>
                                    <tr className="bg-white border-b border-slate-50">
-                                      {sec.cols.map(c => <th key={c} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{c}</th>)}
+                                      {sec.cols.map(c => <th key={c} className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{c}</th>)}
                                    </tr>
                                 </thead>
                                 <tbody>
@@ -594,7 +622,7 @@ const CustomerDetailView = ({ companyId }) => {
                                           <td className="px-6 py-4 font-bold text-slate-900">₹{parseFloat(row.totalAmount || row.amount || 0).toLocaleString()}</td>
                                           {sec.name === 'Invoices' && <td className="px-6 py-4">₹{row.balanceDue || '0.00'}</td>}
                                           <td className="px-6 py-4">
-                                             <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-black ${row.status === 'Sent' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
+                                             <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${row.status === 'Sent' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
                                                 {row.status || 'Draft'}
                                              </span>
                                           </td>
@@ -625,7 +653,7 @@ const CustomerDetailView = ({ companyId }) => {
                                                 className="text-blue-600 font-bold hover:underline cursor-pointer"
                                                 onClick={() => {
                                                   const routes = {
-                                                    'Invoices': '/sales/new-invoice',
+                                                    'Invoices': '/sales-invoices/new',
                                                     'Customer Payments': '/payments/new',
                                                     'Quotes': '/quotes/new',
                                                     'Retainer Invoices': '/retainer-invoices/new',
@@ -648,182 +676,202 @@ const CustomerDetailView = ({ companyId }) => {
               )}
 
                {activeTab === 'Mails' && (
-                <div className="p-10 space-y-6 animate-fade-in max-w-4xl">
-                   <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100/50 bg-white">
-                      <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md">
-                         <div>
-                            <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">System Mails</h3>
-                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Automated and Direct Emails</p>
-                         </div>
-                         <div className="flex items-center gap-3">
-                            <button 
-                               onClick={() => setIsComposeModalOpen(true)}
-                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-black hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
-                            >
-                               <Mail size={16}/> Compose Email
-                            </button>
-                         </div>
+                <div className="flex flex-col h-full animate-fade-in">
+                   {/* Mail Header Bar */}
+                   <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-white flex-shrink-0">
+                      <div>
+                         <h3 className="text-[15px] font-bold text-slate-800 tracking-tight">System Mails</h3>
+                         <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Automated and Direct Emails</p>
                       </div>
+                      <div className="flex items-center gap-3">
+                         <button 
+                            onClick={() => setIsComposeModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-bold hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
+                         >
+                            <Mail size={16}/> Compose Email
+                         </button>
+                      </div>
+                   </div>
 
-                      <div className="min-h-[400px]">
-                         {loadingMails ? (
-                            <div className="flex flex-col items-center justify-center h-[400px] text-slate-400">
-                               <Loader2 className="animate-spin mb-4" size={32} />
-                               <p className="text-[13px] font-bold">Retrieving history...</p>
-                            </div>
-                         ) : mails.length > 0 ? (
-                            <div className="divide-y divide-slate-50">
-                               {mails.map(m => (
-                                  <div key={m.id} className="p-6 hover:bg-slate-50/50 transition-colors group">
-                                     <div className="flex items-start justify-between mb-2">
-                                        <div className="flex items-center gap-3">
-                                           <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${m.status === 'Sent' ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
-                                              {m.status === 'Sent' ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
-                                           </div>
-                                           <div>
-                                              <p className="text-[14px] font-bold text-slate-800 tracking-tight">{m.subject}</p>
-                                              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                                                 <span>To: {m.toEmail}</span>
-                                                 <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                                                 <span>By: {m.Sender?.name || 'System'}</span>
-                                              </div>
-                                           </div>
+                   {/* Mail List - full remaining height */}
+                   <div className="flex-1 overflow-y-auto no-scrollbar">
+                      {loadingMails ? (
+                         <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-slate-400">
+                            <Loader2 className="animate-spin mb-4" size={32} />
+                            <p className="text-[13px] font-bold">Retrieving history...</p>
+                         </div>
+                      ) : mails.length > 0 ? (
+                         <div className="divide-y divide-slate-50">
+                            {mails.map(m => (
+                               <div key={m.id} className="px-8 py-5 hover:bg-slate-50/50 transition-colors group">
+                                  <div className="flex items-start justify-between mb-2">
+                                     <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${m.status === 'Sent' ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-600'}`}>
+                                           {m.status === 'Sent' ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
                                         </div>
-                                        <div className="text-right">
-                                           <p className="text-[12px] font-bold text-slate-500">{new Date(m.sentAt).toLocaleDateString()}</p>
-                                           <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mt-1">{new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                        <div>
+                                           <p className="text-[14px] font-bold text-slate-800 tracking-tight">{m.subject}</p>
+                                           <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                              <span>To: {m.toEmail}</span>
+                                              <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                                              <span>By: {m.Sender?.name || 'System'}</span>
+                                           </div>
                                         </div>
                                      </div>
-                                     <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed ml-11 italic pl-1 border-l-2 border-slate-100 group-hover:border-blue-200 transition-colors">
-                                        {m.body}
-                                     </p>
+                                     <div className="text-right flex-shrink-0">
+                                        <p className="text-[12px] font-bold text-slate-500">{new Date(m.sentAt).toLocaleDateString()}</p>
+                                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-1">{new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                     </div>
                                   </div>
-                               ))}
-                            </div>
-                         ) : (
-                            <div className="p-20 text-center space-y-4">
-                               <Mail size={48} className="mx-auto text-slate-100" strokeWidth={1}/>
-                               <div className="space-y-1">
-                                  <p className="text-[15px] text-slate-400 font-bold tracking-tight italic">No emails sent yet</p>
-                                  <p className="text-[13px] text-slate-300 max-w-xs mx-auto font-medium">Capture communications here by sending an email or statement to this customer.</p>
+                                  <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed ml-11 italic pl-1 border-l-2 border-slate-100 group-hover:border-blue-200 transition-colors">
+                                     {m.body}
+                                  </p>
                                </div>
-                               <button 
-                                  onClick={() => setIsComposeModalOpen(true)}
-                                  className="text-[12px] font-black text-blue-600 hover:text-blue-800 underline decoration-blue-100 underline-offset-4"
-                               >
-                                  Send First Communication
-                                </button>
-                            </div>
-                         )}
-                      </div>
+                            ))}
+                         </div>
+                      ) : (
+                         <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-4">
+                            <Mail size={56} className="text-slate-100" strokeWidth={1}/>
+                            <p className="text-[13px] font-bold text-slate-400">No emails sent yet</p>
+                            <button 
+                               onClick={() => setIsComposeModalOpen(true)}
+                               className="text-[13px] font-bold text-blue-600 hover:text-blue-800 underline decoration-blue-100 underline-offset-4"
+                            >
+                               Send First Communication
+                            </button>
+                         </div>
+                      )}
                    </div>
                 </div>
               )}
 
-              {activeTab === 'Statement' && (
-                <div className="p-8 bg-[#f8fbff] min-h-full animate-fade-in">
-                   <div className="max-w-4xl mx-auto space-y-6">
-                      <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+               {activeTab === 'Statement' && (
+                <div className="p-8 bg-[#f8fbff] min-h-full animate-fade-in overflow-y-auto no-scrollbar">
+                   <div className="max-w-[850px] mx-auto space-y-8">
+                      {/* Controls Bar */}
+                      <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-100 no-print">
                          <div className="flex gap-3">
-                           <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700">
+                           <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
                               <Calendar size={14} className="text-slate-400"/> This Month <ChevronDown size={14}/>
                            </div>
-                           <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700">
+                           <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
                               Filter By: All <ChevronDown size={14}/>
                            </div>
                          </div>
                          <div className="flex items-center gap-2">
-                            <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50"><Printer size={18}/></button>
-                            <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50"><FileText size={18}/></button>
-                            <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50 font-black">₹</button>
-                            <button onClick={() => setIsComposeModalOpen(true)} className="px-5 py-2 bg-blue-600 text-white rounded text-[13px] font-bold shadow-md shadow-blue-100 flex items-center gap-2 hover:bg-blue-700">
+                            <button className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition-all"><Printer size={18}/></button>
+                            <button className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition-all"><FileText size={18}/></button>
+                            <button onClick={() => setIsComposeModalOpen(true)} className="px-5 py-2.5 bg-[#1e61f0] text-white rounded-lg text-[13px] font-bold shadow-lg shadow-blue-100 flex items-center gap-2 hover:bg-blue-700 transition-all">
                                <Send size={14}/> Send Email
                             </button>
                          </div>
                       </div>
 
-                      <div className="bg-white rounded shadow-2xl overflow-hidden aspect-[1/1.4] p-16 border border-slate-200 print:shadow-none font-serif relative">
-                         <div className="absolute top-0 right-0 p-8 text-[12px] text-right space-y-0.5 not-italic font-sans">
-                            <p className="font-bold text-[16px] text-slate-900">{currentCompany?.name || 'Indus CAI private Ltd'}</p>
-                            <p className="text-slate-500">{currentCompany?.state || 'Tamil Nadu'}</p>
-                            <p className="text-slate-500">{currentCompany?.country || 'India'}</p>
-                            <p className="text-blue-600">{currentCompany?.email || 'naveenswathi1811@gmail.com'}</p>
+                      {/* External Statement Title */}
+                      <div className="text-center space-y-1 py-4">
+                         <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">Customer Statement for {customer.name}</h2>
+                         <p className="text-[13px] font-medium text-slate-500">From 01/05/2026 To 31/05/2026</p>
+                      </div>
+
+                      {/* THE STATEMENT DOCUMENT */}
+                      <div className="bg-white rounded-none shadow-[0_30px_100px_rgba(0,0,0,0.1)] overflow-hidden p-16 border border-slate-100 print:shadow-none print:border-none relative min-h-[1100px]">
+                         
+                         {/* Document Header - Company Info Right */}
+                         <div className="flex justify-end mb-16">
+                            <div className="text-right space-y-0.5 font-sans">
+                               <p className="font-bold text-[16px] text-slate-900 uppercase tracking-tight">{currentCompany?.name || 'Caldim'}</p>
+                               <p className="text-[12px] text-slate-500 font-medium">{currentCompany?.state || 'Tamil Nadu'}</p>
+                               <p className="text-[12px] text-slate-500 font-medium">{currentCompany?.country || 'India'}</p>
+                               <p className="text-[12px] text-slate-500 font-medium">91-6379222691</p>
+                               <p className="text-[12px] text-blue-600 font-medium">{currentCompany?.email || 'harithejj05@gmail.com'}</p>
+                            </div>
                          </div>
 
-                         <div className="mt-2 text-[12px] font-sans">
-                            <p className="text-slate-400 mb-1">To</p>
-                            <p className="text-blue-600 font-bold text-[14px]">{customer.name}</p>
+                         {/* "To" Section - Left */}
+                         <div className="mb-20">
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">To</p>
+                            <p className="text-[#1e61f0] font-bold text-[15px] tracking-tight">{customer.name}</p>
                          </div>
 
-                         <div className="mt-16 text-center space-y-1">
-                            <h2 className="text-[26px] font-black text-slate-900 border-b-2 border-slate-900 inline-block pb-1">Statement of Accounts</h2>
-                            <p className="text-[13px] font-bold text-slate-500 font-sans mt-2">01/04/2026 To 30/04/2026</p>
+                         {/* Document Center Title */}
+                         <div className="text-center space-y-2 mb-20">
+                            <h1 className="text-[24px] font-bold text-slate-900 uppercase tracking-[0.1em] border-b-[2px] border-slate-900 inline-block pb-1">Statement of Accounts</h1>
+                            <p className="text-[13px] font-bold text-slate-500 tracking-widest uppercase">01/05/2026 To 31/05/2026</p>
                          </div>
 
-                         <div className="mt-16 flex justify-end">
-                            <div className="w-80 space-y-0 text-[13px] font-sans">
-                               <div className="bg-slate-100/50 p-2 font-black text-slate-700 border-b border-slate-200 uppercase tracking-tighter">Account Summary</div>
-                               <div className="flex justify-between p-2 border-b border-slate-50">
+                         {/* Account Summary Table - Right Aligned */}
+                         <div className="flex justify-end mb-24">
+                            <div className="w-80 border border-slate-100 rounded-none overflow-hidden shadow-sm">
+                               <div className="bg-slate-50 p-2.5 font-bold text-[11px] text-slate-400 uppercase tracking-widest border-b border-slate-100">Account Summary</div>
+                               <div className="flex justify-between px-3 py-2.5 border-b border-slate-50 text-[13px] font-medium text-slate-600">
                                  <span>Opening Balance</span>
-                                 <span className="font-bold">₹{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                 <span className="font-bold text-slate-900">₹{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                </div>
-                               <div className="flex justify-between p-2 border-b border-slate-50">
+                               <div className="flex justify-between px-3 py-2.5 border-b border-slate-50 text-[13px] font-medium text-slate-600">
                                  <span>Invoiced Amount</span>
-                                 <span className="font-bold">₹{statementData?.entries?.reduce((sum, e) => sum + (e.debit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                 <span className="font-bold text-slate-900">₹{statementData?.entries?.reduce((sum, e) => sum + (e.debit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                </div>
-                               <div className="flex justify-between p-2 border-b border-slate-50">
+                               <div className="flex justify-between px-3 py-2.5 border-b border-slate-50 text-[13px] font-medium text-slate-600">
                                  <span>Amount Received</span>
-                                 <span className="font-bold">₹{statementData?.entries?.reduce((sum, e) => sum + (e.credit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                 <span className="font-bold text-slate-900">₹{statementData?.entries?.reduce((sum, e) => sum + (e.credit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                </div>
-                               <div className="flex justify-between p-3 border-b border-slate-200 bg-slate-50/20">
-                                 <span className="font-black">Balance Due</span>
-                                 <span className="font-black text-[15px]">₹{parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               <div className="flex justify-between px-3 py-3 bg-slate-50/50 text-[13px]">
+                                 <span className="font-bold text-slate-800">Balance Due</span>
+                                 <span className="font-black text-slate-900 text-[15px]">₹{parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                </div>
                             </div>
                          </div>
 
-                         <table className="w-full mt-20 text-[12px] font-sans border-t border-slate-200">
-                            <thead className="bg-slate-800 text-white font-black text-[10px] uppercase tracking-widest">
-                               <tr>
-                                  <th className="px-3 py-2 text-left">Date</th>
-                                  <th className="px-3 py-2 text-left">Transactions</th>
-                                  <th className="px-3 py-2 text-left">Details</th>
-                                  <th className="px-3 py-2 text-right">Amount</th>
-                                  <th className="px-3 py-2 text-right">Payments</th>
-                                  <th className="px-3 py-2 text-right">Balance</th>
+                         {/* Transaction Table - Full Width */}
+                         <table className="w-full text-[12px] font-sans border-collapse mb-10">
+                            <thead>
+                               <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest">
+                                  <th className="px-4 py-3 text-left w-24">Date</th>
+                                  <th className="px-4 py-3 text-left">Transactions</th>
+                                  <th className="px-4 py-3 text-left">Details</th>
+                                  <th className="px-4 py-3 text-right">Amount</th>
+                                  <th className="px-4 py-3 text-right">Payments</th>
+                                  <th className="px-4 py-3 text-right">Balance</th>
                                </tr>
                             </thead>
-                            <tbody className="text-slate-600 border-b border-slate-100">
-                               <tr className="border-b border-slate-50">
-                                  <td className="px-3 py-4">01/04/2026</td>
-                                  <td className="px-3 py-4 font-bold text-slate-900">***Opening Balance***</td>
-                                  <td className="px-3 py-4"></td>
-                                  <td className="px-3 py-4 text-right"></td>
-                                  <td className="px-3 py-4 text-right"></td>
-                                  <td className="px-3 py-4 text-right font-medium">{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <tbody className="text-slate-600 border-b border-slate-200">
+                               {/* Opening Balance Row */}
+                               <tr className="border-b border-slate-100">
+                                  <td className="px-4 py-6 font-medium">01/05/2026</td>
+                                  <td className="px-4 py-6 font-bold text-slate-900 italic">***Opening Balance***</td>
+                                  <td className="px-4 py-6"></td>
+                                  <td className="px-4 py-6 text-right font-bold text-slate-900">{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-6 text-right font-medium">0.00</td>
+                                  <td className="px-4 py-6 text-right font-black text-slate-900">{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                </tr>
-                                {statementData?.entries?.map((entry, idx) => (
-                                   <tr key={idx} className="border-b border-slate-50">
-                                      <td className="px-3 py-4">{new Date(entry.date).toLocaleDateString()}</td>
-                                      <td className="px-3 py-4 font-bold text-slate-900">{entry.voucherType} - {entry.voucherNumber}</td>
-                                      <td className="px-3 py-4 italic text-slate-400">{entry.narration}</td>
-                                      <td className="px-3 py-4 text-right">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-                                      <td className="px-3 py-4 text-right">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-                                      <td className="px-3 py-4 text-right font-medium">{entry.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                   </tr>
-                                ))}
+                               {/* Entries */}
+                               {statementData?.entries?.map((e, idx) => (
+                                 <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                   <td className="px-4 py-5 font-medium">{new Date(e.date).toLocaleDateString('en-GB')}</td>
+                                   <td className="px-4 py-5">
+                                      <p className="font-bold text-slate-800">{e.type}</p>
+                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">#{e.voucherNumber || 'INV-001'}</p>
+                                   </td>
+                                   <td className="px-4 py-5 max-w-xs truncate text-slate-400 font-medium italic">{e.description || 'Professional Services'}</td>
+                                   <td className="px-4 py-5 text-right font-bold text-slate-900">{e.debit ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
+                                   <td className="px-4 py-5 text-right font-bold text-emerald-600">{e.credit ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
+                                   <td className="px-4 py-5 text-right font-black text-slate-900">₹{e.runningBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                 </tr>
+                               ))}
                             </tbody>
-                            <tfoot>
-                               <tr className="font-black text-slate-900 text-[14px]">
-                                  <td colSpan={5} className="px-3 py-6 text-right uppercase tracking-tighter">Balance Due</td>
-                                  <td className="px-3 py-6 text-right">₹{parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                               </tr>
-                            </tfoot>
                          </table>
+
+                         <div className="flex justify-end pt-4">
+                            <div className="flex items-center gap-12 text-[14px]">
+                               <span className="font-bold text-slate-500 uppercase tracking-widest">Balance Due</span>
+                               <span className="font-black text-slate-900 text-[18px]">₹{parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            </div>
+                         </div>
                       </div>
                    </div>
                 </div>
               )}
+
 
               {activeTab === 'Overview' && (
                 <div className="p-8 flex gap-10 animate-fade-in group">
@@ -841,7 +889,7 @@ const CustomerDetailView = ({ companyId }) => {
                               ) : (
                                 <div className="flex flex-col items-center gap-1 opacity-40">
                                   <Camera size={28} strokeWidth={1.5}/>
-                                  <span className="text-[9px] font-black uppercase tracking-widest">Add Photo</span>
+                                  <span className="text-[9px] font-bold uppercase tracking-widest">Add Photo</span>
                                 </div>
                               )}
                               
@@ -850,13 +898,13 @@ const CustomerDetailView = ({ companyId }) => {
                                 className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 cursor-pointer"
                               >
                                  <ImageIcon size={18} className="text-white" />
-                                 <span className="text-[8px] font-black text-white uppercase tracking-tighter">Update</span>
+                                 <span className="text-[8px] font-bold text-white uppercase tracking-tighter">Update</span>
                               </div>
                            </div>
                         </div>
                         
                         <div className="space-y-1 pt-1.5 flex-1">
-                           <h3 className="text-[17px] font-black text-slate-900 leading-tight">{customer.salutation} {customer.firstName} {customer.lastName}</h3>
+                           <h3 className="text-[17px] font-bold text-slate-900 leading-tight">{customer.salutation} {customer.firstName} {customer.lastName}</h3>
                            <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{customer.email}</span></div>
                            <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{customer.mobile || 'No contact'}</span></div>
                            <button className="text-[12px] font-bold text-blue-600 hover:text-blue-800 underline decoration-blue-200 underline-offset-4 mt-2">Invite to Portal</button>
@@ -867,7 +915,7 @@ const CustomerDetailView = ({ companyId }) => {
                            
                            {isSettingsOpen && (
                               <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-2xl z-50 py-2 animate-fade-down overflow-hidden">
-                                 <div className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Record Actions</div>
+                                 <div className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Record Actions</div>
                                  <button onClick={() => { setIsSettingsOpen(false); navigate(`/customers/${customer.id}`); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-3"><Edit size={16} className="text-blue-500" /> Edit Profile</button>
                                  <button onClick={() => { setIsSettingsOpen(false); handleDeleteCustomer(); }} className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3"><Trash2 size={16} /> Delete Customer</button>
                               </div>
@@ -876,17 +924,17 @@ const CustomerDetailView = ({ companyId }) => {
                     </div>
 
                     <div className="space-y-6">
-                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center"><span>ADDRESS</span> <ChevronDown size={14}/></h4>
+                       <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center"><span>ADDRESS</span> <ChevronDown size={14}/></h4>
                         <div className="grid grid-cols-2 gap-10 pt-2">
                            <div className="space-y-4">
                               <div className="flex items-center justify-between">
-                                 <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
+                                 <p className="text-[13px] font-bold text-slate-800 uppercase tracking-tighter">Billing Address</p>
                               </div>
                               {renderAddress('billing')}
                            </div>
                            <div className="space-y-4">
                               <div className="flex items-center justify-between">
-                                 <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
+                                 <p className="text-[13px] font-bold text-slate-800 uppercase tracking-tighter">Shipping Address</p>
                               </div>
                               {renderAddress('shipping')}
                            </div>
@@ -894,17 +942,17 @@ const CustomerDetailView = ({ companyId }) => {
                     </div>
 
                     <div className="space-y-6">
-                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center"><span>OTHER DETAILS</span> <ChevronDown size={14}/></h4>
+                       <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center"><span>OTHER DETAILS</span> <ChevronDown size={14}/></h4>
                        <div className="space-y-6 pt-2">
                           <DetailRow label="Customer Type" value={customer.customerType || 'Business'} />
                           <DetailRow label="Default Currency" value={customer.currency || 'INR'} />
-                          <DetailRow label="Portal Status" value={<div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> <span className="text-red-500 font-black text-[13px]">Disabled</span></div>} />
+                          <DetailRow label="Portal Status" value={<div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> <span className="text-red-500 font-bold text-[13px]">Disabled</span></div>} />
                           <DetailRow label="Customer Language" value={customer.language || 'English'} />
                        </div>
                     </div>
 
                     <div className="space-y-6">
-                       <h4 className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center">
+                       <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center">
                           <span>CONTACT PERSONS</span>
                           <div className="flex items-center gap-3">
                              <button onClick={() => navigate(`/customers/${customer.id}`)} className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100 hover:scale-110 transition-transform"><Plus size={14}/></button>
@@ -919,19 +967,19 @@ const CustomerDetailView = ({ companyId }) => {
                         <div className="absolute top-[-30px] right-[-30px] w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover-banner:scale-150 transition-transform duration-1000"></div>
                         <div className="relative z-10 flex items-start justify-between gap-10">
                            <div className="space-y-3">
-                              <div className="flex items-center gap-2 text-[14px] font-black italic tracking-widest text-blue-100 uppercase"><Sparkles size={16} className="fill-blue-200/50" /> WHAT'S NEXT?</div>
-                              <p className="text-[16px] text-white/90 font-medium leading-relaxed">Create an <span className="font-black text-white underline decoration-white/40 underline-offset-4">invoice</span> or a <span className="font-black text-white underline decoration-white/40 underline-offset-4">quote</span> and send it to your customer.</p>
+                              <div className="flex items-center gap-2 text-[14px] font-bold italic tracking-widest text-blue-100 uppercase"><Sparkles size={16} className="fill-blue-200/50" /> WHAT'S NEXT?</div>
+                              <p className="text-[16px] text-white/90 font-medium leading-relaxed">Create an <span className="font-bold text-white underline decoration-white/40 underline-offset-4">invoice</span> or a <span className="font-bold text-white underline decoration-white/40 underline-offset-4">quote</span> and send it to your customer.</p>
                            </div>
                            <div className="flex flex-col gap-2 shrink-0">
-                              <button onClick={() => navigate('/sales/new-invoice')} className="px-6 py-2 bg-white text-blue-600 rounded-lg text-[13px] font-black hover:bg-blue-50 transition-all shadow-xl shadow-blue-900/10">New Invoice</button>
-                              <button onClick={() => navigate('/quotes/new')} className="px-6 py-2 bg-blue-500/30 text-white border border-white/20 rounded-lg text-[13px] font-black hover:bg-blue-500/50 transition-all">New Quote</button>
+                              <button onClick={() => navigate('/sales-invoices/new')} className="px-6 py-2 bg-white text-blue-600 rounded-lg text-[13px] font-bold hover:bg-blue-50 transition-all shadow-xl shadow-blue-900/10">New Invoice</button>
+                              <button onClick={() => navigate('/quotes/new')} className="px-6 py-2 bg-blue-500/30 text-white border border-white/20 rounded-lg text-[13px] font-bold hover:bg-blue-500/50 transition-all">New Quote</button>
                            </div>
                         </div>
                      </div>
 
                      <div className="space-y-2 group cursor-pointer max-w-fit" onClick={() => setIsEditingPaymentTerms(true)}>
-                        <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em]">Payment due period</p>
-                        {!isEditingPaymentTerms ? <p className="text-[18px] text-slate-900 font-black tracking-tight flex items-center gap-3">{customer.paymentTerms || 'Due on Receipt'} <Edit size={14} className="text-blue-400 transition-opacity"/></p> : (
+                        <p className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em]">Payment due period</p>
+                        {!isEditingPaymentTerms ? <p className="text-[18px] text-slate-900 font-bold tracking-tight flex items-center gap-3">{customer.paymentTerms || 'Due on Receipt'} <Edit size={14} className="text-blue-400 transition-opacity"/></p> : (
                           <div className="flex items-center gap-2 pt-1 animate-fade-in">
                             <input autoFocus type="text" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="px-4 py-2 border-2 border-blue-100 rounded-lg outline-none focus:border-blue-500 shadow-sm font-bold" />
                             <button onClick={() => handleUpdateField('paymentTerms', paymentTerms)} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
@@ -941,15 +989,15 @@ const CustomerDetailView = ({ companyId }) => {
                      </div>
 
                      <div className="space-y-6">
-                        <h4 className="text-[20px] font-black text-slate-900 tracking-tight flex items-center gap-3">Receivables <div className="h-0.5 flex-1 bg-slate-50"></div></h4>
+                        <h4 className="text-[20px] font-bold text-slate-900 tracking-tight flex items-center gap-3">Receivables <div className="h-0.5 flex-1 bg-slate-50"></div></h4>
                         <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100 bg-white">
                            <table className="w-full text-left">
-                              <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-black text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">CREDITS</th></tr></thead>
-                              <tbody><tr><td className="px-8 py-8 font-black text-slate-700">{customer.currency || 'INR'}</td><td className="px-8 py-8 text-right font-black text-[24px] text-slate-900">₹{parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">₹0.00</td></tr></tbody>
+                              <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-bold text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">CREDITS</th></tr></thead>
+                              <tbody><tr><td className="px-8 py-8 font-bold text-slate-700">{customer.currency || 'INR'}</td><td className="px-8 py-8 text-right font-bold text-[24px] text-slate-900">₹{parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">₹0.00</td></tr></tbody>
                            </table>
                         </div>
                         <div className="flex items-center gap-3">
-                           {!isEditingBalance ? <button onClick={() => setIsEditingBalance(true)} className="text-[14px] font-black text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2">Enter Opening Balance <Plus size={16} strokeWidth={3}/></button> : (
+                           {!isEditingBalance ? <button onClick={() => setIsEditingBalance(true)} className="text-[14px] font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-2">Enter Opening Balance <Plus size={16} strokeWidth={3}/></button> : (
                              <div className="flex items-center gap-2 animate-fade-in">
                                 <input autoFocus type="number" value={openingBalance} onChange={e => setOpeningBalance(e.target.value)} className="px-4 py-2 border-2 border-blue-100 rounded-lg outline-none w-48 font-bold" />
                                 <button onClick={() => handleUpdateField('openingBalance', openingBalance)} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
@@ -966,7 +1014,7 @@ const CustomerDetailView = ({ companyId }) => {
         ) : (
            <div className="flex-1 flex flex-col items-center justify-center p-20 animate-fade-in text-center opacity-40">
               <div className="w-32 h-32 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100 shadow-inner rotate-6"><Users size={64} strokeWidth={1}/></div>
-              <h3 className="text-[24px] font-black text-slate-900 mb-3 tracking-tighter">Select a Customer</h3>
+              <h3 className="text-[24px] font-bold text-slate-900 mb-3 tracking-tighter">Select a Customer</h3>
               <p className="text-[15px] text-slate-500 max-w-sm mx-auto font-medium">Click on a name in the list to reveal their hidden details.</p>
            </div>
          )}
@@ -979,7 +1027,7 @@ const CustomerDetailView = ({ companyId }) => {
           <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
             <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
               <div>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">{addressType} Address</h3>
+                <h3 className="text-2xl font-bold text-slate-900 tracking-tight uppercase italic">{addressType} Address</h3>
                 <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">FOR {customer.name}</p>
               </div>
               <button onClick={() => setIsAddressDrawerOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
@@ -987,38 +1035,38 @@ const CustomerDetailView = ({ companyId }) => {
             
             <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Attention</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Attention</label>
                   <input type="text" value={addressForm.attention} onChange={e => setAddressForm({...addressForm, attention: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
                </div>
 
                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Street Address 1</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Street Address 1</label>
                   <input type="text" value={addressForm.address1} onChange={e => setAddressForm({...addressForm, address1: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
                </div>
 
                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Street Address 2</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Street Address 2</label>
                   <input type="text" value={addressForm.address2} onChange={e => setAddressForm({...addressForm, address2: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
                </div>
 
                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">City</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">City</label>
                     <input type="text" value={addressForm.city} onChange={e => setAddressForm({...addressForm, city: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">State</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">State</label>
                     <input type="text" value={addressForm.state} onChange={e => setAddressForm({...addressForm, state: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
                   </div>
                </div>
 
                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Zip Code</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Zip Code</label>
                     <input type="text" value={addressForm.zip} onChange={e => setAddressForm({...addressForm, zip: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Phone</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Phone</label>
                     <input 
                         type="text" 
                         value={addressForm.phone} 
@@ -1035,13 +1083,13 @@ const CustomerDetailView = ({ companyId }) => {
             </div>
 
             <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
-               <button onClick={() => setIsAddressDrawerOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Discard</button>
+               <button onClick={() => setIsAddressDrawerOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-bold hover:bg-slate-100 transition-all uppercase tracking-widest">Discard</button>
                <button 
                   onClick={() => {
                     handleUpdateField(addressType === 'billing' ? 'billingAddress' : 'shippingAddress', JSON.stringify(addressForm));
                     setIsAddressDrawerOpen(false);
                   }}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[13px] font-black hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all uppercase tracking-widest"
+                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-[13px] font-bold hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all uppercase tracking-widest"
                >
                  Save Address
                </button>
@@ -1056,7 +1104,7 @@ const CustomerDetailView = ({ companyId }) => {
           <div className="relative w-[500px] bg-white h-full shadow-2xl animate-slide-left flex flex-col">
             <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
               <div>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase italic">Register New Customer</h3>
+                <h3 className="text-2xl font-bold text-slate-900 tracking-tight uppercase italic">Register New Customer</h3>
                 <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">QUICK ONBOARDING</p>
               </div>
               <button onClick={() => setIsQuickAddOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900 shadow-sm"><X size={24}/></button>
@@ -1065,19 +1113,19 @@ const CustomerDetailView = ({ companyId }) => {
             <div className="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
                <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-1 space-y-3">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Salutation</label>
+                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Salutation</label>
                      <select value={quickAddForm.salutation} onChange={e => setQuickAddForm({...quickAddForm, salutation: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all">
                         <option>Mr.</option><option>Ms.</option><option>Mrs.</option><option>Dr.</option>
                      </select>
                   </div>
                   <div className="col-span-3 space-y-3">
-                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Primary Name*</label>
+                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Primary Name*</label>
                      <input type="text" value={quickAddForm.name} onChange={e => setQuickAddForm({...quickAddForm, name: e.target.value})} className="w-full p-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="Enter full name or business name" />
                   </div>
                </div>
 
                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Customer Email</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Customer Email</label>
                   <div className="relative">
                      <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                      <input type="email" value={quickAddForm.email} onChange={e => setQuickAddForm({...quickAddForm, email: e.target.value})} className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-600 transition-all" placeholder="example@business.com" />
@@ -1085,7 +1133,7 @@ const CustomerDetailView = ({ companyId }) => {
                </div>
 
                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking_widest block">Mobile Number</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking_widest block">Mobile Number</label>
                   <div className="relative">
                      <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                      <input 
@@ -1109,11 +1157,11 @@ const CustomerDetailView = ({ companyId }) => {
             </div>
 
             <footer className="p-8 border-t border-slate-100 flex items-center gap-4 bg-slate-50/30">
-               <button onClick={() => setIsQuickAddOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-black hover:bg-slate-100 transition-all uppercase tracking-widest">Cancel</button>
+               <button onClick={() => setIsQuickAddOpen(false)} className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[13px] font-bold hover:bg-slate-100 transition-all uppercase tracking-widest">Cancel</button>
                <button 
                   onClick={handleQuickAdd}
                   disabled={loading || !quickAddForm.name}
-                  className="flex-1 py-4 bg-slate-900 text-white rounded-xl text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all uppercase tracking-widest disabled:opacity-50"
+                  className="flex-1 py-4 bg-slate-900 text-white rounded-xl text-[13px] font-bold hover:bg-black shadow-xl shadow-slate-200 transition-all uppercase tracking-widest disabled:opacity-50"
                >
                   {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : 'REGISTER CUSTOMER'}
                </button>
@@ -1164,8 +1212,8 @@ const CustomerDetailView = ({ companyId }) => {
 
 const DetailRow = ({ label, value }) => (
   <div className="flex justify-between items-start text-[14px] group/row">
-    <span className="text-slate-300 font-black tracking-widest text-[11px] uppercase w-1/3 pt-1">{label}</span>
-    <span className="text-slate-800 font-black w-2/3 text-left leading-tight group-hover/row:text-blue-600 transition-colors">{value}</span>
+    <span className="text-slate-300 font-bold tracking-widest text-[11px] uppercase w-1/3 pt-1">{label}</span>
+    <span className="text-slate-800 font-bold w-2/3 text-left leading-tight group-hover/row:text-blue-600 transition-colors">{value}</span>
   </div>
 );
 

@@ -15,7 +15,7 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-dig
 const DashboardView = ({ stats, vouchers: initialVouchers }) => {
   const navigate = useNavigate();
   const companyId = localStorage.getItem('companyId');
-  const [liveStats, setLiveStats] = useState(stats);
+  const [liveStats, setLiveStats] = useState(stats); 
   const [liveVouchers, setLiveVouchers] = useState(initialVouchers || []);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -99,9 +99,9 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
         <div>
            <div className="flex items-center gap-2 mb-2">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
-              <span className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">Operational Overview</span>
+              <span className="text-[11px] font-bold uppercase text-slate-400 tracking-[0.2em]">Operational Overview</span>
            </div>
-           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Enterprise Dashboard</h1>
+           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Enterprise Dashboard</h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="px-4 py-2.5 bg-white rounded-xl shadow-sm border border-slate-200/60 flex items-center gap-3">
@@ -109,7 +109,7 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
              <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">{new Date().toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' })}</span>
           </div>
           <button onClick={refresh} disabled={refreshing}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 disabled:opacity-50">
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10 disabled:opacity-50">
             <RefreshCcw size={14} strokeWidth={2.5} className={refreshing ? 'animate-spin' : ''} />
             {refreshing ? 'Syncing...' : 'Refresh'}
           </button>
@@ -160,9 +160,9 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
             <div className="px-8 py-7 border-b border-slate-100 flex items-center justify-between">
                <div className="flex items-center gap-3">
                   <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
-                  <h3 className="font-black text-slate-900 text-lg tracking-tight">Recent Financial Activity</h3>
+                  <h3 className="font-bold text-slate-900 text-lg tracking-tight">Recent Financial Activity</h3>
                </div>
-               <button onClick={() => navigate('/vouchers')} className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:tracking-[0.15em] transition-all flex items-center gap-1">
+               <button onClick={() => navigate('/vouchers')} className="text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:tracking-[0.15em] transition-all flex items-center gap-1">
                  View Ledger <ChevronRight size={12}/>
                </button>
             </div>
@@ -173,7 +173,7 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                 <AlertCircle size={32} strokeWidth={1}/>
              </div>
-             <p className="text-[11px] font-black uppercase tracking-[0.2em]">Data Synchronizing...</p>
+             <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Data Synchronizing...</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
@@ -183,7 +183,7 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
                  <div key={v.id} onClick={() => navigate('/vouchers')}
                    className="px-8 py-5 flex items-center justify-between hover:bg-slate-50/50 transition-all group cursor-pointer border-l-2 border-transparent hover:border-blue-500">
                     <div className="flex items-center gap-5">
-                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black
+                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-bold
                           ${v.voucherType === 'Receipt' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
                             v.voucherType === 'Payment' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 
                             v.voucherType === 'Contra' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
@@ -192,7 +192,7 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
                        <div>
                           <div className="font-bold text-slate-900 text-[14px] leading-tight mb-1">{formatDescription(v)}</div>
                           <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${VOUCHER_TYPE_COLOR[v.voucherType] || 'bg-slate-100 text-slate-600'}`}>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${VOUCHER_TYPE_COLOR[v.voucherType] || 'bg-slate-100 text-slate-600'}`}>
                               {v.voucherType}
                             </span>
                             <span className="text-[10px] font-bold text-slate-400 tracking-tight">#{v.voucherNumber} · {fmtDate(v.date)}</span>
@@ -200,8 +200,8 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
                        </div>
                     </div>
                     <div className="text-right">
-                       <div className="font-black text-slate-900 text-base">{fmt(amount)}</div>
-                       <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Currency (INR)</div>
+                       <div className="font-bold text-slate-900 text-base">{fmt(amount)}</div>
+                       <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Currency (INR)</div>
                     </div>
                  </div>
                );
@@ -216,7 +216,7 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
             
             {/* QUICK OPS */}
             <div className="bg-white p-7 rounded-2xl border border-slate-200/60 shadow-sm">
-               <h4 className="text-[11px] font-black uppercase text-slate-400 tracking-widest mb-6">Quick Operations</h4>
+               <h4 className="text-[11px] font-bold uppercase text-slate-400 tracking-widest mb-6">Quick Operations</h4>
                <div className="grid grid-cols-2 gap-4">
                   {[
                     { label: 'Sales Order', icon: <ShoppingBag size={20} strokeWidth={1.5}/>, path: '/sales-orders', color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -227,7 +227,7 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
                     <button key={a.label} onClick={() => navigate(a.path)}
                       className="flex flex-col items-center justify-center p-5 rounded-xl border border-slate-100 hover:border-blue-500 hover:bg-blue-50/10 transition-all group scale-100 hover:scale-[1.02]">
                        <div className={`w-12 h-12 ${a.bg} ${a.color} rounded-2xl flex items-center justify-center mb-3 group-hover:shadow-md transition-shadow`}>{a.icon}</div>
-                       <span className="text-[11px] font-black text-slate-600 tracking-tight">{a.label}</span>
+                       <span className="text-[11px] font-bold text-slate-600 tracking-tight">{a.label}</span>
                     </button>
                   ))}
                </div>
@@ -239,7 +239,7 @@ const DashboardView = ({ stats, vouchers: initialVouchers }) => {
                   <LayoutDashboard size={120} strokeWidth={1} />
                </div>
                <div className="relative z-10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-6">Accounting Status</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-6">Accounting Status</p>
                   <div className="space-y-4">
                     <StatRow label="Ledger Entries" value={liveStats?.ledgerCount || 0} />
                     <StatRow label="Voucher Records" value={liveStats?.voucherCount || 0} />
@@ -266,15 +266,15 @@ const MetricCard = ({ label, value, sub, positive, icon, color }) => (
              color === 'rose' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>
            {icon}
         </div>
-        <div className={`px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1
+        <div className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-widest flex items-center gap-1
            ${positive ? 'text-emerald-600' : 'text-rose-600'}`}>
            {positive ? <ArrowUpRight size={10} strokeWidth={3}/> : <ArrowDownRight size={10} strokeWidth={3}/>}
            {sub}
         </div>
      </div>
      <div>
-        <p className="text-[11px] font-black uppercase text-slate-400 tracking-[0.15em] mb-1">{label}</p>
-        <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{value}</h3>
+        <p className="text-[11px] font-bold uppercase text-slate-400 tracking-[0.15em] mb-1">{label}</p>
+        <h3 className="text-3xl font-bold text-slate-900 tracking-tighter">{value}</h3>
      </div>
      <div className="absolute bottom-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
         {icon}
@@ -284,8 +284,8 @@ const MetricCard = ({ label, value, sub, positive, icon, color }) => (
 
 const StatRow = ({ label, value, hl }) => (
   <div className="flex justify-between items-center">
-    <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
-    <span className={`text-[14px] font-black ${hl || 'text-white'}`}>{value}</span>
+    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{label}</span>
+    <span className={`text-[14px] font-bold ${hl || 'text-white'}`}>{value}</span>
   </div>
 );
 

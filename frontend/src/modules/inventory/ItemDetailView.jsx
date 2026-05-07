@@ -104,7 +104,7 @@ const HistoryTab = ({ itemId }) => {
 
   return (
     <div className="w-full animate-fade-in">
-      <div className="flex text-[10px] font-black text-slate-400 uppercase tracking-widest px-8 py-4 border-b border-slate-100 bg-slate-50/30">
+      <div className="flex text-[10px] font-bold text-slate-400 uppercase tracking-widest px-8 py-4 border-b border-slate-100 bg-slate-50/30">
         <div className="w-48">Timestamp</div>
         <div className="flex-1">Activity Log</div>
       </div>
@@ -130,7 +130,7 @@ const HistoryTab = ({ itemId }) => {
               <div className="flex-1 flex items-center gap-4">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
-                    <span className="text-[13px] text-slate-900 font-black tracking-tight">
+                    <span className="text-[13px] text-slate-900 font-bold tracking-tight">
                       {log?.User?.name || 'System'}
                     </span>
                   </div>
@@ -139,7 +139,7 @@ const HistoryTab = ({ itemId }) => {
                 {/* Status Indicator */}
                 <div className="ml-auto flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                   <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">Success</span>
+                   <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">Success</span>
                 </div>
               </div>
             </div>
@@ -167,7 +167,7 @@ const TransactionsTab = () => {
       {/* Premium Filter Bar */}
       <div className="flex items-center gap-4 mb-8">
         <div className="relative group">
-          <label className="absolute -top-2.5 left-4 px-2 bg-white text-[10px] font-black text-slate-400 uppercase tracking-widest z-10 transition-colors group-focus-within:text-blue-600">
+          <label className="absolute -top-2.5 left-4 px-2 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-widest z-10 transition-colors group-focus-within:text-blue-600">
             Filter By
           </label>
           <div className="relative">
@@ -185,7 +185,7 @@ const TransactionsTab = () => {
         </div>
 
         <div className="relative group">
-          <label className="absolute -top-2.5 left-4 px-2 bg-white text-[10px] font-black text-slate-400 uppercase tracking-widest z-10 transition-colors group-focus-within:text-blue-600">
+          <label className="absolute -top-2.5 left-4 px-2 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-widest z-10 transition-colors group-focus-within:text-blue-600">
             Status
           </label>
           <div className="relative">
@@ -206,11 +206,11 @@ const TransactionsTab = () => {
       {/* Empty State / Table Placeholder */}
       <div className="flex-1 bg-white rounded-[32px] border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden flex flex-col">
         <div className="flex bg-slate-50/50 px-8 py-4 border-b border-slate-100">
-          <div className="w-[15%] text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</div>
-          <div className="w-[20%] text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaction #</div>
-          <div className="flex-1 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Reference</div>
-          <div className="w-[15%] text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</div>
-          <div className="w-[15%] text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</div>
+          <div className="w-[15%] text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</div>
+          <div className="w-[20%] text-[10px] font-bold text-slate-400 uppercase tracking-widest">Transaction #</div>
+          <div className="flex-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Reference</div>
+          <div className="w-[15%] text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Status</div>
+          <div className="w-[15%] text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Amount</div>
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center py-20 gap-6">
@@ -221,12 +221,12 @@ const TransactionsTab = () => {
             </div>
           </div>
           <div className="text-center max-w-[280px]">
-             <h4 className="text-slate-900 font-black text-lg tracking-tight mb-2">No {transactionType} Found</h4>
+             <h4 className="text-slate-900 font-bold text-lg tracking-tight mb-2">No {transactionType} Found</h4>
              <p className="text-slate-400 text-[13px] leading-relaxed font-medium">
                There are no {transactionType.toLowerCase()} associated with this item for the current status.
              </p>
           </div>
-          <button className="mt-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 font-black text-[11px] uppercase tracking-[0.15em] rounded-2xl hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+          <button className="mt-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 font-bold text-[11px] uppercase tracking-[0.15em] rounded-2xl hover:bg-slate-50 transition-all shadow-sm active:scale-95">
              Refresh Data
           </button>
         </div>
@@ -243,7 +243,7 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
      <div className="h-full flex items-center justify-center bg-slate-50/30">
         <div className="flex flex-col items-center gap-4 text-slate-300">
            <Box size={48} strokeWidth={1} className="animate-pulse" />
-           <span className="text-[12px] font-black uppercase tracking-widest italic">Select an item to view details</span>
+           <span className="text-[12px] font-bold uppercase tracking-widest italic">Select an item to view details</span>
         </div>
      </div>
   );
@@ -299,7 +299,7 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`text-[12px] font-black uppercase tracking-widest h-14 relative transition-all ${
+            className={`text-[12px] font-bold uppercase tracking-widest h-14 relative transition-all ${
               activeTab === tab ? 'text-[#1e61f0]' : 'text-slate-400 hover:text-slate-600'
             }`}
           >

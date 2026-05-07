@@ -56,6 +56,14 @@ module.exports = (sequelize, DataTypes) => {
     endDate: {
       type: DataTypes.DATEONLY,
       allowNull: true
+    },
+    CompanyId: {
+      type: DataTypes.UUID,
+      allowNull: false
+    },
+    customerLedgerId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
 

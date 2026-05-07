@@ -64,7 +64,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false
     },
-    VoucherId: DataTypes.UUID // Linked after confirmation
+    VoucherId: DataTypes.UUID, // Linked after confirmation
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    }
   });
 
   SalesInvoice.associate = (models) => {

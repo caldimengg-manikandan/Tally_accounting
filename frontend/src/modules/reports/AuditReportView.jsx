@@ -58,8 +58,8 @@ export default function AuditReportView() {
               <ShieldCheck size={24} />
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Security & Oversight</span>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter">System Audit Trails</h1>
+              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Security & Oversight</span>
+              <h1 className="text-4xl font-bold text-slate-900 tracking-tighter">System Audit Trails</h1>
             </div>
           </div>
           <p className="text-slate-400 font-medium max-w-md">
@@ -79,7 +79,7 @@ export default function AuditReportView() {
               className="pl-12 pr-6 py-4 bg-white border border-slate-100 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-blue-50 transition-all w-80 shadow-sm"
             />
           </div>
-          <button className="flex items-center gap-2 px-8 py-4 bg-white border border-slate-100 rounded-2xl font-black text-[11px] uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
+          <button className="flex items-center gap-2 px-8 py-4 bg-white border border-slate-100 rounded-2xl font-bold text-[11px] uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
             <Filter size={16} /> Filter Date
           </button>
         </div>
@@ -90,41 +90,41 @@ export default function AuditReportView() {
          <div className="p-8 rounded-[2.5rem] bg-slate-900 text-white shadow-2xl relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 w-32 h-32 bg-slate-800 rounded-full blur-3xl opacity-50 transition-transform group-hover:scale-150"></div>
             <Clock className="text-slate-500 mb-4" size={24} />
-            <div className="text-4xl font-black mb-1">{logs.length}</div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Activities Recorded</div>
+            <div className="text-4xl font-bold mb-1">{logs.length}</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Total Activities Recorded</div>
          </div>
          <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm">
             <Activity className="text-blue-500 mb-4" size={24} />
-            <div className="text-4xl font-black text-slate-900 mb-1">
+            <div className="text-4xl font-bold text-slate-900 mb-1">
                {logs.filter(l => l.action.includes('CREATE')).length}
             </div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Creations This Session</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Creations This Session</div>
          </div>
          <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm">
             <ShieldAlert className="text-rose-500 mb-4" size={24} />
-            <div className="text-4xl font-black text-slate-900 mb-1">
+            <div className="text-4xl font-bold text-slate-900 mb-1">
                {logs.filter(l => l.action.includes('DELETE')).length}
             </div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Critical Deletions</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Critical Deletions</div>
          </div>
          <div className="p-8 rounded-[2.5rem] bg-emerald-50 border border-emerald-100 shadow-sm">
             <Database className="text-emerald-500 mb-4" size={24} />
-            <div className="text-4xl font-black text-emerald-900 mb-1">100%</div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 text-center">Data Integrity Score</div>
+            <div className="text-4xl font-bold text-emerald-900 mb-1">100%</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 text-center">Data Integrity Score</div>
          </div>
       </div>
 
       {/* ── TIMELINE ───────────────────────────────────────────── */}
       <div className="bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden">
         <div className="h-16 px-10 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-           <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Master Audit History</span>
-           <span className="px-3 py-1 bg-slate-200/50 rounded-full text-[9px] font-black text-slate-500 uppercase">Immutable Record</span>
+           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Master Audit History</span>
+           <span className="px-3 py-1 bg-slate-200/50 rounded-full text-[9px] font-bold text-slate-500 uppercase">Immutable Record</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-50 bg-[#fafbfc]">
+              <tr className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 border-b border-slate-50 bg-[#fafbfc]">
                 <th className="px-10 py-6">Timestamp</th>
                 <th className="px-10 py-6">Operator (User)</th>
                 <th className="px-10 py-6">Action Type</th>
@@ -151,13 +151,13 @@ export default function AuditReportView() {
                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
                             <UserIcon size={14} />
                          </div>
-                         <span className="text-[13px] font-black text-slate-700">
+                         <span className="text-[13px] font-bold text-slate-700">
                             {log.User?.name || 'Administrator'}
                          </span>
                       </div>
                    </td>
                    <td className="px-10 py-6">
-                      <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest
+                      <span className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest
                         ${log.action.includes('CREATE') ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
                           log.action.includes('DELETE') ? 'bg-rose-50 text-rose-600 border border-rose-100' : 
                           'bg-blue-50 text-blue-600 border border-blue-100'}`}>
@@ -176,7 +176,7 @@ export default function AuditReportView() {
                       </div>
                    </td>
                    <td className="px-10 py-6 text-right">
-                      <span className="text-[11px] font-black bg-slate-100 px-3 py-1.5 rounded-lg text-slate-500 font-mono">
+                      <span className="text-[11px] font-bold bg-slate-100 px-3 py-1.5 rounded-lg text-slate-500 font-mono">
                          {log.recordId?.substring(0, 8) || 'GEN-01'}
                       </span>
                    </td>

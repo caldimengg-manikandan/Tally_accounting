@@ -90,9 +90,9 @@ export default function GSTReturnsView() {
             <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white">
               <FileText size={18} />
             </div>
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">GST Compliance</span>
+            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">GST Compliance</span>
           </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">GST Returns (GSTR-3B)</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tighter">GST Returns (GSTR-3B)</h1>
         </div>
         <div className="flex gap-3">
           <input type="month" value={period} onChange={e => setPeriod(e.target.value)}
@@ -100,7 +100,7 @@ export default function GSTReturnsView() {
           <button onClick={fetchData} className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm">
             <RefreshCcw size={16} />
           </button>
-          <button onClick={exportCSV} disabled={!data} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 disabled:opacity-40">
+          <button onClick={exportCSV} disabled={!data} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 disabled:opacity-40">
             <Download size={16} /> Export
           </button>
         </div>
@@ -119,18 +119,18 @@ export default function GSTReturnsView() {
           {/* Summary Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="p-7 rounded-[2rem] bg-blue-50 border border-blue-100 shadow-sm">
-              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Total Taxable Sales</p>
-              <h3 className="text-2xl font-black text-blue-700 tracking-tighter">{fmt(data.totalSales)}</h3>
+              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Total Taxable Sales</p>
+              <h3 className="text-2xl font-bold text-blue-700 tracking-tighter">{fmt(data.totalSales)}</h3>
             </div>
             <div className="p-7 rounded-[2rem] bg-orange-50 border border-orange-100 shadow-sm">
-              <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Total Taxable Purchases</p>
-              <h3 className="text-2xl font-black text-orange-700 tracking-tighter">{fmt(data.totalPurchases)}</h3>
+              <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1">Total Taxable Purchases</p>
+              <h3 className="text-2xl font-bold text-orange-700 tracking-tighter">{fmt(data.totalPurchases)}</h3>
             </div>
             <div className={`p-7 rounded-[2rem] border shadow-sm ${data.netTaxPayable >= 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
-              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${data.netTaxPayable >= 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${data.netTaxPayable >= 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                 Net Tax {data.netTaxPayable >= 0 ? 'Payable' : 'Refundable'}
               </p>
-              <h3 className={`text-2xl font-black tracking-tighter ${data.netTaxPayable >= 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+              <h3 className={`text-2xl font-bold tracking-tighter ${data.netTaxPayable >= 0 ? 'text-red-700' : 'text-emerald-700'}`}>
                 {fmt(Math.abs(data.netTaxPayable))}
               </h3>
             </div>
@@ -139,10 +139,10 @@ export default function GSTReturnsView() {
           {/* GST Breakdown Table */}
           <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
             <div className="h-14 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">GSTR-3B Summary</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GSTR-3B Summary</span>
             </div>
             <table className="w-full text-left">
-              <thead className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
+              <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
                 <tr>
                   <th className="px-8 py-5">Description</th>
                   <th className="px-8 py-5 text-right">CGST (₹)</th>
@@ -153,25 +153,25 @@ export default function GSTReturnsView() {
               </thead>
               <tbody className="divide-y divide-slate-50 text-[13px] font-semibold">
                 <tr className="hover:bg-blue-50/20">
-                  <td className="px-8 py-5 font-black text-slate-900">3.1 — Output Tax Liability (Sales)</td>
-                  <td className="px-8 py-5 text-right text-blue-600 font-black">{fmt(data.outputTax.cgst)}</td>
-                  <td className="px-8 py-5 text-right text-blue-600 font-black">{fmt(data.outputTax.sgst)}</td>
-                  <td className="px-8 py-5 text-right text-blue-600 font-black">{fmt(data.outputTax.igst)}</td>
-                  <td className="px-8 py-5 text-right font-black text-slate-900">{fmt(outputTotal)}</td>
+                  <td className="px-8 py-5 font-bold text-slate-900">3.1 — Output Tax Liability (Sales)</td>
+                  <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(data.outputTax.cgst)}</td>
+                  <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(data.outputTax.sgst)}</td>
+                  <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(data.outputTax.igst)}</td>
+                  <td className="px-8 py-5 text-right font-bold text-slate-900">{fmt(outputTotal)}</td>
                 </tr>
                 <tr className="hover:bg-emerald-50/20">
-                  <td className="px-8 py-5 font-black text-slate-900">4 — Eligible ITC (Purchases)</td>
-                  <td className="px-8 py-5 text-right text-emerald-600 font-black">{fmt(data.inputTax.cgst)}</td>
-                  <td className="px-8 py-5 text-right text-emerald-600 font-black">{fmt(data.inputTax.sgst)}</td>
-                  <td className="px-8 py-5 text-right text-emerald-600 font-black">{fmt(data.inputTax.igst)}</td>
-                  <td className="px-8 py-5 text-right font-black text-slate-900">{fmt(inputTotal)}</td>
+                  <td className="px-8 py-5 font-bold text-slate-900">4 — Eligible ITC (Purchases)</td>
+                  <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(data.inputTax.cgst)}</td>
+                  <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(data.inputTax.sgst)}</td>
+                  <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(data.inputTax.igst)}</td>
+                  <td className="px-8 py-5 text-right font-bold text-slate-900">{fmt(inputTotal)}</td>
                 </tr>
                 <tr className="bg-slate-900 text-white">
-                  <td className="px-8 py-6 font-black text-sm uppercase tracking-widest">Net Tax Payable</td>
-                  <td className="px-8 py-6 text-right font-black">{fmt(data.outputTax.cgst - data.inputTax.cgst)}</td>
-                  <td className="px-8 py-6 text-right font-black">{fmt(data.outputTax.sgst - data.inputTax.sgst)}</td>
-                  <td className="px-8 py-6 text-right font-black">{fmt(data.outputTax.igst - data.inputTax.igst)}</td>
-                  <td className="px-8 py-6 text-right font-black text-lg">{fmt(data.netTaxPayable)}</td>
+                  <td className="px-8 py-6 font-bold text-sm uppercase tracking-widest">Net Tax Payable</td>
+                  <td className="px-8 py-6 text-right font-bold">{fmt(data.outputTax.cgst - data.inputTax.cgst)}</td>
+                  <td className="px-8 py-6 text-right font-bold">{fmt(data.outputTax.sgst - data.inputTax.sgst)}</td>
+                  <td className="px-8 py-6 text-right font-bold">{fmt(data.outputTax.igst - data.inputTax.igst)}</td>
+                  <td className="px-8 py-6 text-right font-bold text-lg">{fmt(data.netTaxPayable)}</td>
                 </tr>
               </tbody>
             </table>
@@ -181,10 +181,10 @@ export default function GSTReturnsView() {
           {data.gstLedgers.length > 0 && (
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
               <div className="h-14 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">GST Ledger Details</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GST Ledger Details</span>
               </div>
               <table className="w-full text-left">
-                <thead className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
+                <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
                   <tr>
                     <th className="px-8 py-4">Ledger</th>
                     <th className="px-8 py-4">Group</th>
@@ -195,10 +195,10 @@ export default function GSTReturnsView() {
                 <tbody className="divide-y divide-slate-50 text-[13px] font-semibold text-slate-700">
                   {data.gstLedgers.map(l => (
                     <tr key={l.ledgerId} className="hover:bg-emerald-50/20">
-                      <td className="px-8 py-4 font-black text-slate-900">{l.ledgerName}</td>
+                      <td className="px-8 py-4 font-bold text-slate-900">{l.ledgerName}</td>
                       <td className="px-8 py-4 text-slate-500">{l.group}</td>
-                      <td className="px-8 py-4 text-right text-blue-600 font-black">{l.totalDebit > 0 ? fmt(l.totalDebit) : '—'}</td>
-                      <td className="px-8 py-4 text-right text-red-500 font-black">{l.totalCredit > 0 ? fmt(l.totalCredit) : '—'}</td>
+                      <td className="px-8 py-4 text-right text-blue-600 font-bold">{l.totalDebit > 0 ? fmt(l.totalDebit) : '—'}</td>
+                      <td className="px-8 py-4 text-right text-red-500 font-bold">{l.totalCredit > 0 ? fmt(l.totalCredit) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -14,7 +14,7 @@ export const SidebarItem = ({ icon: Icon, label, active, onClick, badge }) => (
       <Icon size={18} strokeWidth={active ? 2.5 : 2} />
     </div>
     <span className={`text-[13px] tracking-tight ${active ? 'font-bold' : 'font-semibold'}`}>{label}</span>
-    {badge && <span className="ml-auto text-[10px] font-black bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center">{badge}</span>}
+    {badge && <span className="ml-auto text-[10px] font-bold bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center">{badge}</span>}
   </button>
 );
 
@@ -33,7 +33,7 @@ export const StatCard = ({ title, amount, trend, trendType, icon: CardIcon }) =>
         </div>
       </div>
       <p className="text-ink-400 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
-      <p className="text-2xl font-black text-ink-900 tracking-tight">₹{amount}</p>
+      <p className="text-2xl font-bold text-ink-900 tracking-tight">₹{amount}</p>
     </div>
   </div>
 );

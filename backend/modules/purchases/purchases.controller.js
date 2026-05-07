@@ -53,7 +53,7 @@ exports.getOrders = async (req, res) => {
 
 exports.createOrder = async (req, res) => {
   try {
-    const { orderNumber, date, totalAmount, status, notes, supplierLedgerId, companyId } = req.body;
+    const { orderNumber, date, totalAmount, status, notes, supplierLedgerId, companyId, projectId } = req.body;
     const order = await PurchaseOrder.create({
       orderNumber,
       date,
@@ -61,7 +61,8 @@ exports.createOrder = async (req, res) => {
       status,
       notes,
       LedgerId: supplierLedgerId,
-      CompanyId: companyId
+      CompanyId: companyId,
+      ProjectId: projectId
     });
     res.status(201).json(order);
   } catch (err) {
@@ -135,7 +136,7 @@ exports.getBills = async (req, res) => {
 
 exports.createBill = async (req, res) => {
     try {
-        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items } = req.body;
+        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId } = req.body;
         
         if (!supplierLedgerId) {
             return res.status(400).json({ error: 'Supplier Ledger is required' });
@@ -206,7 +207,8 @@ exports.createBill = async (req, res) => {
                 reference: reference || ''
             }),
             entries: journalEntries,
-            userId: req.user?.id
+            userId: req.user?.id,
+            projectId // Added this
         });
 
         // Override with user-provided bill number

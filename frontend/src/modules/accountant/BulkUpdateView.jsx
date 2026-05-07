@@ -159,7 +159,7 @@ const BulkUpdateView = () => {
         </div>
         
         <div className="space-y-3 max-w-2xl">
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Bulk Update Accounts in Transactions</h1>
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Bulk Update Accounts in Transactions</h1>
           <p className="text-[14px] font-medium text-slate-400 leading-relaxed">
             Filter transactions (Invoices, Credit Notes, Purchase Orders, Expenses, Bills, Vendor Credits) and bulk-update its accounts with a new account
           </p>
@@ -432,7 +432,7 @@ const BulkUpdateView = () => {
                             <td className="px-6 py-4">
                                <div className="flex flex-col">
                                   <span className="text-[14px] font-bold text-slate-700">{t.voucherNumber}</span>
-                                  <span className="text-[11px] text-slate-400 uppercase font-black">{t.voucherType}</span>
+                                  <span className="text-[11px] text-slate-400 uppercase font-bold">{t.voucherType}</span>
                                </div>
                             </td>
                             <td className="px-6 py-4 text-[13px] font-medium text-slate-600">
@@ -443,7 +443,7 @@ const BulkUpdateView = () => {
                                   {t.Transactions?.[0]?.Ledger?.name || 'Multiple Accounts'}
                                </span>
                             </td>
-                            <td className="px-6 py-4 text-right font-black text-slate-900 text-[14px]">
+                            <td className="px-6 py-4 text-right font-bold text-slate-900 text-[14px]">
                                ₹{(t.Transactions?.reduce((acc, tr) => acc + (parseFloat(tr.debit) || 0), 0) || 0).toLocaleString('en-IN')}
                             </td>
                          </tr>

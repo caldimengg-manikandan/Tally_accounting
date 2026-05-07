@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Plus, Trash2, Save, Printer, ArrowLeft, 
   Search, Info, Check, Loader2, X, Settings, ChevronDown, File, AlertTriangle,
-  ShieldCheck, FileText, Edit2, Package, Mail, Phone, ChevronRight
+  ShieldCheck, FileText, Edit2, Package, Mail, Phone, ChevronRight, Send
 } from 'lucide-react';
 import { useRef } from 'react';
 
@@ -26,6 +26,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder }) => {
     }, []);
 
     const filtered = (items || []).filter(it => {
+        if (!it) return false;
         const n = it.name || '';
         const d = it.salesDescription || '';
         const s = search.toLowerCase();
@@ -254,10 +255,12 @@ export default function ProfessionalInvoiceView() {
   // ─── State ────────────────────────────────────────────────────────
   const [customers, setCustomers] = useState([]);
   const [items,     setItems]     = useState([]);
+  const [projects,  setProjects]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   
   // Header Info
   const [customerId, setCustomerId] = useState('');
+  const [projectId,  setProjectId]  = useState('');
   const [invoiceNo,  setInvoiceNo]  = useState('INV-000001');
   const [orderNo,    setOrderNo]    = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -273,6 +276,10 @@ export default function ProfessionalInvoiceView() {
   const [showManageSalespersons, setShowManageSalespersons] = useState(false);
   const salespersonDropdownRef = React.useRef(null);
   const [subject,     setSubject]     = useState('');
+
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const projectDropdownRef = React.useRef(null);
+  const [projectSearch, setProjectSearch] = useState('');
 
   // Line Items
   const [lineItems, setLineItems] = useState([
@@ -301,9 +308,10 @@ export default function ProfessionalInvoiceView() {
     if (!companyId) return;
     const loadData = async () => {
       try {
-        const [lRes, iRes] = await Promise.all([
+        const [lRes, iRes, pRes] = await Promise.all([
           ledgerAPI.getByCompany(companyId),
-          inventoryAPI.getByCompany(companyId)
+          inventoryAPI.getByCompany(companyId),
+          projectAPI.getByCompany(companyId)
         ]);
         const allLedgers = Array.isArray(lRes.data) ? lRes.data : [];
         const filteredCustomers = allLedgers.filter(l => {
@@ -312,6 +320,7 @@ export default function ProfessionalInvoiceView() {
         });
         setCustomers(filteredCustomers);
         setItems(Array.isArray(iRes.data) ? iRes.data : []);
+        setProjects(Array.isArray(pRes.data) ? pRes.data : []);
 
         // HANDLE CONVERSION FROM CHALLAN, QUOTE, OR ORDER
         if (!id && location.state) {
@@ -389,6 +398,9 @@ export default function ProfessionalInvoiceView() {
       }
       if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
         setShowCustomerDropdown(false);
+      }
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(event.target)) {
+        setShowProjectDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -475,7 +487,8 @@ export default function ProfessionalInvoiceView() {
         subTotal, discountAmount, gstAmount, adjustment, totalAmount: total,
         customerNotes: notes, termsConditions: termsText,
         status, // 'Draft' or 'Confirmed'
-        items: lineItems.map(l => ({ itemId: l.itemId, quantity: l.quantity, rate: l.rate }))
+        items: lineItems.map(l => ({ itemId: l.itemId, quantity: l.quantity, rate: l.rate })),
+        projectId: projectId || null
       };
       
       if (id) {
@@ -501,25 +514,28 @@ export default function ProfessionalInvoiceView() {
   if (loading) return <div className="p-20 text-center font-bold text-slate-400">Loading Invoice Interface...</div>;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-12 flex flex-col items-center font-sans">
-      <div className="w-full max-w-5xl bg-white rounded-sm shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-200 overflow-hidden animate-fade-in mb-20">
-        <header className="px-10 py-6 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => window.history.length > 2 ? navigate(-1) : navigate('/sales-invoices')}
-              className="p-2 -ml-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div className="w-10 h-10 bg-slate-900 rounded flex items-center justify-center text-white">
-              <FileText size={18} />
-            </div>
-            <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase">{id ? 'Edit Invoice' : 'New Invoice'}</h2>
+    <div className="flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
+      {/* Sticky Header */}
+      <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20 no-print">
+        <div className="flex items-center gap-6">
+          <button 
+            onClick={() => window.history.length > 2 ? navigate(-1) : navigate('/sales-invoices')}
+            className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
+          >
+            <ArrowLeft size={22} />
+          </button>
+          <div>
+            <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">{id ? 'Edit Invoice' : 'Create Invoice'}</h2>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Invoices</div>
           </div>
-          <button onClick={() => navigate('/sales-invoices')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
-        </header>
+        </div>
+        <button onClick={() => navigate('/sales-invoices')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
+      </header>
 
-        <div className="p-12 space-y-12">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="max-w-[1000px] mx-auto py-10 px-6">
+          <div className="bg-white rounded border border-slate-200 shadow-sm p-12 space-y-12 animate-fade-in">
           
           {/* Top Section: Grid Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-8">
@@ -544,48 +560,43 @@ export default function ProfessionalInvoiceView() {
 
                   {showCustomerDropdown && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded z-50 overflow-hidden">
-                      <div className="max-h-60 overflow-y-auto no-scrollbar">
-                        {filteredCustomers.length === 0 ? (
-                          <div className="p-4 text-center">
-                            <p className="text-[12px] text-slate-400 mb-2">No customers found</p>
-                            <button 
-                              onClick={() => {
-                                localStorage.setItem('invoice_draft', JSON.stringify({
-                                  customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, taxType, gstPercent, notes, termsText
-                                }));
-                                navigate('/customers/new', { state: { returnTo: location.pathname } });
-                              }} 
-                              className="text-[11px] text-blue-600 font-bold uppercase tracking-widest hover:underline"
-                            >+ Add New</button>
-                          </div>
-                        ) : (
-                          <div className="py-1">
-                            {filteredCustomers.map(c => (
-                              <div 
-                                key={c.id}
-                                onClick={() => { 
-                                  setCustomerId(c.id); 
-                                  setCustomerSearch(c.name); 
-                                  setShowCustomerDropdown(false); 
-                                }}
-                                className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] font-medium border-b border-slate-50 last:border-0 ${customerId === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
-                              >
-                                {c.name}
-                              </div>
-                            ))}
-                            <div 
-                              onClick={() => {
-                                localStorage.setItem('invoice_draft', JSON.stringify({
-                                  customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, taxType, gstPercent, notes, termsText
-                                }));
-                                navigate('/customers/new', { state: { returnTo: location.pathname } });
-                              }}
-                              className="px-4 py-2.5 bg-blue-50/50 hover:bg-blue-600 text-blue-600 hover:text-white font-bold text-[12px] uppercase tracking-widest cursor-pointer transition-colors"
-                            >
-                              + Add New Customer
+                      <div className="flex flex-col">
+                        <div className="max-h-60 overflow-y-auto no-scrollbar">
+                          {filteredCustomers.length === 0 ? (
+                            <div className="p-4 text-center">
+                              <p className="text-[12px] text-slate-400 mb-2">No customers found</p>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="py-1">
+                              {filteredCustomers.map(c => (
+                                <div 
+                                  key={c.id}
+                                  onClick={() => { 
+                                    setCustomerId(c.id); 
+                                    setCustomerSearch(c.name); 
+                                    setShowCustomerDropdown(false); 
+                                  }}
+                                  className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] font-medium border-b border-slate-50 last:border-0 ${customerId === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
+                                >
+                                  {c.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
+                          <button 
+                            onClick={() => {
+                              localStorage.setItem('invoice_draft', JSON.stringify({
+                                customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, taxType, gstPercent, notes, termsText
+                              }));
+                              navigate('/customers/new', { state: { returnTo: location.pathname } });
+                            }}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-bold text-[12px] hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest"
+                          >
+                            <Plus size={14} strokeWidth={3} /> New Customer
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -621,6 +632,64 @@ export default function ProfessionalInvoiceView() {
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Invoice Date*</label>
                 <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" />
+              </div>
+
+              {/* Project Link */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Project</label>
+                <div className="relative" ref={projectDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowProjectDropdown(prev => !prev); setProjectSearch(''); }}
+                    className={`w-full h-11 px-4 pr-9 border rounded text-[13px] font-bold text-left shadow-sm flex items-center justify-between transition-colors
+                      ${showProjectDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 bg-slate-50'}
+                      ${projectId ? 'text-slate-800' : 'text-slate-400 font-medium'}`}
+                  >
+                    <span>{projects.find(p => p.id === projectId)?.name || 'Associate Project'}</span>
+                    <ChevronDown size={14} className={`absolute right-3 text-slate-400 transition-transform ${showProjectDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showProjectDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in">
+                      <div className="p-2 border-b border-slate-100">
+                        <div className="relative">
+                          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            autoFocus
+                            value={projectSearch}
+                            onChange={e => setProjectSearch(e.target.value)}
+                            placeholder="Search projects..."
+                            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto no-scrollbar">
+                        <div 
+                          onClick={() => { setProjectId(''); setShowProjectDropdown(false); }}
+                          className={`px-4 py-2.5 cursor-pointer text-xs font-bold uppercase tracking-widest hover:bg-slate-50 border-b border-slate-50 ${!projectId ? 'text-blue-600' : 'text-slate-400'}`}
+                        >
+                          No Project
+                        </div>
+                        {projects.filter(p => !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase())).length === 0 ? (
+                          <div className="py-6 text-center text-xs text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
+                        ) : (
+                          projects
+                            .filter(p => !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+                            .map(p => (
+                              <div
+                                key={p.id}
+                                onClick={() => { setProjectId(p.id); setShowProjectDropdown(false); }}
+                                className={`px-4 py-2.5 cursor-pointer text-sm font-medium hover:bg-blue-50 transition-colors
+                                  ${projectId === p.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
+                              >
+                                {p.name}
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -856,58 +925,63 @@ export default function ProfessionalInvoiceView() {
                 <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
                 <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">₹{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
-           </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    {/* Footer Action Bar */}
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.04)]">
-      <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest">
-        <ShieldCheck size={14} className="text-emerald-500" />
-        Encrypted & Secure Record Storage
-      </div>
-      <div className="flex items-center gap-4">
-        <button 
-          onClick={() => navigate('/sales-invoices')}
-          className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded transition-all"
-        >
-          Discard
-        </button>
-        <button 
-          onClick={() => handleSave('Draft')}
-          className="px-6 py-2.5 bg-slate-100 text-slate-600 text-[13px] font-bold hover:bg-slate-200 rounded transition-all"
-        >
-          Save as Draft
-        </button>
-        <button 
-          onClick={() => handleSave('Confirmed')}
-          disabled={isSaving}
-          className="px-10 py-2.5 bg-[#1e61f0] text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all uppercase tracking-widest flex items-center gap-2"
-        >
-          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSaving ? 'Saving...' : 'Save and Send'}
-        </button>
-      </div>
-    </div>
+        {/* Sticky Footer */}
+        <footer className="bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky bottom-0 z-20 no-print shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+          <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                  <ShieldCheck size={14} className="text-blue-500" />
+                  Encrypted & Secure Record Storage
+              </div>
+          </div>
+          <div className="flex items-center gap-3">
+              <button 
+                  onClick={() => navigate('/sales-invoices')}
+                  className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:text-slate-900 transition-all uppercase tracking-widest"
+              >
+                  Discard
+              </button>
+              <button 
+                  onClick={() => handleSave('Draft')}
+                  disabled={isSaving}
+                  className="px-6 py-2 bg-slate-100 text-slate-600 rounded text-[13px] font-bold hover:bg-slate-200 transition-all uppercase tracking-widest"
+              >
+                  {isSaving ? '...' : 'Save as Draft'}
+              </button>
+              <button 
+                  onClick={() => handleSave('Confirmed')}
+                  disabled={isSaving}
+                  className="px-8 py-2.5 bg-[#1e61f0] text-white rounded font-bold text-[13px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+              >
+                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : <><Send size={16}/> Save and Send</>}
+              </button>
+          </div>
+        </footer>
 
-    <ManageSalespersonsModal
-      isOpen={showManageSalespersons}
-      onClose={() => setShowManageSalespersons(false)}
-      salespersons={salespersons}
-      onSave={setSalespersons}
-      onSelect={(name) => { setSalesperson(name); }}
-    />
+        {/* Modals */}
+        <ManageSalespersonsModal
+          isOpen={showManageSalespersons}
+          onClose={() => setShowManageSalespersons(false)}
+          salespersons={salespersons}
+          onSave={setSalespersons}
+          onSelect={(name) => { setSalesperson(name); }}
+        />
 
-    <ConfirmModal 
-      isOpen={modalConfig.isOpen}
-      onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
-      title={modalConfig.title}
-      message={modalConfig.message}
-      type={modalConfig.type}
-      showCancel={modalConfig.showCancel}
-      confirmText={modalConfig.confirmText}
-    />
-    </div>
-  );
-}
+        <ConfirmModal
+          isOpen={modalConfig.isOpen}
+          onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+          onConfirm={() => setModalConfig({ ...modalConfig, isOpen: false })}
+          title={modalConfig.title}
+          message={modalConfig.message}
+          type={modalConfig.type}
+          showCancel={modalConfig.showCancel}
+          confirmText={modalConfig.confirmText || 'OK'}
+        />
+      </div>
+    );
+  }

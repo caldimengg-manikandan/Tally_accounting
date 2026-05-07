@@ -76,21 +76,21 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
         <div className="relative w-full" ref={containerRef}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-none flex items-center justify-between cursor-pointer focus-within:bg-white focus-within:border-blue-500 transition-all shadow-sm"
+                className="w-full h-9 px-3 bg-white border border-slate-200 rounded flex items-center justify-between cursor-pointer hover:border-blue-400 focus-within:border-blue-400 transition-all shadow-sm group"
             >
                 <div className="flex-1 overflow-hidden">
                     {value ? (
-                        <div className="text-[14px] font-black text-slate-800 tracking-tight truncate">{value}</div>
+                        <div className="text-[13px] font-bold text-slate-800 tracking-tight truncate">{value}</div>
                     ) : (
-                        <div className="text-[14px] font-bold text-slate-400 italic">{placeholder}</div>
+                        <div className="text-[13px] font-bold text-slate-400">{placeholder}</div>
                     )}
                 </div>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-slate-400 group-hover:text-blue-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 shadow-2xl rounded-none z-[100] overflow-hidden animate-fade-in flex flex-col">
-                    <div className="p-3 border-b border-slate-50 bg-slate-50/50">
+                <div className="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 shadow-2xl rounded-lg z-[100] overflow-hidden animate-fade-in flex flex-col">
+                    <div className="p-2 border-b border-slate-50 bg-slate-50/50">
                         <div className="relative">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input 
@@ -98,7 +98,7 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="Search customers..."
-                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-none text-[13px] outline-none focus:border-blue-500 transition-all font-black"
+                                className="w-full pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded text-[12px] outline-none focus:border-blue-500 transition-all font-bold shadow-sm"
                             />
                         </div>
                     </div>
@@ -108,12 +108,12 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
                                 <div 
                                     key={c.id}
                                     onClick={() => { onChange(c.id); setIsOpen(false); setSearch(''); }}
-                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-none flex items-center gap-3"
+                                    className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded flex items-center gap-3"
                                 >
-                                    <div className="w-8 h-8 rounded-none bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                                        <User size={14} />
+                                    <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                        <User size={12} />
                                     </div>
-                                    <div className="text-[14px] font-black text-slate-800 tracking-tight">{c.name}</div>
+                                    <div className="text-[13px] font-bold text-slate-800 tracking-tight">{c.name}</div>
                                 </div>
                             ))
                         ) : (
@@ -126,9 +126,9 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
                     <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
                         <button 
                             onClick={() => { setIsOpen(false); onNewCustomer(); }}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-black text-[13px] hover:bg-blue-100 rounded-none transition-colors border border-blue-200"
+                            className="w-full flex items-center justify-center gap-2 py-2 text-blue-600 font-bold text-[12px] hover:bg-blue-100 rounded transition-colors border border-blue-200"
                         >
-                            <Plus size={16} strokeWidth={3} /> New Customer
+                            <Plus size={14} strokeWidth={3} /> New Customer
                         </button>
                     </div>
                 </div>
@@ -164,21 +164,21 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
         <div className="relative w-full" ref={containerRef}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between cursor-pointer group"
+                className="w-full h-9 px-3 bg-white border border-slate-200 rounded flex items-center justify-between cursor-pointer hover:border-blue-400 focus-within:border-blue-400 transition-all shadow-sm group"
             >
-                <div className="flex-1">
+                <div className="flex-1 overflow-hidden">
                     {value ? (
-                        <div className="text-[14px] font-black text-slate-900 tracking-tight">{value}</div>
+                        <div className="text-[13px] font-bold text-slate-800 tracking-tight truncate">{value}</div>
                     ) : (
-                        <div className="text-[14px] font-bold text-slate-400 italic">{placeholder}</div>
+                        <div className="text-[13px] font-bold text-slate-400">{placeholder}</div>
                     )}
                 </div>
-                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-slate-400 group-hover:text-blue-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-[400px] bg-white border border-slate-200 shadow-2xl rounded-none z-[100] overflow-hidden animate-fade-in flex flex-col">
-                    <div className="p-3 border-b border-slate-50 bg-slate-50/50">
+                <div className="absolute top-full left-0 mt-2 w-[400px] bg-white border border-slate-200 shadow-2xl rounded-lg z-[100] overflow-hidden animate-fade-in flex flex-col">
+                    <div className="p-2 border-b border-slate-50 bg-slate-50/50">
                         <div className="relative">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input 
@@ -186,7 +186,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="Search items..."
-                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-none text-[13px] outline-none focus:border-blue-500 transition-all font-black"
+                                className="w-full pl-9 pr-4 py-1.5 bg-white border border-slate-200 rounded text-[12px] outline-none focus:border-blue-500 transition-all font-bold shadow-sm"
                             />
                         </div>
                     </div>
@@ -196,15 +196,15 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                                 <div 
                                     key={it.id}
                                     onClick={() => { onChange(it); setIsOpen(false); setSearch(''); }}
-                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-none"
+                                    className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded"
                                 >
                                     <div className="flex justify-between items-start mb-0.5">
-                                        <div className="text-[14px] font-black text-slate-800 tracking-tight flex items-center gap-2">
+                                        <div className="text-[13px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
                                             <Package size={14} className="text-blue-500 opacity-50" /> {it.name}
                                         </div>
-                                        <div className="text-[13px] font-black text-slate-900 tabular-nums">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                        <div className="text-[12px] font-bold text-slate-900 tabular-nums">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
                                     </div>
-                                    <div className="text-[11px] text-slate-400 font-bold whitespace-nowrap overflow-hidden text-ellipsis italic">
+                                    <div className="text-[11px] text-slate-400 font-bold whitespace-nowrap overflow-hidden text-ellipsis italic pl-6">
                                         {it.salesDescription || 'No description provided'}
                                     </div>
                                 </div>
@@ -219,9 +219,9 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                     <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
                         <button 
                             onClick={() => { setIsOpen(false); onNewItem(); }}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-black text-[13px] hover:bg-blue-100 rounded-none transition-colors border border-blue-100"
+                            className="w-full flex items-center justify-center gap-2 py-2 text-blue-600 font-bold text-[12px] hover:bg-blue-100 rounded transition-colors border border-blue-200"
                         >
-                            <Plus size={16} strokeWidth={3} /> New Item
+                            <Plus size={14} strokeWidth={3} /> New Item
                         </button>
                     </div>
                 </div>
@@ -664,7 +664,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                        <ChevronDown size={14} className="rotate-90"/> All Proposals
                     </button>
                     <span className="text-slate-300">|</span>
-                    <span className="text-[13px] font-black text-slate-800">{quote.quoteNumber}</span>
+                    <span className="text-[13px] font-bold text-slate-800">{quote.quoteNumber}</span>
                 </div>
                 <div className="flex items-center gap-3">
                    <button className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-none transition-all hover:text-slate-600"><History size={16}/></button>
@@ -678,8 +678,8 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                     <button onClick={() => window.print()} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold transition-all"><Printer size={14}/> PDF/Print <ChevronDown size={14}/></button>
                     <span className="w-px h-5 bg-slate-100 mx-2" />
                     <button 
-                        onClick={() => navigate('/sales/new-invoice', { state: { quoteData: quote } })}
-                        className="px-4 py-1.5 bg-emerald-600 text-white rounded-none flex items-center gap-2 text-[11px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/10"
+                        onClick={() => navigate('/sales-invoices/new', { state: { quoteData: quote } })}
+                        className="px-4 py-1.5 bg-emerald-600 text-white rounded-none flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/10"
                     >
                         <CheckCircle2 size={14}/> Convert to Invoice
                     </button>
@@ -691,44 +691,44 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                     {/* Professional Watermark */}
                     <div className="absolute -top-10 -right-10 w-96 h-96 bg-blue-50/30 rounded-none blur-[100px] pointer-events-none -z-10"></div>
                     <div className="absolute top-16 right-16 rotate-[12deg] opacity-[0.03] no-print pointer-events-none select-none">
-                        <div className="border-[12px] border-slate-900 text-slate-900 px-12 py-6 text-7xl font-black uppercase tracking-[0.2em] rounded-none">OFFICIAL</div>
+                        <div className="border-[12px] border-slate-900 text-slate-900 px-12 py-6 text-7xl font-bold uppercase tracking-[0.2em] rounded-none">OFFICIAL</div>
                     </div>
 
                     <div className="flex justify-between items-start mb-16 border-b border-slate-900 pb-12">
                         <div className="flex gap-4 items-start max-w-[65%]">
-                            <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-black text-xl shrink-0 rounded-none">{currentCompany?.name?.charAt(0) || 'M'}</div>
+                            <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-bold text-xl shrink-0 rounded-none">{currentCompany?.name?.charAt(0) || 'M'}</div>
                             <div className="space-y-1 min-w-0">
-                                <h2 className="text-[18px] font-black text-slate-900 tracking-tight uppercase leading-tight">{currentCompany?.name || 'THE MOON ENTERPRISES'}</h2>
+                                <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase leading-tight">{currentCompany?.name || 'THE MOON ENTERPRISES'}</h2>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Sales & Estimation Department</p>
                             </div>
                         </div>
                         <div className="text-right">
-                            <h1 className="text-[18px] font-black text-slate-900 tracking-[0.2em] uppercase leading-none mb-3">QUOTE</h1>
+                            <h1 className="text-[18px] font-bold text-slate-900 tracking-[0.2em] uppercase leading-none mb-3">QUOTE</h1>
                             <div className="space-y-1">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Quote Ref #</p>
-                                <p className="text-[15px] font-black text-slate-900 tracking-tight">{quote.quoteNumber}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Quote Ref #</p>
+                                <p className="text-[15px] font-bold text-slate-900 tracking-tight">{quote.quoteNumber}</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-20 mb-16">
                         <div className="space-y-4">
-                            <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Estimate Prepared For</h5>
+                            <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Estimate Prepared For</h5>
                             <div className="space-y-1">
-                                <p className="text-[15px] font-black text-slate-900 leading-tight">{quote.customerName}</p>
+                                <p className="text-[15px] font-bold text-slate-900 leading-tight">{quote.customerName}</p>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Ref: {quote.referenceNumber || 'N/A'}</p>
                             </div>
                         </div>
                         <div className="text-right space-y-4">
-                            <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Date of Quote</h5>
-                            <p className="text-[15px] font-black text-slate-900 leading-tight">{new Date(quote.quoteDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                            <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Date of Quote</h5>
+                            <p className="text-[15px] font-bold text-slate-900 leading-tight">{new Date(quote.quoteDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                         </div>
                     </div>
 
                     <div className="relative mb-20">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b-[3px] border-slate-900 text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                                <tr className="border-b-[3px] border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">
                                     <th className="py-6 text-left pb-4">Service / Item Details</th>
                                     <th className="py-6 text-right w-24 pb-4">Qty</th>
                                     <th className="py-6 text-right w-32 pb-4">Unit Rate</th>
@@ -740,16 +740,16 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                                     <tr key={idx} className="group/row hover:bg-slate-50/50 transition-colors">
                                         <td className="py-8">
                                             <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 group-hover/row:bg-white group-hover/row:text-blue-500 transition-all border border-transparent group-hover/row:border-blue-100 font-black text-[12px] rounded-none">{idx + 1}</div>
+                                                <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 group-hover/row:bg-white group-hover/row:text-blue-500 transition-all border border-transparent group-hover/row:border-blue-100 font-bold text-[12px] rounded-none">{idx + 1}</div>
                                                 <div>
-                                                    <p className="text-[16px] font-black text-slate-900 tracking-tight mb-1">{it.itemDetails}</p>
+                                                    <p className="text-[16px] font-bold text-slate-900 tracking-tight mb-1">{it.itemDetails}</p>
                                                     <p className="text-[12px] text-slate-400 font-bold uppercase tracking-wide leading-relaxed max-w-xs">{it.description || 'General Service Provision'}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{it.quantity}</td>
                                         <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">₹{parseFloat(it.rate).toLocaleString()}</td>
-                                        <td className="py-8 text-right text-[16px] font-black text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
+                                        <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -759,20 +759,20 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                     <div className="flex justify-end pt-12 border-t-2 border-slate-900">
                         <div className="w-full max-w-md space-y-6">
                             <div className="flex justify-between items-center px-2">
-                                <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Estimate Subtotal</span>
+                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Estimate Subtotal</span>
                                 <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(quote.subTotal).toLocaleString()}</span>
                             </div>
                             {parseFloat(quote.taxAmount || 0) > 0 && (
                                 <div className="flex justify-between items-center px-2">
-                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Tax ({quote.selectedTax})</span>
+                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tax ({quote.selectedTax})</span>
                                     <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(quote.taxAmount).toLocaleString()}</span>
                                 </div>
                             )}
                             <div className="bg-slate-900 text-white p-6 md:p-8 shadow-2xl relative overflow-hidden rounded-none">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-none blur-[60px] opacity-20"></div>
                                 <div className="flex justify-between items-center relative z-10">
-                                    <span className="text-[11px] font-black text-blue-300 uppercase tracking-[0.2em]">Grand Total</span>
-                                    <span className="text-[24px] md:text-[32px] font-black text-white tracking-tighter tabular-nums">₹{parseFloat(quote.totalAmount).toLocaleString()}</span>
+                                    <span className="text-[11px] font-bold text-blue-300 uppercase tracking-[0.2em]">Grand Total</span>
+                                    <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tighter tabular-nums">₹{parseFloat(quote.totalAmount).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>
@@ -780,12 +780,12 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
 
                     <div className="mt-32 flex justify-between items-end opacity-40">
                          <div className="space-y-1">
-                             <p className="text-[10px] font-black uppercase tracking-[0.2em]">Validated Proposal</p>
+                             <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Validated Proposal</p>
                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Doc-Hash: {quote.id?.substring(0, 12)}...</p>
                          </div>
                          <div className="text-right">
                              <div className="w-32 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
-                             <p className="text-[10px] font-black uppercase tracking-[0.2em]">Authorized Signature</p>
+                             <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Authorized Signature</p>
                          </div>
                     </div>
                 </div>
@@ -951,7 +951,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [showSalespersonDropdown, setShowSalespersonDropdown] = useState(false);
     const [salespersonSearch, setSalespersonSearch] = useState('');
     const [showManageSalespersons, setShowManageSalespersons] = useState(false);
-    const [project, setProject] = useState('');
+    const [projectId, setProjectId] = useState('');
     const [projects, setProjects] = useState([]);
     const [showProjectDropdown, setShowProjectDropdown] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
@@ -998,7 +998,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                     if (parsed.customerNotes) setCustomerNotes(parsed.customerNotes);
                     if (parsed.terms) setTerms(parsed.terms);
                     if (parsed.items) setItems(parsed.items);
-                    if (parsed.project) setProject(parsed.project);
+                    if (parsed.projectId) setProjectId(parsed.projectId);
                     localStorage.removeItem('quote_draft');
                 }
             } catch(e) {}
@@ -1146,6 +1146,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                     if (q.itemsJson) {
                         setItems(typeof q.itemsJson === 'string' ? JSON.parse(q.itemsJson) : q.itemsJson);
                     }
+                    if (q.ProjectId) setProjectId(q.ProjectId);
                 }
             });
         }
@@ -1231,7 +1232,8 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 subTotal,
                 totalAmount: total,
                 customerNotes,
-                termsConditions: terms
+                termsConditions: terms,
+                projectId
             };
 
             if (editId) {
@@ -1249,136 +1251,172 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#f8f9fa]">
+        <div className="flex flex-col h-full bg-[#f8fafc] relative">
             <BulkItemSelectorModal 
                 isOpen={isBulkModalOpen}
                 onClose={() => setIsBulkModalOpen(false)}
                 onAdd={handleBulkAdd}
                 items={inventoryItems} />
-            <div className="flex-1 mt-20 pb-32 bg-[#f8fafc] overflow-y-auto no-scrollbar">
+            
+            {/* Form Header */}
+            <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20 no-print">
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => navigate('/quotes')}
+                        className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
+                    >
+                        <ArrowLeft size={22} />
+                    </button>
+                    <div>
+                        <h2 className="text-[18px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            {editId ? 'Edit Quote' : 'Create Quote'}
+                            <span className="text-[10px] font-bold text-[#1e61f0] bg-blue-50 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-100">{quoteNo}</span>
+                        </h2>
+                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Quotes</div>
+                    </div>
+                </div>
+                <button onClick={() => navigate('/quotes')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
+            </header>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar">
                 <div className="max-w-[1000px] mx-auto py-10 px-6">
-                    <div className="bg-white rounded-none border border-slate-200 shadow-xl shadow-slate-200/50 p-12 space-y-12">
-                        <div className="grid grid-cols-2 gap-x-12 gap-y-8">
-                            <div className="space-y-2.5 relative">
-                                <label className="text-[11px] font-black text-red-500 uppercase tracking-[0.2em] ml-1">Customer Name*</label>
-                                <CustomerSearchSelector 
-                                    value={customerName}
-                                    onChange={(id) => {
-                                        const c = customers.find(x => x.id === id);
-                                        if (c) {
-                                            setCustomerName(c.name);
-                                            setCustomerLedgerId(c.id);
-                                        }
-                                    }}
-                                    customers={customers}
-                                    placeholder="Search or select customer..."
-                                    onNewCustomer={() => {
-                                        localStorage.setItem('quote_draft', JSON.stringify({
-                                            customerName, quoteNo, refNo, quoteDate, expiryDate, salesperson, subject, discount, adjustment, selectedTax, customerNotes, terms, items, project
-                                        }));
-                                        window.open('/ledger/new', '_blank');
-                                    }}
-                                />
+                    <div className="bg-white rounded border border-slate-200 shadow-sm p-12 space-y-12 animate-fade-in">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-4 mb-8">
+                                <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-widest">Primary Details</h3>
+                                <div className="h-px bg-slate-100 flex-1"></div>
                             </div>
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Quote Reference</label>
-                                <div className="relative">
+
+                            <div className="flex items-center relative z-20">
+                                <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest shrink-0">Customer Name*</label>
+                                <div className="flex-1 max-w-2xl">
+                                    <CustomerSearchSelector 
+                                        value={customerName}
+                                        onChange={(id) => {
+                                            const c = customers.find(x => x.id === id);
+                                            if (c) {
+                                                setCustomerName(c.name);
+                                                setCustomerLedgerId(c.id);
+                                            }
+                                        }}
+                                        customers={customers}
+                                        placeholder="Search or select customer..."
+                                        onNewCustomer={() => {
+                                            localStorage.setItem('quote_draft', JSON.stringify({
+                                                customerName, quoteNo, refNo, quoteDate, expiryDate, salesperson, subject, discount, adjustment, selectedTax, customerNotes, terms, items, projectId
+                                            }));
+                                            window.open('/ledger/new', '_blank');
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Quote Reference</label>
+                                <div className="flex-1 max-w-2xl relative">
                                     <input 
                                         value={quoteNo}
                                         readOnly
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-400 outline-none cursor-not-allowed"
+                                        className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-400 outline-none cursor-not-allowed shadow-sm"
                                     />
-                                    <button onClick={() => setShowQuoteSettings(true)} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 p-1.5 hover:bg-blue-50 rounded-none transition-all">
-                                        <Settings size={16} />
+                                    <button onClick={() => setShowQuoteSettings(true)} className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-500 p-1 hover:bg-blue-50 rounded transition-all">
+                                        <Settings size={14} />
                                     </button>
                                 </div>
                             </div>
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Reference Number</label>
-                                <input 
-                                    value={refNo} 
-                                    onChange={e => setRefNo(e.target.value)} 
-                                    placeholder="e.g. PO-89021"
-                                    className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                                />
+
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Reference Number</label>
+                                <div className="flex-1 max-w-2xl">
+                                    <input 
+                                        value={refNo} 
+                                        onChange={e => setRefNo(e.target.value)} 
+                                        placeholder="e.g. PO-89021"
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all shadow-sm"
+                                    />
+                                </div>
                             </div>
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-red-500 uppercase tracking-[0.2em] ml-1">Quote Date*</label>
-                                <div className="relative">
-                                    <Calendar size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest shrink-0">Quote Date*</label>
+                                <div className="flex-1 max-w-2xl relative">
+                                    <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                     <input 
                                         type="date" 
                                         value={quoteDate} 
                                         onChange={e => setQuoteDate(e.target.value)} 
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all pr-12"
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all pr-10 shadow-sm"
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2.5">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Expiry Date</label>
-                                <div className="relative">
-                                    <Calendar size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+
+                            <div className="flex items-center">
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Expiry Date</label>
+                                <div className="flex-1 max-w-2xl relative">
+                                    <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                     <input 
                                         type="date" 
                                         value={expiryDate} 
                                         onChange={e => setExpiryDate(e.target.value)} 
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all pr-12"
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all pr-10 shadow-sm"
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2.5 relative" ref={salespersonDropdownRef}>
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Salesperson</label>
-                                <div className="relative">
+
+                            <div className="flex items-center relative z-10" ref={salespersonDropdownRef}>
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Salesperson</label>
+                                <div className="flex-1 max-w-2xl relative">
                                     <input 
                                         type="text"
                                         value={salespersonSearch || salesperson}
                                         onChange={(e) => { setSalespersonSearch(e.target.value); setShowSalespersonDropdown(true); }}
                                         onFocus={() => setShowSalespersonDropdown(true)}
                                         placeholder="Assign staff..."
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all shadow-sm"
                                     />
                                     {showSalespersonDropdown && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 shadow-2xl rounded-none z-[120] overflow-hidden">
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 shadow-2xl rounded-lg z-[120] overflow-hidden">
                                             <div className="max-h-56 overflow-y-auto no-scrollbar">
                                                 {salespersons.filter(s => s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).map(s => (
                                                     <div 
                                                         key={s.id} 
                                                         onClick={() => { setSalesperson(s.name); setSalespersonSearch(s.name); setShowSalespersonDropdown(false); }}
-                                                        className="px-6 py-3 hover:bg-blue-50 cursor-pointer text-[14px] font-black text-slate-700 border-b border-slate-50 last:border-0"
+                                                        className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[13px] font-bold text-slate-700 border-b border-slate-50 last:border-0"
                                                     >
                                                         {s.name}
                                                     </div>
                                                 ))}
                                                 <div 
                                                     onClick={() => setShowManageSalespersons(true)}
-                                                    className="px-6 py-4 bg-slate-50 hover:bg-[#1e61f0] text-[#1e61f0] hover:text-white font-black text-[11px] uppercase tracking-[0.2em] cursor-pointer transition-all flex items-center gap-2"
+                                                    className="px-4 py-3 bg-slate-50 hover:bg-[#1e61f0] text-[#1e61f0] hover:text-white font-bold text-[11px] uppercase tracking-widest cursor-pointer transition-all flex items-center gap-2"
                                                 >
-                                                    <Settings size={16} /> Manage Salespersons
+                                                    <Settings size={14} /> Manage Salespersons
                                                 </div>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <div className="space-y-2.5 relative" ref={projectDropdownRef}>
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Project</label>
-                                <div className="relative">
+
+                            <div className="flex items-center relative z-[5]" ref={projectDropdownRef}>
+                                <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Project</label>
+                                <div className="flex-1 max-w-2xl relative">
                                     <input 
                                         type="text"
-                                        value={projectSearch || project}
+                                        value={projectSearch || projects.find(p => p.id === projectId)?.name || ''}
                                         onChange={(e) => { setProjectSearch(e.target.value); setShowProjectDropdown(true); }}
                                         onFocus={() => setShowProjectDropdown(true)}
                                         placeholder="Link to project..."
-                                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
+                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all shadow-sm"
                                     />
                                     {showProjectDropdown && (
-                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 shadow-2xl rounded-none z-[120] overflow-hidden">
+                                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 shadow-2xl rounded-lg z-[120] overflow-hidden">
                                             <div className="max-h-56 overflow-y-auto no-scrollbar">
                                                 {projects.filter(p => (p.name||'').toLowerCase().includes(projectSearch.toLowerCase())).map(p => (
                                                     <div 
                                                         key={p.id} 
-                                                        onClick={() => { setProject(p.name); setProjectSearch(p.name); setShowProjectDropdown(false); }}
-                                                        className="px-6 py-3 hover:bg-blue-50 cursor-pointer text-[14px] font-black text-slate-700 border-b border-slate-50 last:border-0"
+                                                        onClick={() => { setProjectId(p.id); setProjectSearch(p.name); setShowProjectDropdown(false); }}
+                                                        className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[13px] font-bold text-slate-700 border-b border-slate-50 last:border-0"
                                                     >
                                                         {p.name}
                                                     </div>
@@ -1386,14 +1424,14 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                 <div 
                                                     onClick={() => {
                                                         localStorage.setItem('quote_draft', JSON.stringify({
-                                                            customerName, quoteNo, refNo, quoteDate, expiryDate, salesperson, subject, discount, adjustment, selectedTax, customerNotes, terms, items, project
+                                                            customerName, quoteNo, refNo, quoteDate, expiryDate, salesperson, subject, discount, adjustment, selectedTax, customerNotes, terms, items, projectId
                                                         }));
                                                         setShowProjectDropdown(false); 
                                                         window.open('/time-tracking/projects/new', '_blank');
                                                     }}
-                                                    className="px-6 py-4 bg-slate-50 hover:bg-[#1e61f0] text-[#1e61f0] hover:text-white font-black text-[11px] uppercase tracking-[0.2em] cursor-pointer transition-all flex items-center gap-2"
+                                                    className="px-4 py-3 bg-slate-50 hover:bg-[#1e61f0] text-[#1e61f0] hover:text-white font-bold text-[11px] uppercase tracking-widest cursor-pointer transition-all flex items-center gap-2"
                                                 >
-                                                    <Plus size={16} /> Add New Project
+                                                    <Plus size={14} /> Add New Project
                                                 </div>
                                             </div>
                                         </div>
@@ -1401,39 +1439,46 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                 </div>
                             </div>
                         </div>
-                        <div className="space-y-3 pt-6 border-t border-dashed border-slate-100">
-                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Subject / Project Title</label>
-                             <textarea 
-                                value={subject} 
-                                onChange={e => setSubject(e.target.value)} 
-                                placeholder="Enter a brief summary of the proposal"
-                                className="w-full h-16 p-4 bg-slate-50 border border-slate-200 rounded-none text-[14px] font-black text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm"
-                             />
+                        <div className="flex items-start pt-8 mt-8 border-t border-slate-100">
+                             <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest shrink-0 mt-3">Subject</label>
+                             <div className="flex-1 max-w-2xl">
+                                 <textarea 
+                                    value={subject} 
+                                    onChange={e => setSubject(e.target.value)} 
+                                    placeholder="Enter a brief summary of the proposal"
+                                    className="w-full h-20 p-3 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-900 outline-none focus:border-blue-500 transition-all resize-none shadow-sm"
+                                 />
+                             </div>
                         </div>
-                        <div className="relative" ref={priceListRef}>
-                            <div 
-                                onClick={() => setIsPriceListDropdownOpen(!isPriceListDropdownOpen)}
-                                className="flex items-center gap-3 text-[13px] font-black text-slate-500 pt-6 border-t border-slate-100 cursor-pointer hover:text-blue-600 transition-all select-none uppercase tracking-widest"
-                            >
-                                <FileText size={14} />
-                                <span>{priceList ? priceLists.find(p => p.id === priceList)?.name || 'Select Price List' : 'Select Price List'}</span>
-                                <ChevronDown size={14} className={`transition-transform duration-300 ${isPriceListDropdownOpen ? 'rotate-180' : ''}`} />
-                            </div>
-                            {isPriceListDropdownOpen && (
-                                <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-100 shadow-2xl rounded-none z-[100] overflow-hidden animate-scale-up">
-                                    <div className="p-3 border-b border-slate-50">
-                                        <div className="relative">
-                                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input 
-                                                type="text"
-                                                value={priceListSearch}
-                                                onChange={e => setPriceListSearch(e.target.value)}
-                                                placeholder="Search price lists..."
-                                                className="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-none text-[12px] font-black outline-none focus:bg-white focus:ring-0 transition-all"
-                                            />
-                                        </div>
+
+                        <div className="flex items-center pt-8 mt-8 border-t border-slate-100 relative z-[4]" ref={priceListRef}>
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest shrink-0">Price List</label>
+                            <div className="flex-1 max-w-2xl relative">
+                                <div 
+                                    onClick={() => setIsPriceListDropdownOpen(!isPriceListDropdownOpen)}
+                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded flex items-center justify-between cursor-pointer hover:border-blue-400 transition-all shadow-sm group"
+                                >
+                                    <div className="flex items-center gap-2 text-[13px] font-bold text-slate-700">
+                                        <FileText size={14} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                        <span>{priceList ? priceLists.find(p => p.id === priceList)?.name || 'Select Price List' : 'Select Price List'}</span>
                                     </div>
-                                    <div className="max-h-60 overflow-y-auto">
+                                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isPriceListDropdownOpen ? 'rotate-180' : ''}`} />
+                                </div>
+                                {isPriceListDropdownOpen && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 shadow-2xl rounded-lg z-[100] overflow-hidden animate-scale-up">
+                                        <div className="p-2 border-b border-slate-50">
+                                            <div className="relative">
+                                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                <input 
+                                                    type="text"
+                                                    value={priceListSearch}
+                                                    onChange={e => setPriceListSearch(e.target.value)}
+                                                    placeholder="Search price lists..."
+                                                    className="w-full pl-9 pr-4 py-1.5 bg-slate-50 rounded text-[12px] font-bold outline-none focus:bg-white focus:ring-1 focus:ring-blue-100 transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="max-h-60 overflow-y-auto no-scrollbar">
                                         {priceLists.filter(p => !priceListSearch || p.name.toLowerCase().includes(priceListSearch.toLowerCase())).length > 0 ? (
                                             priceLists.filter(p => !priceListSearch || p.name.toLowerCase().includes(priceListSearch.toLowerCase())).map(p => (
                                                 <div 
@@ -1444,8 +1489,8 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                     }}
                                                     className={`px-4 py-3 cursor-pointer transition-all border-b border-slate-50/50 last:border-0 hover:bg-blue-50 ${priceList === p.id ? 'bg-slate-900 text-white' : 'text-slate-600'}`}
                                                 >
-                                                    <p className="text-[13px] font-black">{p.name}</p>
-                                                    <p className={`text-[10px] uppercase font-black tracking-[0.2em] mt-0.5 ${priceList === p.id ? 'text-blue-200' : 'text-slate-400'}`}>
+                                                    <p className="text-[13px] font-bold">{p.name}</p>
+                                                    <p className={`text-[10px] uppercase font-bold tracking-[0.2em] mt-0.5 ${priceList === p.id ? 'text-blue-200' : 'text-slate-400'}`}>
                                                         {p.percentage ? `${p.percentage}% ${p.type === 'Markup' ? 'Markup' : 'Markdown'}` : 'Standard Pricing'}
                                                     </p>
                                                 </div>
@@ -1453,26 +1498,27 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                         ) : (
                                             <div className="p-8 text-center">
                                                 <FileText size={24} className="mx-auto text-slate-200 mb-2" />
-                                                <p className="text-[11px] text-slate-400 font-black uppercase tracking-widest">No lists found</p>
+                                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No lists found</p>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             )}
                         </div>
-                        <div className="space-y-4 pt-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-[14px] font-black text-slate-900 uppercase tracking-[0.1em]">Item Table</h3>
+                    </div>
+                        <div className="space-y-4 pt-8">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-widest">Item Table</h3>
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => setIsBulkModalOpen(true)} className="text-[11px] font-black text-[#1e61f0] flex items-center gap-2 hover:bg-blue-50 px-3 py-1.5 rounded-none transition-all border border-blue-100">
+                                    <button onClick={() => setIsBulkModalOpen(true)} className="text-[11px] font-bold text-blue-600 flex items-center gap-2 hover:bg-blue-50 px-3 py-1.5 rounded transition-all border border-blue-200">
                                         <Package size={14} /> Bulk Add
                                     </button>
                                 </div>
                             </div>
-                            <div className="border border-slate-900 rounded-none overflow-hidden shadow-sm bg-white">
+                            <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white">
                                 <table className="w-full border-collapse">
                                     <thead>
-                                        <tr className="bg-slate-900 text-[10px] text-white font-black uppercase tracking-[0.2em]">
+                                        <tr className="bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 font-bold uppercase tracking-widest">
                                             <th className="px-6 py-4 text-left">Item Details</th>
                                             <th className="px-6 py-4 text-right w-28">Quantity</th>
                                             <th className="px-6 py-4 text-right w-36">Rate</th>
@@ -1482,7 +1528,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {items.map((line, idx) => (
-                                            <tr key={line.id} className="group hover:bg-slate-50 transition-colors">
+                                            <tr key={line.id} className="group hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-6 py-5">
                                                     <ItemSearchSelector 
                                                         items={inventoryItems}
@@ -1502,7 +1548,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                             window.open('/inventory/new', '_blank');
                                                         }}
                                                     />
-                                                    <div className="text-[11px] text-slate-400 pl-4 mt-1 font-black uppercase tracking-tight opacity-60">
+                                                    <div className="text-[11px] text-slate-400 pl-4 mt-1 font-bold uppercase tracking-tight opacity-60">
                                                         {inventoryItems.find(i => i.name === line.itemDetails)?.salesDescription || 'General Service Item'}
                                                     </div>
                                                 </td>
@@ -1516,7 +1562,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                             updated[idx].amount = (parseFloat(e.target.value) || 0) * (parseFloat(updated[idx].rate) || 0);
                                                             setItems(updated);
                                                         }} 
-                                                        className="w-full text-right bg-transparent border-none outline-none text-[13px] font-black text-slate-600 focus:bg-white rounded-none transition-all" 
+                                                        className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all" 
                                                     />
                                                 </td>
                                                 <td className="px-6 py-5 align-top font-mono tabular-nums">
@@ -1529,11 +1575,11 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                             updated[idx].amount = (parseFloat(e.target.value) || 0) * (parseFloat(updated[idx].quantity) || 0);
                                                             setItems(updated);
                                                         }} 
-                                                        className="w-full text-right bg-transparent border-none outline-none text-[13px] font-black text-slate-600 focus:bg-white rounded-none transition-all" 
+                                                        className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600 focus:bg-white rounded transition-all" 
                                                     />
                                                 </td>
                                                 <td className="px-6 py-5 text-right align-top">
-                                                    <span className="text-[13px] font-black text-slate-900 tabular-nums">₹{parseFloat(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span className="text-[13px] font-bold text-slate-900 tabular-nums">₹{parseFloat(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 </td>
                                                 <td className="px-4 py-5 text-center align-top">
                                                     <button onClick={() => setItems(items.filter(it => it.id !== line.id))} className="text-slate-300 hover:text-red-500 transition-colors">
@@ -1545,16 +1591,17 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <button onClick={() => setItems([...items, { id: Date.now(), itemDetails: '', quantity: 1, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-[12px] font-black rounded-none shadow-lg hover:bg-slate-800 transition-all uppercase tracking-widest">
-                                    <Plus size={14} strokeWidth={3}/> Add Item
+                            <div className="flex items-center gap-3 mt-4">
+                                <button onClick={() => setItems([...items, { id: Date.now(), itemDetails: '', quantity: 1, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-[12px] font-bold rounded hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all uppercase tracking-widest">
+                                    <Plus size={14} strokeWidth={3}/> Add Row
                                 </button>
-                                <div className="ml-auto flex items-center gap-4 text-slate-400 font-black text-[11px] uppercase tracking-[0.2em] pl-8 border-l border-slate-100">
+                                <div className="ml-auto flex items-center gap-4 text-slate-400 font-bold text-[11px] uppercase tracking-[0.2em] pl-8 border-l border-slate-200">
                                     <input type="file" ref={bulkFileRef} onChange={handleBulkImport} className="hidden" accept=".xlsx,.xls"/>
                                     <button onClick={() => bulkFileRef.current.click()} className="hover:text-blue-600 transition-colors flex items-center gap-2"><Upload size={14} /> CSV Import</button>
                                 </div>
                             </div>
                         </div>
+
                         <div className="flex justify-between items-start pt-12 border-t border-slate-100 gap-20">
                            <div className="flex-1 max-w-md space-y-8">
                               <div className="space-y-3">
@@ -1563,7 +1610,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                     value={customerNotes} 
                                     onChange={e => setCustomerNotes(e.target.value)} 
                                     placeholder="Will be displayed on the proposal"
-                                    className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded-none text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" 
+                                    className="w-full h-24 p-3 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-900 outline-none focus:border-blue-500 transition-all resize-none shadow-sm" 
                                  />
                               </div>
                               <div className="space-y-3">
@@ -1572,7 +1619,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                    value={terms} 
                                    onChange={e => setTerms(e.target.value)} 
                                    placeholder="Business terms..." 
-                                   className="w-full h-24 bg-slate-50 border border-slate-200 rounded-none text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" 
+                                   className="w-full h-24 p-3 bg-white border border-slate-200 rounded text-[13px] font-medium text-slate-900 outline-none focus:border-blue-500 transition-all resize-none shadow-sm" 
                                  />
                               </div>
                            </div>
@@ -1584,7 +1631,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                               <div className="flex justify-between items-center text-[13px]">
                                 <label className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</label>
                                 <div className="flex items-center gap-4">
-                                   <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none" />
+                                   <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} className="w-16 h-8 px-2 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all" />
                                 </div>
                               </div>
                               <div className="flex justify-between items-center text-[13px]">
@@ -1592,7 +1639,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                 <select 
                                   value={selectedTax} 
                                   onChange={e => setSelectedTax(e.target.value)}
-                                  className="w-32 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-[11px] font-bold text-slate-700 outline-none"
+                                  className="w-32 h-8 px-2 bg-white border border-slate-200 rounded text-[11px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all"
                                 >
                                    <option value="">No Tax</option>
                                    <option value="GST5">GST (5%)</option>
@@ -1603,9 +1650,9 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                               </div>
                               <div className="flex justify-between items-center text-[13px]">
                                 <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
-                                <input type="number" value={adjustment} onChange={e => setAdjustment(e.target.value)} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none" />
+                                <input type="number" value={adjustment} onChange={e => setAdjustment(e.target.value)} className="w-24 h-8 px-2 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all" />
                               </div>
-                              <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
+                              <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6 rounded-lg">
                                 <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
                                 <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">₹{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </div>
@@ -1614,7 +1661,9 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                     </div>
                 </div>
             </div>
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.04)]">
+
+            {/* Form Actions Footer */}
+            <footer className="bg-white border-t border-slate-200 px-12 py-4 flex items-center justify-between shrink-0 sticky bottom-0 z-20 shadow-[0_-5px_25px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest">
                     <ShieldCheck size={14} className="text-emerald-500" />
                     Encrypted & Secure Proposal Storage
@@ -1622,20 +1671,20 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={() => navigate('/quotes')}
-                        className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded transition-all"
+                        className="px-6 py-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl text-[12px] font-bold hover:bg-slate-50 transition-all uppercase tracking-widest"
                     >
                         Discard
                     </button>
                     <button 
                         onClick={handleSave} 
                         disabled={loading}
-                        className="px-10 py-2.5 bg-[#1e61f0] text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all uppercase tracking-widest flex items-center gap-2"
+                        className="px-10 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-[12px] hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all uppercase tracking-widest flex items-center gap-2 active:scale-95"
                     >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                         {loading ? 'Processing...' : (editId ? 'Update Quote' : 'Confirm Quote')}
                     </button>
                 </div>
-            </div>
+            </footer>
             {isQuickAddOpen && (
                 <div className="fixed inset-0 z-[500] flex justify-end">
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={() => setIsQuickAddOpen(false)} />

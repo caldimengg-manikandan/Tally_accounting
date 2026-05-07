@@ -64,7 +64,7 @@ const CreateGroupModal = ({ isOpen, onClose, groupToEdit }) => {
       <div className="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl border border-gray-100 flex flex-col">
         <div className="px-10 pt-10 pb-6 flex justify-between items-center bg-gray-50/50">
             <div>
-               <h3 className="text-xl font-black text-[#0f172a] tracking-tight">{groupToEdit ? 'Update Group' : 'New Management Group'}</h3>
+               <h3 className="text-xl font-bold text-[#0f172a] tracking-tight">{groupToEdit ? 'Update Group' : 'New Management Group'}</h3>
                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Hierarchical Classification</p>
             </div>
             <button type="button" onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-900">
@@ -82,19 +82,19 @@ const CreateGroupModal = ({ isOpen, onClose, groupToEdit }) => {
 
            <div className="space-y-6">
               <div>
-                 <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Group Name</label>
+                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Group Name</label>
                  <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Operating Expenses" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-[#0f172a] outline-none focus:bg-white focus:border-[#1e3a8a] transition-all" />
               </div>
 
               <div className="grid grid-cols-2 gap-6">
                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Financial Nature</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Financial Nature</label>
                     <select value={nature} onChange={e => setNature(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-[#0f172a] outline-none">
                        {['Assets', 'Liabilities', 'Income', 'Expenses'].map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                  </div>
                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Account Category</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Account Category</label>
                     <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-[#0f172a] outline-none">
                        <option value="Primary">Primary (Root)</option>
                        <option value="Sub-Group">Sub-Group (Member)</option>
@@ -104,7 +104,7 @@ const CreateGroupModal = ({ isOpen, onClose, groupToEdit }) => {
 
               {category === 'Sub-Group' && (
                 <div>
-                   <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Parent Group</label>
+                   <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Parent Group</label>
                    <select value={parentId} onChange={e => setParentId(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-[#0f172a] outline-none">
                       <option value="">Select Parent...</option>
                       {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -114,8 +114,8 @@ const CreateGroupModal = ({ isOpen, onClose, groupToEdit }) => {
            </div>
            
            <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
-              <button type="button" onClick={onClose} className="px-6 py-3 text-[#0f172a] text-[10px] font-black tracking-widest uppercase hover:bg-gray-100 rounded-xl transition-all">Cancel</button>
-              <button type="submit" disabled={saving} className="px-8 py-3 bg-[#0f172a] text-white rounded-xl text-[10px] font-black tracking-widest uppercase shadow-lg hover:bg-[#1e3a8a] transition-all">
+              <button type="button" onClick={onClose} className="px-6 py-3 text-[#0f172a] text-[10px] font-bold tracking-widest uppercase hover:bg-gray-100 rounded-xl transition-all">Cancel</button>
+              <button type="submit" disabled={saving} className="px-8 py-3 bg-[#0f172a] text-white rounded-xl text-[10px] font-bold tracking-widest uppercase shadow-lg hover:bg-[#1e3a8a] transition-all">
                  {saving ? 'Saving...' : 'Save Group'}
               </button>
            </div>

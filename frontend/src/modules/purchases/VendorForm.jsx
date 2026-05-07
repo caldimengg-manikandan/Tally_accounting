@@ -306,7 +306,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
             <div className="grid grid-cols-2 gap-20">
                 {/* Billing */}
                 <div className="space-y-6">
-                    <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Billing Address</h4>
+                    <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Billing Address</h4>
                     <div className="space-y-4">
                         <div className="space-y-1">
                             <label className="text-[11px] font-medium text-slate-400">Attention</label>
@@ -353,8 +353,8 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
                 {/* Shipping */}
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h4 className="text-[12px] font-black text-slate-400 uppercase tracking-widest">Shipping Address</h4>
-                        <button type="button" onClick={copyBillingToShipping} className="text-[11px] font-black text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1">
+                        <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Shipping Address</h4>
+                        <button type="button" onClick={copyBillingToShipping} className="text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-widest flex items-center gap-1">
                             <Copy size={12}/> Copy Billing
                         </button>
                     </div>
@@ -498,7 +498,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
                     <button 
                         onClick={handleSave} 
                         disabled={loading}
-                        className="px-10 py-2 bg-blue-600 text-white rounded font-black text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-500/10 transition-all uppercase tracking-widest disabled:opacity-50"
+                        className="px-10 py-2 bg-blue-600 text-white rounded font-bold text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-500/10 transition-all uppercase tracking-widest disabled:opacity-50"
                     >
                         {loading ? 'Processing...' : 'Save Vendor Profile'}
                     </button>

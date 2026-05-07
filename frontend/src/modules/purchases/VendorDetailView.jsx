@@ -20,7 +20,7 @@ import ComposeMailModal from '../../components/ComposeMailModal';
 const DetailRow = ({ label, value }) => (
   <div className="flex justify-between items-center py-1">
     <span className="text-[12px] font-bold text-slate-400 uppercase tracking-tight">{label}</span>
-    <span className="text-[13px] font-black text-slate-700">{value || '---'}</span>
+    <span className="text-[13px] font-bold text-slate-700">{value || '---'}</span>
   </div>
 );
 
@@ -457,8 +457,8 @@ const VendorDetailView = ({ companyId }) => {
           ) : vendors.map(v => (
             <div key={v.id} onClick={() => handleVendorSelect(v.id)} className={`px-5 py-4 cursor-pointer border-b border-slate-50 transition-all border-l-[4px] ${String(v.id) === String(selectedId) ? 'bg-[#f0f5ff] border-l-blue-600' : 'hover:bg-slate-50 border-l-transparent'}`}>
               <div className="flex justify-between items-start mb-2">
-                <span className={`text-[13px] font-black truncate max-w-[140px] ${String(v.id) === String(selectedId) ? 'text-blue-600' : 'text-slate-700'}`}>{v.name}</span>
-                <span className="text-[14px] font-black text-slate-900 tracking-tighter italic">₹{parseFloat(v.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className={`text-[13px] font-bold truncate max-w-[140px] ${String(v.id) === String(selectedId) ? 'text-blue-600' : 'text-slate-700'}`}>{v.name}</span>
+                <span className="text-[14px] font-bold text-slate-900 tracking-tighter italic">₹{parseFloat(v.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex items-center gap-2">
                  <div className={`w-2 h-2 rounded-full ${parseFloat(v.currentBalance || 0) > 0 ? 'bg-orange-400' : 'bg-green-400'}`}></div>
@@ -479,7 +479,7 @@ const VendorDetailView = ({ companyId }) => {
                   <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{vendor.name}</h1>
                </div>
                <div className="flex items-center gap-2.5">
-                  <button onClick={handleSaveProfile} disabled={loading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-[13px] font-black hover:bg-black shadow-xl shadow-slate-200 transition-all flex items-center gap-2 disabled:opacity-50">
+                  <button onClick={handleSaveProfile} disabled={loading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-[13px] font-bold hover:bg-black shadow-xl shadow-slate-200 transition-all flex items-center gap-2 disabled:opacity-50">
                      {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16}/>}
                      {loading ? 'Saving...' : 'Save Profile'}
                   </button>
@@ -547,7 +547,7 @@ const VendorDetailView = ({ companyId }) => {
                       </div>
                    </div>
                    <div className="space-y-6">
-                      <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">ALL COMMENTS</h3>
+                      <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">ALL COMMENTS</h3>
                       {comments.length > 0 ? (
                         <div className="space-y-6">
                            {comments.map(c => (
@@ -627,7 +627,7 @@ const VendorDetailView = ({ companyId }) => {
                                      </div>
                                    )}
                                 </div>
-                                <button className="flex items-center gap-1 text-[11px] font-black text-blue-600 hover:text-blue-800">
+                                <button className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800">
                                    <Plus size={14} strokeWidth={3}/> NEW
                                 </button>
                              </div>
@@ -637,7 +637,7 @@ const VendorDetailView = ({ companyId }) => {
                                <table className="w-full text-left">
                                   <thead>
                                      <tr className="bg-white border-b border-slate-50">
-                                        {sec.cols.map(c => <th key={c} className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">{c}</th>)}
+                                        {sec.cols.map(c => <th key={c} className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c}</th>)}
                                      </tr>
                                   </thead>
                                   <tbody>
@@ -651,7 +651,7 @@ const VendorDetailView = ({ companyId }) => {
                                             <td className="px-6 py-3 font-bold text-slate-900">₹{parseFloat(row.totalAmount || row.amount || 0).toLocaleString()}</td>
                                             {sec.name === 'Bills' && <td className="px-6 py-3">₹{row.balanceDue || '0.00'}</td>}
                                             <td className="px-6 py-3">
-                                               <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-black ${row.status === 'Paid' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
+                                               <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${row.status === 'Paid' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
                                                   {row.status || 'Draft'}
                                                </span>
                                             </td>
@@ -684,13 +684,13 @@ const VendorDetailView = ({ companyId }) => {
                    <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100/50 bg-white">
                       <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md">
                          <div>
-                            <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Communication History</h3>
+                            <h3 className="text-[15px] font-bold text-slate-800 uppercase tracking-tight">Communication History</h3>
                             <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Automated and Direct Emails</p>
                          </div>
                          <div className="flex items-center gap-3">
                             <button 
                                onClick={() => setIsComposeModalOpen(true)}
-                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-black hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
+                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-bold hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all"
                             >
                                <Mail size={16}/> Compose Email
                             </button>
@@ -723,7 +723,7 @@ const VendorDetailView = ({ companyId }) => {
                                         </div>
                                         <div className="text-right">
                                            <p className="text-[12px] font-bold text-slate-500">{new Date(m.sentAt).toLocaleDateString()}</p>
-                                           <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mt-1">{new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                           <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-1">{new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                         </div>
                                      </div>
                                      <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed ml-11 italic pl-1 border-l-2 border-slate-100 group-hover:border-blue-200 transition-colors">
@@ -741,7 +741,7 @@ const VendorDetailView = ({ companyId }) => {
                                </div>
                                <button 
                                   onClick={() => setIsComposeModalOpen(true)}
-                                  className="text-[12px] font-black text-blue-600 hover:text-blue-800 underline decoration-blue-100 underline-offset-4"
+                                  className="text-[12px] font-bold text-blue-600 hover:text-blue-800 underline decoration-blue-100 underline-offset-4"
                                >
                                   Send First Communication
                                 </button>
@@ -767,7 +767,7 @@ const VendorDetailView = ({ companyId }) => {
                          <div className="flex items-center gap-2">
                              <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50 transition-colors"><Printer size={18}/></button>
                              <button className="p-2 border border-slate-200 rounded text-slate-500 hover:bg-slate-50 transition-colors"><FileText size={18}/></button>
-                             <button className="px-5 py-2 bg-blue-600 text-white rounded text-[13px] font-black shadow-lg shadow-blue-100 flex items-center gap-2 hover:bg-blue-700 transition-all" onClick={() => setIsComposeModalOpen(true)}>
+                             <button className="px-5 py-2 bg-blue-600 text-white rounded text-[13px] font-bold shadow-lg shadow-blue-100 flex items-center gap-2 hover:bg-blue-700 transition-all" onClick={() => setIsComposeModalOpen(true)}>
                                 <Send size={14}/> Send Email
                              </button>
                          </div>
@@ -777,7 +777,7 @@ const VendorDetailView = ({ companyId }) => {
                       <div className="bg-white rounded-lg shadow-2xl overflow-hidden aspect-[1/1.3] p-16 border border-slate-200 font-serif relative">
                          {/* Company Header */}
                          <div className="absolute top-0 right-0 p-8 text-[12px] text-right space-y-1 not-italic font-sans">
-                            <p className="font-black text-[18px] text-slate-900 tracking-tight">{currentCompany?.name || 'Indus CAI private Ltd'}</p>
+                            <p className="font-bold text-[18px] text-slate-900 tracking-tight">{currentCompany?.name || 'Indus CAI private Ltd'}</p>
                             <p className="text-slate-500 font-medium">{currentCompany?.state || 'Tamil Nadu'}, India</p>
                             <p className="text-blue-600 font-bold">{currentCompany?.email || 'office@induscai.com'}</p>
                          </div>
@@ -785,7 +785,7 @@ const VendorDetailView = ({ companyId }) => {
                          {/* Vendor Address */}
                          <div className="mt-2 text-[12px] font-sans">
                             <p className="text-slate-400 mb-1 font-bold uppercase tracking-widest text-[10px]">To</p>
-                            <p className="text-blue-600 font-black text-[15px] italic">{vendor?.name || 'Vendor Name'}</p>
+                            <p className="text-blue-600 font-bold text-[15px] italic">{vendor?.name || 'Vendor Name'}</p>
                             <div className="text-slate-500 font-medium mt-1">
                                {vendor?.email}<br/>
                                {vendor?.mobile}
@@ -794,24 +794,24 @@ const VendorDetailView = ({ companyId }) => {
 
                          {/* Main Title */}
                          <div className="mt-20 text-center space-y-2">
-                            <h2 className="text-[28px] font-black text-slate-900 border-b-4 border-slate-900 inline-block pb-2 px-4 italic uppercase tracking-tighter">Statement of Accounts</h2>
-                            <p className="text-[14px] font-black text-slate-400 font-sans mt-4">01/04/2026 To 30/04/2026</p>
+                            <h2 className="text-[28px] font-bold text-slate-900 border-b-4 border-slate-900 inline-block pb-2 px-4 italic uppercase tracking-tighter">Statement of Accounts</h2>
+                            <p className="text-[14px] font-bold text-slate-400 font-sans mt-4">01/04/2026 To 30/04/2026</p>
                          </div>
 
                          {/* Summary Table */}
                          <div className="mt-20 flex justify-end">
                             <div className="w-80 space-y-0 text-[13px] font-sans shadow-xl border border-slate-100 rounded-lg overflow-hidden">
-                               <div className="bg-slate-900 p-3 font-black text-white border-b border-slate-200 uppercase tracking-widest text-[10px]">Account Summary</div>
+                               <div className="bg-slate-900 p-3 font-bold text-white border-b border-slate-200 uppercase tracking-widest text-[10px]">Account Summary</div>
                                <div className="flex justify-between p-3 border-b border-slate-50"><span>Opening Balance</span><span className="font-bold">₹0.00</span></div>
                                <div className="flex justify-between p-3 border-b border-slate-50"><span>Billed Amount</span><span className="font-bold">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</span></div>
                                <div className="flex justify-between p-3 border-b border-slate-50"><span>Amount Paid</span><span className="font-bold">₹0.00</span></div>
-                               <div className="flex justify-between p-4 border-b border-slate-200 bg-slate-50/50"><span className="font-black text-slate-900 uppercase">Balance Due</span><span className="font-black text-[18px] text-blue-600">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</span></div>
+                               <div className="flex justify-between p-4 border-b border-slate-200 bg-slate-50/50"><span className="font-bold text-slate-900 uppercase">Balance Due</span><span className="font-bold text-[18px] text-blue-600">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</span></div>
                             </div>
                          </div>
 
                          {/* Transaction Table */}
                          <table className="w-full mt-24 text-[12px] font-sans border-t-2 border-slate-900">
-                            <thead className="bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-widest">
+                            <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
                                <tr className="border-b border-slate-100">
                                   <th className="px-4 py-3 text-left">Date</th>
                                   <th className="px-4 py-3 text-left">Transactions</th>
@@ -824,15 +824,15 @@ const VendorDetailView = ({ companyId }) => {
                             <tbody className="text-slate-600">
                                <tr className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                   <td className="px-4 py-4 italic font-medium">01/04/2026</td>
-                                  <td className="px-4 py-4 font-black text-slate-900 uppercase tracking-tighter italic text-[13px]">*** Opening Balance ***</td>
+                                  <td className="px-4 py-4 font-bold text-slate-900 uppercase tracking-tighter italic text-[13px]">*** Opening Balance ***</td>
                                   <td className="px-4 py-4">---</td>
                                   <td className="px-4 py-4 text-right">0.00</td>
                                   <td className="px-4 py-4 text-right">0.00</td>
-                                  <td className="px-4 py-4 text-right font-black text-slate-900">0.00</td>
+                                  <td className="px-4 py-4 text-right font-bold text-slate-900">0.00</td>
                                </tr>
                             </tbody>
                             <tfoot>
-                               <tr className="font-black text-slate-900 text-[14px] bg-slate-50/50">
+                               <tr className="font-bold text-slate-900 text-[14px] bg-slate-50/50">
                                   <td colSpan={5} className="px-4 py-6 text-right uppercase tracking-widest text-[11px]">Current Balance Due</td>
                                   <td className="px-4 py-6 text-right text-blue-600 text-[16px]">₹{parseFloat(vendor?.currentBalance || 0).toLocaleString()}</td>
                                </tr>
@@ -859,7 +859,7 @@ const VendorDetailView = ({ companyId }) => {
                           </div>
                        </div>
                        <div className="space-y-1.5 pt-1">
-                          <h3 className="text-[17px] font-black text-slate-900 leading-tight">{vendor.salutation} {vendor.firstName} {vendor.lastName}</h3>
+                          <h3 className="text-[17px] font-bold text-slate-900 leading-tight">{vendor.salutation} {vendor.firstName} {vendor.lastName}</h3>
                           <div className="flex items-center gap-2 text-[13px] text-blue-600 font-bold hover:underline cursor-pointer"><Mail size={14}/> <span>{vendor.email || 'No email'}</span></div>
                           {vendor.phone && <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Phone size={14}/> <span>{vendor.phone}</span></div>}
                           {vendor.mobile && <div className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><Smartphone size={14}/> <span>{vendor.mobile}</span></div>}
@@ -878,7 +878,7 @@ const VendorDetailView = ({ companyId }) => {
                     </div>
 
                     <div className="space-y-6">
-                       <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">ADDRESS</h4>
+                       <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.3em] border-b border-slate-50 pb-3">ADDRESS</h4>
                        <div className="grid grid-cols-2 gap-10 pt-2">
                            {/* Billing Address */}
                            {(() => {
@@ -887,10 +887,10 @@ const VendorDetailView = ({ companyId }) => {
                               const hasAddr = billing && (billing.street1 || billing.city || billing.state || billing.attention || billing.country || billing.pinCode);
                               return (
                                 <div className="space-y-3">
-                                   <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Billing Address</p>
+                                   <p className="text-[13px] font-bold text-slate-800 uppercase tracking-tighter">Billing Address</p>
                                    {hasAddr ? (
                                      <div className="text-[13px] text-slate-800 font-semibold leading-relaxed space-y-1">
-                                       {billing.attention && <p className="font-black text-slate-900">{billing.attention}</p>}
+                                       {billing.attention && <p className="font-bold text-slate-900">{billing.attention}</p>}
                                        {billing.street1 && <p>{billing.street1}</p>}
                                        {billing.street2 && <p>{billing.street2}</p>}
                                        {(billing.city || billing.state || billing.pinCode) && <p>{[billing.city, billing.state, billing.pinCode].filter(Boolean).join(', ')}</p>}
@@ -911,10 +911,10 @@ const VendorDetailView = ({ companyId }) => {
                               const hasAddr = shipping && (shipping.street1 || shipping.city || shipping.state || shipping.attention || shipping.country || shipping.pinCode);
                               return (
                                 <div className="space-y-3">
-                                   <p className="text-[13px] font-black text-slate-800 uppercase tracking-tighter">Shipping Address</p>
+                                   <p className="text-[13px] font-bold text-slate-800 uppercase tracking-tighter">Shipping Address</p>
                                    {hasAddr ? (
                                      <div className="text-[13px] text-slate-800 font-semibold leading-relaxed space-y-1">
-                                       {shipping.attention && <p className="font-black text-slate-900">{shipping.attention}</p>}
+                                       {shipping.attention && <p className="font-bold text-slate-900">{shipping.attention}</p>}
                                        {shipping.street1 && <p>{shipping.street1}</p>}
                                        {shipping.street2 && <p>{shipping.street2}</p>}
                                        {(shipping.city || shipping.state || shipping.pinCode) && <p>{[shipping.city, shipping.state, shipping.pinCode].filter(Boolean).join(', ')}</p>}
@@ -932,7 +932,7 @@ const VendorDetailView = ({ companyId }) => {
 
                     <div className="space-y-6">
                        <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                          <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em]">OTHER DETAILS</h4>
+                          <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.3em]">OTHER DETAILS</h4>
                           <ChevronUp size={18} className="text-blue-600 cursor-pointer" />
                        </div>
                        <div className="space-y-6 pt-2">
@@ -946,7 +946,7 @@ const VendorDetailView = ({ companyId }) => {
 
                     <div className="space-y-6">
                        <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                          <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em]">BANK ACCOUNT DETAILS</h4>
+                          <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.3em]">BANK ACCOUNT DETAILS</h4>
                           <div className="flex items-center gap-2 cursor-pointer">
                              <Plus onClick={() => { handleBankFormReset(); setIsBankModalOpen(true); }} size={18} className="bg-blue-600 text-white rounded-full p-0.5 shadow-sm hover:scale-105 transition-transform" strokeWidth={2.5} />
                              <ChevronUp size={18} className="text-blue-600" />
@@ -1031,7 +1031,7 @@ const VendorDetailView = ({ companyId }) => {
 
                     <div className="space-y-6">
                        <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                          <h4 className="text-[11px] font-black text-slate-700 uppercase tracking-[0.3em]">RECORD INFO</h4>
+                          <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.3em]">RECORD INFO</h4>
                           <ChevronUp size={18} className="text-blue-600 cursor-pointer" />
                        </div>
                        <div className="space-y-6 pt-2">
@@ -1047,22 +1047,22 @@ const VendorDetailView = ({ companyId }) => {
                      <div className="p-8 bg-slate-900 rounded-2xl text-white relative overflow-hidden shadow-2xl shadow-slate-200">
                         <div className="relative z-10 flex items-start justify-between gap-10">
                            <div className="space-y-3">
-                              <div className="flex items-center gap-2 text-[14px] font-black italic tracking-widest text-slate-400 uppercase"><Truck size={16} /> PROCUREMENT STATUS</div>
+                              <div className="flex items-center gap-2 text-[14px] font-bold italic tracking-widest text-slate-400 uppercase"><Truck size={16} /> PROCUREMENT STATUS</div>
                               <p className="text-[16px] text-white/90 font-medium leading-relaxed">View all your pending bills and purchase orders for this vendor.</p>
                            </div>
                            <div className="flex flex-col gap-2 shrink-0">
-                              <button onClick={() => navigate('/bills/new')} className="px-6 py-2 bg-white text-slate-900 rounded-lg text-[13px] font-black hover:bg-slate-50 transition-all shadow-xl">New Bill</button>
-                               <button onClick={() => navigate('/purchase-orders/new')} className="px-6 py-2 bg-white/10 text-white border border-white/20 rounded-lg text-[13px] font-black hover:bg-white/20 transition-all">New PO</button>
+                              <button onClick={() => navigate('/bills/new')} className="px-6 py-2 bg-white text-slate-900 rounded-lg text-[13px] font-bold hover:bg-slate-50 transition-all shadow-xl">New Bill</button>
+                               <button onClick={() => navigate('/purchase-orders/new')} className="px-6 py-2 bg-white/10 text-white border border-white/20 rounded-lg text-[13px] font-bold hover:bg-white/20 transition-all">New PO</button>
                            </div>
                         </div>
                      </div>
 
                      <div className="space-y-6">
-                        <h4 className="text-[20px] font-black text-slate-900 tracking-tight flex items-center gap-3">Payables <div className="h-0.5 flex-1 bg-slate-50"></div></h4>
+                        <h4 className="text-[20px] font-bold text-slate-900 tracking-tight flex items-center gap-3">Payables <div className="h-0.5 flex-1 bg-slate-50"></div></h4>
                         <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100 bg-white">
                            <table className="w-full text-left">
-                              <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-black text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">UNUSED PAYMENTS</th></tr></thead>
-                              <tbody><tr><td className="px-8 py-8 font-black text-slate-700">{vendor.currency || 'INR'}</td><td className="px-8 py-8 text-right font-black text-[24px] text-slate-900">₹{parseFloat(vendor.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">₹0.00</td></tr></tbody>
+                              <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-bold text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">UNUSED PAYMENTS</th></tr></thead>
+                              <tbody><tr><td className="px-8 py-8 font-bold text-slate-700">{vendor.currency || 'INR'}</td><td className="px-8 py-8 text-right font-bold text-[24px] text-slate-900">₹{parseFloat(vendor.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">₹0.00</td></tr></tbody>
                            </table>
                         </div>
                      </div>
@@ -1074,7 +1074,7 @@ const VendorDetailView = ({ companyId }) => {
         ) : (
            <div className="flex-1 flex flex-col items-center justify-center p-20 text-center opacity-40">
               <Users size={64} className="text-slate-200 mb-8" />
-              <h3 className="text-[24px] font-black text-slate-900 mb-3 tracking-tighter">Select a Vendor</h3>
+              <h3 className="text-[24px] font-bold text-slate-900 mb-3 tracking-tighter">Select a Vendor</h3>
               <p className="text-[15px] text-slate-500 max-w-sm mx-auto font-medium">Click on a vendor in the list to reveal their procurement details.</p>
            </div>
          )}
@@ -1198,23 +1198,23 @@ const VendorDetailView = ({ companyId }) => {
                   {(bankForm.bankName || bankForm.branch) && (
                     <div className="grid grid-cols-2 gap-4 p-5 bg-slate-50/50 rounded-xl border border-slate-100 animate-fade-in">
                       <div className="space-y-1">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Bank Name</label>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Bank Name</label>
                         <p className="text-[14px] font-bold text-slate-900">{bankForm.bankName || '---'}</p>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Branch</label>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Branch</label>
                         <p className="text-[14px] font-bold text-slate-900">{bankForm.branch || '---'}</p>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">City</label>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">City</label>
                         <p className="text-[13px] font-semibold text-slate-700">{bankForm.city || '---'}</p>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">State</label>
+                        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">State</label>
                         <p className="text-[13px] font-semibold text-slate-700">{bankForm.state || '---'}</p>
                       </div>
                       <div className="space-y-1 col-span-2">
-                         <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">District</label>
+                         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">District</label>
                          <p className="text-[13px] font-semibold text-slate-700">{bankForm.district || '---'}</p>
                       </div>
                     </div>

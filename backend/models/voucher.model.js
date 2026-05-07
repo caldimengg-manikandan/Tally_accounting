@@ -36,6 +36,14 @@ module.exports = (sequelize, DataTypes) => {
     currency: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    CompanyId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     paranoid: true

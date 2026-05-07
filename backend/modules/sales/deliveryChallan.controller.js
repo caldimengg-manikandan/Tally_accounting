@@ -6,7 +6,7 @@ exports.createChallan = async (req, res) => {
     const { 
       companyId, customerLedgerId, challanNumber, referenceNumber, date, 
       challanType, salesperson, subject, subTotal, discount, 
-      taxAmount, adjustment, totalAmount, status, items 
+      taxAmount, adjustment, totalAmount, status, items, projectId 
     } = req.body;
 
     const challan = await DeliveryChallan.create({
@@ -23,7 +23,8 @@ exports.createChallan = async (req, res) => {
       taxAmount,
       adjustment,
       totalAmount,
-      status: status || 'Draft'
+      status: status || 'Draft',
+      ProjectId: projectId
     }, { transaction: t });
 
     if (items && items.length > 0) {
@@ -88,7 +89,7 @@ exports.updateChallan = async (req, res) => {
     const { 
       customerLedgerId, challanNumber, referenceNumber, date, 
       challanType, salesperson, subject, subTotal, discount, 
-      taxAmount, adjustment, totalAmount, status, items 
+      taxAmount, adjustment, totalAmount, status, items, projectId 
     } = req.body;
 
     const challan = await DeliveryChallan.findByPk(id);
@@ -107,7 +108,8 @@ exports.updateChallan = async (req, res) => {
       taxAmount,
       adjustment,
       totalAmount,
-      status
+      status,
+      ProjectId: projectId
     }, { transaction: t });
 
     if (items) {

@@ -51,7 +51,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false
     },
-    VoucherId: DataTypes.UUID
+    VoucherId: DataTypes.UUID,
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    }
   });
 
   CreditNote.associate = (models) => {
@@ -59,6 +63,7 @@ module.exports = (sequelize, DataTypes) => {
     CreditNote.belongsTo(models.Company);
     CreditNote.belongsTo(models.Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
     CreditNote.belongsTo(models.Ledger, { as: 'ARAccount', foreignKey: 'accountsReceivableId' });
+    CreditNote.belongsTo(models.Project, { foreignKey: 'ProjectId' });
   };
 
   return CreditNote;

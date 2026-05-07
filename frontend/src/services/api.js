@@ -227,6 +227,15 @@ export const projectAPI = {
   getById: (id) => api.get(`/projects/detail/${id}`),
   update: (id, data) => api.put(`/projects/${id}`, data),
   delete: (id) => api.delete(`/projects/${id}`),
+  getPurchases: (id) => api.get(`/projects/${id}/purchases`),
+  getSales: (id) => api.get(`/projects/${id}/sales`),
+  getActivity: (id) => api.get(`/projects/${id}/activity`),
+};
+
+export const timesheetAPI = {
+  log: (data) => api.post('/timesheets', data),
+  getProjectEntries: (projectId) => api.get(`/timesheets/project/${projectId}`),
+  delete: (id) => api.delete(`/timesheets/${id}`)
 };
 
 

@@ -252,7 +252,7 @@ const RecurringExpenseEntryView = ({ companyId }) => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-8">
                <div className="bg-blue-600/5 px-6 py-3 border-b border-slate-100 flex items-center gap-2 rounded-t-2xl">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <h3 className="text-[12px] font-black text-blue-700 uppercase tracking-widest">Basic Details</h3>
+                  <h3 className="text-[12px] font-bold text-blue-700 uppercase tracking-widest">Basic Details</h3>
                </div>
                <div className="p-8 space-y-6">
                   
@@ -338,7 +338,7 @@ const RecurringExpenseEntryView = ({ companyId }) => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-8">
                <div className="bg-emerald-600/5 px-6 py-3 border-b border-slate-100 flex items-center gap-2 rounded-t-2xl">
                   <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                  <h3 className="text-[12px] font-black text-emerald-700 uppercase tracking-widest">Expense Details</h3>
+                  <h3 className="text-[12px] font-bold text-emerald-700 uppercase tracking-widest">Expense Details</h3>
                </div>
                <div className="p-8 space-y-6">
                   
@@ -498,7 +498,7 @@ const RecurringExpenseEntryView = ({ companyId }) => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-8">
                <div className="bg-amber-600/5 px-6 py-3 border-b border-slate-100 flex items-center gap-2 rounded-t-2xl">
                   <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                  <h3 className="text-[12px] font-black text-amber-700 uppercase tracking-widest">Vendor & Notes</h3>
+                  <h3 className="text-[12px] font-bold text-amber-700 uppercase tracking-widest">Vendor & Notes</h3>
                </div>
                <div className="p-8 space-y-6">
                   
@@ -561,7 +561,7 @@ const RecurringExpenseEntryView = ({ companyId }) => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-8">
                <div className="bg-purple-600/5 px-6 py-3 border-b border-slate-100 flex items-center gap-2 rounded-t-2xl">
                   <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                  <h3 className="text-[12px] font-black text-purple-700 uppercase tracking-widest">Customer & Tags</h3>
+                  <h3 className="text-[12px] font-bold text-purple-700 uppercase tracking-widest">Customer & Tags</h3>
                </div>
                <div className="p-8 space-y-6">
                   
@@ -624,7 +624,7 @@ const RecurringExpenseEntryView = ({ companyId }) => {
          <button 
             onClick={handleSave}
             disabled={loading}
-            className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-black rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-bold rounded-xl shadow-lg shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
          >
             {loading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <Save size={18}/>}
             SAVE
@@ -632,7 +632,7 @@ const RecurringExpenseEntryView = ({ companyId }) => {
          <button 
             onClick={() => navigate('/recurring-expenses')}
             disabled={loading}
-            className="px-8 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-[14px] font-black rounded-xl active:scale-95 transition-all disabled:opacity-50"
+            className="px-8 py-2.5 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 text-[14px] font-bold rounded-xl active:scale-95 transition-all disabled:opacity-50"
          >
             CANCEL
          </button>

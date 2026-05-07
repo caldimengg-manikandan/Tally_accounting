@@ -7,7 +7,7 @@ class AccountingService {
    */
   static async recordJournalEntry({ 
     companyId, date, narration, reference, voucherType = 'Journal', entries, userId, voucherNumber: customVoucherNumber,
-    reportingMethod, currency
+    reportingMethod, currency, projectId 
   }, dbTransaction = null) {
     const { AuditLog } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
@@ -46,6 +46,7 @@ class AccountingService {
       narration: narration || `Auto-generated ${voucherType} entry`,
       reportingMethod,
       currency,
+      ProjectId: projectId || null
     }, options);
 
     // 3. Create Transaction Lines & Update Ledger Balances
@@ -60,7 +61,8 @@ class AccountingService {
         CompanyId: companyId,
         CostCenterId: entry.costCenterId || null,
         description: entry.description,
-        contactId: entry.contactId
+        contactId: entry.contactId,
+        ProjectId: projectId || null
       }, options);
 
       // Real-time Balance Update (Tally Standard)
@@ -196,7 +198,7 @@ class AccountingService {
    * Enhanced with: Negative Stock Protection, Integrated Inventory, and Audit Trails.
    */
   static async recordTaxInvoice({ 
-    companyId, customerLedgerId, date, narration, items, type = 'Sales', userId 
+    companyId, customerLedgerId, date, narration, items, type = 'Sales', userId, projectId 
   }, dbTransaction = null) {
     const { Item } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
@@ -287,7 +289,8 @@ class AccountingService {
       voucherType: type,
       narration: narration || `Tax Invoice Post: ${totalTaxableValue.toFixed(2)} + GST`,
       entries: journalEntries,
-      userId
+      userId,
+      projectId
     }, dbTransaction);
 
     // 5. Update Inventory & Metadata Linkage

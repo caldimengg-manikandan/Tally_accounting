@@ -53,6 +53,10 @@ module.exports = (sequelize, DataTypes) => {
     customerLedgerId: {
       type: DataTypes.UUID,
       allowNull: false
+    },
+    ProjectId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
 
@@ -60,6 +64,7 @@ module.exports = (sequelize, DataTypes) => {
     DeliveryChallan.hasMany(models.DeliveryChallanItem, { as: 'items', foreignKey: 'DeliveryChallanId' });
     DeliveryChallan.belongsTo(models.Company);
     DeliveryChallan.belongsTo(models.Ledger, { as: 'Customer', foreignKey: 'customerLedgerId' });
+    DeliveryChallan.belongsTo(models.Project, { foreignKey: 'ProjectId' });
   };
 
   return DeliveryChallan;

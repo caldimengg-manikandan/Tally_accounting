@@ -75,6 +75,7 @@ app.use('/api/mail', require('./modules/mail/mail.routes'));
 app.use('/api/delivery-challans', require('./modules/sales/deliveryChallan.routes'));
 app.use('/api/credit-notes', require('./modules/sales/creditNote.routes'));
 app.use('/api/projects', require('./modules/time_tracking/project.routes'));
+app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
@@ -82,7 +83,7 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
 // Using alter:true to apply new company profile fields;
-const syncOptions = { alter: false }; // Disable automatic sync to prevent constraint errors
+const syncOptions = { alter: true }; // Disable automatic sync to prevent constraint errors
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');

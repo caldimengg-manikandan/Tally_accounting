@@ -112,12 +112,12 @@ const RecurringExpensesView = ({ companyId }) => {
             <header className="px-8 py-6 flex items-center justify-between border-b border-slate-50 bg-white sticky top-0 z-10">
                 <div className="flex items-center gap-3">
                     <Repeat size={20} className="text-blue-600" />
-                    <h1 className="text-[18px] font-black text-slate-800 tracking-tight">Recurring Expenses</h1>
+                    <h1 className="text-[18px] font-bold text-slate-800 tracking-tight">Recurring Expenses</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     <button 
                         onClick={() => navigate('/recurring-expenses/new')}
-                        className="bg-[#1e61f0] hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[12px] font-black flex items-center gap-1.5 transition-all shadow-md shadow-blue-100"
+                        className="bg-[#1e61f0] hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[12px] font-bold flex items-center gap-1.5 transition-all shadow-md shadow-blue-100"
                     >
                         <Plus size={16} strokeWidth={3} /> NEW
                     </button>
@@ -158,7 +158,7 @@ const RecurringExpensesView = ({ companyId }) => {
                             <h3 className={`text-[14px] font-bold tracking-tight ${selectedTemplate?.id === template.id ? 'text-blue-700' : 'text-slate-800'}`}>
                                 {template.profileName}
                             </h3>
-                            <span className="text-[14px] font-black text-slate-900">₹{parseFloat(template.amount).toLocaleString()}</span>
+                            <span className="text-[14px] font-bold text-slate-900">₹{parseFloat(template.amount).toLocaleString()}</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
@@ -166,7 +166,7 @@ const RecurringExpensesView = ({ companyId }) => {
                                 <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                                 <span>Next: {new Date(template.nextGenerationDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short'})}</span>
                             </div>
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${template.status === 'Active' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${template.status === 'Active' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                                 {template.status}
                             </span>
                         </div>
@@ -189,9 +189,9 @@ const RecurringExpensesView = ({ companyId }) => {
             <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden animate-fade-in-right">
                 <header className="px-10 py-6 bg-white border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <h2 className="text-[20px] font-black text-slate-800 tracking-tight">{selectedTemplate.profileName}</h2>
+                        <h2 className="text-[20px] font-bold text-slate-800 tracking-tight">{selectedTemplate.profileName}</h2>
                         <div className="flex items-center gap-2 mt-1">
-                             <span className={`text-[11px] font-black px-2 py-0.5 rounded-full uppercase ${selectedTemplate.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                             <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${selectedTemplate.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                                 {selectedTemplate.status}
                              </span>
                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Created on {new Date(selectedTemplate.createdAt).toLocaleDateString()}</span>
@@ -228,9 +228,9 @@ const RecurringExpensesView = ({ companyId }) => {
                         {/* Summary Card */}
                         <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100 flex flex-col justify-between">
                             <div>
-                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Automation Cycle</p>
+                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Automation Cycle</p>
                                 <div className="flex items-end gap-3 mb-8">
-                                    <h3 className="text-[40px] font-black text-slate-900 leading-none">₹{parseFloat(selectedTemplate.amount).toLocaleString()}</h3>
+                                    <h3 className="text-[40px] font-bold text-slate-900 leading-none">₹{parseFloat(selectedTemplate.amount).toLocaleString()}</h3>
                                     <span className="text-[14px] font-bold text-blue-600 mb-1 uppercase tracking-wider">{selectedTemplate.frequency}</span>
                                 </div>
                                 <div className="space-y-6">
@@ -239,7 +239,7 @@ const RecurringExpensesView = ({ companyId }) => {
                                             <Calendar size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Next Run Date</p>
+                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Next Run Date</p>
                                             <p className="text-[14px] font-bold text-slate-800 italic">{new Date(selectedTemplate.nextGenerationDate).toLocaleDateString('en-IN', {day:'2-digit', month:'long', year:'numeric'})}</p>
                                         </div>
                                     </div>
@@ -248,7 +248,7 @@ const RecurringExpensesView = ({ companyId }) => {
                                             <Repeat size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Last Generated</p>
+                                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Last Generated</p>
                                             <p className="text-[14px] font-bold text-slate-800 italic">{selectedTemplate.lastGeneratedDate ? new Date(selectedTemplate.lastGeneratedDate).toLocaleDateString() : 'Never generated yet'}</p>
                                         </div>
                                     </div>
@@ -258,26 +258,26 @@ const RecurringExpensesView = ({ companyId }) => {
 
                         {/* Account Details Card */}
                         <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
-                             <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Ledger Mappings</p>
+                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-6">Ledger Mappings</p>
                              <div className="space-y-6">
                                 <section>
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
-                                        <label className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Expense Account</label>
+                                        <label className="text-[11px] font-bold text-slate-800 uppercase tracking-widest">Expense Account</label>
                                     </div>
                                     <p className="text-[15px] font-bold text-slate-700 pl-3.5 border-l border-slate-100">{selectedTemplate.ExpenseAccount?.name || 'N/A'}</p>
                                 </section>
                                 <section>
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                                        <label className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Paid Through</label>
+                                        <label className="text-[11px] font-bold text-slate-800 uppercase tracking-widest">Paid Through</label>
                                     </div>
                                     <p className="text-[15px] font-bold text-slate-700 pl-3.5 border-l border-slate-100">{selectedTemplate.PaidThrough?.name || 'N/A'}</p>
                                 </section>
                                 <section>
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
-                                        <label className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Currency</label>
+                                        <label className="text-[11px] font-bold text-slate-800 uppercase tracking-widest">Currency</label>
                                     </div>
                                     <p className="text-[15px] font-bold text-slate-700 pl-3.5 border-l border-slate-100">{selectedTemplate.currency}</p>
                                 </section>
@@ -288,20 +288,20 @@ const RecurringExpensesView = ({ companyId }) => {
                         <div className="lg:col-span-2 bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                                 <div>
-                                    <label className="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                    <label className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">
                                         <User size={12} /> Vendor
                                     </label>
                                     <p className="text-[14px] font-bold text-slate-800">{selectedTemplate.Vendor?.name || '---'}</p>
                                 </div>
                                 <div>
-                                    <label className="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                    <label className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">
                                         <Tag size={12} /> Billable Customer
                                     </label>
                                     <p className="text-[14px] font-bold text-slate-800">{selectedTemplate.Customer?.name || 'Not billable'}</p>
                                 </div>
                             </div>
                             <div className="mt-8 pt-8 border-t border-slate-50">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Internal Notes</label>
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 block">Internal Notes</label>
                                 <p className="text-slate-600 text-[14px] italic leading-relaxed">
                                     {selectedTemplate.notes ? `"${selectedTemplate.notes}"` : 'No notes provided.'}
                                 </p>
@@ -311,7 +311,7 @@ const RecurringExpensesView = ({ companyId }) => {
 
                     <div className="mt-12 text-center p-12 rounded-[2.5rem] bg-blue-600/5 border border-dashed border-blue-200">
                          <Info size={24} className="text-blue-500 mx-auto mb-4" />
-                         <h4 className="text-[16px] font-black text-slate-800 mb-2">Automation Preview</h4>
+                         <h4 className="text-[16px] font-bold text-slate-800 mb-2">Automation Preview</h4>
                          <p className="text-[13px] text-slate-500 max-w-md mx-auto italic">
                             This profile will automatically generate a <span className="font-bold text-blue-600">Payment Voucher</span> worth <span className="font-bold text-slate-900">₹{parseFloat(selectedTemplate.amount || 0).toLocaleString()}</span> every <span className="font-bold text-slate-900">{selectedTemplate.frequency}</span> using the defined ledgers.
                          </p>
@@ -324,24 +324,24 @@ const RecurringExpensesView = ({ companyId }) => {
                     <div className="w-24 h-24 bg-blue-50 rounded-[2rem] flex items-center justify-center text-blue-600 mb-8 animate-pulse">
                         <Repeat size={40} />
                     </div>
-                    <h3 className="text-[24px] font-black text-slate-800 tracking-tight mb-4 uppercase italic">Automation Hub</h3>
+                    <h3 className="text-[24px] font-bold text-slate-800 tracking-tight mb-4 uppercase italic">Automation Hub</h3>
                     <p className="text-slate-500 text-[15px] leading-relaxed mb-8">
                         Select a recurring expense profile from the sidebar to view its automation details, or initialize a new automated workflow.
                     </p>
                     <button 
                          onClick={() => navigate('/recurring-expenses/new')}
-                         className="px-10 py-4 bg-[#1e61f0] hover:bg-blue-700 text-white rounded-2xl font-black text-[14px] tracking-widest shadow-xl shadow-blue-100 transition-all active:scale-95"
+                         className="px-10 py-4 bg-[#1e61f0] hover:bg-blue-700 text-white rounded-2xl font-bold text-[14px] tracking-widest shadow-xl shadow-blue-100 transition-all active:scale-95"
                     >
                         INITIALIZE AUTOMATION
                     </button>
                     <div className="mt-10 flex items-center gap-6">
                         <div className="flex flex-col items-center">
-                            <span className="text-[18px] font-black text-slate-800">{templates.length}</span>
+                            <span className="text-[18px] font-bold text-slate-800">{templates.length}</span>
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Profiles</span>
                         </div>
                         <div className="w-px h-8 bg-slate-100"></div>
                         <div className="flex flex-col items-center">
-                            <span className="text-[18px] font-black text-slate-800">{templates.filter(t => t.status === 'Paused').length}</span>
+                            <span className="text-[18px] font-bold text-slate-800">{templates.filter(t => t.status === 'Paused').length}</span>
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Paused</span>
                         </div>
                     </div>

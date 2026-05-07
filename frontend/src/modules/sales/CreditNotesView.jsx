@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { creditNoteAPI, ledgerAPI, inventoryAPI, salesAPI } from '../../services/api';
+import { creditNoteAPI, ledgerAPI, inventoryAPI, salesAPI, companyAPI, projectAPI } from '../../services/api';
 import { 
   Plus, Calendar, Undo2, MoreHorizontal, Edit2, Trash2, 
   Settings, CheckCircle2, AlertCircle, Clock, ArrowRight,
@@ -47,7 +47,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
             <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden animate-scale-up">
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="text-[18px] font-black text-slate-900 tracking-tight">Manage Salespersons</h3>
+                    <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Manage Salespersons</h3>
                     <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"><X size={18}/></button>
                 </div>
                 <div className="px-6 py-4 flex items-center gap-3 border-b border-slate-100">
@@ -63,7 +63,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     </div>
                     <button
                         onClick={() => setShowAddForm(true)}
-                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-black rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100"
+                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-bold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100"
                     >
                         <Plus size={14}/> New Salesperson
                     </button>
@@ -72,7 +72,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     <div className="mx-6 my-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
+                                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
                                 <input
                                     value={newName}
                                     onChange={e => setNewName(e.target.value)}
@@ -80,7 +80,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                                 />
                             </div>
                             <div>
-                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
+                                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
                                 <input
                                     type="email"
                                     value={newEmail}
@@ -93,13 +93,13 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                             <button
                                 onClick={handleSaveAndSelect}
                                 disabled={!newName.trim()}
-                                className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-black rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm"
+                                className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-bold rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm"
                             >
                                 Save and Select
                             </button>
                             <button
                                 onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }}
-                                className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-black rounded hover:bg-slate-50 transition-all"
+                                className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-bold rounded hover:bg-slate-50 transition-all"
                             >
                                 Cancel
                             </button>
@@ -108,8 +108,8 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                 )}
                 <div className="px-6">
                     <div className="grid grid-cols-2 py-3 border-b border-slate-100">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salesperson Name</span>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Salesperson Name</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
                     </div>
                     <div className="max-h-56 overflow-y-auto no-scrollbar">
                         {filtered.length === 0 ? (
@@ -151,14 +151,15 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
     }, []);
 
     const filtered = (customers || []).filter(c => {
-        return c.name?.toLowerCase().includes(search.toLowerCase());
+        if (!c || !c.name) return false;
+        return c.name.toLowerCase().includes(search.toLowerCase());
     });
 
     return (
         <div className="relative w-full" ref={containerRef}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between cursor-pointer focus-within:bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all shadow-sm"
+                className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between cursor-pointer focus-within:bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all appearance-none shadow-sm"
             >
                 <div className="flex-1 overflow-hidden">
                     {value ? (
@@ -167,11 +168,11 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
                         <div className="text-[14px] font-bold text-slate-400">{placeholder}</div>
                     )}
                 </div>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 shadow-2xl rounded-xl z-[100] overflow-hidden animate-fade-in flex flex-col">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-xl z-[200] overflow-hidden animate-fade-in flex flex-col">
                     <div className="p-3 border-b border-slate-50 bg-slate-50/50">
                         <div className="relative">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -208,7 +209,7 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
                     <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
                         <button 
                             onClick={() => { setIsOpen(false); onNewCustomer(); }}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-black text-[13px] hover:bg-blue-100 rounded-lg transition-colors"
+                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-bold text-[13px] hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest"
                         >
                             <Plus size={16} strokeWidth={3} /> New Customer
                         </button>
@@ -220,7 +221,7 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ITEM SEARCH SELECTOR (INLINE COMPONENT)
+// ITEM SEARCH SELECTOR
 // ─────────────────────────────────────────────────────────────────────────────
 const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -236,6 +237,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
     }, []);
 
     const filtered = (items || []).filter(it => {
+        if (!it) return false;
         const n = it.name || '';
         const d = it.salesDescription || '';
         const s = search.toLowerCase();
@@ -259,7 +261,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-[350px] bg-white border border-slate-200 shadow-2xl rounded-xl z-[100] overflow-hidden animate-fade-in flex flex-col">
+                <div className="absolute top-full left-0 mt-2 w-[350px] bg-white border border-slate-200 shadow-2xl rounded-xl z-[300] overflow-hidden animate-fade-in flex flex-col">
                     <div className="p-3 border-b border-slate-50 bg-slate-50/50">
                         <div className="relative">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -301,7 +303,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                     <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
                         <button 
                             onClick={() => { setIsOpen(false); onNewItem(); }}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-black text-[13px] hover:bg-blue-100 rounded-lg transition-colors"
+                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-bold text-[13px] hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest"
                         >
                             <Plus size={16} strokeWidth={3} /> New Item
                         </button>
@@ -312,6 +314,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
     );
 };
 
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CREDIT NOTE FORM (COMPONENT)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -321,6 +324,7 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
     const [saving, setSaving] = useState(false);
     const [ledgers, setLedgers] = useState([]);
     const [items, setItems] = useState([]);
+    const [projects, setProjects] = useState([]);
     
     const customers = useMemo(() => ledgers.filter(l => {
         const g = l.Group?.name || '';
@@ -343,7 +347,8 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
         adjustment: 0,
         taxAmount: 0,
         customerNotes: 'Will be displayed on the credit note',
-        termsConditions: 'Enter terms and conditions here...'
+        termsConditions: 'Enter terms and conditions here...',
+        projectId: ''
     });
 
     const [lineItems, setLineItems] = useState([
@@ -355,11 +360,13 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
         setLoading(true);
         Promise.all([
             ledgerAPI.getByCompany(companyId),
-            inventoryAPI.getByCompany(companyId)
-        ]).then(([ledgersRes, itemsRes]) => {
+            inventoryAPI.getByCompany(companyId),
+            projectAPI.getByCompany(companyId)
+        ]).then(([ledgersRes, itemsRes, projectsRes]) => {
             const allLedgers = ledgersRes.data || [];
             setLedgers(allLedgers);
             setItems(itemsRes.data || []);
+            setProjects(projectsRes.data || []);
             const defaultAR = allLedgers.find(l => l.name === 'Accounts Receivable');
             if (defaultAR) setFormData(prev => ({ ...prev, accountsReceivableId: defaultAR.id }));
         }).finally(() => setLoading(false));
@@ -434,31 +441,37 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
     if (loading) return <div className="p-20 flex flex-col items-center justify-center h-screen"><Loader2 className="animate-spin text-blue-500 mb-4" size={32}/><div className="font-bold text-slate-400 uppercase tracking-widest text-sm">Preparing Interface...</div></div>;
 
     return (
-        <div className="flex flex-col h-screen bg-[#f8fafc]">
-            <header className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 px-10 py-5 flex items-center justify-between z-[110] shadow-sm">
-              <div className="flex items-center gap-4">
-                <button onClick={() => navigate('/credit-notes')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-900 transition-all"><ArrowLeft size={20} /></button>
-                <div className="w-10 h-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg flex items-center justify-center text-white shadow-md">
-                    <Undo2 size={18} />
+        <div className="flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
+            {/* Sticky Header */}
+            <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20 no-print">
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => navigate('/credit-notes')}
+                        className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
+                    >
+                        <ArrowLeft size={22} />
+                    </button>
+                    <div>
+                        <h2 className="text-[18px] font-bold text-slate-900 tracking-tight flex items-center gap-2 uppercase">
+                            {editId ? 'Edit Credit Note' : 'New Credit Note'}
+                            <span className="text-[10px] font-bold text-[#1e61f0] bg-blue-50 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-100">{formData.creditNoteNumber}</span>
+                        </h2>
+                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Credit Notes</div>
+                    </div>
                 </div>
-                <div>
-                  <h2 className="text-[20px] font-black text-slate-900 tracking-tight uppercase">{editId ? 'Edit Credit Note' : 'New Credit Note'}</h2>
-                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Return & Credit Issuance</p>
-                </div>
-              </div>
-              <button onClick={() => navigate('/credit-notes')} className="text-slate-400 hover:text-slate-800 transition-colors p-2 hover:bg-slate-100 rounded-full"><X size={24} /></button>
+                <button onClick={() => navigate('/credit-notes')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
             </header>
 
-            <div className="flex-1 mt-24 pb-32 bg-[#f8fafc] overflow-y-auto custom-scrollbar">
-              <div className="max-w-[1000px] mx-auto py-8 px-6">
-                
-                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.05)] p-14 space-y-16 animate-fade-in relative overflow-hidden ring-1 ring-slate-900/5">
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto no-scrollbar">
+                <div className="max-w-[1000px] mx-auto py-10 px-6">
+                    <div className="bg-white rounded border border-slate-200 shadow-sm p-12 space-y-12 animate-fade-in relative overflow-hidden">
                   {/* Decorative corner blur */}
                   <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-50 via-purple-50/30 to-transparent rounded-bl-[100%] opacity-70 pointer-events-none -z-10 blur-3xl"></div>
 
                   <div className="grid grid-cols-2 gap-x-16 gap-y-10 relative z-10">
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black text-red-500 uppercase tracking-widest ml-1 flex items-center gap-2">Customer Selection*</label>
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1 flex items-center gap-2">Customer Selection*</label>
                       <CustomerSearchSelector 
                           customers={customers}
                           value={customers.find(c => c.id === formData.customerLedgerId)?.name || ''}
@@ -469,7 +482,7 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black text-red-500 uppercase tracking-widest ml-1 flex items-center gap-2">AR Account*</label>
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1 flex items-center gap-2">AR Account*</label>
                       <div className="relative">
                           <select 
                             value={formData.accountsReceivableId} 
@@ -484,13 +497,30 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black text-red-500 uppercase tracking-widest ml-1">Credit Note #*</label>
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Credit Note #*</label>
                       <input 
                         type="text" 
                         value={formData.creditNoteNumber} 
                         onChange={e => setFormData({...formData, creditNoteNumber: e.target.value})}
                         className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm"
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Project</label>
+                      <div className="relative">
+                        <select 
+                          value={formData.projectId} 
+                          onChange={e => setFormData({...formData, projectId: e.target.value})}
+                          className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm appearance-none"
+                        >
+                          <option value="">Select or associate project</option>
+                          {projects.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -505,7 +535,7 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black text-red-500 uppercase tracking-widest ml-1">Credit Date*</label>
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Credit Date*</label>
                       <input 
                         type="date" 
                         value={formData.date} 
@@ -517,7 +547,7 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
 
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-[14px] font-black text-slate-900 uppercase tracking-tight flex items-center gap-2"><Package size={16} className="text-blue-500"/> Line Items</h3>
+                        <h3 className="text-[14px] font-bold text-slate-900 uppercase tracking-tight flex items-center gap-2"><Package size={16} className="text-blue-500"/> Line Items</h3>
                         <button className="text-[11px] font-bold text-[#1e61f0] flex items-center gap-1.5 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all"><Settings size={14}/> Settings</button>
                     </div>
                     
@@ -563,7 +593,7 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                                   className="w-full text-right bg-slate-50 border border-slate-100 px-3 py-2 outline-none text-[13px] font-bold text-slate-700 focus:bg-white focus:border-blue-300 rounded-lg transition-all" 
                                 />
                               </td>
-                              <td className="px-6 py-5 text-right font-mono font-black text-slate-900 text-[15px] align-top pt-7">
+                              <td className="px-6 py-5 text-right font-mono font-bold text-slate-900 text-[15px] align-top pt-7">
                                 ₹{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                               </td>
                               <td className="px-4 py-5 text-center align-top pt-7">
@@ -580,26 +610,47 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                   <div className="flex justify-end pt-12 border-t border-slate-100/80">
                      <div className="w-80 space-y-4 bg-slate-900 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-[50px] opacity-20 pointer-events-none"></div>
-                        <div className="flex justify-between items-center text-[15px] font-black relative z-10">
+                        <div className="flex justify-between items-center text-[15px] font-bold relative z-10">
                           <span className="text-slate-400 uppercase tracking-widest text-[12px]">Total Credit</span>
-                          <span className="text-[28px] font-black text-white tracking-tighter">₹{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-[28px] font-bold text-white tracking-tighter">₹{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                      </div>
-                  </div>
+                    </div>
                 </div>
-              </div>
             </div>
+        </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 px-12 py-4 flex items-center justify-between z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.04)]">
-                <div className="flex items-center gap-3 text-slate-500 text-[11px] font-bold uppercase tracking-widest"><div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><Undo2 size={14} strokeWidth={2.5} /></div> Amount will be credited to Balance</div>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/credit-notes')} className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded-xl transition-all">Discard</button>
-                    <button onClick={() => handleSave('Open')} disabled={saving} className="px-10 py-3 bg-[#1e61f0] text-white rounded-xl font-bold text-[13px] hover:bg-blue-700 shadow-xl shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95">
-                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                        {saving ? 'Processing...' : (editId ? 'Update Note' : 'Issue Credit')}
+            {/* Sticky Footer */}
+            <footer className="bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky bottom-0 z-20 no-print shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                        <Undo2 size={14} className="text-blue-500" />
+                        Credit Adjustment Protocol
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => navigate('/credit-notes')}
+                        className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:text-slate-900 transition-all uppercase tracking-widest"
+                    >
+                        Discard
+                    </button>
+                    <button 
+                        onClick={() => handleSave('Draft')}
+                        disabled={saving}
+                        className="px-6 py-2 bg-slate-100 text-slate-600 rounded text-[13px] font-bold hover:bg-slate-200 transition-all uppercase tracking-widest"
+                    >
+                        {saving ? '...' : 'Save as Draft'}
+                    </button>
+                    <button 
+                        onClick={() => handleSave('Open')}
+                        disabled={saving}
+                        className="px-8 py-2.5 bg-[#1e61f0] text-white rounded font-bold text-[13px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+                    >
+                        {saving ? <Loader2 size={16} className="animate-spin" /> : <><Send size={16}/> Issue Credit</>}
                     </button>
                 </div>
-            </div>
+            </footer>
         </div>
     );
 };
@@ -618,7 +669,7 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
     }, [id]);
 
     if (loading) return <div className="p-20 text-center font-bold text-slate-300 animate-pulse uppercase tracking-widest text-[11px]">Syncing Records...</div>;
-    if (!note) return <div className="p-20 text-center text-slate-300 font-black text-2xl opacity-20 uppercase tracking-tighter">Not Found</div>;
+    if (!note) return <div className="p-20 text-center text-slate-300 font-bold text-2xl opacity-20 uppercase tracking-tighter">Not Found</div>;
 
     return (
         <div className="flex-1 flex flex-col h-full bg-[#f8fafc] animate-fade-in shadow-inner overflow-hidden">
@@ -628,7 +679,7 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                        <ChevronDown size={14} className="rotate-90"/> All Credit Notes
                     </button>
                     <span className="text-slate-300">|</span>
-                    <span className="text-[13px] font-black text-slate-800">{note.creditNoteNumber}</span>
+                    <span className="text-[13px] font-bold text-slate-800">{note.creditNoteNumber}</span>
                 </div>
                 <div className="flex items-center gap-3">
                    <button className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-md transition-all hover:text-slate-600"><History size={16}/></button>
@@ -650,44 +701,44 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                     {/* Professional Watermark */}
                     <div className="absolute -top-10 -right-10 w-96 h-96 bg-blue-50/30 rounded-full blur-[100px] pointer-events-none -z-10"></div>
                     <div className="absolute top-16 right-16 rotate-[12deg] opacity-[0.03] no-print pointer-events-none select-none">
-                        <div className="border-[12px] border-slate-900 text-slate-900 px-12 py-6 text-7xl font-black uppercase tracking-[0.2em] rounded-none">OFFICIAL</div>
+                        <div className="border-[12px] border-slate-900 text-slate-900 px-12 py-6 text-7xl font-bold uppercase tracking-[0.2em] rounded-none">OFFICIAL</div>
                     </div>
 
                     <div className="flex justify-between items-start mb-16 border-b border-slate-900 pb-12">
                         <div className="flex gap-4 items-start max-w-[65%]">
-                            <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-black text-xl shrink-0 rounded-none">{localStorage.getItem('companyName')?.charAt(0) || 'M'}</div>
+                            <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-bold text-xl shrink-0 rounded-none">{localStorage.getItem('companyName')?.charAt(0) || 'M'}</div>
                             <div className="space-y-1 min-w-0">
-                                <h2 className="text-[18px] font-black text-slate-900 tracking-tight uppercase leading-tight">{localStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
+                                <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase leading-tight">{localStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Returns & Adjustments Department</p>
                             </div>
                         </div>
                         <div className="text-right">
-                            <h1 className="text-[18px] font-black text-slate-900 tracking-[0.2em] uppercase leading-none mb-3">CREDIT NOTE</h1>
+                            <h1 className="text-[18px] font-bold text-slate-900 tracking-[0.2em] uppercase leading-none mb-3">CREDIT NOTE</h1>
                             <div className="space-y-1">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Document #</p>
-                                <p className="text-[15px] font-black text-slate-900 tracking-tight">{note.creditNoteNumber}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Document #</p>
+                                <p className="text-[15px] font-bold text-slate-900 tracking-tight">{note.creditNoteNumber}</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-20 mb-16">
                         <div className="space-y-4">
-                            <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Bill To</h5>
+                            <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Bill To</h5>
                             <div className="space-y-1">
-                                <p className="text-[15px] font-black text-slate-900 leading-tight">{note.CustomerLedger?.name || note.customerName}</p>
+                                <p className="text-[15px] font-bold text-slate-900 leading-tight">{note.CustomerLedger?.name || note.customerName}</p>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">A/C: {note.customerLedgerId?.split('-')[0]}</p>
                             </div>
                         </div>
                         <div className="text-right space-y-4">
-                            <h5 className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Date of Issue</h5>
-                            <p className="text-[15px] font-black text-slate-900 leading-tight">{new Date(note.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                            <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Date of Issue</h5>
+                            <p className="text-[15px] font-bold text-slate-900 leading-tight">{new Date(note.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                         </div>
                     </div>
 
                     <div className="relative mb-20">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b-[3px] border-slate-900 text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">
+                                <tr className="border-b-[3px] border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">
                                     <th className="py-6 text-left pb-4">Service / Item Details</th>
                                     <th className="py-6 text-right w-24 pb-4">Qty</th>
                                     <th className="py-6 text-right w-32 pb-4">Unit Rate</th>
@@ -699,16 +750,16 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                                     <tr key={idx} className="group/row hover:bg-slate-50/50 transition-colors">
                                         <td className="py-8">
                                             <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 group-hover/row:bg-white group-hover/row:text-blue-500 transition-all border border-transparent group-hover/row:border-blue-100 font-black text-[12px] rounded-none">{idx + 1}</div>
+                                                <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 group-hover/row:bg-white group-hover/row:text-blue-500 transition-all border border-transparent group-hover/row:border-blue-100 font-bold text-[12px] rounded-none">{idx + 1}</div>
                                                 <div>
-                                                    <p className="text-[16px] font-black text-slate-900 tracking-tight mb-1">{it.Item?.name || it.description}</p>
+                                                    <p className="text-[16px] font-bold text-slate-900 tracking-tight mb-1">{it.Item?.name || it.description}</p>
                                                     <p className="text-[12px] text-slate-400 font-bold uppercase tracking-wide leading-relaxed max-w-xs">{it.description || 'General Credit Issuance'}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{it.quantity}</td>
                                         <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">₹{parseFloat(it.rate).toLocaleString()}</td>
-                                        <td className="py-8 text-right text-[16px] font-black text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
+                                        <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -718,14 +769,14 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                     <div className="flex justify-end pt-12 border-t-2 border-slate-900">
                         <div className="w-full max-w-md space-y-6">
                             <div className="flex justify-between items-center px-2">
-                                <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Subtotal</span>
+                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Subtotal</span>
                                 <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(note.totalAmount).toLocaleString()}</span>
                             </div>
                             <div className="bg-slate-900 text-white p-6 md:p-8 shadow-2xl relative overflow-hidden rounded-none">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-none blur-[60px] opacity-20"></div>
                                 <div className="flex justify-between items-center relative z-10">
-                                    <span className="text-[11px] font-black text-blue-300 uppercase tracking-[0.2em]">Final Credit</span>
-                                    <span className="text-[24px] md:text-[32px] font-black text-white tracking-tighter tabular-nums">₹{parseFloat(note.totalAmount).toLocaleString()}</span>
+                                    <span className="text-[11px] font-bold text-blue-300 uppercase tracking-[0.2em]">Final Credit</span>
+                                    <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tighter tabular-nums">₹{parseFloat(note.totalAmount).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>
@@ -733,12 +784,12 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
 
                     <div className="mt-32 flex justify-between items-end opacity-40">
                          <div className="space-y-1">
-                             <p className="text-[10px] font-black uppercase tracking-[0.2em]">Generated By Tally Accounting</p>
+                             <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Generated By Tally Accounting</p>
                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Doc-Hash: {note.id?.substring(0, 12)}...</p>
                          </div>
                          <div className="text-right">
                              <div className="w-32 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
-                             <p className="text-[10px] font-black uppercase tracking-[0.2em]">Authorized Signature</p>
+                             <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Authorized Signature</p>
                          </div>
                     </div>
                 </div>
@@ -750,9 +801,254 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN VIEW COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// CREDIT NOTES TABLE VIEW (LANDSCAPE)
+// ─────────────────────────────────────────────────────────────────────────────
+const CreditNotesTableView = ({ notes, loading, onSelect, navigate, fetchNotes }) => {
+    const [searchQuery, setSearchQuery] = useState('');
+    
+    const filtered = notes.filter(n => 
+        n.creditNoteNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (n.CustomerLedger?.name || n.customerName)?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+        <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 group cursor-pointer">
+                        <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">Credit Notes</h1>
+                        <ChevronDown size={18} className="text-blue-600 mt-1" />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                   <button 
+                      onClick={() => navigate('/credit-notes/new')}
+                      className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-200 active:scale-95"
+                   >
+                      <Plus size={16} strokeWidth={3}/> New Credit Note
+                   </button>
+                   <button className="p-2.5 text-slate-400 hover:text-slate-800 border border-slate-100 bg-white rounded-lg hover:bg-slate-50 transition-colors">
+                      <MoreHorizontal size={20} />
+                   </button>
+                </div>
+            </div>
+
+            {/* SEARCH/FILTER BAR */}
+            <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                    <div className="relative group w-72">
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e61f0] transition-colors" />
+                        <input 
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search by number or customer..."
+                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 outline-none focus:border-[#1e61f0] focus:ring-4 focus:ring-blue-50 shadow-sm transition-all"
+                        />
+                    </div>
+                    <button 
+                        onClick={fetchNotes}
+                        className="p-2.5 text-slate-400 hover:text-[#1e61f0] hover:bg-white rounded-lg border border-transparent hover:border-slate-100 transition-all"
+                        title="Refresh"
+                    >
+                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 text-slate-500 text-[13px] font-bold hover:text-slate-900 transition-colors uppercase tracking-widest">
+                        <Filter size={14} /> Filter
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 mx-2" />
+                    <button className="h-10 px-5 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                        <Download size={14} /> Export
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+                {loading ? (
+                    <div className="py-24 text-center space-y-4">
+                        <Loader2 size={32} className="animate-spin text-blue-500 mx-auto" />
+                        <p className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em] animate-pulse">Scanning Records...</p>
+                    </div>
+                ) : (
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] border-b border-slate-200 sticky top-0 z-10">
+                                <th className="px-6 py-4 rounded-tl-xl">Date</th>
+                                <th className="px-6 py-4">Credit Note #</th>
+                                <th className="px-6 py-4">Customer</th>
+                                <th className="px-6 py-4">Reference</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-right">Amount</th>
+                                <th className="px-6 py-4 text-center rounded-tr-xl">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="py-32 text-center">
+                                       <div className="flex flex-col items-center justify-center gap-4">
+                                          <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200">
+                                             <Undo2 size={32} />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <p className="text-slate-900 text-[16px] font-bold">No credit notes found</p>
+                                            <p className="text-slate-400 text-[13px] font-medium">Issue credit notes to handle returns or price adjustments.</p>
+                                          </div>
+                                          <button onClick={() => navigate('/credit-notes/new')} className="text-blue-600 text-[13px] font-bold hover:underline mt-2">Create a credit note</button>
+                                       </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                filtered.map(n => (
+                                    <tr 
+                                        key={n.id} 
+                                        onClick={() => onSelect(n.id)}
+                                        className="hover:bg-blue-50/30 cursor-pointer group transition-all"
+                                    >
+                                        <td className="px-6 py-5 text-[13px] text-slate-500 font-medium">
+                                            {new Date(n.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="text-[14px] font-bold text-blue-600 group-hover:underline transition-colors">
+                                                {n.creditNoteNumber}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="text-[14px] font-bold text-slate-900">{n.CustomerLedger?.name || n.customerName}</div>
+                                        </td>
+                                        <td className="px-6 py-5 text-[13px] text-slate-500 font-medium">
+                                            {n.reference || '—'}
+                                        </td>
+                                        <td className="px-6 py-5 text-center">
+                                            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full uppercase text-[9px] font-black tracking-widest">
+                                                SUCCESS
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5 text-right whitespace-nowrap">
+                                            <span className="text-[15px] text-slate-900 font-black tracking-tight">
+                                                ₹{parseFloat(n.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/credit-notes/edit/${n.id}`); }} 
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-100"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button 
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-100"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CREDIT NOTES LIST (SIDEBAR)
+// ─────────────────────────────────────────────────────────────────────────────
+const CreditNotesList = ({ notes, loading, selectedId, onSelect, navigate, fetchNotes }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    const filtered = notes.filter(n => 
+        n.creditNoteNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (n.CustomerLedger?.name || n.customerName)?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="flex flex-col h-full bg-white border-r border-slate-100 w-[400px] shrink-0 no-print animate-fade-in-left">
+            <div className="p-6 border-b border-slate-50 space-y-5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-[17px] font-bold text-slate-900 tracking-tight">Credit Notes</h2>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-0.5">Returns Log</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => navigate('/credit-notes/new')}
+                            className="p-2 bg-[#1e61f0] text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95"
+                        >
+                            <Plus size={18} strokeWidth={3} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="relative group">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                    <input 
+                        type="text"
+                        placeholder="Search logs..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all"
+                    />
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+                {loading ? (
+                    <div className="p-12 text-center animate-pulse">
+                        <Loader2 size={24} className="animate-spin text-blue-200 mx-auto mb-2" />
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Hydrating...</span>
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="p-12 text-center opacity-30 italic text-[12px] font-bold uppercase tracking-widest text-slate-400">Empty Log</div>
+                ) : (
+                    <div className="space-y-1 px-3">
+                        {filtered.map(n => {
+                            const isSelected = String(n.id) === String(selectedId);
+                            return (
+                                <div 
+                                    key={n.id}
+                                    onClick={() => onSelect(n.id)}
+                                    className={`p-5 cursor-pointer rounded-2xl transition-all flex flex-col gap-2 relative overflow-hidden group
+                                        ${isSelected ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 -translate-y-0.5' : 'hover:bg-slate-50 text-slate-600'}`}
+                                >
+                                    <div className="flex justify-between items-start relative z-10">
+                                        <div className={`text-[14px] font-bold tracking-tight leading-tight ${isSelected ? 'text-white' : 'text-slate-900 group-hover:text-blue-600'}`}>
+                                            {n.CustomerLedger?.name || n.customerName}
+                                        </div>
+                                        <div className={`text-[15px] font-black italic tracking-tighter ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                                            ₹{parseFloat(n.totalAmount || 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center relative z-10">
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                            {n.creditNoteNumber} | {new Date(n.date).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    {isSelected && <div className="absolute top-0 right-0 p-3 opacity-20"><Undo2 size={48} strokeWidth={1} /></div>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN VIEW COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
 const CreditNotesView = () => {
     const navigate = useNavigate();
-    const { id } = useParams();
+    const params = useParams();
     const location = useLocation();
     const companyId = localStorage.getItem('companyId');
     const [notes, setNotes] = useState([]);
@@ -767,69 +1063,49 @@ const CreditNotesView = () => {
         finally { setLoading(false); }
     };
 
-    useEffect(() => {
-        if (companyId) fetchNotes();
-    }, [companyId]);
+    useEffect(() => { if (companyId) fetchNotes(); }, [companyId]);
+
+    const selectedId = params.id;
 
     if (location.pathname === '/credit-notes/new' || location.pathname.includes('/edit/')) {
-        return <CreditNoteForm companyId={companyId} navigate={navigate} editId={id} />;
+        return <CreditNoteForm companyId={companyId} navigate={navigate} editId={selectedId} />;
     }
 
-    return (
-        <div className="flex h-screen bg-white font-sans overflow-hidden">
-            <div className={`flex flex-col border-r border-slate-100 transition-all duration-300 no-print ${id ? 'w-[380px]' : 'w-[420px]'}`}>
-                <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                    <div>
-                        <h2 className="text-[16px] font-black text-slate-900 tracking-tight">Credit Notes</h2>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Returns Log</p>
-                    </div>
-                    <button onClick={() => navigate('/credit-notes/new')} className="p-2 bg-[#1e61f0] text-white rounded-lg shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
-                        <Plus size={18}/>
-                    </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto divide-y divide-slate-50 custom-scrollbar">
-                    {loading ? (
-                        <div className="p-20 text-center space-y-4">
-                             <Loader2 size={24} className="animate-spin text-blue-100 mx-auto" />
-                             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Scanning Records...</p>
-                        </div>
-                    ) : notes.length === 0 ? (
-                        <div className="p-20 text-center text-slate-200 italic font-bold uppercase tracking-widest text-[10px] opacity-40">No Records Found</div>
-                    ) : (
-                        notes.map(n => (
-                            <div 
-                                key={n.id} 
-                                onClick={() => navigate(`/credit-notes/view/${n.id}`)}
-                                className={`px-8 py-6 cursor-pointer transition-all border-l-4 ${id === n.id ? 'bg-blue-50 border-blue-600' : 'bg-white border-transparent hover:bg-slate-50'}`}
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className="text-[14px] font-black text-slate-900">{n.CustomerLedger?.name || n.customerName}</span>
-                                    <span className="text-[14px] font-black text-slate-900 font-mono">₹{parseFloat(n.totalAmount).toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{n.creditNoteNumber} | {new Date(n.date).toLocaleDateString()}</span>
-                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded leading-none border border-emerald-200">Success</span>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
+    // IF NO ID: SHOW LANDSCAPE TABLE VIEW
+    if (!selectedId) {
+        return (
+            <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
+                <CreditNotesTableView 
+                    notes={notes} 
+                    loading={loading} 
+                    onSelect={(id) => navigate(`/credit-notes/view/${id}`)}
+                    navigate={navigate}
+                    fetchNotes={fetchNotes}
+                />
             </div>
+        );
+    }
 
-            {id ? (
-                <CreditNoteDetail id={id} navigate={navigate} companyId={companyId} />
-            ) : (
-               <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 text-center p-20">
-                    <div className="w-24 h-24 bg-white rounded-[2rem] shadow-xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100">
-                        <Undo2 size={40} strokeWidth={1.5} />
-                    </div>
-                    <h3 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase mb-2">Credit Center</h3>
-                    <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest max-w-[240px]">Select a document to view details</p>
-               </div>
-            )}
+    // IF ID PRESENT: SHOW SPLIT VIEW
+    return (
+        <div className="flex h-screen bg-[#f8fafc] overflow-hidden animate-fade-in relative">
+            <CreditNotesList 
+                notes={notes} 
+                loading={loading} 
+                selectedId={selectedId} 
+                onSelect={(id) => navigate(`/credit-notes/view/${id}`)}
+                navigate={navigate}
+                fetchNotes={fetchNotes}
+            />
+            <div className="flex-1 h-full overflow-hidden flex flex-col bg-slate-50">
+                <CreditNoteDetail 
+                    id={selectedId} 
+                    navigate={navigate} 
+                    companyId={companyId} 
+                    onRefresh={fetchNotes}
+                />
+            </div>
         </div>
     );
 };
-
 export default CreditNotesView;

@@ -281,7 +281,7 @@ const LedgersView = () => {
 
                     {/* COL 2: TYPE */}
                     <div className="w-40 shrink-0 flex items-center">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border
                             ${isGroup ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-transparent text-slate-400 border-transparent group-hover:border-slate-200'}`}>
                             {isGroup ? 'Group' : 'Ledger'}
                         </span>
@@ -290,7 +290,7 @@ const LedgersView = () => {
                     {/* COL 3: NATURE */}
                     <div className="w-40 shrink-0 flex items-center">
                         {(isGroup || node.nature) && (
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border
                                 ${node.nature?.toLowerCase() === 'assets' ? 'bg-emerald-100/50 text-emerald-700 border-emerald-200' :
                                   node.nature?.toLowerCase() === 'liabilities' ? 'bg-rose-100/50 text-rose-700 border-rose-200' :
                                   node.nature?.toLowerCase() === 'income' ? 'bg-indigo-100/50 text-indigo-700 border-indigo-200' : 
@@ -304,7 +304,7 @@ const LedgersView = () => {
 
                     {/* COL 4: BALANCE + ACTIONS */}
                     <div className="w-56 shrink-0 pr-4 flex items-center justify-end gap-3">
-                        <span className={`text-[13px] ${isGroup ? 'font-black text-slate-900 border-b border-slate-200' : 'font-bold text-slate-700'}`}>
+                        <span className={`text-[13px] ${isGroup ? 'font-bold text-slate-900 border-b border-slate-200' : 'font-bold text-slate-700'}`}>
                             {formatCurrency(getNodeBalance(node, isGroup))}
                         </span>
                         
@@ -511,7 +511,7 @@ const LedgersView = () => {
                                        <button 
                                           type="button"
                                           onClick={() => window.location.href='/settings/company'}
-                                          className="text-[10px] uppercase font-black tracking-widest bg-rose-600 text-white px-3 py-2 rounded-lg hover:bg-rose-700 transition-all self-start"
+                                          className="text-[10px] uppercase font-bold tracking-widest bg-rose-600 text-white px-3 py-2 rounded-lg hover:bg-rose-700 transition-all self-start"
                                        >
                                           Go to Company Setup
                                        </button>
@@ -523,11 +523,11 @@ const LedgersView = () => {
                            <div className="space-y-4">
                                {/* LEDGER NAME */}
                                <div>
-                                   <label className="block text-[10px] uppercase font-black tracking-widest text-[#64748b] mb-2 px-1">Ledger Name</label>
+                                   <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1">Ledger Name</label>
                                    <input 
                                        type="text"
                                        required
-                                       className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-6 text-sm font-black text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all placeholder:text-[#cbd5e1]"
+                                       className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-6 text-sm font-bold text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all placeholder:text-[#cbd5e1]"
                                        placeholder="e.g. Rent, Salary..."
                                        value={formData.name}
                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -536,7 +536,7 @@ const LedgersView = () => {
 
                                {/* DESCRIPTION BOX */}
                                <div>
-                                   <label className="block text-[10px] uppercase font-black tracking-widest text-[#64748b] mb-2 px-1">Description / Notes</label>
+                                   <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1">Description / Notes</label>
                                    <textarea 
                                        className="w-full bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-6 py-4 text-sm font-bold text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all placeholder:text-[#cbd5e1] min-h-[80px]"
                                        placeholder="Add any additional details here..."
@@ -549,13 +549,13 @@ const LedgersView = () => {
                                {formData.type === 'Ledger' && (
                                    <div className="flex gap-4">
                                        <div className="flex-1">
-                                           <label className="block text-[10px] uppercase font-black tracking-widest text-[#64748b] mb-2 px-1">Opening Balance</label>
+                                           <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1">Opening Balance</label>
                                            <div className="relative">
                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
                                                <input 
                                                    type="number"
                                                    step="0.01"
-                                                   className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl pl-10 pr-6 text-sm font-black text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all placeholder:text-[#cbd5e1]"
+                                                   className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl pl-10 pr-6 text-sm font-bold text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all placeholder:text-[#cbd5e1]"
                                                    placeholder="0.00"
                                                    value={formData.openingBalance || ''}
                                                    onChange={e => setFormData({ ...formData, openingBalance: e.target.value })}
@@ -563,9 +563,9 @@ const LedgersView = () => {
                                            </div>
                                        </div>
                                        <div className="w-32">
-                                           <label className="block text-[10px] uppercase font-black tracking-widest text-[#64748b] mb-2 px-1">Dr / Cr</label>
+                                           <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1">Dr / Cr</label>
                                            <select
-                                               className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-4 text-sm font-black text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all appearance-none cursor-pointer"
+                                               className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-4 text-sm font-bold text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all appearance-none cursor-pointer"
                                                value={formData.openingBalanceType || 'Dr'}
                                                onChange={e => setFormData({ ...formData, openingBalanceType: e.target.value })}
                                            >
@@ -578,7 +578,7 @@ const LedgersView = () => {
 
                                {/* PARENT SELECTION */}
                                <div>
-                                  <label className="block text-[10px] uppercase font-black tracking-widest text-[#64748b] mb-2 px-1 text-slate-500">Under (Select Group)</label>
+                                  <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1 text-slate-500">Under (Select Group)</label>
                                   <select 
                                      value={formData.parent_id || ''}
                                      required
@@ -591,7 +591,7 @@ const LedgersView = () => {
                                              nature: selectedGrp ? selectedGrp.nature : formData.nature
                                          });
                                      }}
-                                     className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-6 text-sm font-black text-blue-800 focus:border-blue-600 focus:bg-white outline-none transition-all appearance-none cursor-pointer"
+                                     className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-6 text-sm font-bold text-blue-800 focus:border-blue-600 focus:bg-white outline-none transition-all appearance-none cursor-pointer"
                                   >
                                      <option value="">-- Primary (Root Group) --</option>
                                      {['Assets', 'Liabilities', 'Income', 'Expenses'].map(nature => (

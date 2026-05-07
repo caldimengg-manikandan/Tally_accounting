@@ -72,7 +72,7 @@ const ConfirmModal = ({
             {showCancel && (
                 <button 
                 onClick={onClose}
-                className="flex-1 px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[12px] font-black hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm"
+                className="flex-1 px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[12px] font-bold hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm"
                 >
                 {cancelText}
                 </button>
@@ -82,7 +82,7 @@ const ConfirmModal = ({
                     if (onConfirm) onConfirm();
                     onClose();
                 }}
-                className={`flex-1 px-6 py-4 text-white rounded-2xl text-[12px] font-black transition-all shadow-xl uppercase tracking-widest ${getButtonClass()}`}
+                className={`flex-1 px-6 py-4 text-white rounded-2xl text-[12px] font-bold transition-all shadow-xl uppercase tracking-widest ${getButtonClass()}`}
             >
                 {confirmText}
             </button>

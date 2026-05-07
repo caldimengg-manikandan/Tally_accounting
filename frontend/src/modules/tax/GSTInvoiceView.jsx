@@ -32,12 +32,12 @@ const GSTInvoiceView = () => {
           <p className="text-sm text-gray-500">GSTIN: 29ABCDE1234F1Z5</p>
         </div>
         <div className="text-right">
-          <h2 className="text-3xl font-black text-gray-200 uppercase tracking-widest mb-4">Tax Invoice</h2>
+          <h2 className="text-3xl font-bold text-gray-200 uppercase tracking-widest mb-4">Tax Invoice</h2>
           <p className="font-bold"># INV-2024-001</p>
         </div>
       </div>
       <div className="flex justify-end pt-8">
-        <button onClick={downloadInvoicePDF} className="bg-ink-900 text-white px-8 py-4 rounded-xl font-black shadow-xl flex items-center gap-2">
+        <button onClick={downloadInvoicePDF} className="bg-ink-900 text-white px-8 py-4 rounded-xl font-bold shadow-xl flex items-center gap-2">
           <Download size={18} /> Download PDF Invoice
         </button>
       </div>

@@ -39,7 +39,7 @@ const Notification = () => {
 
               {/* Content */}
               <div className="flex-1 pt-0.5">
-                <h4 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">
+                <h4 className="text-[14px] font-bold text-slate-800 uppercase tracking-tight">
                   {n.type === 'success' ? 'Action Successful' : 
                    n.type === 'error' ? 'Something went wrong' : 'System Message'}
                 </h4>

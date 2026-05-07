@@ -54,7 +54,7 @@ const AuthPage = ({ onLogin }) => {
             <span className="text-2xl font-bold text-slate-800 tracking-tight">Tally Replica</span>
           </div>
 
-          <h1 className="text-5xl lg:text-6xl font-black text-[#1F314F] leading-[1.1] tracking-tight">
+          <h1 className="text-5xl lg:text-6xl font-bold text-[#1F314F] leading-[1.1] tracking-tight">
             {isLogin ? 'Welcome back to' : 'Wave hello to'} <br/>
             <span className="text-blue-600">Tally Replica!</span>
           </h1>

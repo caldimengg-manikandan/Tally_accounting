@@ -65,16 +65,16 @@ const CostCenterView = () => {
                       <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
                          <Target size={20}/>
                       </div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]">Resource Allocation</span>
+                      <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Resource Allocation</span>
                    </div>
-                   <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Cost Centers</h1>
+                   <h1 className="text-3xl font-bold text-slate-900 tracking-tighter">Cost Centers</h1>
                    <p className="text-sm text-slate-500 mt-1">Track financials by Project, Department, or Business Unit.</p>
                 </div>
                 <div className="flex gap-3">
                    <button onClick={fetchCenters} className="p-3 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400"><RefreshCcw size={18}/></button>
                    <button 
                       onClick={() => setShowModal(true)}
-                      className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 hover:-translate-y-0.5 transition-all"
+                      className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 hover:-translate-y-0.5 transition-all"
                    >
                       <Plus size={16}/> New Center
                    </button>
@@ -121,13 +121,13 @@ const CostCenterView = () => {
                                         <Building2 size={20}/>
                                     </div>
                                     <div>
-                                        <div className="text-lg font-black text-slate-900 leading-tight">{center.name}</div>
+                                        <div className="text-lg font-bold text-slate-900 leading-tight">{center.name}</div>
                                         <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">ID: {center.id.substring(0,8)}</div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-8">
                                     <div className="text-right hidden sm:block">
-                                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Description</div>
+                                        <div className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Description</div>
                                         <div className="text-sm font-bold text-slate-500">{center.description || '—'}</div>
                                     </div>
                                     <button 
@@ -149,12 +149,12 @@ const CostCenterView = () => {
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowModal(false)}></div>
                     <div className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-zoom-in">
                         <header className="px-8 py-6 bg-slate-50 border-b border-slate-100">
-                            <h3 className="text-xl font-black text-slate-900 tracking-tight">New Cost Center</h3>
+                            <h3 className="text-xl font-bold text-slate-900 tracking-tight">New Cost Center</h3>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Resource Initialization</p>
                         </header>
                         <form onSubmit={handleCreate} className="p-8 space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Center Name</label>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Center Name</label>
                                 <input 
                                     type="text" 
                                     required 
@@ -165,7 +165,7 @@ const CostCenterView = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes (Optional)</label>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notes (Optional)</label>
                                 <textarea 
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
@@ -173,8 +173,8 @@ const CostCenterView = () => {
                                 />
                             </div>
                             <div className="flex gap-4 pt-4">
-                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-slate-50 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50">Cancel</button>
-                                <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:-translate-y-1 transition-all">Create Unit</button>
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-slate-50 rounded-2xl font-bold text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50">Cancel</button>
+                                <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:-translate-y-1 transition-all">Create Unit</button>
                             </div>
                         </form>
                     </div>
@@ -190,8 +190,8 @@ const StatCard = ({ icon, label, value, color }) => (
             {icon}
         </div>
         <div>
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{label}</div>
-            <div className="text-2xl font-black text-slate-900 tracking-tighter">{value}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{label}</div>
+            <div className="text-2xl font-bold text-slate-900 tracking-tighter">{value}</div>
         </div>
     </div>
 );

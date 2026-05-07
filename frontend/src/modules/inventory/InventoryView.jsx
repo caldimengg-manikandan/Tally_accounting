@@ -153,7 +153,7 @@ const InventoryView = () => {
                     <AlertTriangle size={14} /> Filter
                 </button>
                 <div className="w-px h-4 bg-slate-200 mx-2" />
-                <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                <button className="h-9 px-4 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-[4px] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
                     <RefreshCcw size={14} /> Sync
                 </button>
             </div>
@@ -239,7 +239,7 @@ const InventoryView = () => {
                 <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-[#1e61f0]">
                    <Package size={16} />
                 </div>
-                <h2 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">Active Items</h2>
+                <h2 className="text-[13px] font-bold text-slate-800 uppercase tracking-widest">Active Items</h2>
                 <ChevronDown size={14} className="text-[#1e61f0] mt-0.5" />
               </div>
               <div className="flex items-center gap-2">

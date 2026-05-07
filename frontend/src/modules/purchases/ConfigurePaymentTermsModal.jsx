@@ -45,7 +45,7 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
                 <Info size={20} />
              </div>
              <div>
-                <h2 className="text-[18px] font-black text-slate-900 tracking-tight">Configure Payment Terms</h2>
+                <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">Configure Payment Terms</h2>
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 italic">Customize your procurement schedules</p>
              </div>
           </div>
@@ -59,8 +59,8 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
               <table className="w-full border-collapse">
                  <thead>
                     <tr className="bg-slate-50/50 border-b border-slate-100 text-left">
-                       <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Term Name</th>
-                       <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Days</th>
+                       <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Term Name</th>
+                       <th className="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-right">Days</th>
                        <th className="w-10"></th>
                     </tr>
                  </thead>
@@ -85,10 +85,10 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
                                   type="text"
                                   value={term.days}
                                   onChange={(e) => handleDayChange(index, e.target.value)}
-                                  className="w-16 bg-transparent text-[14px] font-black text-slate-900 text-right outline-none focus:text-indigo-600 transition-colors border-b border-transparent focus:border-indigo-100"
+                                  className="w-16 bg-transparent text-[14px] font-bold text-slate-900 text-right outline-none focus:text-indigo-600 transition-colors border-b border-transparent focus:border-indigo-100"
                                 />
                              ) : (
-                                <span className="text-[14px] font-black text-slate-400 italic uppercase tracking-widest">{term.days}</span>
+                                <span className="text-[14px] font-bold text-slate-400 italic uppercase tracking-widest">{term.days}</span>
                              )}
                           </td>
                           <td className="px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
@@ -109,7 +109,7 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
            
            <button 
              onClick={addNewTerm}
-             className="mt-4 flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-black text-[11px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all hover:bg-indigo-50 active:scale-95"
+             className="mt-4 flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold text-[11px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all hover:bg-indigo-50 active:scale-95"
            >
               <Plus size={14} strokeWidth={3} />
               Add New Term
@@ -120,13 +120,13 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
         <div className="p-6 border-t border-slate-50 bg-white flex items-center justify-end gap-3">
            <button 
              onClick={onClose}
-             className="px-5 py-2.5 text-slate-400 hover:text-slate-900 text-[12px] font-black tracking-widest uppercase transition-all"
+             className="px-5 py-2.5 text-slate-400 hover:text-slate-900 text-[12px] font-bold tracking-widest uppercase transition-all"
            >
              Cancel
            </button>
            <button 
              onClick={() => onSave(terms)}
-             className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-black rounded-xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all uppercase tracking-widest"
+             className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold rounded-xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all uppercase tracking-widest"
            >
              Save
            </button>

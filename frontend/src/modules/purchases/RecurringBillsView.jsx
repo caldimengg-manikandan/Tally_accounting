@@ -249,9 +249,9 @@ const RecurringBillsView = ({ companyId }) => {
             <div className="relative w-full max-w-2xl h-full bg-white shadow-2xl flex flex-col slide-in-from-right-full animate-in duration-300">
                 <header className="px-10 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
                     <div>
-                        <h2 className="text-[20px] font-black text-slate-800 tracking-tight">{selectedTemplate.profileName}</h2>
+                        <h2 className="text-[20px] font-bold text-slate-800 tracking-tight">{selectedTemplate.profileName}</h2>
                         <div className="flex items-center gap-2 mt-1">
-                             <span className={`text-[11px] font-black px-2 py-0.5 rounded-full uppercase ${selectedTemplate.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                             <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${selectedTemplate.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                                 {selectedTemplate.status}
                              </span>
                         </div>
@@ -282,11 +282,11 @@ const RecurringBillsView = ({ companyId }) => {
                         <div className="grid grid-cols-2 gap-4">
                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                               <div className="text-[11px] text-slate-400 font-bold uppercase mb-2">Total Amount</div>
-                              <div className="text-[24px] font-black text-slate-900">₹{parseFloat(selectedTemplate.totalAmount).toLocaleString()}</div>
+                              <div className="text-[24px] font-bold text-slate-900">₹{parseFloat(selectedTemplate.totalAmount).toLocaleString()}</div>
                            </div>
                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                               <div className="text-[11px] text-slate-400 font-bold uppercase mb-2">Frequency</div>
-                              <div className="text-[24px] font-black text-blue-600 tracking-tight uppercase">{selectedTemplate.repeatEvery}</div>
+                              <div className="text-[24px] font-bold text-blue-600 tracking-tight uppercase">{selectedTemplate.repeatEvery}</div>
                            </div>
                         </div>
 

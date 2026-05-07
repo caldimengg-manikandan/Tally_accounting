@@ -114,7 +114,7 @@ const BankDetailView = () => {
                  <ArrowLeft size={20} />
                </button>
                <div>
-                 <h1 className="text-xl font-black text-slate-800 tracking-tight">{account?.name}</h1>
+                 <h1 className="text-xl font-bold text-slate-800 tracking-tight">{account?.name}</h1>
                  <p className="text-[11px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2">
                    {account?.bankName || 'Bank Account'} 
                    <span className="text-slate-300">•</span>
@@ -133,13 +133,13 @@ const BankDetailView = () => {
                     <button 
                       onClick={handleUpdate}
                       disabled={saving}
-                      className="px-6 py-2 bg-[#1e61f0] text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                      className="px-6 py-2 bg-[#1e61f0] text-white rounded-xl text-[12px] font-bold uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
                     >
                       {saving ? 'Saving...' : <><Save size={14}/> Save Changes</>}
                     </button>
                     <button 
                       onClick={() => setIsEditing(false)}
-                      className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                      className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-[12px] font-bold uppercase tracking-widest hover:bg-slate-200 transition-all"
                     >
                       Cancel
                     </button>
@@ -173,8 +173,8 @@ const BankDetailView = () => {
             {/* Balance Overview */}
             <div className="bg-white rounded-2xl border border-slate-100 p-8 shadow-sm relative overflow-hidden">
                <div className="relative z-10">
-                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Available Balance</p>
-                 <h2 className="text-4xl font-black text-slate-800 tracking-tighter">
+                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Available Balance</p>
+                 <h2 className="text-4xl font-bold text-slate-800 tracking-tighter">
                    {formatCurrency(account?.computedBalance)}
                  </h2>
                </div>
@@ -191,7 +191,7 @@ const BankDetailView = () => {
                       <button 
                          key={tab}
                          onClick={() => setActiveTab(tab)}
-                         className={`text-[12px] font-black uppercase tracking-widest pb-1 transition-all border-b-2 ${activeTab === tab ? 'border-blue-500 text-slate-800' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                         className={`text-[12px] font-bold uppercase tracking-widest pb-1 transition-all border-b-2 ${activeTab === tab ? 'border-blue-500 text-slate-800' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                       >
                         {tab}
                       </button>
@@ -207,10 +207,10 @@ const BankDetailView = () => {
                  <table className="w-full text-left">
                    <thead className="bg-[#FBFCFE] border-b border-slate-50">
                      <tr>
-                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
-                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                       <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                       <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
+                       <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description</th>
+                       <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</th>
+                       <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Amount</th>
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-50">
@@ -228,13 +228,13 @@ const BankDetailView = () => {
                          <td className="px-6 py-4">
                            <div className={`flex items-center gap-1.5 ${parseFloat(tx.debit) > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                               {parseFloat(tx.debit) > 0 ? <ArrowDownLeft size={14}/> : <ArrowUpRight size={14}/>}
-                              <span className="text-[11px] font-black uppercase tracking-tight">
+                              <span className="text-[11px] font-bold uppercase tracking-tight">
                                 {parseFloat(tx.debit) > 0 ? 'Debit' : 'Credit'}
                               </span>
                            </div>
                          </td>
                          <td className="px-6 py-4 text-right">
-                           <span className={`text-[13px] font-black ${parseFloat(tx.debit) > 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
+                           <span className={`text-[13px] font-bold ${parseFloat(tx.debit) > 0 ? 'text-emerald-600' : 'text-slate-800'}`}>
                              {formatCurrency(Math.max(parseFloat(tx.debit) || 0, parseFloat(tx.credit) || 0))}
                            </span>
                          </td>
@@ -264,9 +264,9 @@ const BankDetailView = () => {
                 )}
                 
                 <div className="flex justify-between items-center border-b border-slate-50 pb-4 relative z-10">
-                  <h3 className="text-[13px] font-black text-slate-800 uppercase tracking-widest">A/c Information</h3>
+                  <h3 className="text-[13px] font-bold text-slate-800 uppercase tracking-widest">A/c Information</h3>
                   {isEditing && (
-                    <span className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-1 animate-pulse">
+                    <span className="text-[10px] font-bold text-blue-600 uppercase flex items-center gap-1 animate-pulse">
                       Editing Mode
                     </span>
                   )}
@@ -277,7 +277,7 @@ const BankDetailView = () => {
                    <div className="flex items-start gap-4">
                       <div className="p-2 bg-blue-50 text-blue-600 rounded-lg shrink-0"><Building2 size={16}/></div>
                       <div className="w-full">
-                        <p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1.5">Bank Name</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1.5">Bank Name</p>
                         {isEditing ? (
                           <input 
                             type="text"
@@ -296,17 +296,17 @@ const BankDetailView = () => {
                    <div className="flex items-start gap-4">
                       <div className="p-2 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Hash size={16}/></div>
                       <div className="w-full">
-                        <p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1.5">Account Number</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1.5">Account Number</p>
                         {isEditing ? (
                           <input 
                             type="text"
                             placeholder="Enter Acc No."
                             value={editData.accountNumber || ''}
                             onChange={(e) => setEditData({...editData, accountNumber: e.target.value})}
-                            className="w-full text-[13px] font-black text-slate-800 border-b border-blue-400 focus:border-blue-600 outline-none pb-1 bg-white px-2 py-1 rounded-t-sm"
+                            className="w-full text-[13px] font-bold text-slate-800 border-b border-blue-400 focus:border-blue-600 outline-none pb-1 bg-white px-2 py-1 rounded-t-sm"
                           />
                         ) : (
-                          <p className="text-[13px] font-black text-slate-800 leading-tight">{account?.accountNumber || 'N/A'}</p>
+                          <p className="text-[13px] font-bold text-slate-800 leading-tight">{account?.accountNumber || 'N/A'}</p>
                         )}
                       </div>
                    </div>
@@ -315,17 +315,17 @@ const BankDetailView = () => {
                    <div className="flex items-start gap-4">
                       <div className="p-2 bg-slate-50 text-slate-600 rounded-lg shrink-0"><Globe size={16}/></div>
                       <div className="w-full">
-                        <p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1.5">IFSC Code</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1.5">IFSC Code</p>
                         {isEditing ? (
                           <input 
                             type="text"
                             placeholder="e.g. HDFC0001234"
                             value={editData.ifsc || ''}
                             onChange={(e) => setEditData({...editData, ifsc: e.target.value.toUpperCase()})}
-                            className="w-full text-[13px] font-black text-slate-800 border-b border-blue-400 focus:border-blue-600 outline-none pb-1 bg-white px-2 py-1 rounded-t-sm"
+                            className="w-full text-[13px] font-bold text-slate-800 border-b border-blue-400 focus:border-blue-600 outline-none pb-1 bg-white px-2 py-1 rounded-t-sm"
                           />
                         ) : (
-                          <p className="text-[13px] font-black text-slate-800 leading-tight tracking-widest">{account?.ifsc || 'N/A'}</p>
+                          <p className="text-[13px] font-bold text-slate-800 leading-tight tracking-widest">{account?.ifsc || 'N/A'}</p>
                         )}
                       </div>
                    </div>
@@ -334,7 +334,7 @@ const BankDetailView = () => {
                    <div className="flex items-start gap-4">
                       <div className="p-2 bg-slate-50 text-slate-600 rounded-lg shrink-0"><CreditCard size={16}/></div>
                       <div className="w-full">
-                        <p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1.5">Account Code</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1.5">Account Code</p>
                         {isEditing ? (
                           <input 
                             type="text"
@@ -356,15 +356,15 @@ const BankDetailView = () => {
                     <div className="bg-slate-50 rounded-xl p-4 space-y-3">
                        <div className="flex items-center gap-2 mb-1">
                           <Info size={12} className="text-blue-500"/>
-                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Branch Details</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Branch Details</span>
                        </div>
                        <div className="flex justify-between items-center">
                           <span className="text-[10px] font-bold text-slate-500">Branch</span>
-                          <span className="text-[11px] font-black text-slate-800 text-right">{ifscDetails.BRANCH}</span>
+                          <span className="text-[11px] font-bold text-slate-800 text-right">{ifscDetails.BRANCH}</span>
                        </div>
                        <div className="flex justify-between items-center">
                           <span className="text-[10px] font-bold text-slate-500">City/State</span>
-                          <span className="text-[11px] font-black text-slate-800 text-right truncate ml-4">{ifscDetails.CITY}, {ifscDetails.STATE}</span>
+                          <span className="text-[11px] font-bold text-slate-800 text-right truncate ml-4">{ifscDetails.CITY}, {ifscDetails.STATE}</span>
                        </div>
                     </div>
                   </div>
@@ -373,9 +373,9 @@ const BankDetailView = () => {
 
              <div className="bg-[#1e61f0] rounded-2xl p-6 text-white relative overflow-hidden shadow-xl shadow-blue-500/20 group cursor-pointer">
                 <div className="relative z-10">
-                   <h4 className="text-[15px] font-black mb-1">Start Reconciliation</h4>
+                   <h4 className="text-[15px] font-bold mb-1">Start Reconciliation</h4>
                    <p className="text-[11px] text-blue-100 font-medium mb-4">Match your Tally records with bank statements in one click.</p>
-                   <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest group-hover:gap-4 transition-all">
+                   <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest group-hover:gap-4 transition-all">
                       Configure Now <ArrowLeft size={14} className="rotate-180" />
                    </div>
                 </div>

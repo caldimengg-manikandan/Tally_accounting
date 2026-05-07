@@ -7,7 +7,7 @@ import {
   Package, User, Search, X, ChevronRight, FileText,
   Filter, Download, ArrowLeft, Loader2, Save, Send,
   Trash, Info, HelpCircle, Tag, Paperclip, ChevronDown, Check,
-  AlertTriangle, Play, Pause, Square, File, Zap, ShieldCheck, Phone
+  AlertTriangle, Play, Pause, Square, File, Zap, ShieldCheck, Phone, Repeat
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
@@ -138,7 +138,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
             <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden animate-scale-up">
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="text-[18px] font-black text-slate-900 tracking-tight">Manage Salespersons</h3>
+                    <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Manage Salespersons</h3>
                     <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"><X size={18}/></button>
                 </div>
 
@@ -155,7 +155,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     </div>
                     <button
                         onClick={() => setShowAddForm(true)}
-                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-black rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100"
+                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-bold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md shadow-blue-100"
                     >
                         <Plus size={14}/> New Salesperson
                     </button>
@@ -165,7 +165,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     <div className="mx-6 my-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
+                                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
                                 <input
                                     value={newName}
                                     onChange={e => setNewName(e.target.value)}
@@ -173,7 +173,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                                 />
                             </div>
                             <div>
-                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
+                                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
                                 <input
                                     type="email"
                                     value={newEmail}
@@ -186,13 +186,13 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                             <button
                                 onClick={handleSaveAndSelect}
                                 disabled={!newName.trim()}
-                                className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-black rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm"
+                                className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-bold rounded hover:bg-blue-700 transition-all disabled:opacity-40 shadow-sm"
                             >
                                 Save and Select
                             </button>
                             <button
                                 onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }}
-                                className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-black rounded hover:bg-slate-50 transition-all"
+                                className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-bold rounded hover:bg-slate-50 transition-all"
                             >
                                 Cancel
                             </button>
@@ -384,31 +384,31 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
     const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()));
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] p-12 flex flex-col items-center font-sans">
-            <div className="w-full max-w-5xl bg-white rounded-sm shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-slate-200 overflow-hidden animate-fade-in mb-20">
-                <header className="px-10 py-6 border-b border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => window.history.length > 2 ? navigate(-1) : navigate('/recurring-invoices')}
-                            className="p-2 -ml-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all"
-                        >
-                            <ArrowLeft size={20} />
-                        </button>
-                        <div className="w-10 h-10 bg-slate-900 rounded flex items-center justify-center text-white">
-                            <RefreshCw size={18} />
-                        </div>
-                        <div>
-                            <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase flex items-center gap-2">
-                                {editId ? 'Edit Subscription' : 'New Subscription'}
-                                <span className="text-[10px] font-bold text-[#1e61f0] bg-blue-50 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-100">Smart Draft</span>
-                            </h2>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Recurring Billing & Lifecycle Management</p>
-                        </div>
+        <div className="flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
+            {/* Sticky Header */}
+            <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20 no-print">
+                <div className="flex items-center gap-6">
+                    <button 
+                        onClick={() => window.history.length > 2 ? navigate(-1) : navigate('/recurring-invoices')}
+                        className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
+                    >
+                        <ArrowLeft size={22} />
+                    </button>
+                    <div>
+                        <h2 className="text-[18px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                            {editId ? 'Edit Subscription' : 'New Subscription'}
+                            <span className="text-[10px] font-bold text-[#1e61f0] bg-blue-50 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-100">Smart Draft</span>
+                        </h2>
+                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Recurring Invoices</div>
                     </div>
-                    <button onClick={() => navigate('/recurring-invoices')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
-                </header>
+                </div>
+                <button onClick={() => navigate('/recurring-invoices')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
+            </header>
 
-                <div className="p-12 space-y-12">
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto no-scrollbar">
+                <div className="max-w-[1000px] mx-auto py-10 px-6">
+                    <div className="bg-white rounded border border-slate-200 shadow-sm p-12 space-y-12 animate-fade-in">
                     <ManageSalespersonsModal
                         isOpen={showManageSalespersons}
                         onClose={() => setShowManageSalespersons(false)}
@@ -437,12 +437,11 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                     </div>
 
                                     {showCustomerDropdown && (
-                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded z-50 overflow-hidden">
+                                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded z-50 overflow-hidden flex flex-col">
                                             <div className="max-h-60 overflow-y-auto no-scrollbar">
                                                 {filteredCustomers.length === 0 ? (
                                                     <div className="p-4 text-center">
                                                         <p className="text-[12px] text-slate-400 mb-2">No customers found</p>
-                                                        <button onClick={() => navigate('/customers/new')} className="text-[11px] text-blue-600 font-bold uppercase tracking-widest hover:underline">+ Add New</button>
                                                     </div>
                                                 ) : (
                                                     <div className="py-1">
@@ -457,6 +456,14 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                                         ))}
                                                     </div>
                                                 )}
+                                            </div>
+                                            <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
+                                                <button 
+                                                    onClick={() => navigate('/customers/new')}
+                                                    className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-bold text-[12px] hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest"
+                                                >
+                                                    <Plus size={14} strokeWidth={3} /> New Customer
+                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -638,22 +645,35 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                             </div>
                         </div>
                     </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-[100] shadow-md">
-                <div className="flex items-center gap-8">
-                    <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest"><ShieldCheck size={14} className="text-emerald-500" /> Infrastructure Security Verified</div>
-                    <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest"><Zap size={14} className="text-blue-500" /> Automated Dispatch Active</div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/recurring-invoices')} className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded">Discard</button>
-                    <button onClick={handleSave} disabled={saving} className="px-10 py-2.5 bg-[#1e61f0] text-white rounded font-bold text-[13px] hover:bg-blue-700 shadow-xl flex items-center gap-2 uppercase tracking-widest">
-                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                        {saving ? 'Saving...' : 'Save and Send'}
-                    </button>
-                </div>
-            </div>
+                {/* Sticky Footer */}
+                <footer className="bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky bottom-0 z-20 no-print shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                            <Zap size={14} className="text-blue-500" />
+                            Automated Dispatch Active
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => navigate('/recurring-invoices')}
+                            className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:text-slate-900 transition-all uppercase tracking-widest"
+                        >
+                            Discard
+                        </button>
+                        <button 
+                            onClick={() => handleSave()}
+                            disabled={saving}
+                            className="px-8 py-2.5 bg-[#1e61f0] text-white rounded font-bold text-[13px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+                        >
+                            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                            {saving ? 'Processing...' : (editId ? 'Update Subscription' : 'Initialize Subscription')}
+                        </button>
+                    </div>
+            </footer>
         </div>
     );
 };
@@ -694,7 +714,7 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
     }, [id]);
 
     if (loading) return <div className="p-20 text-center font-bold text-slate-300 animate-pulse uppercase tracking-widest">Syncing Automation...</div>;
-    if (!template) return <div className="p-20 text-center text-slate-300 font-black text-2xl opacity-20 uppercase">Not Found</div>;
+    if (!template) return <div className="p-20 text-center text-slate-300 font-bold text-2xl opacity-20 uppercase">Not Found</div>;
 
     const safeDate = template.nextGenerationDate ? new Date(template.nextGenerationDate).toLocaleDateString('en-GB') : '—';
     const startDate = template.startDate ? new Date(template.startDate).toLocaleDateString('en-GB') : '—';
@@ -877,9 +897,265 @@ const RecurringInvoiceDetail = (props) => (
     </DetailErrorBoundary>
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// RECURRING INVOICES TABLE VIEW (LANDSCAPE)
+// ─────────────────────────────────────────────────────────────────────────────
+const RecurringInvoicesTableView = ({ templates, loading, onSelect, navigate, fetchTemplates }) => {
+    const [searchQuery, setSearchQuery] = useState('');
+    
+    const filtered = templates.filter(t => 
+        t.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.templateName?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+        <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 group cursor-pointer">
+                        <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">Recurring Invoices</h1>
+                        <ChevronDown size={18} className="text-blue-600 mt-1" />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                   <button 
+                      onClick={() => navigate('/recurring-invoices/new')}
+                      className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-blue-200 active:scale-95"
+                   >
+                      <Plus size={16} strokeWidth={3}/> New Profile
+                   </button>
+                   <button className="p-2.5 text-slate-400 hover:text-slate-800 border border-slate-100 bg-white rounded-lg hover:bg-slate-50 transition-colors">
+                      <MoreHorizontal size={20} />
+                   </button>
+                </div>
+            </div>
+
+            {/* SEARCH/FILTER BAR */}
+            <div className="px-8 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                    <div className="relative group w-72">
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#1e61f0] transition-colors" />
+                        <input 
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search by profile or customer..."
+                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 outline-none focus:border-[#1e61f0] focus:ring-4 focus:ring-blue-50 shadow-sm transition-all"
+                        />
+                    </div>
+                    <button 
+                        onClick={fetchTemplates}
+                        className="p-2.5 text-slate-400 hover:text-[#1e61f0] hover:bg-white rounded-lg border border-transparent hover:border-slate-100 transition-all"
+                        title="Refresh"
+                    >
+                        <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 text-slate-500 text-[13px] font-bold hover:text-slate-900 transition-colors uppercase tracking-widest">
+                        <Filter size={14} /> Filter
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 mx-2" />
+                    <button className="h-10 px-5 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
+                        <Download size={14} /> Export
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+                {loading ? (
+                    <div className="py-24 text-center space-y-4">
+                        <Loader2 size={32} className="animate-spin text-blue-500 mx-auto" />
+                        <p className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em] animate-pulse">Syncing Automations...</p>
+                    </div>
+                ) : (
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] border-b border-slate-200 sticky top-0 z-10">
+                                <th className="px-6 py-4 rounded-tl-xl">Profile Name</th>
+                                <th className="px-6 py-4">Customer</th>
+                                <th className="px-6 py-4">Frequency</th>
+                                <th className="px-6 py-4">Last Invoice</th>
+                                <th className="px-6 py-4">Next Invoice</th>
+                                <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-right">Amount</th>
+                                <th className="px-6 py-4 text-center rounded-tr-xl">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan="8" className="py-32 text-center">
+                                       <div className="flex flex-col items-center justify-center gap-4">
+                                          <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200">
+                                             <RefreshCw size={32} />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <p className="text-slate-900 text-[16px] font-bold">No recurring invoices found</p>
+                                            <p className="text-slate-400 text-[13px] font-medium">Create a profile to automate your billing cycle.</p>
+                                          </div>
+                                          <button onClick={() => navigate('/recurring-invoices/new')} className="text-blue-600 text-[13px] font-bold hover:underline mt-2">Create an automation profile</button>
+                                       </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                filtered.map(t => (
+                                    <tr 
+                                        key={t.id} 
+                                        onClick={() => onSelect(t.id)}
+                                        className="hover:bg-blue-50/30 cursor-pointer group transition-all"
+                                    >
+                                        <td className="px-6 py-5">
+                                            <div className="text-[14px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                                                {t.templateName}
+                                            </div>
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">ID: {t.id}</div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="text-[14px] font-medium text-slate-800">{t.customerName}</div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center gap-2">
+                                                <Repeat size={14} className="text-slate-400" />
+                                                <span className="text-[13px] font-bold text-slate-600">{t.frequency}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5 text-[13px] text-slate-500 font-medium">
+                                            {t.lastGenerationDate ? new Date(t.lastGenerationDate).toLocaleDateString('en-GB') : '—'}
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex flex-col">
+                                                <span className="text-[13px] text-blue-600 font-bold">{t.nextGenerationDate ? new Date(t.nextGenerationDate).toLocaleDateString('en-GB') : '—'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5 text-center">
+                                            <span className={`px-2.5 py-1 rounded-full uppercase text-[9px] font-black tracking-widest border
+                                                ${t.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                                {t.status || 'Active'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5 text-right whitespace-nowrap">
+                                            <span className="text-[15px] text-slate-900 font-black tracking-tight">
+                                                ₹{parseFloat(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/recurring-invoices/edit/${t.id}`); }} 
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-100"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button 
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-100"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECURRING INVOICES LIST (SIDEBAR)
+// ─────────────────────────────────────────────────────────────────────────────
+const RecurringInvoicesList = ({ templates, loading, selectedId, onSelect, navigate, fetchTemplates }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    const filtered = templates.filter(t => 
+        t.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.templateName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="flex flex-col h-full bg-white border-r border-slate-100 w-[400px] shrink-0 no-print animate-fade-in-left">
+            <div className="p-6 border-b border-slate-50 space-y-5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-[17px] font-bold text-slate-900 tracking-tight">Recurring</h2>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-0.5">Automations</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => navigate('/recurring-invoices/new')}
+                            className="p-2 bg-[#1e61f0] text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95"
+                        >
+                            <Plus size={18} strokeWidth={3} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="relative group">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                    <input 
+                        type="text"
+                        placeholder="Search profiles..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all"
+                    />
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+                {loading ? (
+                    <div className="p-12 text-center animate-pulse">
+                        <Loader2 size={24} className="animate-spin text-blue-200 mx-auto mb-2" />
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Hydrating...</span>
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="p-12 text-center opacity-30 italic text-[12px] font-bold uppercase tracking-widest text-slate-400">Empty Hub</div>
+                ) : (
+                    <div className="space-y-1 px-3">
+                        {filtered.map(t => {
+                            const isSelected = String(t.id) === String(selectedId);
+                            return (
+                                <div 
+                                    key={t.id}
+                                    onClick={() => onSelect(t.id)}
+                                    className={`p-5 cursor-pointer rounded-2xl transition-all flex flex-col gap-2 relative overflow-hidden group
+                                        ${isSelected ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 -translate-y-0.5' : 'hover:bg-slate-50 text-slate-600'}`}
+                                >
+                                    <div className="flex justify-between items-start relative z-10">
+                                        <div className={`text-[14px] font-bold tracking-tight leading-tight ${isSelected ? 'text-white' : 'text-slate-900 group-hover:text-blue-600'}`}>
+                                            {t.customerName}
+                                        </div>
+                                        <div className={`text-[15px] font-black italic tracking-tighter ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                                            ₹{parseFloat(t.totalAmount || 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center relative z-10">
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                            {t.templateName} | {t.frequency}
+                                        </span>
+                                    </div>
+                                    {isSelected && <div className="absolute top-0 right-0 p-3 opacity-20"><RefreshCw size={48} strokeWidth={1} /></div>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN VIEW COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
 const RecurringInvoicesView = () => {
     const navigate = useNavigate();
-    const { id } = useParams();
+    const params = useParams();
     const location = useLocation();
     const companyId = localStorage.getItem('companyId');
     const [templates, setTemplates] = useState([]);
@@ -896,27 +1172,46 @@ const RecurringInvoicesView = () => {
 
     useEffect(() => { if (companyId) fetchTemplates(); }, [companyId]);
 
+    const selectedId = params.id;
+
     if (location.pathname === '/recurring-invoices/new' || location.pathname.includes('/edit/')) {
-        return <RecurringInvoiceForm companyId={companyId} navigate={navigate} editId={id} />;
+        return <RecurringInvoiceForm companyId={companyId} navigate={navigate} editId={selectedId} />;
     }
 
-    return (
-        <div className="flex h-screen bg-white font-sans overflow-hidden">
-            <div className={`flex flex-col border-r border-slate-100 transition-all duration-300 no-print ${id ? 'w-[380px]' : 'w-[420px]'}`}>
-                <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                    <div><h2 className="text-[16px] font-black text-slate-900 tracking-tight">Recurring</h2><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Automations</p></div>
-                    <button onClick={() => navigate('/recurring-invoices/new')} className="p-2 bg-[#1e61f0] text-white rounded shadow-lg active:scale-95 transition-all"><Plus size={18}/></button>
-                </div>
-                <div className="flex-1 overflow-y-auto divide-y divide-slate-50 custom-scrollbar">
-                    {loading ? <div className="p-20 text-center animate-pulse"><Loader2 size={24} className="animate-spin text-blue-100 mx-auto" /></div> : templates.length === 0 ? <div className="p-20 text-center text-slate-200 italic font-bold uppercase tracking-widest text-[10px] opacity-40">No Records Found</div> : templates.map(t => (
-                        <div key={t.id} onClick={() => navigate(`/recurring-invoices/view/${t.id}`)} className={`px-8 py-6 cursor-pointer transition-all border-l-4 ${id === t.id ? 'bg-blue-50 border-blue-600' : 'bg-white border-transparent hover:bg-slate-50'}`}>
-                            <div className="flex justify-between items-start mb-2"><span className="text-[14px] font-black text-slate-900">{t.customerName}</span><span className="text-[14px] font-black text-slate-900 font-mono">₹{parseFloat(t.totalAmount).toLocaleString()}</span></div>
-                            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.templateName} | {t.frequency}</span></div>
-                        </div>
-                    ))}
-                </div>
+    // IF NO ID: SHOW LANDSCAPE TABLE VIEW
+    if (!selectedId) {
+        return (
+            <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
+                <RecurringInvoicesTableView 
+                    templates={templates} 
+                    loading={loading} 
+                    onSelect={(id) => navigate(`/recurring-invoices/view/${id}`)}
+                    navigate={navigate}
+                    fetchTemplates={fetchTemplates}
+                />
             </div>
-            {id ? <RecurringInvoiceDetail id={id} navigate={navigate} companyId={companyId} /> : <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 text-center p-20"><div className="w-24 h-24 bg-white rounded-[2rem] shadow-xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100"><RefreshCw size={40} strokeWidth={1.5} /></div><h3 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase mb-2">Automation Hub</h3><p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest max-w-[240px]">Select a profile to view details</p></div>}
+        );
+    }
+
+    // IF ID PRESENT: SHOW SPLIT VIEW
+    return (
+        <div className="flex h-screen bg-[#f8fafc] overflow-hidden animate-fade-in relative">
+            <RecurringInvoicesList 
+                templates={templates} 
+                loading={loading} 
+                selectedId={selectedId} 
+                onSelect={(id) => navigate(`/recurring-invoices/view/${id}`)}
+                navigate={navigate}
+                fetchTemplates={fetchTemplates}
+            />
+            <div className="flex-1 h-full overflow-hidden flex flex-col bg-slate-50">
+                <RecurringInvoiceDetail 
+                    id={selectedId} 
+                    navigate={navigate} 
+                    companyId={companyId} 
+                    onRefresh={fetchTemplates}
+                />
+            </div>
         </div>
     );
 };

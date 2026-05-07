@@ -69,7 +69,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
     );
 
     if (!payment) return (
-      <div className="flex-1 flex items-center justify-center text-slate-300 font-black text-3xl opacity-20 tracking-tighter uppercase">Document Not Found</div>
+      <div className="flex-1 flex items-center justify-center text-slate-300 font-bold text-3xl opacity-20 tracking-tighter uppercase">Document Not Found</div>
     );
 
     // Derived Data
@@ -86,7 +86,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                        <ChevronDown size={14} className="rotate-90"/> All Payments
                     </button>
                     <span className="text-slate-300">|</span>
-                    <span className="text-[13px] font-black text-slate-800">{payment.voucherNumber}</span>
+                    <span className="text-[13px] font-bold text-slate-800">{payment.voucherNumber}</span>
                 </div>
                 <div className="flex items-center gap-4">
                    <button className="p-1.5 text-slate-400 hover:bg-slate-50 rounded-md transition-all hover:text-slate-600"><History size={16}/></button>
@@ -115,24 +115,24 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                     
                     {/* Status Stamp */}
                     <div className="absolute top-12 right-12 rotate-[15deg] opacity-10 no-print pointer-events-none">
-                        <div className="border-[8px] border-emerald-500 text-emerald-500 px-10 py-4 text-5xl font-black uppercase tracking-widest rounded-3xl">PAID</div>
+                        <div className="border-[8px] border-emerald-500 text-emerald-500 px-10 py-4 text-5xl font-bold uppercase tracking-widest rounded-3xl">PAID</div>
                     </div>
 
                     <div className="flex justify-between items-start mb-24">
                         <div className="space-y-4">
-                            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-2xl">
+                            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-2xl">
                                 {localStorage.getItem('companyName')?.charAt(0) || 'M'}
                             </div>
                             <div className="space-y-1">
-                                <h2 className="text-[22px] font-black text-slate-900 tracking-tighter uppercase leading-none">{localStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
+                                <h2 className="text-[22px] font-bold text-slate-900 tracking-tighter uppercase leading-none">{localStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
                                 <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest">Global Trading Solutions</p>
                             </div>
                         </div>
                         <div className="text-right space-y-2">
-                            <h1 className="text-[42px] font-black text-slate-900 tracking-tighter uppercase leading-none opacity-10">RECEIPT</h1>
+                            <h1 className="text-[42px] font-bold text-slate-900 tracking-tighter uppercase leading-none opacity-10">RECEIPT</h1>
                             <div className="space-y-1">
-                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Receipt Number</p>
-                                <p className="text-[18px] font-black text-slate-900 tracking-tight">{payment.voucherNumber}</p>
+                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Receipt Number</p>
+                                <p className="text-[18px] font-bold text-slate-900 tracking-tight">{payment.voucherNumber}</p>
                             </div>
                         </div>
                     </div>
@@ -141,12 +141,12 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                     <div className="bg-slate-900 rounded-[2.5rem] p-12 mb-16 text-white flex justify-between items-center shadow-2xl shadow-slate-200 relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-transparent pointer-events-none" />
                         <div className="relative z-10 space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Total Amount Received</p>
-                            <h4 className="text-[48px] font-black tracking-tighter leading-none">₹{parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h4>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">Total Amount Received</p>
+                            <h4 className="text-[48px] font-bold tracking-tighter leading-none">₹{parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h4>
                         </div>
                         <div className="relative z-10 text-right space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Payment Date</p>
-                            <h4 className="text-[18px] font-black tracking-tight">{new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</h4>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">Payment Date</p>
+                            <h4 className="text-[18px] font-bold tracking-tight">{new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</h4>
                         </div>
                     </div>
 
@@ -154,21 +154,21 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                     <div className="grid grid-cols-2 gap-20 mb-20 px-4">
                         <div className="space-y-10">
                             <div className="space-y-3">
-                                <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none">Received From</h5>
+                                <h5 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">Received From</h5>
                                 <div className="space-y-1">
-                                    <p className="text-[18px] font-black text-[#1e61f0] leading-tight">{customer?.name || 'Customer'}</p>
+                                    <p className="text-[18px] font-bold text-[#1e61f0] leading-tight">{customer?.name || 'Customer'}</p>
                                     <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest">Premium Partner Account</p>
                                 </div>
                             </div>
                             <div className="space-y-3">
-                                <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none">Settlement Account</h5>
+                                <h5 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">Settlement Account</h5>
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
                                         <Banknote size={20} />
                                     </div>
                                     <div className="space-y-0.5">
-                                        <p className="text-[14px] font-black text-slate-800 leading-none">{bank?.name || 'Bank Transfer'}</p>
-                                        <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Verified Payment</p>
+                                        <p className="text-[14px] font-bold text-slate-800 leading-none">{bank?.name || 'Bank Transfer'}</p>
+                                        <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">Verified Payment</p>
                                     </div>
                                 </div>
                             </div>
@@ -178,7 +178,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                                 <CheckCircle2 size={32} />
                             </div>
                             <div className="space-y-1">
-                                <h3 className="text-[16px] font-black text-slate-900 tracking-tight uppercase leading-none">Transaction Cleared</h3>
+                                <h3 className="text-[16px] font-bold text-slate-900 tracking-tight uppercase leading-none">Transaction Cleared</h3>
                                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest max-w-[120px]">Payment successfully applied to balance</p>
                             </div>
                         </div>
@@ -186,7 +186,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
 
                     {/* Narration */}
                     <div className="border-t border-slate-100 pt-10 mb-24 px-4">
-                         <h5 className="text-[11px] font-black text-slate-300 uppercase tracking-widest mb-6 italic opacity-50">Settlement Remarks</h5>
+                         <h5 className="text-[11px] font-bold text-slate-300 uppercase tracking-widest mb-6 italic opacity-50">Settlement Remarks</h5>
                          <p className="text-[15px] text-slate-600 font-bold leading-relaxed italic border-l-[6px] border-slate-100 pl-8">{payment.narration || 'This payment has been successfully received and credited to your account. We appreciate your continued business partnership.'}</p>
                     </div>
 
@@ -195,16 +195,16 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                          <div className="space-y-2">
                              <div className="flex items-center gap-2 text-slate-300">
                                  <ShieldCheck size={16} />
-                                 <span className="text-[10px] font-black uppercase tracking-widest">Digital Audit Logged</span>
+                                 <span className="text-[10px] font-bold uppercase tracking-widest">Digital Audit Logged</span>
                              </div>
                              <p className="text-[10px] text-slate-400 font-bold max-w-[240px] leading-relaxed">This is an electronically generated receipt issued under the authority of {localStorage.getItem('companyName')}.</p>
                          </div>
                          <div className="text-center space-y-6">
                              <div className="w-64">
                                 <div className="h-14 border-b-2 border-slate-900 border-dashed mb-4 relative">
-                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-20 text-[40px] font-black text-slate-400 select-none">AUTHORIZED</div>
+                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-20 text-[40px] font-bold text-slate-400 select-none">AUTHORIZED</div>
                                 </div>
-                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest">Authorized Signature</p>
+                                <p className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Authorized Signature</p>
                              </div>
                          </div>
                     </div>
@@ -292,9 +292,9 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-[#f8fafc]">
+        <div className="flex flex-col h-full bg-[#f8fafc] relative">
             {/* Form Header */}
-            <header className="fixed top-0 left-0 right-0 bg-white border-b border-slate-100 px-12 py-4 flex items-center justify-between z-[110] shadow-[0_2px_15px_rgba(0,0,0,0.02)]">
+            <header className="sticky top-0 bg-white border-b border-slate-100 px-12 py-4 flex items-center justify-between z-20 shadow-[0_2px_15px_rgba(0,0,0,0.02)] shrink-0">
               <div className="flex items-center gap-6">
                 <button 
                   onClick={() => navigate('/payments')}
@@ -316,7 +316,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
               </div>
             </header>
 
-            <div className="flex-1 mt-20 pb-32 bg-[#f8fafc] overflow-y-auto no-scrollbar">
+            <div className="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
               <div className="max-w-[1000px] mx-auto py-10 px-6">
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-12 space-y-12 animate-fade-in">
                   
@@ -343,7 +343,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                         type="number"
                         value={amount}
                         onChange={e => { setAmount(e.target.value); handleAutoAllocation(e.target.value); }}
-                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[18px] font-black text-[#1e61f0] outline-none focus:bg-white focus:border-blue-500 transition-all"
+                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[18px] font-bold text-[#1e61f0] outline-none focus:bg-white focus:border-blue-500 transition-all"
                       />
                     </div>
 
@@ -413,11 +413,11 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                                     <FileText size={20} />
                                 </div>
                                 <div>
-                                    <h4 className="text-[15px] font-black text-slate-800 tracking-tight">{inv.invoiceNumber}</h4>
+                                    <h4 className="text-[15px] font-bold text-slate-800 tracking-tight">{inv.invoiceNumber}</h4>
                                     <div className="flex items-center gap-3 mt-0.5">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date: {new Date(inv.date).toLocaleDateString()}</span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date: {new Date(inv.date).toLocaleDateString()}</span>
                                         <span className="text-slate-200">|</span>
-                                        <span className="text-[10px] font-black text-[#1e61f0] uppercase tracking-widest">Due: ₹{parseFloat(inv.balance).toLocaleString()}</span>
+                                        <span className="text-[10px] font-bold text-[#1e61f0] uppercase tracking-widest">Due: ₹{parseFloat(inv.balance).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>
@@ -427,7 +427,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                                     type="number"
                                     value={allocation[inv.id] || ''}
                                     onChange={e => setAllocation({...allocation, [inv.id]: parseFloat(e.target.value || 0)})}
-                                    className="w-48 h-12 pl-8 pr-4 bg-white border border-slate-200 rounded-xl text-right font-black text-slate-700 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all"
+                                    className="w-48 h-12 pl-8 pr-4 bg-white border border-slate-200 rounded-xl text-right font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all"
                                 />
                             </div>
                           </div>
@@ -442,15 +442,15 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                         <div className="absolute top-0 left-0 right-0 h-1.5 bg-blue-600 opacity-20" />
                         <div className="flex justify-between items-center text-[13px]">
                           <span className="text-slate-500 font-bold uppercase tracking-widest">Total Received</span>
-                          <span className="text-slate-900 font-black font-mono">₹{parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-slate-900 font-bold font-mono">₹{parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center text-[13px]">
                           <span className="text-slate-500 font-bold uppercase tracking-widest">Allocated</span>
-                          <span className="text-emerald-600 font-black font-mono">- ₹{Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-emerald-600 font-bold font-mono">- ₹{Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="pt-6 border-t border-slate-200 flex justify-between items-center mt-4">
                           <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Excess Fund</span>
-                          <span className="text-[20px] font-black text-slate-900 tracking-tighter font-mono">₹{(parseFloat(amount || 0) - Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-[20px] font-bold text-slate-900 tracking-tighter font-mono">₹{(parseFloat(amount || 0) - Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                      </div>
                   </div>
@@ -459,7 +459,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
             </div>
 
             {/* Footer Action Bar */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-[100] shadow-[0_-10px_40px_rgba(0,0,0,0.04)]">
+            <div className="sticky bottom-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.04)] shrink-0">
                 <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-widest">
                     <ShieldCheck size={14} className="text-[#1e61f0]" />
                     Transaction Secured via Bank Encryption
@@ -516,13 +516,13 @@ const PaymentsEmptyState = ({ onGoToInvoices, onRecordPayment }) => {
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-12 italic opacity-40">Payment Settlement Lifecycle</p>
                 <div className="flex flex-col items-center gap-12">
                     <div className="flex items-center gap-4">
-                        <div className="px-5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoicing</div>
+                        <div className="px-5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invoicing</div>
                         <ArrowRight size={16} className="text-slate-200" />
-                        <div className="px-5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black text-slate-400 uppercase tracking-widest">Reminders</div>
+                        <div className="px-5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reminders</div>
                         <ArrowRight size={16} className="text-slate-200" />
-                        <div className="px-5 py-2.5 bg-[#1e61f0] text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-200">Collection</div>
+                        <div className="px-5 py-2.5 bg-[#1e61f0] text-white rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-blue-200">Collection</div>
                         <ArrowRight size={16} className="text-slate-200" />
-                        <div className="px-5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-black text-slate-400 uppercase tracking-widest">Reconciliation</div>
+                        <div className="px-5 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reconciliation</div>
                     </div>
                 </div>
             </div>
@@ -581,7 +581,7 @@ const PaymentsReceivedView = () => {
                 {/* Header Section */}
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
                     <div>
-                        <h2 className="text-[16px] font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        <h2 className="text-[16px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
                             Payments Received
                             <ChevronDown size={14} className="opacity-40" />
                         </h2>
@@ -616,7 +616,7 @@ const PaymentsReceivedView = () => {
                     {loading ? (
                         <div className="p-20 text-center space-y-4">
                              <Loader2 size={24} className="animate-spin text-blue-100 mx-auto" />
-                             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Scanning Ledger...</p>
+                             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Scanning Ledger...</p>
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="p-20 text-center text-slate-200 italic font-bold uppercase tracking-widest text-[10px] opacity-40">
@@ -636,23 +636,23 @@ const PaymentsReceivedView = () => {
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="space-y-0.5">
-                                            <span className={`text-[14px] font-black truncate max-w-[180px] block ${isActive ? 'text-[#1e61f0]' : 'text-slate-900'}`}>
+                                            <span className={`text-[14px] font-bold truncate max-w-[180px] block ${isActive ? 'text-[#1e61f0]' : 'text-slate-900'}`}>
                                                 {customerName}
                                             </span>
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
                                                 {p.voucherNumber}
                                             </span>
                                         </div>
-                                        <span className="text-[14px] font-black text-slate-900 font-mono">
+                                        <span className="text-[14px] font-bold text-slate-900 font-mono">
                                             ₹{amount.toLocaleString('en-IN')}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                             <Calendar size={11} className="text-slate-300" /> 
                                             {new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                         </div>
-                                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[9px] font-black uppercase tracking-widest rounded leading-none border border-emerald-200">
+                                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[9px] font-bold uppercase tracking-widest rounded leading-none border border-emerald-200">
                                             Success
                                         </span>
                                     </div>
@@ -677,7 +677,7 @@ const PaymentsReceivedView = () => {
                     <div className="w-24 h-24 bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 flex items-center justify-center text-slate-200 mb-8 border border-slate-100">
                         <CreditCard size={40} strokeWidth={1.5} />
                     </div>
-                    <h3 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase mb-2">Payment Vault</h3>
+                    <h3 className="text-[20px] font-bold text-slate-900 tracking-tighter uppercase mb-2">Payment Vault</h3>
                     <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest max-w-[240px]">Select a settlement record from the list to view detailed receipt</p>
                </div>
             )}

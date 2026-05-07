@@ -25,7 +25,7 @@ const AIScannerView = () => {
     <div className="space-y-6 animate-fade-up">
       <div className="bg-gradient-to-br from-primary-600 to-indigo-700 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden group">
         <div className="relative z-10">
-          <h3 className="text-2xl font-black mb-2 flex items-center gap-2">AI Bookkeeper</h3>
+          <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">AI Bookkeeper</h3>
           <p className="opacity-80 font-medium">Upload any receipt and let our AI engine handle the debit/credit logic for you.</p>
           
           {!scanResult && !isScanning && (
@@ -34,34 +34,34 @@ const AIScannerView = () => {
                 if(e.target.files && e.target.files.length > 0) simulateScan();
               }} />
               <Package size={40} className="mx-auto mb-4" />
-              <p className="font-black text-lg">Click to Upload Receipt</p>
+              <p className="font-bold text-lg">Click to Upload Receipt</p>
             </label>
           )}
 
           {isScanning && (
             <div className="mt-8 bg-white/5 backdrop-blur-md rounded-3xl p-12 text-center border border-white/10 animate-pulse">
                <div className="w-16 h-16 border-4 border-t-white rounded-full animate-spin mx-auto mb-6"></div>
-               <p className="font-black text-xl">AI is Reading your Receipt...</p>
+               <p className="font-bold text-xl">AI is Reading your Receipt...</p>
             </div>
           )}
 
           {scanResult && (
             <div className="mt-8 bg-white text-gray-900 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-500">
                <div className="flex justify-between items-start mb-6">
-                  <h4 className="text-2xl font-black">{scanResult.merchant}</h4>
-                  <p className="text-emerald-500 font-black">{scanResult.confidence}</p>
+                  <h4 className="text-2xl font-bold">{scanResult.merchant}</h4>
+                  <p className="text-emerald-500 font-bold">{scanResult.confidence}</p>
                </div>
                <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className="bg-gray-50 p-4 rounded-2xl">
-                     <p className="text-[10px] font-black text-gray-400 uppercase">Total Amount</p>
-                     <p className="text-xl font-black">{scanResult.amount}</p>
+                     <p className="text-[10px] font-bold text-gray-400 uppercase">Total Amount</p>
+                     <p className="text-xl font-bold">{scanResult.amount}</p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-2xl">
-                     <p className="text-[10px] font-black text-gray-400 uppercase">GST Included</p>
-                     <p className="text-xl font-black">{scanResult.tax}</p>
+                     <p className="text-[10px] font-bold text-gray-400 uppercase">GST Included</p>
+                     <p className="text-xl font-bold">{scanResult.tax}</p>
                   </div>
                </div>
-               <button onClick={() => setScanResult(null)} className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black">Post to Ledger</button>
+               <button onClick={() => setScanResult(null)} className="w-full py-4 bg-primary-600 text-white rounded-2xl font-bold">Post to Ledger</button>
             </div>
           )}
         </div>

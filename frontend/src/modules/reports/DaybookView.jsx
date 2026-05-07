@@ -54,7 +54,7 @@ const DaybookView = () => {
         field: 'voucherType', 
         width: 160,
         cellRenderer: p => (
-            <span className="px-2 py-0.5 rounded bg-slate-100 text-[#0f172a] text-[10px] font-black uppercase tracking-widest border border-slate-200">
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-[#0f172a] text-[10px] font-bold uppercase tracking-widest border border-slate-200">
                 {p.value}
             </span>
         )
@@ -76,7 +76,7 @@ const DaybookView = () => {
         field: 'totalDebit', 
         width: 180,
         type: 'numericColumn',
-        cellClass: 'font-black text-emerald-600',
+        cellClass: 'font-bold text-emerald-600',
         valueFormatter: p => p.value.toLocaleString('en-IN', { minimumFractionDigits: 2 })
     },
     { 
@@ -84,7 +84,7 @@ const DaybookView = () => {
         field: 'totalCredit', 
         width: 180,
         type: 'numericColumn',
-        cellClass: 'font-black text-blue-600',
+        cellClass: 'font-bold text-blue-600',
         valueFormatter: p => p.value.toLocaleString('en-IN', { minimumFractionDigits: 2 })
     },
     {
@@ -112,7 +112,7 @@ const DaybookView = () => {
                    <FileText size={20} />
                 </div>
                 <div>
-                   <h2 className="text-xl font-black text-[#0f172a] uppercase tracking-tighter">Daybook</h2>
+                   <h2 className="text-xl font-bold text-[#0f172a] uppercase tracking-tighter">Daybook</h2>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Transactional Chronology & Journal Log</p>
                 </div>
              </div>
@@ -124,10 +124,10 @@ const DaybookView = () => {
                 <input type="text" placeholder="Search daybook..." className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded text-xs font-bold outline-none focus:border-[#0f172a] focus:bg-white transition-all" />
              </div>
              <div className="flex items-center gap-2">
-                <button className="h-10 px-4 bg-white border border-slate-200 text-[#0f172a] rounded font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all">
+                <button className="h-10 px-4 bg-white border border-slate-200 text-[#0f172a] rounded font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all">
                    <Printer size={16} /> Print
                 </button>
-                <button className="h-10 px-4 bg-white border border-slate-200 text-[#0f172a] rounded font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all">
+                <button className="h-10 px-4 bg-white border border-slate-200 text-[#0f172a] rounded font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all">
                    <FileSpreadsheet size={16} /> Excel
                 </button>
              </div>
@@ -142,12 +142,12 @@ const DaybookView = () => {
              <div className="h-12 px-6 bg-slate-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-6">
                    <div className="flex items-center gap-4">
-                      <button className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-500 hover:text-[#0f172a] transition-colors"><Filter size={14}/> Filters</button>
+                      <button className="flex items-center gap-2 text-[10px] font-bold uppercase text-slate-500 hover:text-[#0f172a] transition-colors"><Filter size={14}/> Filters</button>
                       <div className="h-4 w-px bg-slate-200" />
                    </div>
                    <div className="flex items-center gap-6">
-                      <span className="text-[10px] font-black uppercase text-slate-400">Total Entries: <span className="text-slate-900">{rowData.length}</span></span>
-                      <span className="text-[10px] font-black uppercase text-slate-400">Period: <span className="text-slate-900">Current Session</span></span>
+                      <span className="text-[10px] font-bold uppercase text-slate-400">Total Entries: <span className="text-slate-900">{rowData.length}</span></span>
+                      <span className="text-[10px] font-bold uppercase text-slate-400">Period: <span className="text-slate-900">Current Session</span></span>
                    </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -181,13 +181,13 @@ const DaybookView = () => {
           <div className="bg-[#0f172a] text-white p-6 rounded-lg flex flex-wrap items-center justify-between gap-8 shadow-xl">
              <div className="flex items-center gap-10">
                 <div className="flex flex-col">
-                   <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Total Debit Volume</span>
-                   <span className="text-2xl font-black tracking-tighter">₹ {totalDebits.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                   <span className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Total Debit Volume</span>
+                   <span className="text-2xl font-bold tracking-tighter">₹ {totalDebits.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="w-px h-10 bg-white/10" />
                 <div className="flex flex-col">
-                   <span className="text-[10px] font-black uppercase opacity-40 tracking-widest">Total Credit Volume</span>
-                   <span className="text-2xl font-black tracking-tighter">₹ {totalCredits.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                   <span className="text-[10px] font-bold uppercase opacity-40 tracking-widest">Total Credit Volume</span>
+                   <span className="text-2xl font-bold tracking-tighter">₹ {totalCredits.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
              </div>
              
@@ -195,15 +195,15 @@ const DaybookView = () => {
                 <div className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded flex items-center gap-3">
                    <CheckCircle2 size={16} className="text-emerald-500" />
                    <div className="flex flex-col">
-                      <span className="text-[9px] font-black uppercase opacity-60">Status</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Books Reconciled</span>
+                      <span className="text-[9px] font-bold uppercase opacity-60">Status</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Books Reconciled</span>
                    </div>
                 </div>
                 <div className="bg-white/5 border border-white/10 px-4 py-2 rounded flex items-center gap-3">
                    <Clock size={16} className="text-blue-400" />
                    <div className="flex flex-col">
-                      <span className="text-[9px] font-black uppercase opacity-60">Last Sync</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest">Just now</span>
+                      <span className="text-[9px] font-bold uppercase opacity-60">Last Sync</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Just now</span>
                    </div>
                 </div>
              </div>

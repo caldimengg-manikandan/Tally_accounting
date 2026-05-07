@@ -47,7 +47,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
             <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative bg-white rounded-2xl shadow-[0_30px_80px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden animate-scale-up">
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="text-[18px] font-black text-slate-900 tracking-tight">Manage Salespersons</h3>
+                    <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Manage Salespersons</h3>
                     <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"><X size={18}/></button>
                 </div>
                 <div className="px-6 py-4 flex items-center gap-3 border-b border-slate-100">
@@ -63,7 +63,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     </div>
                     <button
                         onClick={() => setShowAddForm(true)}
-                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-black rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap"
+                        className="px-4 py-2 bg-[#1e61f0] text-white text-[13px] font-bold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 whitespace-nowrap"
                     >
                         <Plus size={14}/> New Salesperson
                     </button>
@@ -72,17 +72,17 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
                     <div className="mx-6 my-4 p-5 bg-slate-50 rounded-xl border border-slate-200">
                         <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
+                                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Name*</label>
                                 <input value={newName} onChange={e => setNewName(e.target.value)} className="w-full h-9 px-3 border border-slate-300 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white" />
                             </div>
                             <div>
-                                <label className="block text-[11px] font-black text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
+                                <label className="block text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1.5">Email*</label>
                                 <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} className="w-full h-9 px-3 border border-slate-300 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white" />
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={handleSaveAndSelect} disabled={!newName.trim()} className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-black rounded hover:bg-blue-700">Save and Select</button>
-                            <button onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }} className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-black rounded">Cancel</button>
+                            <button onClick={handleSaveAndSelect} disabled={!newName.trim()} className="px-5 py-2 bg-[#1e61f0] text-white text-[12px] font-bold rounded hover:bg-blue-700">Save and Select</button>
+                            <button onClick={() => { setShowAddForm(false); setNewName(''); setNewEmail(''); }} className="px-5 py-2 bg-white border border-slate-200 text-slate-600 text-[12px] font-bold rounded">Cancel</button>
                         </div>
                     </div>
                 )}
@@ -169,8 +169,8 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
     if (loading) return <div className="p-20 text-center font-bold text-slate-400">Loading Retainer Interface...</div>;
 
     return (
-        <div className="flex flex-col h-screen bg-[#f8fafc]">
-            <header className="fixed top-0 left-0 right-0 bg-white border-b border-slate-100 px-12 py-4 flex items-center justify-between z-[110] shadow-sm">
+        <div className="flex flex-col h-full bg-[#f8fafc] relative">
+            <header className="sticky top-0 bg-white border-b border-slate-100 px-12 py-4 flex items-center justify-between z-20 shadow-sm shrink-0">
                 <div className="flex items-center gap-6">
                     <button onClick={() => navigate('/retainer-invoices')} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-[#1e61f0] transition-all"><ArrowLeft size={22} /></button>
                     <div>
@@ -181,7 +181,7 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
                 <button onClick={() => navigate('/retainer-invoices')} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><X size={24} /></button>
             </header>
 
-            <div className="flex-1 mt-20 pb-32 bg-[#f8fafc] overflow-y-auto no-scrollbar">
+            <div className="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
                 <div className="max-w-[1000px] mx-auto py-10 px-6">
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-12 space-y-12 animate-fade-in">
                         <div className="grid grid-cols-2 gap-x-12 gap-y-8">
@@ -230,7 +230,7 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
                 </div>
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-[100] shadow-md">
+            <div className="sticky bottom-0 bg-white border-t border-slate-100 px-12 py-4 flex items-center justify-between z-20 shadow-md shrink-0">
                 <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Advance payment will be credited to customer account</div>
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate('/retainer-invoices')} className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded">Discard</button>
@@ -257,7 +257,7 @@ const RetainerInvoiceDetail = ({ id, navigate, companyId }) => {
     }, [id]);
 
     if (loading) return <div className="p-20 text-center font-bold text-slate-300 animate-pulse uppercase tracking-widest">Syncing Records...</div>;
-    if (!note) return <div className="p-20 text-center text-slate-300 font-black text-2xl opacity-20 uppercase">Not Found</div>;
+    if (!note) return <div className="p-20 text-center text-slate-300 font-bold text-2xl opacity-20 uppercase">Not Found</div>;
 
     return (
         <div className="flex-1 flex flex-col h-full bg-[#f8fafc] animate-fade-in shadow-inner overflow-hidden">
@@ -265,7 +265,7 @@ const RetainerInvoiceDetail = ({ id, navigate, companyId }) => {
                 <div className="flex items-center gap-2">
                     <button onClick={() => navigate('/retainer-invoices')} className="text-[13px] font-bold text-blue-600 hover:underline">All Retainers</button>
                     <span className="text-slate-300">|</span>
-                    <span className="text-[13px] font-black text-slate-800">{note.invoiceNumber}</span>
+                    <span className="text-[13px] font-bold text-slate-800">{note.invoiceNumber}</span>
                 </div>
                 <div className="flex items-center gap-3">
                    <button onClick={() => navigate(`/retainer-invoices/edit/${note.id}`)} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded flex items-center gap-1.5 text-[12px] font-bold border border-transparent hover:border-slate-100 transition-all"><Edit2 size={14}/> Edit</button>
@@ -276,38 +276,38 @@ const RetainerInvoiceDetail = ({ id, navigate, companyId }) => {
                 <div className="bg-white shadow-2xl rounded-2xl min-h-[600px] w-full max-w-[800px] mx-auto p-20 border border-slate-100">
                     <div className="flex justify-between items-start mb-24">
                         <div className="space-y-4">
-                            <h2 className="text-[22px] font-black text-slate-900 tracking-tighter uppercase">{localStorage.getItem('companyName')}</h2>
+                            <h2 className="text-[22px] font-bold text-slate-900 tracking-tighter uppercase">{localStorage.getItem('companyName')}</h2>
                             <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest">Retainer Invoice</p>
                         </div>
                         <div className="text-right">
-                            <h1 className="text-[42px] font-black text-slate-900 tracking-tighter uppercase leading-none opacity-10">ADVANCE</h1>
-                            <p className="text-[18px] font-black text-slate-900 tracking-tight mt-4">{note.invoiceNumber}</p>
+                            <h1 className="text-[42px] font-bold text-slate-900 tracking-tighter uppercase leading-none opacity-10">ADVANCE</h1>
+                            <p className="text-[18px] font-bold text-slate-900 tracking-tight mt-4">{note.invoiceNumber}</p>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-20 mb-20">
                         <div className="space-y-3">
-                            <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Customer</h5>
-                            <p className="text-[18px] font-black text-[#1e61f0]">{note.CustomerLedger?.name || note.customerName}</p>
+                            <h5 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Customer</h5>
+                            <p className="text-[18px] font-bold text-[#1e61f0]">{note.CustomerLedger?.name || note.customerName}</p>
                         </div>
                         <div className="text-right space-y-3">
-                            <h5 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Date Issued</h5>
-                            <p className="text-[18px] font-black text-slate-900">{new Date(note.invoiceDate).toLocaleDateString()}</p>
+                            <h5 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date Issued</h5>
+                            <p className="text-[18px] font-bold text-slate-900">{new Date(note.invoiceDate).toLocaleDateString()}</p>
                         </div>
                     </div>
                     <table className="w-full mb-12">
-                        <thead><tr className="border-b-2 border-slate-900 text-[10px] font-black uppercase tracking-widest">
+                        <thead><tr className="border-b-2 border-slate-900 text-[10px] font-bold uppercase tracking-widest">
                             <th className="py-4 text-left">Description</th><th className="py-4 text-right">Amount</th>
                         </tr></thead>
                         <tbody className="divide-y divide-slate-100">
                             {note.items?.map((it, idx) => (
                                 <tr key={idx}>
-                                    <td className="py-6"><p className="text-[14px] font-black text-slate-800">{it.description}</p></td>
-                                    <td className="py-6 text-right text-[14px] font-black text-slate-900">₹{parseFloat(it.amount).toLocaleString()}</td>
+                                    <td className="py-6"><p className="text-[14px] font-bold text-slate-800">{it.description}</p></td>
+                                    <td className="py-6 text-right text-[14px] font-bold text-slate-900">₹{parseFloat(it.amount).toLocaleString()}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    <div className="flex justify-end"><div className="w-64 border-t-2 border-slate-900 pt-6 flex justify-between items-center text-[18px] font-black uppercase tracking-tighter"><span>Total</span><span>₹{parseFloat(note.totalAmount).toLocaleString()}</span></div></div>
+                    <div className="flex justify-end"><div className="w-64 border-t-2 border-slate-900 pt-6 flex justify-between items-center text-[18px] font-bold uppercase tracking-tighter"><span>Total</span><span>₹{parseFloat(note.totalAmount).toLocaleString()}</span></div></div>
                 </div>
             </div>
         </div>
@@ -344,19 +344,19 @@ const RetainerInvoicesView = () => {
         <div className="flex h-screen bg-white font-sans overflow-hidden">
             <div className={`flex flex-col border-r border-slate-100 transition-all duration-300 no-print ${id ? 'w-[380px]' : 'w-[420px]'}`}>
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                    <div><h2 className="text-[16px] font-black text-slate-900 tracking-tight">Retainers</h2><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Advance Payments</p></div>
+                    <div><h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Retainers</h2><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Advance Payments</p></div>
                     <button onClick={() => navigate('/retainer-invoices/new')} className="p-2 bg-[#1e61f0] text-white rounded-lg shadow-lg active:scale-95 transition-all"><Plus size={18}/></button>
                 </div>
                 <div className="flex-1 overflow-y-auto divide-y divide-slate-50 custom-scrollbar">
                     {loading ? <div className="p-20 text-center animate-pulse"><Loader2 size={24} className="animate-spin text-blue-100 mx-auto" /></div> : notes.length === 0 ? <div className="p-20 text-center text-slate-200 italic font-bold uppercase tracking-widest text-[10px] opacity-40">No Records Found</div> : notes.map(n => (
                         <div key={n.id} onClick={() => navigate(`/retainer-invoices/view/${n.id}`)} className={`px-8 py-6 cursor-pointer transition-all border-l-4 ${id === n.id ? 'bg-blue-50 border-blue-600' : 'bg-white border-transparent hover:bg-slate-50'}`}>
-                            <div className="flex justify-between items-start mb-2"><span className="text-[14px] font-black text-slate-900">{n.CustomerLedger?.name || n.customerName}</span><span className="text-[14px] font-black text-slate-900 font-mono">₹{parseFloat(n.totalAmount).toLocaleString()}</span></div>
+                            <div className="flex justify-between items-start mb-2"><span className="text-[14px] font-bold text-slate-900">{n.CustomerLedger?.name || n.customerName}</span><span className="text-[14px] font-bold text-slate-900 font-mono">₹{parseFloat(n.totalAmount).toLocaleString()}</span></div>
                             <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{n.invoiceNumber} | {new Date(n.invoiceDate).toLocaleDateString()}</span></div>
                         </div>
                     ))}
                 </div>
             </div>
-            {id ? <RetainerInvoiceDetail id={id} navigate={navigate} companyId={companyId} /> : <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 text-center p-20"><div className="w-24 h-24 bg-white rounded-[2rem] shadow-xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100"><DollarSign size={40} strokeWidth={1.5} /></div><h3 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase mb-2">Advance Hub</h3><p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest max-w-[240px]">Select a document to view details</p></div>}
+            {id ? <RetainerInvoiceDetail id={id} navigate={navigate} companyId={companyId} /> : <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 text-center p-20"><div className="w-24 h-24 bg-white rounded-[2rem] shadow-xl flex items-center justify-center text-slate-200 mb-8 border border-slate-100"><DollarSign size={40} strokeWidth={1.5} /></div><h3 className="text-[20px] font-bold text-slate-900 tracking-tighter uppercase mb-2">Advance Hub</h3><p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest max-w-[240px]">Select a document to view details</p></div>}
         </div>
     );
 };

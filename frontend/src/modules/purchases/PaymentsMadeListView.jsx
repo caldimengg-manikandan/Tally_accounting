@@ -46,7 +46,7 @@ const PaymentsMadeListView = ({ companyId }) => {
             <Wallet size={24} className="text-white" />
           </div>
           <div>
-            <h1 className="text-[18px] font-black text-slate-900 tracking-tight">Payments Made</h1>
+            <h1 className="text-[18px] font-bold text-slate-900 tracking-tight">Payments Made</h1>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Track and manage vendor settlements</p>
           </div>
         </div>
@@ -70,7 +70,7 @@ const PaymentsMadeListView = ({ companyId }) => {
             className="flex items-center gap-2 px-5 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all"
           >
             <Plus size={18} strokeWidth={3} />
-            <span className="text-[13px] font-black uppercase tracking-wider">New Payment</span>
+            <span className="text-[13px] font-bold uppercase tracking-wider">New Payment</span>
           </button>
         </div>
       </header>
@@ -79,13 +79,13 @@ const PaymentsMadeListView = ({ companyId }) => {
       <div className="px-8 py-4 bg-slate-50/50 flex items-center gap-8 border-b border-slate-50">
          <div className="flex items-center gap-3">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Total Settled:</span>
-            <span className="text-[13px] font-black text-slate-900">₹{payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Total Settled:</span>
+            <span className="text-[13px] font-bold text-slate-900">₹{payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</span>
          </div>
          <div className="flex items-center gap-3">
             <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Payments Count:</span>
-            <span className="text-[13px] font-black text-slate-900">{payments.length}</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Payments Count:</span>
+            <span className="text-[13px] font-bold text-slate-900">{payments.length}</span>
          </div>
       </div>
 
@@ -94,15 +94,15 @@ const PaymentsMadeListView = ({ companyId }) => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="sticky top-0 bg-white/90 backdrop-blur-md z-10 border-b border-slate-100 px-8">
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] w-12 text-center">
+              <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] w-12 text-center">
                 <input type="checkbox" className="rounded-md border-slate-300 text-blue-600" />
               </th>
-              <th className="px-5 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Date</th>
-              <th className="px-5 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Payment#</th>
-              <th className="px-5 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Vendor Name</th>
-              <th className="px-5 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Reference</th>
-              <th className="px-5 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Amount</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center w-20">Actions</th>
+              <th className="px-5 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Date</th>
+              <th className="px-5 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Payment#</th>
+              <th className="px-5 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Vendor Name</th>
+              <th className="px-5 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Reference</th>
+              <th className="px-5 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-right">Amount</th>
+              <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] text-center w-20">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -127,7 +127,7 @@ const PaymentsMadeListView = ({ companyId }) => {
                       </div>
                       <button 
                         onClick={() => navigate('/payments-made/new')}
-                        className="mt-2 text-[12px] font-black text-blue-600 uppercase tracking-widest hover:text-blue-700"
+                        className="mt-2 text-[12px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-700"
                       >
                         + Create Your First Payment
                       </button>
@@ -144,7 +144,7 @@ const PaymentsMadeListView = ({ companyId }) => {
                     <div className="text-[13px] font-bold text-slate-900">{new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Confirmed</div>
                   </td>
-                  <td className="px-5 py-5 text-[13px] font-black text-blue-600 tracking-tight">{p.paymentNumber}</td>
+                  <td className="px-5 py-5 text-[13px] font-bold text-blue-600 tracking-tight">{p.paymentNumber}</td>
                   <td className="px-5 py-5">
                     <div className="text-[13px] font-bold text-slate-900">{p.vendorName}</div>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Vendor</div>
@@ -153,8 +153,8 @@ const PaymentsMadeListView = ({ companyId }) => {
                     {p.reference || p.narration?.substring(0, 30) || '--'}
                   </td>
                   <td className="px-5 py-5 text-right">
-                    <div className="text-[14px] font-black text-slate-900">₹{p.amount.toLocaleString()}</div>
-                    <div className="flex items-center justify-end gap-1 text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-1">
+                    <div className="text-[14px] font-bold text-slate-900">₹{p.amount.toLocaleString()}</div>
+                    <div className="flex items-center justify-end gap-1 text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1">
                        <CheckCircle2 size={10} />
                        Settled
                     </div>
