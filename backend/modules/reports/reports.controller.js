@@ -97,7 +97,7 @@ exports.getProfitAndLoss = async (req, res) => {
 
     ledgers.forEach(l => {
       const amount = parseFloat(l.totalCredit || 0) - parseFloat(l.totalDebit || 0);
-      const entry = { name: l.name, group: l.Group?.name, amount: Math.abs(amount) };
+      const entry = { ledgerId: l.id, name: l.name, group: l.Group?.name, amount: Math.abs(amount) };
 
       if (l.Group?.nature === 'Income') {
         income.push(entry);
