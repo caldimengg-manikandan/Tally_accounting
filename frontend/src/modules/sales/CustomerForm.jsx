@@ -3,7 +3,7 @@ import {
   Info, Mail, Phone, MapPin, Building, ShieldCheck, 
   AlertCircle, Loader2, Plus, Save, X, Activity, CheckCircle2,
   ChevronRight, ChevronDown, ArrowRight, ArrowLeft, Copy, Trash2, MoreVertical,
-  Upload, FileText, Globe, CreditCard, Clock, Download, Search, User
+  Upload, FileText, Globe, CreditCard, Clock, Download, Search, User, Edit2, Check
 } from 'lucide-react';
 import { ledgerAPI, groupAPI } from '../../services/api';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
@@ -32,6 +32,13 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   const [pan, setPan] = useState('');
   const [currency, setCurrency] = useState('INR- Indian Rupee');
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
+  const [receivableAccount, setReceivableAccount] = useState('Accounts Receivable');
+  const [openingBalance, setOpeningBalance] = useState('0.00');
+  const [portalEnabled, setPortalEnabled] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState('1.00');
+  const [tempExchangeRate, setTempExchangeRate] = useState('1.00');
+  const [isRateEditable, setIsRateEditable] = useState(false);
+  const [accounts, setAccounts] = useState([]);
   
   // Addresses
   const initialAddress = { attention: '', country: 'India', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
@@ -84,6 +91,9 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
        setCurrency(customerToEdit.currency || 'INR- Indian Rupee');
        setPaymentTerms(customerToEdit.paymentTerms || 'Due on Receipt');
        setCompanyName(customerToEdit.companyName || '');
+       setReceivableAccount(customerToEdit.receivableAccount || 'Accounts Receivable');
+       setOpeningBalance(customerToEdit.openingBalance?.toString() || '0.00');
+       setPortalEnabled(customerToEdit.portalEnabled || false);
        
        if (customerToEdit.billingAddressJson) setBillingAddress(JSON.parse(customerToEdit.billingAddressJson));
        else if (customerToEdit.billingAddress) {
@@ -96,8 +106,55 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
        }
        
        setDisplayName(customerToEdit.name || '');
-    }
+     }
   }, [customerToEdit]);
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const res = await ledgerAPI.getByCompany(companyId);
+        if (res.data) setAccounts(res.data);
+      } catch (err) {
+        console.error('Failed to fetch accounts', err);
+      }
+    };
+    fetchAccounts();
+  }, [companyId]);
+
+  // Handle Currency Change & Exchange Rate (Real-time API)
+  useEffect(() => {
+    if (!currency || currency.startsWith('INR')) {
+      setExchangeRate('1.00');
+      return;
+    }
+    
+    const fetchLatestRate = async () => {
+      try {
+        const code = currency.split('-')[0].trim();
+        // Fetching latest rates from a public API with INR as base
+        const res = await fetch(`https://open.er-api.com/v6/latest/INR`);
+        const data = await res.json();
+        
+        if (data && data.rates) {
+          // The API gives rates as 1 INR = X ForeignCurrency
+          // We need 1 ForeignCurrency = X INR
+          const rateToInr = data.rates[code];
+          if (rateToInr) {
+             const actualRate = (1 / rateToInr).toFixed(6);
+             setExchangeRate(actualRate);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch real-time exchange rate', err);
+        // Fallback to approximate values if API is down
+        const fallbacks = { 'AED': '22.71', 'USD': '83.31', 'EUR': '89.41' };
+        const code = currency.split('-')[0].trim();
+        setExchangeRate(fallbacks[code] || '1.00');
+      }
+    };
+
+    fetchLatestRate();
+  }, [currency]); // Only triggers when currency selection changes
 
   const handleSave = async (e) => {
     if (e) e.preventDefault();
@@ -127,7 +184,10 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         billingAddress: JSON.stringify(billingAddress),
         shippingAddress: JSON.stringify(shippingAddress),
         currency,
-        paymentTerms
+        paymentTerms,
+        receivableAccount,
+        openingBalance: parseFloat(openingBalance) || 0,
+        portalEnabled
       };
 
       let res;
@@ -413,31 +473,182 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                         <div className="h-px bg-slate-100 flex-1"></div>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-6 max-w-2xl">
+                        {/* PAN */}
                         <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Currency</label>
-                            <select value={currency} onChange={e => setCurrency(e.target.value)} className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium">
-                                {CURRENCIES.map(c => <option key={c.code} value={c.display}>{c.display}</option>)}
-                            </select>
-                        </div>
-
-                        <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Payment Terms</label>
-                            <select value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium">
-                                <option value="Due on Receipt">Due on Receipt</option>
-                                <option value="Net 15">Net 15</option>
-                                <option value="Net 30">Net 30</option>
-                                <option value="Net 45">Net 45</option>
-                            </select>
-                        </div>
-
-                        <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest">PAN Number</label>
+                            <div className="w-48 flex items-center gap-1.5">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">PAN</label>
+                                <Info size={12} className="text-slate-300" />
+                            </div>
                             <input 
                                 value={pan} onChange={e => setPan(e.target.value)}
-                                className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 capitalize font-bold text-slate-700" 
+                                className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 capitalize font-medium text-slate-700" 
                                 placeholder="ABCDE1234F"
                             />
+                        </div>
+
+                        {/* Currency */}
+                        <div className="flex items-center">
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Currency</label>
+                            <div className="flex-1 relative">
+                                <select 
+                                    value={currency} 
+                                    onChange={e => setCurrency(e.target.value)} 
+                                    className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium appearance-none"
+                                >
+                                    {CURRENCIES.map(c => <option key={c.code} value={c.display}>{c.display}</option>)}
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Exchange Rate */}
+                        <div className="flex items-center animate-slide-down">
+                            <label className="w-48 text-[11px] font-bold text-blue-600 uppercase tracking-widest">Exchange Rate</label>
+                            <div className={`flex-1 flex items-center h-9 border rounded overflow-hidden transition-all ${isRateEditable ? 'border-blue-400 bg-white' : 'border-blue-200 bg-blue-50/30'}`}>
+                                <span className="px-3 py-2 text-[11px] font-bold text-blue-400 border-r border-blue-100 whitespace-nowrap">
+                                    1 {currency ? currency.split('-')[0].trim() : 'INR'} =
+                                </span>
+                                <input 
+                                    type="text"
+                                    readOnly={!isRateEditable}
+                                    value={isRateEditable ? tempExchangeRate : exchangeRate}
+                                    onChange={e => setTempExchangeRate(e.target.value)}
+                                    className={`flex-1 px-3 py-2 outline-none text-[13px] font-bold ${isRateEditable ? 'text-slate-800' : 'text-blue-700'} bg-transparent`} 
+                                />
+                                {(!currency || !currency.startsWith('INR')) && (
+                                    <div className="flex items-center h-full border-l border-blue-100 divide-x divide-blue-100">
+                                       {!isRateEditable ? (
+                                           <button 
+                                             type="button"
+                                             onClick={() => {
+                                               setTempExchangeRate(exchangeRate);
+                                               setIsRateEditable(true);
+                                             }}
+                                             className="px-3 py-2 hover:bg-blue-100/50 text-blue-400 transition-colors"
+                                             title="Edit Rate"
+                                           >
+                                              <Edit2 size={14} />
+                                           </button>
+                                       ) : (
+                                           <>
+                                              <button 
+                                                type="button"
+                                                onClick={() => {
+                                                   setExchangeRate(tempExchangeRate);
+                                                   setIsRateEditable(false);
+                                                }}
+                                                className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                                                title="Update Rate"
+                                              >
+                                                 <Check size={14} />
+                                              </button>
+                                              <button 
+                                                type="button"
+                                                onClick={() => setIsRateEditable(false)}
+                                                className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-400 transition-colors"
+                                                title="Cancel"
+                                              >
+                                                 <X size={14} />
+                                              </button>
+                                           </>
+                                       )}
+                                    </div>
+                                )}
+                                <span className="px-3 py-2 text-[11px] font-bold text-blue-400 border-l border-blue-100">INR</span>
+                            </div>
+                        </div>
+
+                        {/* Accounts Receivable */}
+                        <div className="flex items-center">
+                            <div className="w-48 flex items-center gap-1.5">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Accounts Receivable</label>
+                                <Info size={12} className="text-slate-300" />
+                            </div>
+                            <div className="flex-1 relative">
+                                <select 
+                                    value={receivableAccount} 
+                                    onChange={e => setReceivableAccount(e.target.value)} 
+                                    className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium appearance-none focus:border-blue-400"
+                                >
+                                    <option>Accounts Receivable</option>
+                                    {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Opening Balance */}
+                        <div className="flex items-center">
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Opening Balance</label>
+                            <div className="flex-1 flex items-center h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400">
+                                <span className="bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-400 border-r border-slate-100">
+                                    {currency ? currency.split('-')[0].trim() : 'INR'}
+                                </span>
+                                <input 
+                                    type="number"
+                                    value={openingBalance} onChange={e => setOpeningBalance(e.target.value)}
+                                    className="flex-1 px-3 py-2 outline-none text-[13px] font-medium" 
+                                />
+                            </div>
+                        </div>
+
+                        {/* Payment Terms */}
+                        <div className="flex items-center">
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Payment Terms</label>
+                            <div className="flex-1 relative">
+                                <select 
+                                    value={paymentTerms} 
+                                    onChange={e => setPaymentTerms(e.target.value)} 
+                                    className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium appearance-none"
+                                >
+                                    <option value="Due on Receipt">Due on Receipt</option>
+                                    <option value="Net 15">Net 15</option>
+                                    <option value="Net 30">Net 30</option>
+                                    <option value="Net 45">Net 45</option>
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Enable Portal */}
+                        <div className="flex items-start pt-2">
+                            <div className="w-48 flex items-center gap-1.5">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Enable Portal?</label>
+                                <Info size={12} className="text-slate-300" />
+                            </div>
+                            <div className="flex-1 flex items-center gap-2">
+                                <input 
+                                    type="checkbox"
+                                    checked={portalEnabled}
+                                    onChange={e => setPortalEnabled(e.target.checked)}
+                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-[13px] text-slate-600">Allow portal access for this customer</span>
+                            </div>
+                        </div>
+
+                        {/* Documents */}
+                        <div className="flex items-start pt-4">
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest pt-2">Documents</label>
+                            <div className="flex-1 space-y-2">
+                                <button className="flex items-center gap-2 px-4 py-1.5 border border-slate-200 rounded-md text-[13px] font-medium text-slate-600 hover:bg-slate-50">
+                                    <Upload size={14} /> Upload File
+                                </button>
+                                <p className="text-[11px] text-slate-400">You can upload a maximum of 10 files, 10MB each</p>
+                            </div>
+                        </div>
+
+                        {/* Add more details link */}
+                        <div className="pt-4">
+                            <button className="text-[13px] font-medium text-blue-600 hover:underline">Add more details</button>
+                        </div>
+                        
+                        {/* Footer info text */}
+                        <div className="pt-8">
+                           <p className="text-[12px] text-slate-500 italic">
+                               Customer Owner: Assign a user as the customer owner to provide access only to the data of this customer. <span className="text-blue-500 cursor-pointer hover:underline">Learn More</span>
+                           </p>
                         </div>
                     </div>
                 </section>

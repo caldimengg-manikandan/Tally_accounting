@@ -6,6 +6,9 @@ const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/
 // All protected routes require a valid token and active company context
 router.use(verifyToken, tenantAccess);
 
+// Bulk Update transactions
+router.post('/bulk-update', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.bulkUpdateTransactions);
+
 // Create voucher (ACCOUNTANT and ADMIN only)
 router.post('/', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.createVoucher);
 router.put('/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.updateVoucher);

@@ -5,8 +5,8 @@ import {
   Settings, Check, Search
 } from 'lucide-react';
 
-const BudgetsView = () => {
-  const [isCreating, setIsCreating] = useState(true);
+const BudgetsView = ({ showNew }) => {
+  const [isCreating, setIsCreating] = useState(showNew || false);
   const [isFiscalDropdownOpen, setIsFiscalDropdownOpen] = useState(false);
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
   const [formData, setFormData] = useState({

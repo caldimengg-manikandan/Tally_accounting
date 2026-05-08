@@ -1,13 +1,13 @@
- const { Voucher, Transaction, Ledger, sequelize } = require('../models');
+const { Voucher, Transaction, Ledger, sequelize } = require('../models');
 
 class AccountingService {
   /**
    * Universal Journal Engine: The absolute core of the accounting system.
    * Enhanced with: Production Audit Logging, Real-time Balances, and Double-Entry Validation.
    */
-  static async recordJournalEntry({ 
+  static async recordJournalEntry({
     companyId, date, narration, reference, voucherType = 'Journal', entries, userId, voucherNumber: customVoucherNumber,
-    reportingMethod, currency, projectId 
+    reportingMethod, currency, projectId
   }, dbTransaction = null) {
     const { AuditLog } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
@@ -52,7 +52,7 @@ class AccountingService {
     // 3. Create Transaction Lines & Update Ledger Balances
     for (const entry of entries) {
       if (!entry.ledgerId) throw new Error('INTEGRITY ERROR: Missing Ledger ID in transaction line.');
-      
+
       await Transaction.create({
         VoucherId: voucher.id,
         LedgerId: entry.ledgerId,
@@ -80,11 +80,11 @@ class AccountingService {
         action: 'CREATE_VOUCHER',
         tableName: 'Vouchers',
         recordId: voucher.id,
-        newData: { 
-          voucherNumber, 
-          voucherType, 
-          totalValue: totalDebit, 
-          lines: entries.length 
+        newData: {
+          voucherNumber,
+          voucherType,
+          totalValue: totalDebit,
+          lines: entries.length
         },
         CompanyId: companyId,
         UserId: userId
@@ -94,8 +94,8 @@ class AccountingService {
     return voucher;
   }
 
-  static async updateJournalEntry(voucherId, { 
-    companyId, date, narration, reference, entries, userId, voucherNumber, reportingMethod, currency 
+  static async updateJournalEntry(voucherId, {
+    companyId, date, narration, reference, entries, userId, voucherNumber, reportingMethod, currency
   }, dbTransaction = null) {
     const { AuditLog } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
@@ -126,7 +126,7 @@ class AccountingService {
       for (const oldTx of voucher.Transactions) {
         const ledger = await Ledger.findByPk(oldTx.LedgerId, options);
         if (ledger) {
-          const delta = parseFloat(oldTx.debit || 0) - parseFloat(oldTx.credit || 0);
+          const delta = parseFloat(oldTx.debit || 0) - parseFloat(oldTx.credit || 0)
           ledger.currentBalance = parseFloat(ledger.currentBalance || 0) - delta; // Reverse delta
           await ledger.save(options);
         }
@@ -153,7 +153,7 @@ class AccountingService {
     // 5. Create new transactions & Update Ledger Balances
     for (const entry of entries) {
       if (!entry.ledgerId) throw new Error('INTEGRITY ERROR: Missing Ledger ID in transaction line.');
-      
+
       await Transaction.create({
         VoucherId: voucher.id,
         LedgerId: entry.ledgerId,
@@ -180,10 +180,10 @@ class AccountingService {
         action: 'UPDATE_VOUCHER',
         tableName: 'Vouchers',
         recordId: voucher.id,
-        newData: { 
-          voucherNumber: voucher.voucherNumber, 
-          totalValue: totalDebit, 
-          lines: entries.length 
+        newData: {
+          voucherNumber: voucher.voucherNumber,
+          totalValue: totalDebit,
+          lines: entries.length
         },
         CompanyId: companyId,
         UserId: userId
@@ -197,15 +197,15 @@ class AccountingService {
    * Professional Tax Invoice Engine (GST Compliant)
    * Enhanced with: Negative Stock Protection, Integrated Inventory, and Audit Trails.
    */
-  static async recordTaxInvoice({ 
-    companyId, customerLedgerId, date, narration, items, type = 'Sales', userId, projectId 
+  static async recordTaxInvoice({
+    companyId, customerLedgerId, date, narration, items, type = 'Sales', userId, projectId
   }, dbTransaction = null) {
     const { Item } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
-    
+
     let totalTaxableValue = 0;
     let totalGstAmount = 0;
-    
+
     // 1. Calculate & VALIDATE STOCK (Negative Stock Safety)
     const processedItems = [];
     for (const itemData of items) {
@@ -228,7 +228,7 @@ class AccountingService {
     // 2. Identify States for GST Automation
     const { Company, Group } = require('../models');
     const { Op } = require('sequelize');
-    
+
     const company = await Company.findByPk(companyId, options);
     const customer = await Ledger.findByPk(customerLedgerId, options);
 
@@ -236,19 +236,19 @@ class AccountingService {
     if (!customer) throw new Error('CONFIG ERROR: Customer ledger not found.');
 
     const isLocal = company.state === customer.state;
-    
+
     const salesGroup = await Group.findOne({ where: { CompanyId: companyId, name: 'Sales Accounts' }, ...options });
     let salesLedger = null;
     if (salesGroup) {
-        salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, GroupId: salesGroup.id }, ...options });
+      salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, GroupId: salesGroup.id }, ...options });
     }
     if (!salesLedger) {
-        salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Sales%' } }, ...options });
+      salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Sales%' } }, ...options });
     }
-    
+
     const missing = [];
     if (!salesLedger) missing.push('Sales Ledger');
-    
+
     // 3. Prepare Journal Entries (only if ledgers found)
     const journalEntries = [];
     if (salesLedger) {
@@ -260,10 +260,10 @@ class AccountingService {
       // Intra-state: CGST + SGST
       const cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
       const sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
-      
+
       if (!cgstLedger) missing.push('CGST Ledger');
       if (!sgstLedger) missing.push('SGST Ledger');
-      
+
       if (missing.length === 0) {
         journalEntries.push({ ledgerId: cgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
         journalEntries.push({ ledgerId: sgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
@@ -272,7 +272,7 @@ class AccountingService {
       // Inter-state: IGST
       const igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%IGST%' } }, ...options });
       if (!igstLedger) missing.push('IGST Ledger');
-      
+
       if (missing.length === 0) {
         journalEntries.push({ ledgerId: igstLedger.id, debit: 0, credit: totalGstAmount });
       }
@@ -309,12 +309,77 @@ class AccountingService {
         ItemId: item.id
       }, {
         where: { VoucherId: voucher.id, LedgerId: salesLedger.id },
-        limit: 1, 
+        limit: 1,
         ...options
       });
     }
 
     return { voucher, grandTotal, totalTaxableValue, totalGstAmount };
+  }
+  /**
+   * Professional Bulk Update Engine
+   * Atomic replacement of accounts across multiple transactions with balance recalibration.
+   */
+  static async bulkUpdateTransactions({ companyId, transactionIds, targetLedgerId, userId }) {
+    const { AuditLog } = require('../models');
+    
+    const result = await sequelize.transaction(async (t) => {
+      const targetLedger = await Ledger.findByPk(targetLedgerId, { transaction: t });
+      if (!targetLedger) throw new Error('Target ledger not found');
+      if (targetLedger.CompanyId !== companyId) throw new Error('Unauthorized target ledger');
+
+      let updatedCount = 0;
+      const historyDetails = [];
+
+      for (const txId of transactionIds) {
+        const tx = await Transaction.findByPk(txId, { transaction: t });
+        if (!tx || tx.CompanyId !== companyId) continue;
+
+        const oldLedgerId = tx.LedgerId;
+        if (oldLedgerId === targetLedgerId) continue;
+
+        // 1. Reverse balance from old ledger
+        const oldLedger = await Ledger.findByPk(oldLedgerId, { transaction: t });
+        if (oldLedger) {
+          const delta = parseFloat(tx.debit || 0) - parseFloat(tx.credit || 0);
+          oldLedger.currentBalance = parseFloat(oldLedger.currentBalance || 0) - delta;
+          await oldLedger.save({ transaction: t });
+          historyDetails.push({ txId, oldAccount: oldLedger.name });
+        }
+
+        // 2. Update transaction
+        tx.LedgerId = targetLedgerId;
+        await tx.save({ transaction: t });
+
+        // 3. Apply balance to new ledger
+        const delta = parseFloat(tx.debit || 0) - parseFloat(tx.credit || 0);
+        targetLedger.currentBalance = parseFloat(targetLedger.currentBalance || 0) + delta;
+        
+        updatedCount++;
+      }
+
+      await targetLedger.save({ transaction: t });
+
+      // 4. Audit Log
+      if (AuditLog) {
+        await AuditLog.create({
+          action: 'BULK_UPDATE_TRANSACTIONS',
+          tableName: 'Transactions',
+          recordId: 0,
+          newData: {
+            updatedCount,
+            targetAccount: targetLedger.name,
+            transactionIds
+          },
+          CompanyId: companyId,
+          UserId: userId
+        }, { transaction: t });
+      }
+
+      return { updatedCount, targetAccount: targetLedger.name };
+    });
+
+    return result;
   }
 }
 

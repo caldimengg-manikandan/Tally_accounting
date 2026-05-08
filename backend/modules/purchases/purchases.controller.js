@@ -246,11 +246,13 @@ exports.getExpenses = async (req, res) => {
             
             let customerName = '-';
             let vendorName = '-';
+            let reference = '';
             try {
                 if (expense.narration) {
                     const parsed = JSON.parse(expense.narration);
                     if (parsed.vendor) vendorName = parsed.vendor;
                     if (parsed.customer) customerName = parsed.customer;
+                    if (parsed.invoiceNumber) reference = parsed.invoiceNumber;
                 }
             } catch (e) {}
 
@@ -267,6 +269,7 @@ exports.getExpenses = async (req, res) => {
                 vendorName,
                 customerName,
                 paidThrough,
+                reference,
                 narration: expense.narration
             };
         });

@@ -183,7 +183,7 @@ const ExpensesView = ({ companyId, initialTab = 'All Expenses' }) => {
                                    {exp.Ledger?.name || 'General Expense'}
                                 </td>
                              )}
-                             {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600">{exp.voucherNumber}</td>}
+                             {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600">{exp.reference || ''}</td>}
                              {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600 truncate max-w-[150px]">{exp.vendorName || '-'}</td>}
                              {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600">{exp.paidThrough || '-'}</td>}
                              {!selectedExpenseId && <td className="px-6 py-4 text-[14px] text-slate-600 truncate max-w-[150px]">{exp.customerName || '-'}</td>}

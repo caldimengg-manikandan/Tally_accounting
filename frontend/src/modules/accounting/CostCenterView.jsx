@@ -6,11 +6,11 @@ import {
 } from 'lucide-react';
 import { costCenterAPI } from '../../services/api';
 
-const CostCenterView = () => {
+const CostCenterView = ({ showNew }) => {
     const [centers, setCenters] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [showModal, setShowModal] = useState(false);
+    const [showModal, setShowModal] = useState(showNew || false);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const companyId = localStorage.getItem('companyId');

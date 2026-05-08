@@ -100,6 +100,7 @@ exports.updateVoucher = async (req, res) => {
 };
 
 exports.getVouchers = async (req, res) => {
+  console.log('GET Vouchers for Company:', req.params.companyId);
   try {
     const vouchers = await Voucher.findAll({
       where: { CompanyId: req.params.companyId },
@@ -171,6 +172,29 @@ exports.updateVoucherNarration = async (req, res) => {
     await voucher.save();
     
     res.json({ message: 'Voucher narration updated successfully', voucher });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.bulkUpdateTransactions = async (req, res) => {
+  try {
+    const { companyId, transactionIds, targetLedgerId } = req.body;
+    if (!transactionIds || !transactionIds.length) {
+      return res.status(400).json({ error: 'No transactions provided for update.' });
+    }
+    if (!targetLedgerId) {
+      return res.status(400).json({ error: 'Target ledger not specified.' });
+    }
+
+    const result = await AccountingService.bulkUpdateTransactions({
+      companyId,
+      transactionIds,
+      targetLedgerId,
+      userId: req.user?.id
+    });
+
+    res.json({ message: `Successfully updated ${result.updatedCount} transactions.`, result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -71,6 +71,7 @@ export const voucherAPI = {
   update: (id, data) => api.put(`/vouchers/${id}`, data),
   updateNarration: (id, narration) => api.put(`/vouchers/${id}/narration`, { narration }),
   delete: (id) => api.delete(`/vouchers/${id}`),
+  bulkUpdate: (data) => api.post('/vouchers/bulk-update', data),
 };
 
 // ─── Purchase Module ───────────────────────────────

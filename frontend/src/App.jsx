@@ -144,12 +144,12 @@ const NAV = [
     icon: UserCheck,
     items: [
       { label: 'Manual Journals',   path: '/accountant/journals', icon: BookOpen, showPlus: true, plusPath: '/accountant/journals/new' },
-      { label: 'Bulk Update',       path: '/accountant/bulk-update', icon: RefreshCw },
-      { label: 'Currency Adjustments', path: '/accountant/currency-adjustments', icon: ArrowLeftRight },
+      { label: 'Bulk Update',       path: '/accountant/bulk-update', icon: RefreshCw, showPlus: true, plusPath: '/accountant/bulk-update/new' },
+      { label: 'Currency Adjustments', path: '/accountant/currency-adjustments', icon: ArrowLeftRight, showPlus: true, plusPath: '/accountant/currency-adjustments/new' },
       { label: 'Chart of Accounts', path: '/ledgers', icon: ClipboardList, showPlus: true, plusPath: '/ledgers/new' },
       { label: 'Budgets',           path: '/accountant/budgets', icon: Target, showPlus: true, plusPath: '/accountant/budgets/new' },
-      { label: 'Transaction Locking', path: '/accountant/locking', icon: Shield },
-      { label: 'Cost Centers',      path: '/cost-centers', icon: Target },
+      { label: 'Transaction Locking', path: '/accountant/locking', icon: Shield, showPlus: true, plusPath: '/accountant/locking/new' },
+      { label: 'Cost Centers',      path: '/cost-centers', icon: Target, showPlus: true, plusPath: '/cost-centers/new' },
     ]
   },
   {
@@ -235,9 +235,9 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
                     {item.showPlus && (
                        <button 
                          onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); setIsHovered(false); }}
-                         className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-blue-600 hover:text-white"
+                         className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-blue-600 hover:text-white"
                        >
-                         <Plus size={12} strokeWidth={3} />
+                         <Plus size={14} strokeWidth={3} />
                        </button>
                     )}
                   </div>
@@ -304,9 +304,9 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, navigate }) =
                    <button 
                      onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); }}
                      title={`Add New ${item.label}`}
-                     className="hidden group-hover/item:flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white shrink-0 shadow-sm transition-all hover:bg-blue-700"
+                     className={`items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white shrink-0 shadow-sm transition-all hover:bg-blue-700 ${active ? 'flex' : 'hidden group-hover/item:flex'}`}
                    >
-                     <Plus size={12} strokeWidth={3} />
+                     <Plus size={14} strokeWidth={3} />
                    </button>
                 )}
               </div>
@@ -330,8 +330,8 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
       ${collapsed 
         ? `flex-col items-center justify-center h-[72px] w-full gap-1.5 border-b border-slate-50/50
            ${active ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`
-        : `items-center gap-3 w-full px-6 py-2.5 rounded-l-full
-           ${active ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}`}
+        : `items-center gap-3 w-full px-6 py-2.5
+           ${active ? 'bg-blue-50/50 text-blue-600 border-l-4 border-blue-600' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'}`}`}
   >
     {Icon && <Icon size={collapsed ? 22 : 18} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? (collapsed ? 'text-white' : 'text-blue-600') : 'text-slate-400 group-hover:text-slate-900'}`} />}
     
@@ -349,13 +349,13 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
     )}
 
     {showPlus && !collapsed && (
-      <div 
+      <button 
         onClick={(e) => { e.stopPropagation(); onPlusClick && onPlusClick(); }}
         title={`Add New ${label}`}
-        className="ml-auto opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-blue-100 rounded-md"
+        className="ml-auto opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700"
       >
-        <Plus size={14} strokeWidth={3} className={active ? 'text-blue-600' : 'text-slate-400 hover:text-blue-600'} />
-      </div>
+        <Plus size={14} strokeWidth={3} />
+      </button>
     )}
   </button>
 );
@@ -667,14 +667,20 @@ function AuthenticatedApp() {
         </AppShell>
       } />
       <Route path="/ledgers"              element={shell(LedgersView)} />
+      <Route path="/ledgers/new"          element={shell(LedgersView, { showNew: true })} />
       <Route path="/ledger-statement/:id" element={shell(LedgerStatementView)} />
       <Route path="/cost-centers"          element={shell(CostCenterView)} />
+      <Route path="/cost-centers/new"      element={shell(CostCenterView, { showNew: true })} />
       
       {/* Accountant Expanded */}
       <Route path="/accountant/bulk-update"          element={shell(BulkUpdateView)} />
+      <Route path="/accountant/bulk-update/new"      element={shell(BulkUpdateView, { showNew: true })} />
       <Route path="/accountant/currency-adjustments" element={shell(CurrencyAdjustmentsView)} />
+      <Route path="/accountant/currency-adjustments/new" element={shell(CurrencyAdjustmentsView, { showNew: true })} />
       <Route path="/accountant/budgets"             element={shell(BudgetsView)} />
+      <Route path="/accountant/budgets/new"         element={shell(BudgetsView, { showNew: true })} />
       <Route path="/accountant/locking"             element={shell(TransactionLockingView)} />
+      <Route path="/accountant/locking/new"         element={shell(TransactionLockingView, { showNew: true })} />
       
       {/* Purchases */}
       <Route path="/vendors"             element={shell(VendorsListView)} />

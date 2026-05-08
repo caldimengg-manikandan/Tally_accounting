@@ -44,6 +44,10 @@ module.exports = (sequelize, DataTypes) => {
     CompanyId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    UserId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     paranoid: true

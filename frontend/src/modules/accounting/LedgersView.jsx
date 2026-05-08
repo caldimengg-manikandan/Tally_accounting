@@ -8,14 +8,14 @@ import {
 } from 'lucide-react';
 import { groupAPI, ledgerAPI } from '../../services/api';
 
-const LedgersView = () => {
+const LedgersView = ({ showNew }) => {
     const navigate = useNavigate();
     const [groups, setGroups] = useState([]);
     const [expandedGroups, setExpandedGroups] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [showDrawer, setShowDrawer] = useState(false);
+    const [showDrawer, setShowDrawer] = useState(showNew || false);
     const [seeding, setSeeding] = useState(false);
     const [seedStatus, setSeedStatus] = useState(null); // 'success' | 'error' | null
     

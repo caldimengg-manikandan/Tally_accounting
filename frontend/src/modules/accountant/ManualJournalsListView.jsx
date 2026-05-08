@@ -601,6 +601,13 @@ const ManualJournalsListView = ({ companyId: propCompanyId }) => {
   const [error,       setError]       = useState(null);
   const [selectedId,  setSelectedId]  = useState(id || null);
   const [detailView,  setDetailView]  = useState('Details');
+  const user = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
 
   // ── Fetch all journals + ledgers ──────────────────────────
   const fetchData = useCallback(async () => {
@@ -806,7 +813,7 @@ const ManualJournalsListView = ({ companyId: propCompanyId }) => {
                         )}
                       </td>
                       <td className="px-4 py-4 text-[12px] font-black text-slate-900 text-right">₹{fmt(amt)}</td>
-                      <td className="px-4 py-4 text-[12px] font-medium text-slate-500">{j.User?.name || j.createdBy || 'harithajp5'}</td>
+                      <td className="px-4 py-4 text-[12px] font-medium text-slate-500">{j.User?.name || j.createdBy || user.name || user.username || user.email || 'Administrator'}</td>
                       <td className="px-8 py-4 text-[12px] font-medium text-slate-600">{j.reportingMethod || 'Accrual and Cash'}</td>
                     </tr>
                   );
