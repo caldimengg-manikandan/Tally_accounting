@@ -101,10 +101,25 @@ export default function LedgerStatementView() {
 
       {/* Summary Cards */}
       {data && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <SummaryCard label="Opening Balance" value={fmt(data.ledger.openingBalance)} color="slate" />
-          <SummaryCard label="Closing Balance" value={fmt(data.ledger.closingBalance)} color="indigo" />
-          <SummaryCard label="Total Entries" value={data.entries.length} color="slate" isNum />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <SummaryCard 
+            label="Opening Balance" 
+            value={fmt(Math.abs(data.ledger.openingBalance))} 
+            suffix={data.ledger.openingBalance < 0 ? 'Cr' : 'Dr'}
+            color="slate" 
+          />
+          <SummaryCard 
+            label="Closing Balance" 
+            value={fmt(Math.abs(data.ledger.closingBalance))} 
+            suffix={data.ledger.closingBalance < 0 ? 'Cr' : 'Dr'}
+            color={data.ledger.closingBalance < 0 ? 'rose' : 'indigo'} 
+          />
+          <SummaryCard 
+            label="Total Ledger Entries" 
+            value={data.entries.length} 
+            suffix="Vouchers"
+            color="emerald" 
+          />
         </div>
       )}
 
@@ -180,11 +195,27 @@ export default function LedgerStatementView() {
               )}
               {/* Closing row */}
               {data && data.entries.length > 0 && (
-                <tr className="bg-slate-900 text-white font-bold">
-                  <td className="px-8 py-5 text-xs uppercase tracking-widest" colSpan={4}>Closing Balance</td>
-                  <td className="px-8 py-5 text-right" />
-                  <td className="px-8 py-5 text-right" />
-                  <td className="px-8 py-5 text-right text-lg">{fmt(Math.abs(data.ledger.closingBalance))}</td>
+                <tr className="bg-indigo-50/40 border-t-2 border-indigo-100 font-bold">
+                  <td className="px-8 py-6" colSpan={4}>
+                    <div className="flex flex-col">
+                       <span className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Fiscal Reconciliation</span>
+                       <span className="text-xs font-bold text-slate-900 uppercase tracking-widest">Aggregate Closing Balance</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-right" />
+                  <td className="px-8 py-6 text-right" />
+                  <td className="px-8 py-6 text-right">
+                     <div className="flex flex-col items-end gap-1">
+                        <span className="text-2xl font-black text-indigo-600 tracking-tighter leading-none">
+                           {fmt(Math.abs(data.ledger.closingBalance))}
+                        </span>
+                        <div className="flex items-center gap-2">
+                           <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded border ${data.ledger.closingBalance < 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                              {data.ledger.closingBalance < 0 ? 'Credit Balance' : 'Debit Balance'}
+                           </span>
+                        </div>
+                     </div>
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -195,14 +226,25 @@ export default function LedgerStatementView() {
   );
 }
 
-const SummaryCard = ({ label, value, color, isNum }) => (
-  <div className={`p-6 rounded-[2rem] border border-slate-100 shadow-lg flex justify-between items-center
-    ${color === 'indigo' ? 'bg-indigo-50/40' : 'bg-slate-50/40'}`}>
-    <div>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-      <h3 className={`text-2xl font-bold tracking-tighter ${color === 'indigo' ? 'text-indigo-600' : 'text-slate-900'}`}>
-        {isNum ? value : value}
-      </h3>
+const SummaryCard = ({ label, value, suffix, color }) => {
+  const colors = {
+    indigo: 'bg-indigo-50/40 border-indigo-100 text-indigo-600',
+    rose: 'bg-rose-50/40 border-rose-100 text-rose-600',
+    slate: 'bg-slate-50/40 border-slate-100 text-slate-600',
+    emerald: 'bg-emerald-50/40 border-emerald-100 text-emerald-600',
+  };
+
+  return (
+    <div className={`p-6 rounded-2xl border shadow-sm flex justify-between items-center transition-all hover:shadow-md ${colors[color] || colors.slate}`}>
+      <div>
+        <p className="text-[10px] font-black uppercase opacity-60 tracking-[0.1em] mb-1">{label}</p>
+        <div className="flex items-baseline gap-2">
+           <h3 className="text-2xl font-black tracking-tighter leading-none">
+             {value}
+           </h3>
+           {suffix && <span className="text-[10px] font-black uppercase opacity-50">{suffix}</span>}
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
