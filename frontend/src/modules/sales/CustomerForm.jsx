@@ -33,12 +33,13 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   const [currency, setCurrency] = useState('INR- Indian Rupee');
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
   const [receivableAccount, setReceivableAccount] = useState('Accounts Receivable');
-  const [openingBalance, setOpeningBalance] = useState('0.00');
+  const [openingBalance, setOpeningBalance] = useState('');
   const [portalEnabled, setPortalEnabled] = useState(false);
   const [exchangeRate, setExchangeRate] = useState('1.00');
   const [tempExchangeRate, setTempExchangeRate] = useState('1.00');
   const [isRateEditable, setIsRateEditable] = useState(false);
   const [accounts, setAccounts] = useState([]);
+  const [showDisplayNameDropdown, setShowDisplayNameDropdown] = useState(false);
   
   // Addresses
   const initialAddress = { attention: '', country: 'India', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
@@ -61,20 +62,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
     return Array.from(options).filter(opt => opt.length > 0);
   }, [salutation, firstName, lastName, companyName]);
 
-  // Auto-select first display name option when options change
-  useEffect(() => {
-    if (displayNameOptions.length > 0) {
-      setDisplayName(prev => {
-        // If current value is not in options, reset to first option
-        if (!prev || !displayNameOptions.includes(prev)) {
-          return displayNameOptions[0];
-        }
-        return prev;
-      });
-    } else {
-      setDisplayName('');
-    }
-  }, [displayNameOptions]);
+  // Display name options are shown in dropdown only — no auto-fill
 
   useEffect(() => {
     if (customerToEdit) {
@@ -187,7 +175,8 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         paymentTerms,
         receivableAccount,
         openingBalance: parseFloat(openingBalance) || 0,
-        portalEnabled
+        portalEnabled,
+        displayName
       };
 
       let res;
@@ -312,18 +301,45 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                     <div className="flex items-center">
                                         <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest shrink-0">Display Name*</label>
                                         <div className="flex-1 relative">
-                                            <select 
-                                                value={displayName} 
-                                                onChange={e => setDisplayName(e.target.value)}
-                                                className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white focus:border-blue-400 appearance-none font-bold text-blue-600"
-                                            >
-                                                <option value="">Select a Display Name</option>
-                                                {displayNameOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                            </select>
-                                            <div className="absolute right-3 top-2.5 text-slate-300 pointer-events-none flex items-center gap-1">
-                                               <ChevronDown size={14} />
-                                               <Info size={14} />
+                                            <div className="flex items-center h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400 bg-white">
+                                                <input 
+                                                    value={displayName} 
+                                                    onChange={e => setDisplayName(e.target.value)}
+                                                    onFocus={() => setShowDisplayNameDropdown(true)}
+                                                    placeholder="Type or select a Display Name"
+                                                    className="flex-1 h-full px-3 text-[13px] outline-none bg-transparent font-bold text-blue-600"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowDisplayNameDropdown(prev => !prev)}
+                                                    className="px-2 h-full flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                                >
+                                                    <ChevronDown size={14} className={`transition-transform ${showDisplayNameDropdown ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                <div className="pr-2 flex items-center text-slate-300">
+                                                    <Info size={14} />
+                                                </div>
                                             </div>
+                                            {showDisplayNameDropdown && displayNameOptions.length > 0 && (
+                                                <>
+                                                    <div className="fixed inset-0 z-[70]" onClick={() => setShowDisplayNameDropdown(false)} />
+                                                    <ul className="absolute left-0 right-0 top-[calc(100%+4px)] bg-white border border-slate-200 rounded-lg shadow-xl z-[80] max-h-48 overflow-y-auto py-1">
+                                                        {displayNameOptions.map(opt => (
+                                                            <li 
+                                                                key={opt}
+                                                                onClick={() => { setDisplayName(opt); setShowDisplayNameDropdown(false); }}
+                                                                className={`px-4 py-2 text-[13px] cursor-pointer transition-colors ${
+                                                                    displayName === opt 
+                                                                        ? 'bg-blue-50 text-blue-700 font-bold' 
+                                                                        : 'text-slate-700 hover:bg-slate-50 font-medium'
+                                                                }`}
+                                                            >
+                                                                {opt}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -502,21 +518,55 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             </div>
                         </div>
 
-                        {/* Exchange Rate */}
-                        <div className="flex items-center animate-slide-down">
-                            <label className="w-48 text-[11px] font-bold text-blue-600 uppercase tracking-widest">Exchange Rate</label>
-                            <div className={`flex-1 flex items-center h-9 border rounded overflow-hidden transition-all ${isRateEditable ? 'border-blue-400 bg-white' : 'border-blue-200 bg-blue-50/30'}`}>
-                                <span className="px-3 py-2 text-[11px] font-bold text-blue-400 border-r border-blue-100 whitespace-nowrap">
-                                    1 {currency ? currency.split('-')[0].trim() : 'INR'} =
+                        {/* Accounts Receivable */}
+                        <div className="flex items-center">
+                            <div className="w-48 flex items-center gap-1.5">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Accounts Receivable</label>
+                                <Info size={12} className="text-slate-300" />
+                            </div>
+                            <div className="flex-1 relative">
+                                <select 
+                                    value={receivableAccount} 
+                                    onChange={e => setReceivableAccount(e.target.value)} 
+                                    className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium appearance-none focus:border-blue-400"
+                                >
+                                    <option>Accounts Receivable</option>
+                                    {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Opening Balance */}
+                        <div className="flex items-center">
+                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Opening Balance</label>
+                            <div className="flex-1 flex items-center h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400">
+                                <span className="bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-400 border-r border-slate-100">
+                                    {currency ? currency.split('-')[0].trim() : 'INR'}
                                 </span>
                                 <input 
-                                    type="text"
-                                    readOnly={!isRateEditable}
-                                    value={isRateEditable ? tempExchangeRate : exchangeRate}
-                                    onChange={e => setTempExchangeRate(e.target.value)}
-                                    className={`flex-1 px-3 py-2 outline-none text-[13px] font-bold ${isRateEditable ? 'text-slate-800' : 'text-blue-700'} bg-transparent`} 
+                                    type="number"
+                                    value={openingBalance} onChange={e => setOpeningBalance(e.target.value)}
+                                    className="flex-1 px-3 py-2 outline-none text-[13px] font-medium" 
                                 />
-                                {(!currency || !currency.startsWith('INR')) && (
+                            </div>
+                        </div>
+
+                        {/* Exchange Rate - only shown for non-INR currencies */}
+                        {(currency && !currency.startsWith('INR')) && (
+                            <div className="flex items-center animate-slide-down">
+                                <label className="w-48 text-[11px] font-bold text-blue-600 uppercase tracking-widest">Exchange Rate</label>
+                                <div className={`flex-1 flex items-center h-9 border rounded overflow-hidden transition-all ${isRateEditable ? 'border-blue-400 bg-white' : 'border-blue-200 bg-blue-50/30'}`}>
+                                    <span className="px-3 py-2 text-[11px] font-bold text-blue-400 border-r border-blue-100 whitespace-nowrap">
+                                        1 {currency ? currency.split('-')[0].trim() : 'INR'} =
+                                    </span>
+                                    <input 
+                                        type="text"
+                                        readOnly={!isRateEditable}
+                                        value={isRateEditable ? tempExchangeRate : exchangeRate}
+                                        onChange={e => setTempExchangeRate(e.target.value)}
+                                        className={`flex-1 px-3 py-2 outline-none text-[13px] font-bold ${isRateEditable ? 'text-slate-800' : 'text-blue-700'} bg-transparent`} 
+                                    />
                                     <div className="flex items-center h-full border-l border-blue-100 divide-x divide-blue-100">
                                        {!isRateEditable ? (
                                            <button 
@@ -554,44 +604,10 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                            </>
                                        )}
                                     </div>
-                                )}
-                                <span className="px-3 py-2 text-[11px] font-bold text-blue-400 border-l border-blue-100">INR</span>
+                                    <span className="px-3 py-2 text-[11px] font-bold text-blue-400 border-l border-blue-100">INR</span>
+                                </div>
                             </div>
-                        </div>
-
-                        {/* Accounts Receivable */}
-                        <div className="flex items-center">
-                            <div className="w-48 flex items-center gap-1.5">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Accounts Receivable</label>
-                                <Info size={12} className="text-slate-300" />
-                            </div>
-                            <div className="flex-1 relative">
-                                <select 
-                                    value={receivableAccount} 
-                                    onChange={e => setReceivableAccount(e.target.value)} 
-                                    className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium appearance-none focus:border-blue-400"
-                                >
-                                    <option>Accounts Receivable</option>
-                                    {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
-                                </select>
-                                <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        {/* Opening Balance */}
-                        <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Opening Balance</label>
-                            <div className="flex-1 flex items-center h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400">
-                                <span className="bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-400 border-r border-slate-100">
-                                    {currency ? currency.split('-')[0].trim() : 'INR'}
-                                </span>
-                                <input 
-                                    type="number"
-                                    value={openingBalance} onChange={e => setOpeningBalance(e.target.value)}
-                                    className="flex-1 px-3 py-2 outline-none text-[13px] font-medium" 
-                                />
-                            </div>
-                        </div>
+                        )}
 
                         {/* Payment Terms */}
                         <div className="flex items-center">

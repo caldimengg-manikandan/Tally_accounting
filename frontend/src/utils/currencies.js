@@ -16,3 +16,21 @@ export const CURRENCIES = [
   { code: 'BHD', name: 'Bahraini Dinar', display: 'BHD - Bahraini Dinar', symbol: '.د.ب' },
   { code: 'QAR', name: 'Qatari Rial', display: 'QAR - Qatari Rial', symbol: 'ر.ق' },
 ];
+
+export const getCurrencyDisplay = (currency) => {
+  if (!currency) return '₹';
+  // Check if it's already a symbol (safety check)
+  if (currency === '₹') return '₹';
+  
+  // Standardize Indian Rupee
+  if (currency.startsWith('INR')) return '₹';
+  
+  // Extract code from formats like "AED - United Arab Emirates Dirham" or "AED-Dirham"
+  // Using a regex to split by space, dash, or other common separators
+  const code = currency.split(/[ -]/)[0].trim();
+  
+  // If the result is 'INR', return symbol
+  if (code === 'INR') return '₹';
+  
+  return code;
+};

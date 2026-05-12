@@ -83,6 +83,15 @@ exports.sendEmail = async (req, res) => {
       type: type || 'General'
     });
 
+    // 3. If Invoice, update status to Sent
+    if (type === 'Invoice' && (mailStatus === 'Sent' || mailStatus === 'Sent (Mock)')) {
+        const { SalesInvoice } = require('../../models');
+        const { documentId } = req.body;
+        if (documentId) {
+            await SalesInvoice.update({ status: 'Sent' }, { where: { id: documentId } });
+        }
+    }
+
     res.status(201).json({
       message: mailStatus === 'Sent' ? 'Email sent successfully' : 'Email recorded but delivery failed',
       mail: savedMail

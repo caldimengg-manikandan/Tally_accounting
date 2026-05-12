@@ -106,7 +106,7 @@ exports.getVouchers = async (req, res) => {
       where: { CompanyId: req.params.companyId },
       include: [{
         model: Transaction,
-        include: [{ model: Ledger, attributes: ['id', 'name'] }]
+        include: [{ model: Ledger, attributes: ['id', 'name', 'currency'] }]
       }],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
@@ -121,7 +121,7 @@ exports.getVoucherById = async (req, res) => {
     const voucher = await Voucher.findByPk(req.params.id, {
       include: [{
         model: Transaction,
-        include: [{ model: Ledger, attributes: ['id', 'name'] }]
+        include: [{ model: Ledger, attributes: ['id', 'name', 'currency'] }]
       }]
     });
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });

@@ -66,7 +66,7 @@ exports.getOrders = async (req, res) => {
     const orders = await SalesOrder.findAll({
       where: { CompanyId: companyId },
       include: [
-        { model: Ledger, as: 'Customer', attributes: ['name'] },
+        { model: Ledger, as: 'Customer', attributes: ['name', 'currency'] },
         { model: SalesOrderItem, as: 'Items' }
       ],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
@@ -185,7 +185,7 @@ exports.createInvoice = async (req, res) => {
         userId: req.user?.id,
         projectId
       });
-      await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Sent' }, { transaction: t });
+      await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Confirmed' }, { transaction: t });
     }
 
     await t.commit();
@@ -202,7 +202,7 @@ exports.getInvoicesByCompany = async (req, res) => {
     const invoices = await SalesInvoice.findAll({
       where: { CompanyId: companyId },
       include: [
-        { model: Ledger, as: 'CustomerLedger', attributes: ['name'] }
+        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'currency'] }
       ],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
@@ -218,7 +218,7 @@ exports.getInvoiceById = async (req, res) => {
     const invoice = await SalesInvoice.findByPk(id, {
       include: [
         { model: SalesInvoiceItem, as: 'items', include: [{ model: Item }] },
-        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'email', 'billingAddress', 'address'] }
+        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'email', 'billingAddress', 'address', 'currency'] }
       ]
     });
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
@@ -247,12 +247,24 @@ exports.updateInvoice = async (req, res) => {
 
     // Update main record
     await invoice.update({
-      customerLedgerId, invoiceNumber, date, dueDate,
-      orderNumber, terms, salesperson, subject, subTotal, 
-      discountAmount, gstAmount, adjustment, totalAmount,
-      customerNotes, termsConditions, status,
-      balance: totalAmount - (invoice.amountPaid || 0), // Recalculate balance
-      ProjectId: projectId
+      customerLedgerId: customerLedgerId !== undefined ? customerLedgerId : invoice.customerLedgerId,
+      invoiceNumber: invoiceNumber !== undefined ? invoiceNumber : invoice.invoiceNumber,
+      date: date !== undefined ? date : invoice.date,
+      dueDate: dueDate !== undefined ? dueDate : invoice.dueDate,
+      orderNumber: orderNumber !== undefined ? orderNumber : invoice.orderNumber,
+      terms: terms !== undefined ? terms : invoice.terms,
+      salesperson: salesperson !== undefined ? salesperson : invoice.salesperson,
+      subject: subject !== undefined ? subject : invoice.subject,
+      subTotal: subTotal !== undefined ? subTotal : invoice.subTotal,
+      discountAmount: discountAmount !== undefined ? discountAmount : invoice.discountAmount,
+      gstAmount: gstAmount !== undefined ? gstAmount : invoice.gstAmount,
+      adjustment: adjustment !== undefined ? adjustment : invoice.adjustment,
+      totalAmount: totalAmount !== undefined ? totalAmount : invoice.totalAmount,
+      status: status !== undefined ? status : invoice.status,
+      customerNotes: customerNotes !== undefined ? customerNotes : invoice.customerNotes,
+      termsConditions: termsConditions !== undefined ? termsConditions : invoice.termsConditions,
+      balance: totalAmount !== undefined ? (parseFloat(totalAmount) - parseFloat(invoice.amountPaid || 0)) : invoice.balance,
+      ProjectId: projectId !== undefined ? projectId : invoice.ProjectId
     }, { transaction: t });
 
     // Update items
@@ -284,7 +296,7 @@ exports.updateInvoice = async (req, res) => {
         userId: req.user?.id,
         projectId
       });
-      await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Sent' }, { transaction: t });
+      await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Confirmed' }, { transaction: t });
     }
 
     await t.commit();

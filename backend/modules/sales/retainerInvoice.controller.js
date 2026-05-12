@@ -70,6 +70,7 @@ exports.getByCompany = async (req, res) => {
   try {
     const retainers = await RetainerInvoice.findAll({
       where: { CompanyId: req.params.companyId },
+      include: [{ model: Ledger, as: 'CustomerLedger', attributes: ['name', 'currency'] }],
       order: [['invoiceDate', 'DESC']]
     });
     res.json(retainers);
@@ -88,7 +89,7 @@ exports.getById = async (req, res) => {
     }
 
     const retainer = await RetainerInvoice.findByPk(id, {
-        include: [{ model: Ledger, as: 'CustomerLedger' }]
+        include: [{ model: Ledger, as: 'CustomerLedger', attributes: ['name', 'currency', 'email'] }]
     });
     if (!retainer) {
         console.error(`[RetainerInvoice] NO RECORD FOUND for ID: ${id}`);

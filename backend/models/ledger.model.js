@@ -10,6 +10,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
+    displayName: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     openingBalance: {
       type: DataTypes.DOUBLE,
       defaultValue: 0.00

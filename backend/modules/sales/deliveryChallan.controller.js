@@ -56,7 +56,7 @@ exports.getChallans = async (req, res) => {
     const challans = await DeliveryChallan.findAll({
       where: { CompanyId: companyId },
       include: [
-        { model: Ledger, as: 'Customer', attributes: ['name'] }
+        { model: Ledger, as: 'Customer', attributes: ['name', 'currency'] }
       ],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
@@ -71,7 +71,7 @@ exports.getChallanById = async (req, res) => {
     const { id } = req.params;
     const challan = await DeliveryChallan.findByPk(id, {
       include: [
-        { model: Ledger, as: 'Customer', attributes: ['name', 'email'] },
+        { model: Ledger, as: 'Customer', attributes: ['name', 'email', 'currency'] },
         { model: DeliveryChallanItem, as: 'items', include: [{ model: Item }] }
       ]
     });

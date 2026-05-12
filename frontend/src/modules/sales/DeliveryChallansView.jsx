@@ -13,6 +13,7 @@ import {
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 import EmailSendModal from '../../components/EmailSendModal';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 // ─────────────────────────────────────────────────
 // MANAGE SALESPERSONS MODAL
@@ -295,7 +296,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                                         <div className="text-[14px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
                                             <Package size={14} className="text-blue-500 opacity-50" /> {it.name}
                                         </div>
-                                        <div className="text-[13px] font-bold text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                        <div className="text-[13px] font-bold text-slate-900">{getCurrencyDisplay(it.currency)} {parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
                                     </div>
                                     <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
                                         {it.salesDescription || 'No description provided'}
@@ -710,7 +711,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                                 />
                               </td>
                               <td className="px-6 py-5 text-right align-top font-mono">
-                                <span className="text-[13px] font-bold text-slate-900">{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                  <span className="text-[13px] font-bold text-slate-900">{getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </td>
                               <td className="px-4 py-5 text-center align-top">
                                 <button onClick={() => setLineItems(prev => prev.length > 1 ? prev.filter(p => p.id !== line.id) : prev)} className="text-slate-300 hover:text-red-500 transition-colors">
@@ -755,7 +756,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                      <div className="w-80 space-y-4">
                         <div className="flex justify-between text-[13px]">
                           <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
-                          <span className="font-bold text-slate-900 font-mono">₹{totals.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                           <span className="font-bold text-slate-900 font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {totals.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
 
                         <div className="flex justify-between items-center text-[13px]">
@@ -767,7 +768,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
 
                         <div className="flex justify-between items-center text-[13px]">
                           <span className="text-slate-500 font-bold uppercase tracking-widest">Tax (GST 18%)</span>
-                          <span className="text-slate-900 font-bold font-mono">₹{totals.taxAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                           <span className="text-slate-900 font-bold font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {totals.taxAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
 
                         <div className="flex justify-between items-center text-[13px]">
@@ -777,7 +778,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
 
                         <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
                           <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Challan Total</span>
-                          <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">₹{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                           <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                      </div>
                   </div>
@@ -826,10 +827,6 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
         </div>
     );
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DELIVERY CHALLAN DETAIL VIEW
-// ─────────────────────────────────────────────────────────────────────────────
 
 const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
     const { addNotification } = useNotificationStore();
@@ -1003,7 +1000,7 @@ const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
                                 </div>
                                 <div className="flex justify-between px-8 py-5 text-[15px] font-bold text-slate-900 bg-slate-100/50">
                                     <span className="text-slate-500 uppercase tracking-[0.1em] text-[10px] mt-1">Grand Total</span>
-                                    <span className="text-xl tracking-tight">₹{formatCurrency(challan.totalAmount)}</span>
+                                     <span className="text-xl tracking-tight">{getCurrencyDisplay(challan.Customer?.currency)} {formatCurrency(challan.totalAmount)}</span>
                                 </div>
                             </div>
                         </div>
@@ -1052,10 +1049,6 @@ const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
         </div>
     );
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN SPLIT-VIEW
-// ─────────────────────────────────────────────────────────────────────────────
 
 const DeliveryChallansView = ({ companyId }) => {
     const navigate = useNavigate();
@@ -1152,11 +1145,11 @@ const DeliveryChallansView = ({ companyId }) => {
                         >
                             <div className="flex justify-between items-start mb-1">
                                 <span className={`text-[13px] font-semibold ${id === c.id ? 'text-blue-600' : 'text-slate-800'}`}>{c.challanNumber}</span>
-                                <span className="text-[13px] font-semibold text-slate-900">₹{parseFloat(c.totalAmount).toLocaleString()}</span>
+                                 <span className="text-[13px] font-semibold text-slate-900">{getCurrencyDisplay(c.Customer?.currency)} {parseFloat(c.totalAmount).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                <span className="text-[11px] font-bold text-slate-400 truncate max-w-[180px]">{c.Customer?.name}</span>
-                               <span className="text-[9px] font-bold uppercase text-slate-300 border border-slate-100 px-1.5 py-0.5 rounded tracking-widest">{new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                               <span className="text-[9px] font-bold uppercase text-slate-300 border border-slate-100 px-1.5 py-0.5 rounded tracking-widest">{new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}</span>
                             </div>
                         </div>
                     ))}
@@ -1225,7 +1218,7 @@ const DeliveryChallansView = ({ companyId }) => {
                                                 className={`hover:bg-blue-50/30 cursor-pointer transition-all group`}
                                             >
                                                 <td className="px-10 py-6 text-[14px] font-medium text-slate-600">
-                                                    {new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                    {new Date(c.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                 </td>
                                                 <td className="px-10 py-6 text-[14px] font-medium text-blue-600">
                                                     {c.challanNumber}
@@ -1244,7 +1237,7 @@ const DeliveryChallansView = ({ companyId }) => {
                                                     </span>
                                                 </td>
                                                 <td className="px-10 py-6 text-right text-[15px] font-black text-slate-900">
-                                                    ₹{parseFloat(c.totalAmount).toLocaleString()}
+                                                     {getCurrencyDisplay(c.Customer?.currency)} {parseFloat(c.totalAmount).toLocaleString()}
                                                 </td>
                                                 <td className="px-10 py-6 text-center">
                                                     <button 

@@ -212,12 +212,15 @@ class AccountingService {
       const item = await Item.findByPk(itemData.itemId, options);
       if (!item) throw new Error(`STOCK ERROR: Item ID ${itemData.itemId} not found.`);
 
+      // Stock validation removed to allow sales even with zero/negative stock
+      /*
       if (parseFloat(item.currentStock) < parseFloat(itemData.quantity)) {
         throw new Error(`INSUFFICIENT STOCK: Cannot sell ${itemData.quantity} ${item.unit} of "${item.name}". Only ${item.currentStock} remaining.`);
       }
+      */
 
       const taxable = parseFloat(itemData.quantity) * parseFloat(itemData.rate);
-      const tax = taxable * (parseFloat(itemData.gstRate || 18) / 100);
+      const tax = taxable * (parseFloat(itemData.gstRate || 0) / 100);
       totalTaxableValue += taxable;
       totalGstAmount += tax;
       processedItems.push({ ...itemData, item, taxable, tax });
@@ -237,13 +240,25 @@ class AccountingService {
 
     const isLocal = company.state === customer.state;
 
-    const salesGroup = await Group.findOne({ where: { CompanyId: companyId, name: 'Sales Accounts' }, ...options });
+    const salesGroup = await Group.findOne({ 
+      where: { CompanyId: companyId, name: { [Op.like]: '%Sales%' } }, 
+      ...options 
+    });
     let salesLedger = null;
     if (salesGroup) {
       salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, GroupId: salesGroup.id }, ...options });
     }
     if (!salesLedger) {
-      salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Sales%' } }, ...options });
+      salesLedger = await Ledger.findOne({ 
+        where: { 
+          CompanyId: companyId, 
+          [Op.or]: [
+            { name: { [Op.like]: '%Sales%' } },
+            { name: { [Op.like]: '%Income%' } }
+          ]
+        }, 
+        ...options 
+      });
     }
 
     const missing = [];
@@ -256,25 +271,27 @@ class AccountingService {
       journalEntries.push({ ledgerId: salesLedger.id, debit: 0, credit: totalTaxableValue });
     }
 
-    if (isLocal) {
-      // Intra-state: CGST + SGST
-      const cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
-      const sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
+    if (totalGstAmount > 0.01) {
+      if (isLocal) {
+        // Intra-state: CGST + SGST
+        const cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
+        const sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
 
-      if (!cgstLedger) missing.push('CGST Ledger');
-      if (!sgstLedger) missing.push('SGST Ledger');
+        if (!cgstLedger) missing.push('CGST Ledger');
+        if (!sgstLedger) missing.push('SGST Ledger');
 
-      if (missing.length === 0) {
-        journalEntries.push({ ledgerId: cgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
-        journalEntries.push({ ledgerId: sgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
-      }
-    } else {
-      // Inter-state: IGST
-      const igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%IGST%' } }, ...options });
-      if (!igstLedger) missing.push('IGST Ledger');
+        if (missing.length === 0) {
+          journalEntries.push({ ledgerId: cgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
+          journalEntries.push({ ledgerId: sgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
+        }
+      } else {
+        // Inter-state: IGST
+        const igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%IGST%' } }, ...options });
+        if (!igstLedger) missing.push('IGST Ledger');
 
-      if (missing.length === 0) {
-        journalEntries.push({ ledgerId: igstLedger.id, debit: 0, credit: totalGstAmount });
+        if (missing.length === 0) {
+          journalEntries.push({ ledgerId: igstLedger.id, debit: 0, credit: totalGstAmount });
+        }
       }
     }
 

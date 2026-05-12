@@ -180,7 +180,7 @@ exports.processDueInvoices = async (req, res) => {
           totalAmount: template.totalAmount,
           subTotal: template.subTotal,
           gstAmount: template.taxAmount,
-          status: 'Sent', // Default to sent/active for recurring
+          status: 'Confirmed', // Default to confirmed/active for recurring, shows as Draft in UI
           CompanyId: template.CompanyId,
           balance: template.totalAmount // Initialize balance
         });
