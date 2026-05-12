@@ -15,6 +15,7 @@ import { inventoryAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 import EmailSendModal from '../../components/EmailSendModal';
 import ConfirmModal from '../../components/ConfirmModal';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 // ─────────────────────────────────────────────────
 // UTILS: NUMBER TO WORDS
@@ -69,7 +70,8 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
     }, []);
 
     const filtered = (customers || []).filter(c => {
-        return c.name?.toLowerCase().includes(search.toLowerCase());
+        return (c.displayName || c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+               (c.companyName || '').toLowerCase().includes(search.toLowerCase());
     });
 
     return (
@@ -113,7 +115,12 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
                                     <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
                                         <User size={12} />
                                     </div>
-                                    <div className="text-[13px] font-bold text-slate-800 tracking-tight">{c.name}</div>
+                                    <div className="flex flex-col">
+                                        <div className="text-[13px] font-bold text-slate-800 tracking-tight">{c.displayName || c.name}</div>
+                                        {c.companyName && c.companyName !== (c.displayName || c.name) && (
+                                            <div className="text-[10px] text-slate-400 font-medium">{c.companyName}</div>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         ) : (
@@ -202,7 +209,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                                         <div className="text-[13px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
                                             <Package size={14} className="text-blue-500 opacity-50" /> {it.name}
                                         </div>
-                                        <div className="text-[12px] font-bold text-slate-900 tabular-nums">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                        <div className="text-[12px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(it.currency)} {parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
                                     </div>
                                     <div className="text-[11px] text-slate-400 font-bold whitespace-nowrap overflow-hidden text-ellipsis italic pl-6">
                                         {it.salesDescription || 'No description provided'}
@@ -306,7 +313,7 @@ const BulkItemSelectorModal = ({ isOpen, onClose, onAdd, items }) => {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start mb-1">
                                             <span className={`text-[15px] font-bold tracking-tight ${isPicked ? 'text-blue-700' : 'text-slate-800'}`}>{it.name}</span>
-                                            <span className={`text-[15px] font-bold ${isPicked ? 'text-blue-900' : 'text-slate-900'}`}>₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</span>
+                                            <span className={`text-[15px] font-bold ${isPicked ? 'text-blue-900' : 'text-slate-900'}`}>{getCurrencyDisplay(it.currency)} {parseFloat(it.sellingPrice || 0).toLocaleString()}</span>
                                         </div>
                                         <p className="text-[12px] text-slate-400 font-medium truncate italic">{it.salesDescription || 'Sync description field...'}</p>
                                     </div>
@@ -491,7 +498,7 @@ const QuotesList = ({ quotes, loading, navigate, onDelete, onRefresh, selectedId
                                 <div className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-50">Sort By</div>
                                 <SortOption label="Quote Number" sortKey="quoteNumber" />
                                 <SortOption label="Date" sortKey="quoteDate" />
-                                <SortOption label="Customer Name" sortKey="customerName" />
+                                <SortOption label="Customer Name" sortKey="Customer.displayName" />
                                 <SortOption label="Amount" sortKey="totalAmount" />
                                 <div className="mt-2 pt-2 border-t border-slate-50">
                                    <div onClick={() => { setIsOptionsOpen(false); onRefresh(); }} className="px-4 py-2 hover:bg-[#f4f5f7] cursor-pointer text-slate-700 flex items-center gap-2 font-medium text-[13px]"><RefreshCw size={14}/> Refresh List</div>
@@ -549,17 +556,17 @@ const QuotesList = ({ quotes, loading, navigate, onDelete, onRefresh, selectedId
                                         className={`hover:bg-slate-50 transition-colors cursor-pointer group ${String(q.id) === String(selectedId) ? 'bg-blue-50/50' : ''}`}
                                     >
                                         <td className="px-6 py-4 text-[13px] text-slate-500 font-medium whitespace-nowrap">
-                                            {new Date(q.quoteDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                            {new Date(q.quoteDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-[14px] font-medium text-blue-600 group-hover:underline truncate max-w-[250px]">
-                                                {q.customerName}
+                                                {q.Customer?.displayName || q.Customer?.name || q.customerName}
                                             </div>
                                             <div className="text-[11px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">#{q.quoteNumber}</div>
                                         </td>
                                         <td className="px-6 py-4 text-right whitespace-nowrap">
                                             <span className="text-[14px] text-slate-900 font-medium">
-                                                ₹ {parseFloat(q.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                {getCurrencyDisplay(q.Customer?.currency)} {parseFloat(q.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
@@ -715,13 +722,13 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                         <div className="space-y-4">
                             <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Estimate Prepared For</h5>
                             <div className="space-y-1">
-                                <p className="text-[15px] font-bold text-slate-900 leading-tight">{quote.customerName}</p>
+                                <p className="text-[15px] font-bold text-slate-900 leading-tight">{quote.Customer?.displayName || quote.Customer?.name || quote.customerName}</p>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Ref: {quote.referenceNumber || 'N/A'}</p>
                             </div>
                         </div>
                         <div className="text-right space-y-4">
                             <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Date of Quote</h5>
-                            <p className="text-[15px] font-bold text-slate-900 leading-tight">{new Date(quote.quoteDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                            <p className="text-[15px] font-bold text-slate-900 leading-tight">{new Date(quote.quoteDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                         </div>
                     </div>
 
@@ -748,8 +755,8 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                                             </div>
                                         </td>
                                         <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{it.quantity}</td>
-                                        <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">₹{parseFloat(it.rate).toLocaleString()}</td>
-                                        <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
+                                        <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{getCurrencyDisplay(quote.Customer?.currency)} {parseFloat(it.rate).toLocaleString()}</td>
+                                        <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(quote.Customer?.currency)} {parseFloat(it.amount).toLocaleString()}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -760,19 +767,19 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                         <div className="w-full max-w-md space-y-6">
                             <div className="flex justify-between items-center px-2">
                                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Estimate Subtotal</span>
-                                <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(quote.subTotal).toLocaleString()}</span>
+                                <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(quote.Customer?.currency)} {parseFloat(quote.subTotal).toLocaleString()}</span>
                             </div>
                             {parseFloat(quote.taxAmount || 0) > 0 && (
                                 <div className="flex justify-between items-center px-2">
                                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tax ({quote.selectedTax})</span>
-                                    <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(quote.taxAmount).toLocaleString()}</span>
+                                    <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(quote.Customer?.currency)} {parseFloat(quote.taxAmount).toLocaleString()}</span>
                                 </div>
                             )}
                             <div className="bg-slate-900 text-white p-6 md:p-8 shadow-2xl relative overflow-hidden rounded-none">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-none blur-[60px] opacity-20"></div>
                                 <div className="flex justify-between items-center relative z-10">
                                     <span className="text-[11px] font-bold text-blue-300 uppercase tracking-[0.2em]">Grand Total</span>
-                                    <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tighter tabular-nums">₹{parseFloat(quote.totalAmount).toLocaleString()}</span>
+                                    <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tighter tabular-nums">{getCurrencyDisplay(quote.Customer?.currency)} {parseFloat(quote.totalAmount).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>
@@ -1107,7 +1114,9 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
             const allLedgers = ledgersRes.data || [];
             setCustomers(allLedgers.filter(l => {
                 const g = l.Group?.name || '';
-                return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer');
+                const gDirect = l.groupName || '';
+                return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer')
+                    || gDirect.toLowerCase().includes('debtor') || gDirect.toLowerCase().includes('customer');
             }));
             setInventoryItems(invRes.data || []);
             setPriceLists(priceRes.data || []);
@@ -1579,7 +1588,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                     />
                                                 </td>
                                                 <td className="px-6 py-5 text-right align-top">
-                                                    <span className="text-[13px] font-bold text-slate-900 tabular-nums">₹{parseFloat(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <span className="text-[13px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(customers.find(c => c.id === customerLedgerId)?.currency)} {parseFloat(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 </td>
                                                 <td className="px-4 py-5 text-center align-top">
                                                     <button onClick={() => setItems(items.filter(it => it.id !== line.id))} className="text-slate-300 hover:text-red-500 transition-colors">
@@ -1626,7 +1635,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                            <div className="w-80 space-y-4">
                               <div className="flex justify-between text-[13px]">
                                 <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
-                                <span className="font-bold text-slate-900 font-mono">₹{subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="font-bold text-slate-900 font-mono">{getCurrencyDisplay(customers.find(c => c.id === customerLedgerId)?.currency)} {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </div>
                               <div className="flex justify-between items-center text-[13px]">
                                 <label className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</label>
@@ -1654,7 +1663,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                               </div>
                               <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6 rounded-lg">
                                 <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
-                                <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">₹{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">{getCurrencyDisplay(customers.find(c => c.id === customerLedgerId)?.currency)} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </div>
                            </div>
                         </div>

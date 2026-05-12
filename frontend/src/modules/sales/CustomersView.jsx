@@ -35,7 +35,12 @@ const CustomersView = () => {
         standalone={true}
         customerToEdit={customerToEdit}
         onSaveSuccess={(newCustomer) => {
-            navigate('/customers');
+            const savedId = newCustomer?.ledger?.id || newCustomer?.id;
+            if (savedId) {
+              navigate(`/customers/view/${savedId}`);
+            } else {
+              navigate('/customers');
+            }
         }}
         onCancel={() => window.history.length > 2 ? navigate(-1) : navigate('/customers')}
     />

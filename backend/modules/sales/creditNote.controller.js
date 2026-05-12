@@ -57,7 +57,7 @@ exports.getCreditNotes = async (req, res) => {
     const notes = await CreditNote.findAll({
       where: { CompanyId: companyId },
       include: [
-        { model: Ledger, as: 'Customer', attributes: ['name'] }
+        { model: Ledger, as: 'Customer', attributes: ['name', 'currency'] }
       ],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
@@ -72,7 +72,7 @@ exports.getCreditNoteById = async (req, res) => {
     const { id } = req.params;
     const cn = await CreditNote.findByPk(id, {
       include: [
-        { model: Ledger, as: 'Customer', attributes: ['name', 'email'] },
+        { model: Ledger, as: 'Customer', attributes: ['name', 'email', 'currency'] },
         { model: Ledger, as: 'ARAccount', attributes: ['name'] },
         { model: CreditNoteItem, as: 'items', include: [
             { model: Item },

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 // ─────────────────────────────────────────────────
 // MANAGE SALESPERSONS MODAL
@@ -286,7 +287,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                                         <div className="text-[14px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
                                             <Package size={14} className="text-blue-500 opacity-50" /> {it.name}
                                         </div>
-                                        <div className="text-[13px] font-bold text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                        <div className="text-[13px] font-bold text-slate-900">{getCurrencyDisplay(it.currency)} {parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
                                     </div>
                                     <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
                                         {it.salesDescription || 'No description provided'}
@@ -328,11 +329,16 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
     
     const customers = useMemo(() => ledgers.filter(l => {
         const g = l.Group?.name || '';
-        return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer');
+        const gDirect = l.groupName || '';
+        return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer')
+            || gDirect.toLowerCase().includes('debtor') || gDirect.toLowerCase().includes('customer');
     }), [ledgers]);
     const arAccounts = useMemo(() => ledgers.filter(l => {
         const g = l.Group?.name || '';
-        return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer') || l.name === 'Accounts Receivable';
+        const gDirect = l.groupName || '';
+        return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer')
+            || gDirect.toLowerCase().includes('debtor') || gDirect.toLowerCase().includes('customer')
+            || l.name === 'Accounts Receivable';
     }), [ledgers]);
 
     const [formData, setFormData] = useState({
@@ -594,7 +600,7 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                                 />
                               </td>
                               <td className="px-6 py-5 text-right font-mono font-bold text-slate-900 text-[15px] align-top pt-7">
-                                ₹{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                {getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                               </td>
                               <td className="px-4 py-5 text-center align-top pt-7">
                                 <button onClick={() => setLineItems(prev => prev.filter(p => p.id !== line.id))} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-md transition-all"><Trash2 size={16}/></button>
@@ -612,7 +618,7 @@ const CreditNoteForm = ({ companyId, navigate, editId }) => {
                         <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-[50px] opacity-20 pointer-events-none"></div>
                         <div className="flex justify-between items-center text-[15px] font-bold relative z-10">
                           <span className="text-slate-400 uppercase tracking-widest text-[12px]">Total Credit</span>
-                          <span className="text-[28px] font-bold text-white tracking-tighter">₹{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-[28px] font-bold text-white tracking-tighter">{getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                      </div>
                     </div>
@@ -731,7 +737,7 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                         </div>
                         <div className="text-right space-y-4">
                             <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Date of Issue</h5>
-                            <p className="text-[15px] font-bold text-slate-900 leading-tight">{new Date(note.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                            <p className="text-[15px] font-bold text-slate-900 leading-tight">{new Date(note.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                         </div>
                     </div>
 
@@ -758,8 +764,8 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                                             </div>
                                         </td>
                                         <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{it.quantity}</td>
-                                        <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">₹{parseFloat(it.rate).toLocaleString()}</td>
-                                        <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
+                                        <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{getCurrencyDisplay(note.CustomerLedger?.currency)} {parseFloat(it.rate).toLocaleString()}</td>
+                                        <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(note.CustomerLedger?.currency)} {parseFloat(it.amount).toLocaleString()}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -770,13 +776,13 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                         <div className="w-full max-w-md space-y-6">
                             <div className="flex justify-between items-center px-2">
                                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Subtotal</span>
-                                <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(note.totalAmount).toLocaleString()}</span>
+                                <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(note.CustomerLedger?.currency)} {parseFloat(note.totalAmount).toLocaleString()}</span>
                             </div>
                             <div className="bg-slate-900 text-white p-6 md:p-8 shadow-2xl relative overflow-hidden rounded-none">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-none blur-[60px] opacity-20"></div>
                                 <div className="flex justify-between items-center relative z-10">
                                     <span className="text-[11px] font-bold text-blue-300 uppercase tracking-[0.2em]">Final Credit</span>
-                                    <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tighter tabular-nums">₹{parseFloat(note.totalAmount).toLocaleString()}</span>
+                                    <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tighter tabular-nums">{getCurrencyDisplay(note.CustomerLedger?.currency)} {parseFloat(note.totalAmount).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>
@@ -910,7 +916,7 @@ const CreditNotesTableView = ({ notes, loading, onSelect, navigate, fetchNotes }
                                         className="hover:bg-blue-50/30 cursor-pointer group transition-all"
                                     >
                                         <td className="px-6 py-5 text-[13px] text-slate-500 font-medium">
-                                            {new Date(n.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            {new Date(n.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="text-[14px] font-bold text-blue-600 group-hover:underline transition-colors">
@@ -930,7 +936,7 @@ const CreditNotesTableView = ({ notes, loading, onSelect, navigate, fetchNotes }
                                         </td>
                                         <td className="px-6 py-5 text-right whitespace-nowrap">
                                             <span className="text-[15px] text-slate-900 font-black tracking-tight">
-                                                ₹{parseFloat(n.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                {getCurrencyDisplay(n.CustomerLedger?.currency)} {parseFloat(n.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </span>
                                         </td>
                                         <td className="px-6 py-5">
@@ -1024,12 +1030,12 @@ const CreditNotesList = ({ notes, loading, selectedId, onSelect, navigate, fetch
                                             {n.CustomerLedger?.name || n.customerName}
                                         </div>
                                         <div className={`text-[15px] font-black italic tracking-tighter ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                                            ₹{parseFloat(n.totalAmount || 0).toLocaleString()}
+                                            {getCurrencyDisplay(n.CustomerLedger?.currency)} {parseFloat(n.totalAmount || 0).toLocaleString()}
                                         </div>
                                     </div>
                                     <div className="flex justify-between items-center relative z-10">
                                         <span className={`text-[10px] font-bold uppercase tracking-widest ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                                            {n.creditNoteNumber} | {new Date(n.date).toLocaleDateString()}
+                                            {n.creditNoteNumber} | {new Date(n.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                         </span>
                                     </div>
                                     {isSelected && <div className="absolute top-0 right-0 p-3 opacity-20"><Undo2 size={48} strokeWidth={1} /></div>}

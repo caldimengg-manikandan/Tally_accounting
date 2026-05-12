@@ -9,6 +9,7 @@ import {
 import { salesAPI, ledgerAPI, inventoryAPI, companyAPI, projectAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 // ─────────────────────────────────────────────────
 // MANAGE SALESPERSONS MODAL (Internal)
@@ -121,8 +122,9 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
     }, []);
 
     const filtered = (customers || []).filter(c => {
-        if (!c || !c.name) return false;
-        return c.name.toLowerCase().includes(search.toLowerCase());
+        if (!c) return false;
+        return (c.displayName || c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+               (c.companyName || '').toLowerCase().includes(search.toLowerCase());
     });
 
     return (
@@ -166,7 +168,12 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
                                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
                                         <User size={14} />
                                     </div>
-                                    <div className="text-[14px] font-bold text-slate-800 tracking-tight">{c.name}</div>
+                                    <div className="flex flex-col">
+                                        <div className="text-[14px] font-bold text-slate-800 tracking-tight">{c.displayName || c.name}</div>
+                                        {c.companyName && c.companyName !== (c.displayName || c.name) && (
+                                            <div className="text-[11px] text-slate-400 font-medium">{c.companyName}</div>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         ) : (
@@ -256,7 +263,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                                         <div className="text-[14px] font-bold text-slate-800 tracking-tight flex items-center gap-2">
                                             <Package size={14} className="text-blue-500 opacity-50" /> {it.name}
                                         </div>
-                                        <div className="text-[13px] font-bold text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                        <div className="text-[13px] font-bold text-slate-900">{getCurrencyDisplay(it.currency)} {parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
                                     </div>
                                     <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
                                         {it.salesDescription || 'No description provided'}
@@ -343,7 +350,9 @@ const SalesOrdersView = ({ companyId }) => {
             setOrders(Array.isArray(oRes.data) ? oRes.data : []);
             setCustomers(Array.isArray(cRes.data) ? cRes.data.filter(l => 
                 l.Group?.name?.toLowerCase().includes('debtor') || 
-                l.Group?.name?.toLowerCase().includes('customer')
+                l.Group?.name?.toLowerCase().includes('customer') ||
+                l.groupName?.toLowerCase().includes('debtor') ||
+                l.groupName?.toLowerCase().includes('customer')
             ) : []);
             setItems(Array.isArray(iRes.data) ? iRes.data : []);
             setProjects(Array.isArray(projRes.data) ? projRes.data : []);
@@ -500,7 +509,7 @@ const SalesOrdersView = ({ companyId }) => {
 
     const filteredOrders = orders.filter(o => 
         o.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        o.Customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        (o.Customer?.displayName || o.Customer?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const renderListView = () => {
@@ -514,7 +523,10 @@ const SalesOrdersView = ({ companyId }) => {
         const sortedOrders = [...filteredOrders].sort((a, b) => {
             let aValue = a[sortConfig.key] || '';
             let bValue = b[sortConfig.key] || '';
-            if (sortConfig.key === 'totalAmount') {
+            if (sortConfig.key === 'Customer.name') {
+                aValue = (a.Customer?.displayName || a.Customer?.name || '').toLowerCase();
+                bValue = (b.Customer?.displayName || b.Customer?.name || '').toLowerCase();
+            } else if (sortConfig.key === 'totalAmount') {
                aValue = parseFloat(aValue || 0);
                bValue = parseFloat(bValue || 0);
             } else {
@@ -624,14 +636,14 @@ const SalesOrdersView = ({ companyId }) => {
                                         className="hover:bg-slate-50/80 transition-all cursor-pointer group border-b border-slate-50"
                                     >
                                         <td className="px-6 py-6 text-[13px] font-medium text-slate-500 tabular-nums whitespace-nowrap">
-                                            {new Date(order.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                            {new Date(order.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}
                                         </td>
                                         <td className="px-6 py-6">
                                             <div className="text-[14px] font-bold text-[#1e61f0] group-hover:underline uppercase tracking-tight">{order.orderNumber}</div>
                                             <div className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ref: {order.referenceNumber || 'INTERNAL'}</div>
                                         </td>
                                         <td className="px-6 py-6">
-                                            <div className="text-[14px] font-medium text-slate-800 uppercase leading-none">{order.Customer?.name || 'GENERIC CLIENT'}</div>
+                                            <div className="text-[14px] font-medium text-slate-800 uppercase leading-none">{order.Customer?.displayName || order.Customer?.name || 'GENERIC CLIENT'}</div>
                                         </td>
                                         <td className="px-6 py-6 text-center">
                                             <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-bold tracking-widest border ${
@@ -643,7 +655,7 @@ const SalesOrdersView = ({ companyId }) => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-6 text-right font-medium text-slate-900 tabular-nums text-[14px]">
-                                            ₹{parseFloat(order.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            {getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                         </td>
                                         <td className="px-6 py-6" onClick={e => e.stopPropagation()}>
                                             <div className="flex items-center justify-center gap-2">
@@ -714,7 +726,10 @@ const SalesOrdersView = ({ companyId }) => {
                                 <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest">Customer Selection*</label>
                                 <div className="flex-1 max-w-2xl">
                                     <CustomerSearchSelector 
-                                        value={customers.find(c => c.id === formData.customerId)?.name}
+                                        value={(() => {
+                                            const c = customers.find(c => c.id === formData.customerId);
+                                            return c ? (c.displayName || c.name) : '';
+                                        })()}
                                         customers={customers}
                                         placeholder="Search or select ledger..."
                                         onChange={(id) => setFormData(p => ({ ...p, customerId: id }))}
@@ -866,7 +881,7 @@ const SalesOrdersView = ({ companyId }) => {
                                                     />
                                                 </td>
                                                 <td className="px-6 py-5 text-right align-top">
-                                                    <span className="text-[13px] font-bold text-slate-900 tabular-nums">₹{(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                <span className="text-[13px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {(parseFloat(line.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                                 </td>
                                                 <td className="px-4 py-5 text-center align-top">
                                                     <button onClick={() => handleRemoveField(line.id)} className="text-slate-300 hover:text-red-500 transition-colors">
@@ -911,7 +926,7 @@ const SalesOrdersView = ({ companyId }) => {
                              <div className="w-96 space-y-4">
                                     <div className="flex justify-between items-center text-[13px]">
                                         <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
-                                        <span className="font-bold text-slate-900 tabular-nums">₹{formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span className="font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
@@ -948,7 +963,7 @@ const SalesOrdersView = ({ companyId }) => {
                                     <div className="pt-6 mt-6 border-t border-slate-200">
                                         <div className="flex justify-between items-center">
                                             <span className="text-[15px] font-bold text-slate-900 uppercase tracking-widest">Total Amount</span>
-                                            <span className="text-[24px] font-bold text-blue-600 tabular-nums">₹{formData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <span className="text-[24px] font-bold text-blue-600 tabular-nums">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {formData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
@@ -1051,12 +1066,12 @@ const SalesOrdersView = ({ companyId }) => {
                             <div className="text-right space-y-6">
                                 <div>
                                     <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Issue Date</h5>
-                                    <p className="text-[15px] font-bold text-slate-900 uppercase">{new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                    <p className="text-[15px] font-bold text-slate-900 uppercase">{new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                                 </div>
                                 {order.expectedShipmentDate && (
                                     <div>
                                         <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Target Delivery</h5>
-                                        <p className="text-[15px] font-bold text-blue-600 uppercase">{new Date(order.expectedShipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                                        <p className="text-[15px] font-bold text-blue-600 uppercase">{new Date(order.expectedShipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                                     </div>
                                 )}
                             </div>
@@ -1085,8 +1100,8 @@ const SalesOrdersView = ({ companyId }) => {
                                                 </div>
                                             </td>
                                             <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums uppercase">{it.quantity} units</td>
-                                            <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">₹{parseFloat(it.rate).toLocaleString()}</td>
-                                            <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">₹{parseFloat(it.amount).toLocaleString()}</td>
+                                            <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(it.rate).toLocaleString()}</td>
+                                            <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(it.amount).toLocaleString()}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -1097,19 +1112,19 @@ const SalesOrdersView = ({ companyId }) => {
                             <div className="w-full max-w-md space-y-6">
                                 <div className="flex justify-between items-center px-2">
                                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Net Subtotal</span>
-                                    <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(order.subTotal).toLocaleString()}</span>
+                                    <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.subTotal).toLocaleString()}</span>
                                 </div>
                                 {parseFloat(order.taxAmount || 0) > 0 && (
                                     <div className="flex justify-between items-center px-2">
                                         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tax Levy</span>
-                                        <span className="text-[16px] font-bold text-slate-600 tabular-nums">₹{parseFloat(order.taxAmount).toLocaleString()}</span>
+                                        <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.taxAmount).toLocaleString()}</span>
                                     </div>
                                 )}
                                 <div className="bg-slate-900 text-white p-6 md:p-8 shadow-2xl relative overflow-hidden rounded-none">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-none blur-[60px] opacity-20"></div>
                                     <div className="flex justify-between items-center relative z-10">
                                         <span className="text-[11px] font-bold text-blue-300 uppercase tracking-[0.2em]">Order Total</span>
-                                        <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tight tabular-nums leading-none">₹{parseFloat(order.totalAmount).toLocaleString()}</span>
+                                        <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tight tabular-nums leading-none">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.totalAmount).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>

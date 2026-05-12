@@ -12,6 +12,7 @@ import {
 import { retainerInvoiceAPI, ledgerAPI, salesAPI, projectAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MANAGE SALESPERSONS MODAL
@@ -133,7 +134,7 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
             setLoading(true);
             try {
                 const res = await ledgerAPI.getByCompany(companyId);
-                const debtors = res.data.filter(l => l.Group?.name?.toLowerCase().includes('debtor') || l.Group?.name?.toLowerCase().includes('customer'));
+                const debtors = res.data.filter(l => l.Group?.name?.toLowerCase().includes('debtor') || l.Group?.name?.toLowerCase().includes('customer') || l.groupName?.toLowerCase().includes('debtor') || l.groupName?.toLowerCase().includes('customer'));
                 setCustomers(debtors || []);
                 const projRes = await projectAPI.getByCompany(companyId);
                 setProjects(projRes.data || []);
@@ -217,7 +218,10 @@ const RetainerInvoiceForm = ({ companyId, navigate, editId }) => {
                                         {lineItems.map(it => (
                                             <tr key={it.id}>
                                                 <td className="px-6 py-5"><input value={it.description} onChange={e => setLineItems(prev => prev.map(p => p.id === it.id ? {...p, description: e.target.value} : p))} className="w-full bg-transparent border-none outline-none text-[14px] font-bold text-slate-700" /></td>
-                                                <td className="px-6 py-5"><input type="number" value={it.amount} onChange={e => setLineItems(prev => prev.map(p => p.id === it.id ? {...p, amount: e.target.value} : p))} className="w-full text-right bg-transparent border-none outline-none text-[14px] font-bold text-slate-700" /></td>
+                                                <td className="px-6 py-5 align-top flex items-center justify-end gap-2 text-slate-700 font-bold text-[14px]">
+                                                    <span>{getCurrencyDisplay(customers.find(c => String(c.id) === String(formData.customerLedgerId))?.currency)}</span>
+                                                    <input type="number" value={it.amount} onChange={e => setLineItems(prev => prev.map(p => p.id === it.id ? {...p, amount: e.target.value} : p))} className="w-24 text-right bg-transparent border-none outline-none font-bold text-slate-700" />
+                                                </td>
                                                 <td className="px-4 py-5"><button onClick={() => setLineItems(prev => prev.filter(p => p.id !== it.id))} className="text-slate-300 hover:text-red-500"><Trash2 size={16}/></button></td>
                                             </tr>
                                         ))}
@@ -291,7 +295,7 @@ const RetainerInvoiceDetail = ({ id, navigate, companyId }) => {
                         </div>
                         <div className="text-right space-y-3">
                             <h5 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date Issued</h5>
-                            <p className="text-[18px] font-bold text-slate-900">{new Date(note.invoiceDate).toLocaleDateString()}</p>
+                            <p className="text-[18px] font-bold text-slate-900">{new Date(note.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                         </div>
                     </div>
                     <table className="w-full mb-12">
@@ -302,12 +306,12 @@ const RetainerInvoiceDetail = ({ id, navigate, companyId }) => {
                             {note.items?.map((it, idx) => (
                                 <tr key={idx}>
                                     <td className="py-6"><p className="text-[14px] font-bold text-slate-800">{it.description}</p></td>
-                                    <td className="py-6 text-right text-[14px] font-bold text-slate-900">₹{parseFloat(it.amount).toLocaleString()}</td>
+                                    <td className="py-6 text-right text-[14px] font-bold text-slate-900">{getCurrencyDisplay(note.CustomerLedger?.currency)} {parseFloat(it.amount).toLocaleString()}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    <div className="flex justify-end"><div className="w-64 border-t-2 border-slate-900 pt-6 flex justify-between items-center text-[18px] font-bold uppercase tracking-tighter"><span>Total</span><span>₹{parseFloat(note.totalAmount).toLocaleString()}</span></div></div>
+                    <div className="flex justify-end"><div className="w-64 border-t-2 border-slate-900 pt-6 flex justify-between items-center text-[18px] font-bold uppercase tracking-tighter"><span>Total</span><span>{getCurrencyDisplay(note.CustomerLedger?.currency)} {parseFloat(note.totalAmount).toLocaleString()}</span></div></div>
                 </div>
             </div>
         </div>
@@ -350,8 +354,8 @@ const RetainerInvoicesView = () => {
                 <div className="flex-1 overflow-y-auto divide-y divide-slate-50 custom-scrollbar">
                     {loading ? <div className="p-20 text-center animate-pulse"><Loader2 size={24} className="animate-spin text-blue-100 mx-auto" /></div> : notes.length === 0 ? <div className="p-20 text-center text-slate-200 italic font-bold uppercase tracking-widest text-[10px] opacity-40">No Records Found</div> : notes.map(n => (
                         <div key={n.id} onClick={() => navigate(`/retainer-invoices/view/${n.id}`)} className={`px-8 py-6 cursor-pointer transition-all border-l-4 ${id === n.id ? 'bg-blue-50 border-blue-600' : 'bg-white border-transparent hover:bg-slate-50'}`}>
-                            <div className="flex justify-between items-start mb-2"><span className="text-[14px] font-bold text-slate-900">{n.CustomerLedger?.name || n.customerName}</span><span className="text-[14px] font-bold text-slate-900 font-mono">₹{parseFloat(n.totalAmount).toLocaleString()}</span></div>
-                            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{n.invoiceNumber} | {new Date(n.invoiceDate).toLocaleDateString()}</span></div>
+                            <div className="flex justify-between items-start mb-2"><span className="text-[14px] font-bold text-slate-900">{n.CustomerLedger?.name || n.customerName}</span><span className="text-[14px] font-bold text-slate-900 font-mono">{getCurrencyDisplay(n.CustomerLedger?.currency)} {parseFloat(n.totalAmount).toLocaleString()}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{n.invoiceNumber} | {new Date(n.invoiceDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span></div>
                         </div>
                     ))}
                 </div>

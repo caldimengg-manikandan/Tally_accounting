@@ -76,7 +76,7 @@ const RecurringExpenseEntryView = ({ companyId }) => {
             const allLedgers = ledgersRes.data || [];
             setLedgers(allLedgers);
             setVendors(vendorsRes.data || []);
-            setCustomers(allLedgers.filter(l => l.Group?.name?.includes('Debtor') || l.Group?.name?.includes('Customer')));
+            setCustomers(allLedgers.filter(l => l.Group?.name?.includes('Debtor') || l.Group?.name?.includes('Customer') || l.groupName?.includes('Debtor') || l.groupName?.includes('Customer')));
 
             if (id) {
                 const templatesRes = await recurringExpenseAPI.getByCompany(companyId);

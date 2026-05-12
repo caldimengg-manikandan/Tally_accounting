@@ -17,6 +17,7 @@ import {
 import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import ComposeMailModal from '../../components/ComposeMailModal';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 const CustomerDetailView = ({ companyId }) => {
   const { id } = useParams();
@@ -444,7 +445,7 @@ const CustomerDetailView = ({ companyId }) => {
                 {c.name}
               </div>
               <div className="text-[12px] font-black text-slate-400 italic tracking-tighter">
-                ₹{parseFloat(c.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                {getCurrencyDisplay(c.currency)} {parseFloat(c.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </div>
             </div>
           ))}
@@ -619,8 +620,8 @@ const CustomerDetailView = ({ companyId }) => {
                                           <td className="px-6 py-4">{row.date || 'N/A'}</td>
                                           <td className="px-6 py-4 font-bold text-blue-600">{row.number || row.orderNumber || row.quoteNumber || '---'}</td>
                                           <td className="px-6 py-4">{row.reference || row.referenceNumber || '---'}</td>
-                                          <td className="px-6 py-4 font-bold text-slate-900">₹{parseFloat(row.totalAmount || row.amount || 0).toLocaleString()}</td>
-                                          {sec.name === 'Invoices' && <td className="px-6 py-4">₹{row.balanceDue || '0.00'}</td>}
+                                          <td className="px-6 py-4 font-bold text-slate-900">{getCurrencyDisplay(customer.currency)} {parseFloat(row.totalAmount || row.amount || 0).toLocaleString()}</td>
+                                          {sec.name === 'Invoices' && <td className="px-6 py-4">{getCurrencyDisplay(customer.currency)} {row.balanceDue || '0.00'}</td>}
                                           <td className="px-6 py-4">
                                              <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${row.status === 'Sent' ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-400'}`}>
                                                 {row.status || 'Draft'}
@@ -719,7 +720,7 @@ const CustomerDetailView = ({ companyId }) => {
                                         </div>
                                      </div>
                                      <div className="text-right flex-shrink-0">
-                                        <p className="text-[12px] font-bold text-slate-500">{new Date(m.sentAt).toLocaleDateString()}</p>
+                                        <p className="text-[12px] font-bold text-slate-500">{new Date(m.sentAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
                                         <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-1">{new Date(m.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                      </div>
                                   </div>
@@ -805,19 +806,19 @@ const CustomerDetailView = ({ companyId }) => {
                                <div className="bg-slate-50 p-2.5 font-bold text-[11px] text-slate-400 uppercase tracking-widest border-b border-slate-100">Account Summary</div>
                                <div className="flex justify-between px-3 py-2.5 border-b border-slate-50 text-[13px] font-medium text-slate-600">
                                  <span>Opening Balance</span>
-                                 <span className="font-bold text-slate-900">₹{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                 <h4 className="text-[28px] font-bold text-slate-900 tracking-tighter">{getCurrencyDisplay(customer.currency)} {parseFloat(statementData?.openingBalance || 0).toLocaleString()}</h4>
                                </div>
                                <div className="flex justify-between px-3 py-2.5 border-b border-slate-50 text-[13px] font-medium text-slate-600">
                                  <span>Invoiced Amount</span>
-                                 <span className="font-bold text-slate-900">₹{statementData?.entries?.reduce((sum, e) => sum + (e.debit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                 <span className="font-bold text-slate-900">{getCurrencyDisplay(customer.currency)} {statementData?.entries?.reduce((sum, e) => sum + (e.debit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                </div>
                                <div className="flex justify-between px-3 py-2.5 border-b border-slate-50 text-[13px] font-medium text-slate-600">
                                  <span>Amount Received</span>
-                                 <span className="font-bold text-slate-900">₹{statementData?.entries?.reduce((sum, e) => sum + (e.credit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                 <span className="font-bold text-slate-900">{getCurrencyDisplay(customer.currency)} {statementData?.entries?.reduce((sum, e) => sum + (e.credit || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                </div>
                                <div className="flex justify-between px-3 py-3 bg-slate-50/50 text-[13px]">
                                  <span className="font-bold text-slate-800">Balance Due</span>
-                                 <span className="font-black text-slate-900 text-[15px]">₹{parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                 <h4 className="text-[28px] font-bold text-[#1e61f0] tracking-tighter">{getCurrencyDisplay(customer.currency)} {parseFloat(statementData?.closingBalance || 0).toLocaleString()}</h4>
                                </div>
                             </div>
                          </div>
@@ -840,9 +841,9 @@ const CustomerDetailView = ({ companyId }) => {
                                   <td className="px-4 py-6 font-medium">01/05/2026</td>
                                   <td className="px-4 py-6 font-bold text-slate-900 italic">***Opening Balance***</td>
                                   <td className="px-4 py-6"></td>
-                                  <td className="px-4 py-6 text-right font-bold text-slate-900">{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                  <td className="px-4 py-6 text-right font-medium">0.00</td>
-                                  <td className="px-4 py-6 text-right font-black text-slate-900">{parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-6 text-right font-bold text-slate-900">{getCurrencyDisplay(customer.currency)} {parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                  <td className="px-4 py-6 text-right font-medium">{getCurrencyDisplay(customer.currency)} 0.00</td>
+                                  <td className="px-4 py-6 text-right font-black text-slate-900">{getCurrencyDisplay(customer.currency)} {parseFloat(statementData?.ledger?.openingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                                </tr>
                                {/* Entries */}
                                {statementData?.entries?.map((e, idx) => (
@@ -853,9 +854,9 @@ const CustomerDetailView = ({ companyId }) => {
                                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">#{e.voucherNumber || 'INV-001'}</p>
                                    </td>
                                    <td className="px-4 py-5 max-w-xs truncate text-slate-400 font-medium italic">{e.description || 'Professional Services'}</td>
-                                   <td className="px-4 py-5 text-right font-bold text-slate-900">{e.debit ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
-                                   <td className="px-4 py-5 text-right font-bold text-emerald-600">{e.credit ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
-                                   <td className="px-4 py-5 text-right font-black text-slate-900">₹{e.runningBalance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                   <td className="py-6 px-4 text-right text-slate-600 font-bold tabular-nums">{getCurrencyDisplay(customer.currency)} {parseFloat(e.debit || 0).toLocaleString()}</td>
+                                   <td className="px-4 py-5 text-right font-bold text-emerald-600">{getCurrencyDisplay(customer.currency)} {e.credit ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
+                                   <td className="py-6 px-4 text-right text-slate-900 font-black tabular-nums">{getCurrencyDisplay(customer.currency)} {parseFloat(e.runningBalance || 0).toLocaleString()}</td>
                                  </tr>
                                ))}
                             </tbody>
@@ -864,7 +865,7 @@ const CustomerDetailView = ({ companyId }) => {
                          <div className="flex justify-end pt-4">
                             <div className="flex items-center gap-12 text-[14px]">
                                <span className="font-bold text-slate-500 uppercase tracking-widest">Balance Due</span>
-                               <span className="font-black text-slate-900 text-[18px]">₹{parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                               <span className="font-black text-slate-900 text-[18px]">{getCurrencyDisplay(customer.currency)} {parseFloat(statementData?.ledger?.closingBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                          </div>
                       </div>
@@ -993,7 +994,7 @@ const CustomerDetailView = ({ companyId }) => {
                         <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100 bg-white">
                            <table className="w-full text-left">
                               <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-bold text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">CREDITS</th></tr></thead>
-                              <tbody><tr><td className="px-8 py-8 font-bold text-slate-700">{customer.currency || 'INR'}</td><td className="px-8 py-8 text-right font-bold text-[24px] text-slate-900">₹{parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">₹0.00</td></tr></tbody>
+                              <tbody><tr><td className="px-8 py-8 font-bold text-slate-700">{customer.currency || 'INR'}</td><td className="px-8 py-8 text-right font-bold text-[24px] text-slate-900">{getCurrencyDisplay(customer.currency)} {parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">{getCurrencyDisplay(customer.currency)} 0.00</td></tr></tbody>
                            </table>
                         </div>
                         <div className="flex items-center gap-3">

@@ -1,60 +1,28 @@
 const jwt = require('jsonwebtoken');
-const { User, Company } = require('../models');
 
-// 1. verifyToken -> validates JWT and attaches user info to request
-exports.verifyToken = async (req, res, next) => {
-  let token;
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
+// 1. verifyToken -> check for Bearer <token> in headers
+exports.verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'No token provided' });
   }
 
-  // console.log('[DEBUG] Token received:', token ? 'YES (length: ' + token.length + ')' : 'NO');
-
-  if (!token) {
-    return res.status(401).json({ error: 'Not authorized, token missing' });
-  }
-
-  try {
-    const secret = process.env.JWT_SECRET?.trim() || 'tally_replica_secret_key_123';
-    const decoded = jwt.verify(token, secret);
-    
-    // We fetch the latest user to ensure they still exist and might fetch updated role
-    const user = await User.findByPk(decoded.id);
-    if (!user) {
-      return res.status(401).json({ error: 'Not authorized, user no longer exists' });
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ error: 'Failed to authenticate token' });
     }
-
-    // Attach user to request
-    req.user = user;
+    req.user = decoded; // Contains id, role, companyId (activeCompanyId)
     next();
-  } catch (err) {
-    console.error('[verifyToken] Auth Error:', err.name, err.message);
-    // Distinguish JWT errors from unexpected server errors
-    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError' || err.name === 'NotBeforeError') {
-      return res.status(401).json({ error: 'Not authorized, invalid or expired token. Please log in again.' });
-    }
-    res.status(500).json({ error: 'Server error during authentication' });
-  }
+  });
 };
 
-// 2. authorizeRoles(...roles) -> restricts access based on user role
-exports.authorizeRoles = (...roles) => {
+// 2. authorizeRoles -> check if req.user.role is in the allowed list
+exports.authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'User not attached to request' });
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ error: 'Permission denied: Insufficient role' });
     }
-
-    // SUPER_ADMIN has access to everything
-    if (req.user.role === 'SUPER_ADMIN') {
-      return next();
-    }
-
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        error: `Role (${req.user.role}) is not allowed to access this resource.` 
-      });
-    }
-    
     next();
   };
 };
@@ -65,21 +33,22 @@ exports.tenantAccess = async (req, res, next) => {
     return res.status(401).json({ error: 'User not attached to request' });
   }
 
-  // SUPER_ADMIN can bypass tenant bounds if they need global access, 
-  // but if they supply a company ID we respect it.
+  // SUPER_ADMIN bypass
   if (req.user.role === 'SUPER_ADMIN' && !req.user.activeCompanyId) {
-    // Optionally: require them to use a specific header, or allow them to fetch all data.
-    // We let them pass but without a strict req.companyId, so queries must handle this
     return next();
   }
 
-  if (!req.user.activeCompanyId) {
+  // Safely extract companyId
+  const paramCompanyId = (req.params && req.params.companyId) || 
+                         (req.body && req.body.companyId) || 
+                         (req.query && req.query.companyId);
+                         
+  const userActiveCompanyId = req.user.activeCompanyId || req.user.companyId;
+
+  if (!userActiveCompanyId && !paramCompanyId) {
     return res.status(403).json({ error: 'Please switch to an active company first.' });
   }
 
-  // Ensure they actually belong to this company (double check against DB if we want stringent security)
-  // But the logic for selecting an activeCompanyId should already ensure they belong to it.
-
-  req.companyId = req.user.activeCompanyId;
+  req.companyId = paramCompanyId || userActiveCompanyId;
   next();
 };

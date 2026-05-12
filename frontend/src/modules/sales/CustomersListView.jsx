@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { ledgerAPI, groupAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 const CustomersListView = ({ companyId }) => {
   const navigate = useNavigate();
@@ -297,7 +298,7 @@ const CustomersListView = ({ companyId }) => {
                         <td className="px-6 py-4 text-[14px] text-slate-600">{c.workPhone || '-'}</td>
                         <td className="px-6 py-4 text-right">
                            <span className="text-[14px] text-slate-900 font-medium whitespace-nowrap">
-                              ₹ {c.currentBalance?.toLocaleString() || '0.00'}
+                               {getCurrencyDisplay(c.currency)} {c.currentBalance?.toLocaleString() || '0.00'}
                            </span>
                         </td>
                         <td className="px-6 py-4">

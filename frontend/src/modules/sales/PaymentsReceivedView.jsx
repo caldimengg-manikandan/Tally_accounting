@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { voucherAPI, ledgerAPI, salesAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PAYMENT RECEIPT PREVIEW COMPONENT
@@ -142,11 +143,11 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-transparent pointer-events-none" />
                         <div className="relative z-10 space-y-2">
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">Total Amount Received</p>
-                            <h4 className="text-[48px] font-bold tracking-tighter leading-none">₹{parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h4>
+                            <h4 className="text-[48px] font-bold tracking-tighter leading-none">{getCurrencyDisplay(customer?.currency)} {parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h4>
                         </div>
                         <div className="relative z-10 text-right space-y-2">
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">Payment Date</p>
-                            <h4 className="text-[18px] font-bold tracking-tight">{new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</h4>
+                            <h4 className="text-[18px] font-bold tracking-tight">{new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</h4>
                         </div>
                     </div>
 
@@ -338,7 +339,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                     </div>
 
                     <div className="space-y-2.5">
-                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Amount Received (₹)*</label>
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Amount Received ({getCurrencyDisplay(selectedCustomer?.currency)})*</label>
                       <input 
                         type="number"
                         value={amount}
@@ -415,14 +416,14 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                                 <div>
                                     <h4 className="text-[15px] font-bold text-slate-800 tracking-tight">{inv.invoiceNumber}</h4>
                                     <div className="flex items-center gap-3 mt-0.5">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date: {new Date(inv.date).toLocaleDateString()}</span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date: {new Date(inv.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                                         <span className="text-slate-200">|</span>
-                                        <span className="text-[10px] font-bold text-[#1e61f0] uppercase tracking-widest">Due: ₹{parseFloat(inv.balance).toLocaleString()}</span>
+                                        <span className="text-[10px] font-bold text-[#1e61f0] uppercase tracking-widest">Due: {getCurrencyDisplay(selectedCustomer?.currency)} {parseFloat(inv.balance).toLocaleString()}</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[13px]">₹</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[13px]">{getCurrencyDisplay(selectedCustomer?.currency)}</span>
                                 <input 
                                     type="number"
                                     value={allocation[inv.id] || ''}
@@ -442,15 +443,15 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                         <div className="absolute top-0 left-0 right-0 h-1.5 bg-blue-600 opacity-20" />
                         <div className="flex justify-between items-center text-[13px]">
                           <span className="text-slate-500 font-bold uppercase tracking-widest">Total Received</span>
-                          <span className="text-slate-900 font-bold font-mono">₹{parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-slate-900 font-bold font-mono">{getCurrencyDisplay(selectedCustomer?.currency)} {parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between items-center text-[13px]">
                           <span className="text-slate-500 font-bold uppercase tracking-widest">Allocated</span>
-                          <span className="text-emerald-600 font-bold font-mono">- ₹{Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-emerald-600 font-bold font-mono">- {getCurrencyDisplay(selectedCustomer?.currency)} {Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="pt-6 border-t border-slate-200 flex justify-between items-center mt-4">
                           <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Excess Fund</span>
-                          <span className="text-[20px] font-bold text-slate-900 tracking-tighter font-mono">₹{(parseFloat(amount || 0) - Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-[20px] font-bold text-slate-900 tracking-tighter font-mono">{getCurrencyDisplay(selectedCustomer?.currency)} {(parseFloat(amount || 0) - Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                      </div>
                   </div>
@@ -644,13 +645,13 @@ const PaymentsReceivedView = () => {
                                             </span>
                                         </div>
                                         <span className="text-[14px] font-bold text-slate-900 font-mono">
-                                            ₹{amount.toLocaleString('en-IN')}
+                                            {getCurrencyDisplay(p.Transactions.find(t => t.Ledger?.Group?.name?.includes('Sundry Debtors') || t.Ledger?.Group?.name?.includes('Customer'))?.Ledger?.currency)} {amount.toLocaleString('en-IN')}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                             <Calendar size={11} className="text-slate-300" /> 
-                                            {new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                            {new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
                                         </div>
                                         <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[9px] font-bold uppercase tracking-widest rounded leading-none border border-emerald-200">
                                             Success

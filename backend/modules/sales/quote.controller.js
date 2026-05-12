@@ -7,6 +7,7 @@ exports.getQuotes = async (req, res) => {
   try {
     const quotes = await Quote.findAll({
       where: { CompanyId: req.params.companyId },
+      include: [{ model: Ledger, as: 'Customer', attributes: ['name', 'currency'] }],
       order: [['quoteDate', 'DESC'], ['createdAt', 'DESC']]
     });
     res.json(quotes);

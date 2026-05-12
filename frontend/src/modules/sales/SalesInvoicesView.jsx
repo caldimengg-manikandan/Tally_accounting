@@ -7,10 +7,11 @@ import {
   Check, AlertCircle, File, Mail, Printer,
   Share2, History, X, ChevronRight, Download,
   Send, Loader2, ArrowLeft, DollarSign, Clock,
-  Tag, Info, Paperclip
+  Tag, Info, Paperclip, Sparkles
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 const formatAddress = (address) => {
     if (!address) return '';
@@ -45,7 +46,7 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
     
     const filtered = invoices.filter(inv => 
         inv.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.CustomerLedger?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        (inv.CustomerLedger?.displayName || inv.CustomerLedger?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -105,17 +106,22 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
                                 >
                                     <div className="flex justify-between items-start">
                                         <div className={`text-[13px] font-bold tracking-tight ${isSelected ? 'text-blue-700' : 'text-slate-900'}`}>
-                                            {inv.CustomerLedger?.name}
+                                            {inv.CustomerLedger?.displayName || inv.CustomerLedger?.name}
                                         </div>
                                         <div className="text-[14px] font-bold text-slate-900 tracking-tight">
-                                            ₹{parseFloat(inv.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                            {getCurrencyDisplay(inv.CustomerLedger?.currency)} {parseFloat(inv.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                         </div>
                                     </div>
                                     <div className="flex justify-between items-center text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                                        <span>{inv.invoiceNumber} | {new Date(inv.date).toLocaleDateString('en-GB')}</span>
-                                        <span className={`px-2 py-0.5 rounded text-[8px] border ${inv.status === 'Sent' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
-                                            {inv.status?.toUpperCase()}
-                                        </span>
+                                        <span>{inv.invoiceNumber} | {new Date(inv.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                        {(() => {
+                                            const badge = getStatusBadge(inv);
+                                            return (
+                                                <span className={`text-[9px] uppercase tracking-tighter ${badge.class}`}>
+                                                    {badge.label}
+                                                </span>
+                                            );
+                                        })()}
                                     </div>
                                     {inv.dueDate && (
                                         <div className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">
@@ -143,7 +149,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
 
     const [to, setTo] = useState(invoice.CustomerLedger?.email || '');
     const [subject, setSubject] = useState(`Invoice - ${invoice.invoiceNumber} from ${companyName}`);
-    const [body, setBody] = useState(`Dear ${invoice.CustomerLedger?.name || 'Customer'},\n\nThank you for your business. Your invoice can be viewed, printed and downloaded as PDF from the link below. You can also choose to pay it online.\n\nBest Regards,\n${senderName}\n${companyName}`);
+    const [body, setBody] = useState(`Dear ${invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name || 'Customer'},\n\nThank you for your business. Your invoice can be viewed, printed and downloaded as PDF from the link below. You can also choose to pay it online.\n\nBest Regards,\n${senderName}\n${companyName}`);
     const [isSending, setIsSending] = useState(false);
 
     const handleSend = async () => {
@@ -172,7 +178,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
         <div className="flex-1 bg-[#f8fafc] flex flex-col h-full animate-fade-in no-print">
             <header className="px-10 py-6 bg-white border-b border-slate-200 flex items-center justify-between">
                 <div>
-                   <h2 className="text-2xl font-bold text-slate-900 italic tracking-tight">Email To {invoice.CustomerLedger?.name}</h2>
+                   <h2 className="text-2xl font-bold text-slate-900 italic tracking-tight">Email To {invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</h2>
                 </div>
                 <button onClick={onCancel} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
                     <X size={24} />
@@ -195,7 +201,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                                 <div className="flex-1 flex gap-2">
                                    <div className="flex-1 p-2 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 bg-white flex items-center gap-2">
                                       <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-500 text-[11px]">{invoice.CustomerLedger?.name?.[0]}</span>
-                                      {invoice.CustomerLedger?.name} &lt;{to}&gt;
+                                      {invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name} &lt;{to}&gt;
                                    </div>
                                 </div>
                             </div>
@@ -262,7 +268,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
 
                         {/* Content */}
                         <div className="space-y-10 text-center">
-                            <p className="text-[16px] text-slate-600 font-medium">Dear {invoice.CustomerLedger?.name},</p>
+                            <p className="text-[16px] text-slate-600 font-medium">Dear {invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name},</p>
                             <p className="text-[16px] text-slate-500 leading-relaxed max-w-md mx-auto">
                                 Thank you for your business. Your invoice can be viewed, printed and downloaded as PDF from the link below. You can also choose to pay it online.
                             </p>
@@ -271,7 +277,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                             <div className="bg-[#fffcf0] border border-amber-100 py-10 px-6 space-y-6">
                                 <div>
                                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-2">Invoice Amount</p>
-                                    <h1 className="text-4xl font-bold text-slate-900 italic tracking-tight">₹ {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h1>
+                                    <h1 className="text-4xl font-bold text-slate-900 italic tracking-tight">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h1>
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-y-3 max-w-[280px] mx-auto pt-6 border-t border-amber-200/50">
@@ -279,10 +285,10 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                                     <div className="text-right text-[12px] font-bold text-slate-900">{invoice.invoiceNumber}</div>
                                     
                                     <div className="text-left text-[12px] font-bold text-slate-400">Invoice Date</div>
-                                    <div className="text-right text-[12px] font-bold text-slate-900">{new Date(invoice.date).toLocaleDateString('en-GB')}</div>
+                                    <div className="text-right text-[12px] font-bold text-slate-900">{new Date(invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                                     
                                     <div className="text-left text-[12px] font-bold text-slate-400">Due Date</div>
-                                    <div className="text-right text-[12px] font-bold text-slate-900">{new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB')}</div>
+                                    <div className="text-right text-[12px] font-bold text-slate-900">{new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                                 </div>
 
                                 <div className="pt-8">
@@ -337,10 +343,27 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
         }
     };
 
+    const handleMarkAsSent = async () => {
+        try {
+            await salesAPI.updateInvoice(id, { status: 'Sent' });
+            addNotification('Invoice marked as sent', 'success');
+            onRefresh();
+            salesAPI.getById(id).then(res => setInvoice(res.data));
+        } catch (err) {
+            addNotification('Failed to update status', 'error');
+        }
+    };
+
     if (loading) return <div className="flex-1 flex items-center justify-center text-slate-300 font-bold animate-pulse">HYDRATING DOCUMENT...</div>;
     if (!invoice) return <div className="flex-1 flex items-center justify-center text-slate-200 text-4xl font-bold uppercase italic tracking-tight opacity-20">Document Not Found</div>;
 
-    if (currentView === 'email') return <InvoiceEmailView invoice={invoice} company={company} onCancel={() => setCurrentView('detail')} onSent={() => { addNotification('Email queued for delivery', 'success'); setCurrentView('detail'); }} />;
+    if (currentView === 'email') return <InvoiceEmailView invoice={invoice} company={company} onCancel={() => setCurrentView('detail')} onSent={async () => { 
+        await salesAPI.updateInvoice(id, { status: 'Sent' });
+        addNotification('Email queued for delivery', 'success'); 
+        onRefresh();
+        setCurrentView('detail'); 
+        salesAPI.getById(id).then(res => setInvoice(res.data));
+    }} />;
 
     const items = invoice.items || [];
 
@@ -372,16 +395,51 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                  <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><DollarSign size={14}/> Record Payment</button>
             </div>
 
+            {/* What's Next Banner */}
+            {(invoice.status === 'Confirmed' || invoice.status === 'Draft' || !invoice.status) && (
+                <div className="mx-8 mt-6 mb-0 p-4 bg-[#f0f7ff] border border-blue-100 rounded-xl flex items-center justify-between no-print animate-fade-in shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                            <Sparkles size={16} />
+                        </div>
+                        <p className="text-[14px] font-medium text-slate-700">
+                            <span className="font-bold text-slate-900 uppercase">What's next?</span> Send this Invoice to your customer or mark it as Sent.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => setCurrentView('email')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
+                        >
+                            Send Invoice
+                        </button>
+                        <button 
+                            onClick={handleMarkAsSent}
+                            className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-[13px] font-bold hover:bg-slate-50 transition-all shadow-sm"
+                        >
+                            Mark As Sent
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Document Scrolling Area */}
             <div className="flex-1 overflow-y-auto bg-slate-50 p-16 flex flex-col items-center no-scrollbar print:p-0 print:bg-white custom-document-container">
                  {/* Main Scrollable Invoice Document */}
                  <div className="bg-white shadow-[0_25px_60px_rgba(0,0,0,0.1)] rounded-md w-full max-w-4xl p-16 relative border border-slate-100 min-h-[1050px] animate-fade-up">
                     
                     {/* Status Ribbon */}
-                    <div className={`absolute top-8 -right-12 w-48 py-2 text-[10px] font-bold uppercase tracking-[0.2em] transform rotate-45 text-center shadow-lg text-white no-print
-                        ${invoice.status === 'Confirmed' || invoice.status === 'Sent' ? 'bg-emerald-600' : 'bg-slate-400'}`}>
-                        {invoice.status?.toUpperCase() || 'DRAFT'}
-                    </div>
+                    {(() => {
+                        const badge = getStatusBadge(invoice);
+                        const ribbonColor = badge.label.includes('OVERDUE') ? 'bg-rose-600' : 
+                                            badge.label === 'PAID' ? 'bg-blue-600' :
+                                            badge.label === 'SENT' ? 'bg-emerald-600' : 'bg-slate-400';
+                        return (
+                            <div className={`absolute top-8 -right-12 w-48 py-2 text-[10px] font-bold uppercase tracking-[0.2em] transform rotate-45 text-center shadow-lg text-white no-print ${ribbonColor}`}>
+                                {badge.label}
+                            </div>
+                        );
+                    })()}
 
                     {/* Header */}
                     <div className="flex justify-between items-start mb-16">
@@ -407,7 +465,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                             <div className="space-y-1">
                                 <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Bill To</p>
                                 <h4 className="text-[18px] font-bold text-blue-600 leading-tight">
-                                    {invoice.CustomerLedger?.name || 'Customer Name'}
+                                    {invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name || 'Customer Name'}
                                 </h4>
                                 <div className="text-[12px] text-slate-500 font-medium leading-relaxed max-w-[320px] whitespace-pre-wrap">
                                     {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
@@ -420,13 +478,13 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                                 <span className="text-[14px] font-bold text-slate-900">: {invoice.invoiceNumber}</span>
                                 
                                 <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Invoice Date</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.date).toLocaleDateString('en-GB')}</span>
+                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                                 
                                 <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Terms</span>
                                 <span className="text-[14px] font-bold text-slate-900">: {invoice.terms || 'Due on Receipt'}</span>
                                 
                                 <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Due Date</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB')}</span>
+                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                             </div>
                         </div>
                     </div>
@@ -439,8 +497,8 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                                     <th className="py-4 px-4 w-12 text-center">#</th>
                                     <th className="py-4 px-4 text-left">Item & Description</th>
                                     <th className="py-4 px-4 w-24 text-center">Qty</th>
-                                    <th className="py-4 px-4 w-32 text-right">Rate</th>
-                                    <th className="py-4 px-4 w-32 text-right">Amount</th>
+                                    <th className="py-4 px-4 w-32 text-right">Rate ({getCurrencyDisplay(invoice.CustomerLedger?.currency)})</th>
+                                    <th className="py-4 px-4 w-32 text-right">Amount ({getCurrencyDisplay(invoice.CustomerLedger?.currency)})</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -492,19 +550,19 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                             <div className="p-8 space-y-4">
                                 <div className="flex justify-between items-center text-[12px] font-bold text-slate-400 uppercase tracking-widest">
                                     <span>Sub Total</span>
-                                    <span className="text-slate-900 font-bold">₹{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-slate-900 font-bold">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 <div className="flex justify-between items-center text-[12px] font-bold text-slate-400 uppercase tracking-widest">
                                     <span>GST (18%)</span>
-                                    <span className="text-slate-900 font-bold">₹{parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-slate-900 font-bold">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                                 
                                 <div className="pt-8 mt-4 border-t border-slate-200 flex flex-col items-end">
                                     <div className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.3em] mb-1">Grand Total</div>
                                     <div className="text-4xl font-bold text-slate-900 italic tracking-tight">
-                                        ₹{parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                        {getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                     </div>
-                                    <div className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mt-1">INR (₹) / Total Payable</div>
+                                    <div className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mt-1">{invoice.CustomerLedger?.currency || 'INR'} ({getCurrencyDisplay(invoice.CustomerLedger?.currency)}) / Total Payable</div>
                                 </div>
                                 
                                 <div className="pt-6">
@@ -513,7 +571,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                                             <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Balance Due</p>
                                             <p className="text-[14px] font-bold text-blue-600 italic tracking-tight">AVAILABLE</p>
                                          </div>
-                                         <span className="text-[20px] font-bold text-blue-600 italic">₹{parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                         <span className="text-[20px] font-bold text-blue-600 italic">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             </div>
@@ -559,10 +617,27 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 
 const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoices, filterType }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [idToDelete, setIdToDelete] = useState(null);
+    const { addNotification } = useNotificationStore();
+
+    const handleDelete = async () => {
+        if (!idToDelete) return;
+        try {
+            await salesAPI.deleteInvoice(idToDelete);
+            addNotification('Invoice deleted successfully', 'success');
+            fetchInvoices();
+        } catch (err) {
+            addNotification('Failed to delete invoice', 'error');
+        } finally {
+            setIsDeleteModalOpen(false);
+            setIdToDelete(null);
+        }
+    };
     
     const filtered = invoices.filter(inv => {
         const matchesSearch = inv.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            inv.CustomerLedger?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+                            (inv.CustomerLedger?.displayName || inv.CustomerLedger?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
         
         if (filterType === 'unpaid') {
             return matchesSearch && parseFloat(inv.balance || inv.totalAmount) > 0;
@@ -647,16 +722,19 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                             <tr>
                                 <th className="px-6 py-4">Date</th>
                                 <th className="px-6 py-4">Invoice #</th>
-                                <th className="px-6 py-4">Customer</th>
+                                <th className="px-6 py-4">Order Number</th>
+                                <th className="px-6 py-4">Customer Name</th>
                                 <th className="px-6 py-4 text-center">Status</th>
+                                <th className="px-6 py-4 text-center">Due Date</th>
                                 <th className="px-6 py-4 text-right">Amount</th>
+                                <th className="px-6 py-4 text-right">Balance Due</th>
                                 <th className="px-6 py-4 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="py-20 text-center">
+                                    <td colSpan="11" className="py-20 text-center">
                                        <div className="flex flex-col items-center justify-center gap-3">
                                           <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
                                              <FileText size={24} />
@@ -674,25 +752,40 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                                         className="hover:bg-slate-50 cursor-pointer group transition-colors"
                                     >
                                         <td className="px-6 py-4 text-[13px] text-slate-500 font-medium whitespace-nowrap">
-                                            {new Date(inv.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
+                                            {new Date(inv.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-[14px] font-medium text-blue-600 group-hover:underline">
                                                 {inv.invoiceNumber}
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4 text-[13px] text-slate-500 font-medium whitespace-nowrap">
+                                            {inv.orderNumber || '-'}
+                                        </td>
                                         <td className="px-6 py-4">
-                                            <div className="text-[14px] font-medium text-slate-800">{inv.CustomerLedger?.name}</div>
+                                            <div className="text-[14px] font-medium text-slate-800">{inv.CustomerLedger?.displayName || inv.CustomerLedger?.name}</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-bold tracking-widest border
-                                                ${inv.status === 'Sent' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
-                                                {inv.status || 'Draft'}
-                                            </span>
+                                            {(() => {
+                                                const badge = getStatusBadge(inv);
+                                                return (
+                                                    <span className={`uppercase text-[11px] font-bold tracking-tight ${badge.class}`}>
+                                                        {badge.label}
+                                                    </span>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td className="px-6 py-4 text-[13px] text-slate-500 font-medium text-center whitespace-nowrap">
+                                            {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                                         </td>
                                         <td className="px-6 py-4 text-right whitespace-nowrap">
                                             <span className="text-[14px] text-slate-900 font-medium">
-                                                ₹{parseFloat(inv.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                {getCurrencyDisplay(inv.CustomerLedger?.currency)} {parseFloat(inv.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                                            <span className={`text-[14px] font-bold text-slate-900`}>
+                                                {getCurrencyDisplay(inv.CustomerLedger?.currency)} {parseFloat(inv.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
@@ -704,6 +797,11 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                                                     <Edit2 size={13} /> Edit
                                                 </button>
                                                 <button 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        setIdToDelete(inv.id);
+                                                        setIsDeleteModalOpen(true);
+                                                    }}
                                                     className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
                                                     title="Delete Invoice"
                                                 >
@@ -718,6 +816,14 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                     </table>
                 )}
             </div>
+            <ConfirmModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleDelete}
+                title="Delete Invoice"
+                message="Are you sure you want to permanently delete this invoice? This action cannot be undone."
+                type="danger"
+            />
         </div>
     );
 };
@@ -725,6 +831,31 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN SALES INVOICES VIEW (DYNAMIC TRANSITION)
 // ─────────────────────────────────────────────────────────────────────────────
+
+const getStatusBadge = (inv) => {
+    if (inv.status === 'Sent' || inv.status === 'Partially Paid') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const due = new Date(inv.dueDate || inv.date);
+        due.setHours(0, 0, 0, 0);
+        
+        if (today > due) {
+            const diffTime = today - due;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return { 
+                label: `OVERDUE BY ${diffDays} DAY${diffDays > 1 ? 'S' : ''}`, 
+                class: 'text-rose-500 font-bold' 
+            };
+        }
+        return { label: inv.status.toUpperCase(), class: 'text-emerald-600 font-bold' };
+    }
+
+    if (inv.status === 'Paid') {
+        return { label: 'PAID', class: 'text-blue-600 font-bold' };
+    }
+
+    return { label: (inv.status || 'Draft').toUpperCase(), class: 'text-slate-400 font-bold' };
+};
 
 const SalesInvoicesView = ({ companyId }) => {
     const navigate = useNavigate();

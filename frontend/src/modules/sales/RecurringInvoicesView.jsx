@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
+import { getCurrencyDisplay } from '../../utils/currencies';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ITEM SEARCH SELECTOR (FOR TABLE CELLS)
@@ -83,7 +84,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder }) => {
                                                 <Package size={14} className="text-blue-500 opacity-50" />
                                                 {it.name}
                                             </div>
-                                            <div className="text-[13px] font-bold text-slate-900">₹{parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
+                                            <div className="text-[13px] font-bold text-slate-900">{getCurrencyDisplay(it.currency)} {parseFloat(it.sellingPrice || 0).toLocaleString()}</div>
                                         </div>
                                         <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis italic">
                                             {it.salesDescription || 'No description provided'}
@@ -281,7 +282,9 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                 const allLedgers = ledRes.data || [];
                 const debtors = allLedgers.filter(l => {
                     const g = l.Group?.name || '';
-                    return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer');
+                    const gDirect = l.groupName || '';
+                    return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer')
+                        || gDirect.toLowerCase().includes('debtor') || gDirect.toLowerCase().includes('customer');
                 });
                 setCustomers(debtors);
                 setItems(itRes.data || []);
@@ -609,7 +612,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                                 <input type="number" value={line.rate} onChange={e => handleUpdateLine(line.id, 'rate', e.target.value)} className="w-full text-right bg-transparent border-none outline-none text-[13px] font-bold text-slate-600" />
                                             </td>
                                             <td className="px-6 py-5 text-right align-top font-mono">
-                                                <span className="text-[13px] font-bold text-slate-900">{(parseFloat(line.amount) || 0).toFixed(2)}</span>
+                                                <span className="text-[13px] font-bold text-slate-900">{getCurrencyDisplay(customers.find(c => c.name === formData.customerName)?.currency)} {(parseFloat(line.amount) || 0).toFixed(2)}</span>
                                             </td>
                                             <td className="px-4 py-5 text-center align-top">
                                                 <button onClick={() => setLineItems(prev => prev.length > 1 ? prev.filter(p => p.id !== line.id) : prev)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
@@ -641,7 +644,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                             <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Adjustment</span><input type="number" value={formData.adjustment} onChange={e => setFormData({...formData, adjustment: e.target.value})} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
                             <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
                                 <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
-                                <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter">₹{totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter">{getCurrencyDisplay(customers.find(c => c.name === formData.customerName)?.currency)} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>
@@ -719,7 +722,7 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
     const safeDate = template.nextGenerationDate ? new Date(template.nextGenerationDate).toLocaleDateString('en-GB') : '—';
     const startDate = template.startDate ? new Date(template.startDate).toLocaleDateString('en-GB') : '—';
     const endDate = template.endDate ? new Date(template.endDate).toLocaleDateString('en-GB') : 'Never Expires';
-    const safeTotal = parseFloat(template.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const safeTotal = parseFloat(template.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 });
     
     // Status Badge Color Logic
     const status = template.status || 'Active';
@@ -835,7 +838,7 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
                             <div className="grid grid-cols-3 border-b border-slate-200 pb-6 mb-6">
                                 <div className="text-center border-r border-slate-100 px-2">
                                     <p className="text-[12px] text-slate-500 mb-1 font-medium">Invoice Amount</p>
-                                    <p className="text-[14px] font-medium text-slate-900">₹{safeTotal}</p>
+                                    <p className="text-[14px] font-medium text-slate-900">{getCurrencyDisplay(template.Customer?.currency)} {safeTotal}</p>
                                 </div>
                                 <div className="text-center border-r border-slate-100 px-2">
                                     <p className="text-[12px] text-slate-500 mb-1 font-medium">Next Invoice Date</p>
@@ -853,7 +856,7 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
                                     <button className="flex items-center gap-1 text-[15px] font-medium text-slate-800 hover:text-blue-600 transition-colors">
                                         All Child Invoices <ChevronDown size={16} className="text-blue-600" />
                                     </button>
-                                    <span className="text-[13px] text-slate-500 font-medium">Unpaid Invoices : <span className="text-slate-900 font-semibold">₹0.00</span></span>
+                                    <span className="text-[13px] text-slate-500 font-medium">Unpaid Invoices : <span className="text-slate-900 font-semibold">{getCurrencyDisplay(template.Customer?.currency)} 0.00</span></span>
                                 </div>
 
                                 <div className="space-y-3 mt-4">
@@ -867,7 +870,7 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
                                             <span className="text-[11px] text-slate-500 flex items-center gap-1 italic"><Clock size={10}/> Manually Added</span>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
-                                            <span className="text-[13px] font-medium text-slate-900">₹{safeTotal}</span>
+                                            <span className="text-[13px] font-medium text-slate-900">{getCurrencyDisplay(template.Customer?.currency)} {safeTotal}</span>
                                             <span className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase">DRAFT</span>
                                             <button className="px-3 py-1 bg-blue-500 text-white text-[12px] font-medium rounded hover:bg-blue-600 transition-colors mt-1 shadow-sm">
                                                 Record Payment
@@ -1037,7 +1040,7 @@ const RecurringInvoicesTableView = ({ templates, loading, onSelect, navigate, fe
                                         </td>
                                         <td className="px-6 py-5 text-right whitespace-nowrap">
                                             <span className="text-[15px] text-slate-900 font-black tracking-tight">
-                                                ₹{parseFloat(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                {getCurrencyDisplay(t.Customer?.currency)} {parseFloat(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </span>
                                         </td>
                                         <td className="px-6 py-5">
@@ -1131,7 +1134,7 @@ const RecurringInvoicesList = ({ templates, loading, selectedId, onSelect, navig
                                             {t.customerName}
                                         </div>
                                         <div className={`text-[15px] font-black italic tracking-tighter ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                                            ₹{parseFloat(t.totalAmount || 0).toLocaleString()}
+                                            {getCurrencyDisplay(t.Customer?.currency)} {parseFloat(t.totalAmount || 0).toLocaleString()}
                                         </div>
                                     </div>
                                     <div className="flex justify-between items-center relative z-10">
