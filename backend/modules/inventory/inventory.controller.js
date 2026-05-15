@@ -56,7 +56,16 @@ exports.createItem = async (req, res) => {
 exports.getItems = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const items = await Item.findAll({ where: { CompanyId: companyId } });
+    const { type } = req.query;
+    
+    const where = { CompanyId: companyId };
+    if (type === 'sales') {
+      where.salesInformation = true;
+    } else if (type === 'purchase') {
+      where.purchaseInformation = true;
+    }
+    
+    const items = await Item.findAll({ where });
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -193,8 +202,16 @@ exports.deleteItem = async (req, res) => {
 
   } catch (err) {
     console.error('[INVENTORY DELETE ERROR]:', err);
+    
+    // Check for foreign key constraint violation (Postgres error 23503)
+    if (err.name === 'SequelizeForeignKeyConstraintError' || err.code === '23503' || (err.parent && err.parent.code === '23503')) {
+      return res.status(400).json({ 
+        error: 'Cannot delete item because it is used in transactions, invoices, or other documents. You can disable it instead.' 
+      });
+    }
+
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Failed to delete item' });
+      res.status(500).json({ error: 'Failed to delete item: ' + err.message });
     }
   }
 };

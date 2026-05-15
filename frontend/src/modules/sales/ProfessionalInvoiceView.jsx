@@ -7,8 +7,10 @@ import {
   Scan, History, RefreshCcw
 } from 'lucide-react';
 import { useRef } from 'react';
-import { ledgerAPI, inventoryAPI, salesAPI, companyAPI, projectAPI } from '../../services/api';
+import { ledgerAPI, inventoryAPI, salesAPI, companyAPI, projectAPI, mailAPI } from '../../services/api';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import ConfirmModal from '../../components/ConfirmModal';
+import EmailSendModal from '../../components/EmailSendModal';
 
 // ─────────────────────────────────────────────────
 // ACCOUNT OPTIONS DEFINITION
@@ -32,7 +34,7 @@ const ACCOUNT_OPTIONS = {
   "Income": [
     "Discount", "General Income", "Interest Income", "Late Fee Income", "Other Charges", "Sales", "Shipping Charge"
   ],
-  "Expense": [
+  "Expense": [    
     "Advertising And Marketing", "Automobile Expense", "Bad Debt", "Bank Fees and Charges", "Consultant Expense", "Contract Assets", "Credit Card Charges", "Depreciation And Amortisation", "Depreciation Expense", "IT and Internet Expenses", "Janitorial Expense", "Lodging", "Meals and Entertainment", "Merchandise", "Office Supplies", "Other Expenses", "Postage", "Printing and Stationery", "Purchase Discounts", "Raw Materials And Consumables", "Rent Expense", "Repairs and Maintenance", "Salaries and Employee Wages", "Telephone Expense", "Transportation Expense", "Travel Expense", "Uncategorized"
   ],
   "Cost Of Goods Sold": [
@@ -43,23 +45,35 @@ const ACCOUNT_OPTIONS = {
 // ─────────────────────────────────────────────────
 // ITEM SEARCH SELECTOR (FOR TABLE CELLS)
 // ─────────────────────────────────────────────────
-const ItemSearchSelector = ({ value, onChange, items: propItems, placeholder }) => {
+// ─────────────────────────────────────────────────
+const ItemSearchSelector = ({ value, onChange, items: propItems, placeholder, onNewItem, currencySymbol = '₹', usageType = 'sales' }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
     const [localItems, setLocalItems] = useState([]);
     const [fetching, setFetching] = useState(false);
     const companyId = localStorage.getItem('companyId');
     const dropdownRef = useRef(null);
 
-    // Use prop items if available, otherwise use local items
-    const items = (propItems && propItems.length > 0) ? propItems : localItems;
+    // Combine and Sort items: prioritize prop items, then local items
+    const allItems = useMemo(() => {
+        const source = (propItems && propItems.length > 0) ? propItems : localItems;
+        return [...source].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }, [propItems, localItems]);
+    
+    const filteredItems = allItems.filter(it => {
+        const matchesSearch = (it.name || '').toLowerCase().includes(search.toLowerCase()) || 
+                             (it.salesDescription || '').toLowerCase().includes(search.toLowerCase());
+        const isSalesItem = it.salesInformation !== false && it.salesInformation !== 0 && it.salesInformation !== 'false'; // Default to true if missing
+        return matchesSearch && isSalesItem;
+    });
 
     const fetchItems = async () => {
         if (!companyId) return;
-        if (propItems && propItems.length > 0) return; // Don't fetch if parent provided items
         setFetching(true);
         try {
-            const res = await inventoryAPI.getByCompany(companyId);
-            setLocalItems(Array.isArray(res.data) ? res.data : []);
+            const res = await inventoryAPI.getByCompany(companyId, usageType);
+            const data = Array.isArray(res.data) ? res.data : [];
+            setLocalItems(data);
         } catch (err) {
             console.error("Fetch error:", err);
         } finally {
@@ -68,8 +82,10 @@ const ItemSearchSelector = ({ value, onChange, items: propItems, placeholder }) 
     };
 
     useEffect(() => {
-        if (isOpen) fetchItems();
-    }, [isOpen]);
+        if (isOpen && (!propItems || propItems.length === 0)) {
+            fetchItems();
+        }
+    }, [isOpen, propItems]);
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -83,47 +99,91 @@ const ItemSearchSelector = ({ value, onChange, items: propItems, placeholder }) 
         <div className="relative w-full" ref={dropdownRef}>
             <div 
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full h-11 px-4 bg-white border border-blue-400 rounded-lg text-[13px] font-medium text-slate-700 flex items-center justify-between cursor-pointer shadow-sm"
+                className="w-full h-11 px-4 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-700 flex items-center justify-between cursor-pointer shadow-sm hover:border-blue-400 transition-all group"
             >
-                <span className={!value ? 'text-slate-300 italic' : 'text-slate-900 font-bold'}>
-                    {value || placeholder}
-                </span>
-                <ChevronDown size={16} className="text-slate-400" />
+                <div className="flex items-center gap-2 overflow-hidden">
+                    <Package size={14} className="text-slate-400 shrink-0" />
+                    <span className={`truncate ${!value ? 'text-slate-400 italic' : 'text-slate-900 font-bold'}`}>
+                        {value || placeholder}
+                    </span>
+                </div>
+                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-lg z-[500] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-1">
-                    <div className="max-h-[250px] overflow-y-auto py-1">
-                        {items.length > 0 ? (
-                            items.map((it, idx) => (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-2xl rounded-xl z-[500] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-1 min-w-[400px]">
+                    <div className="p-2 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
+                        <div className="relative flex-1">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input 
+                                autoFocus
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search items..."
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold outline-none focus:border-blue-500 transition-all"
+                            />
+                        </div>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); fetchItems(); }}
+                            title="Sync Items"
+                            className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 text-slate-400 hover:text-blue-600 transition-all"
+                        >
+                            <RefreshCcw size={14} className={fetching ? 'animate-spin' : ''} />
+                        </button>
+                    </div>
+                    
+                    <div className="max-h-[320px] overflow-y-auto py-1 no-scrollbar">
+                        {filteredItems.length > 0 ? (
+                            filteredItems.map((it, idx) => (
                                 <div 
                                     key={it.id || idx} 
                                     onClick={() => {
                                         onChange(it);
                                         setIsOpen(false);
+                                        setSearch('');
                                     }}
-                                    className="px-4 py-3 hover:bg-[#1e61f0] hover:text-white cursor-pointer transition-colors group border-b border-slate-50 last:border-0"
+                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group border-b border-slate-50 last:border-0"
                                 >
-                                <div className="flex items-center justify-between">
-                                    <div className="text-[14px] font-bold mb-0.5">{it.name || 'Unnamed Item'}</div>
-                                    <div className="text-[13px] font-bold text-[#1e61f0] group-hover:text-white">
-                                        {parseFloat(it.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    <div className="flex items-center justify-between mb-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${it.type === 'Service' ? 'bg-purple-400' : 'bg-blue-400'}`} title={it.type} />
+                                            <div className="text-[14px] font-bold text-slate-800 group-hover:text-blue-700 transition-colors">{it.name || 'Unnamed Item'}</div>
+                                        </div>
+                                        <div className="text-[13px] font-black text-slate-900 tabular-nums">
+                                            {currencySymbol} {parseFloat(it.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </div>
                                     </div>
-                                </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[11px] text-slate-400 font-medium truncate italic max-w-[250px]">
+                                            {it.salesDescription || 'No description'}
+                                        </div>
+                                        {it.unit && (
+                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter bg-slate-100 px-1.5 rounded">
+                                                {it.unit}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         ) : (
-                            <div className="px-4 py-8 text-center text-slate-400 text-[13px] italic">
-                                {fetching ? 'Fetching inventory...' : 'No items found in items module.'}
+                            <div className="px-4 py-12 text-center flex flex-col items-center gap-2">
+                                <Package size={24} className="text-slate-200" />
+                                <span className="text-slate-400 text-[12px] font-bold uppercase tracking-widest italic">
+                                    {fetching ? 'Syncing items...' : 'No items found'}
+                                </span>
                             </div>
                         )}
                     </div>
-                    <div className="border-t border-slate-100 p-1">
+                    
+                    <div className="border-t border-slate-100 p-2 bg-slate-50">
                         <button 
-                            className="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-bold text-[#1e61f0] hover:bg-blue-50 rounded transition-colors"
-                            onClick={(e) => { e.stopPropagation(); /* Logic to open item entry could go here */ }}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[12px] font-bold text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 hover:border-blue-600 rounded-lg transition-all"
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (onNewItem) onNewItem();
+                            }}
                         >
-                            <Plus size={16} /> Add New Item
+                            <Plus size={16} strokeWidth={3} /> ADD NEW ITEM
                         </button>
                     </div>
                 </div>
@@ -260,7 +320,6 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
         </div>
     );
 };
-import ConfirmModal from '../../components/ConfirmModal';
 
 export default function ProfessionalInvoiceView() {
   const { id } = useParams();
@@ -295,18 +354,44 @@ export default function ProfessionalInvoiceView() {
   const [subject,     setSubject]     = useState('');
   const [currencyCode, setCurrencyCode] = useState('INR');
   const [tdsType, setTdsType] = useState('TDS');
-  const [exchangeRate, setExchangeRate] = useState(25.92);
+  const [exchangeRate, setExchangeRate] = useState(1.00);
   const [showExchangeRatePopover, setShowExchangeRatePopover] = useState(false);
-  const [tempExchangeRate, setTempExchangeRate] = useState(25.92);
+  const [tempExchangeRate, setTempExchangeRate] = useState(1.00);
   const [recalculatePrices, setRecalculatePrices] = useState(true);
   const exchangeRateRef = React.useRef(null);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const projectDropdownRef = React.useRef(null);
   const [projectSearch, setProjectSearch] = useState('');
 
+  // Handle Currency Change & Exchange Rate (Real-time API) - Now explicitly called instead of useEffect
+  const fetchLiveExchangeRate = async (code) => {
+    const cleanCode = (code || 'INR').split(/[ -]/)[0].trim();
+    if (cleanCode === 'INR') {
+      setExchangeRate(1.00);
+      setTempExchangeRate(1.00);
+      return;
+    }
+    
+    try {
+      const res = await fetch(`https://open.er-api.com/v6/latest/INR`);
+      const data = await res.json();
+      
+      if (data && data.rates) {
+        const rateToInr = data.rates[cleanCode];
+        if (rateToInr) {
+           const actualRate = parseFloat((1 / rateToInr).toFixed(2));
+           setExchangeRate(actualRate);
+           setTempExchangeRate(actualRate);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch real-time exchange rate', err);
+    }
+  };
+
   // Line Items
   const [lineItems, setLineItems] = useState([
-    { id: Date.now(), itemId: '', description: '', quantity: 1, rate: 0, discount: 0, discountType: '%', amount: 0 }
+    { id: Date.now(), itemId: '', description: '', quantity: 0, rate: 0, discount: 0, discountType: '%', amount: 0 }
   ]);
 
   // Totals & Adjustments
@@ -324,6 +409,10 @@ export default function ProfessionalInvoiceView() {
   const customerDropdownRef = React.useRef(null);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [savedInvoiceData, setSavedInvoiceData] = useState(null);
+  
   const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
 
   // ─── Load Data ──────────────────────────────────────────────────
@@ -357,10 +446,9 @@ export default function ProfessionalInvoiceView() {
 
         // Fetch Inventory Items (Crucial for the dropdown)
         try {
-          const iRes = await inventoryAPI.getByCompany(companyId);
+          const iRes = await inventoryAPI.getByCompany(companyId, 'sales');
           const fetchedItems = Array.isArray(iRes.data) ? iRes.data : [];
-          // Filter to only show items intended for sales
-          setItems(fetchedItems.filter(it => it.salesInformation !== false));
+          setItems(fetchedItems);
         } catch (e) { console.error("Inventory load error:", e); }
 
         // Fetch Projects
@@ -368,6 +456,16 @@ export default function ProfessionalInvoiceView() {
           const pRes = await projectAPI.getByCompany(companyId);
           setProjects(Array.isArray(pRes.data) ? pRes.data : []);
         } catch (e) { console.error("Project load error:", e); }
+
+        // Fetch Next Invoice Number (if creating new)
+        if (!id) {
+          try {
+            const nextRes = await salesAPI.getNextNumber(companyId, 'invoice');
+            if (nextRes.data && nextRes.data.nextNumber) {
+              setInvoiceNo(nextRes.data.nextNumber);
+            }
+          } catch (e) { console.error("Next invoice number load error:", e); }
+        }
 
         // HANDLE CONVERSION FROM CHALLAN, QUOTE, OR ORDER
         if (!id && location.state) {
@@ -385,9 +483,9 @@ export default function ProfessionalInvoiceView() {
                 id: Math.random(),
                 itemId: it.itemId,
                 description: it.description || it.itemDetails || it.detail || '',
-                quantity: parseFloat(it.quantity || 1),
+                quantity: parseFloat(it.quantity || 0),
                 rate: parseFloat(it.rate || 0),
-                amount: parseFloat(it.quantity || 1) * parseFloat(it.rate || 0)
+                amount: parseFloat(it.quantity || 0) * parseFloat(it.rate || 0)
               })));
             }
 
@@ -423,6 +521,10 @@ export default function ProfessionalInvoiceView() {
               setAdjustment(inv.adjustment || 0);
               setDiscountPercent(inv.discountPercent || 0);
               setNotes(inv.customerNotes || '');
+              if (inv.exchangeRate) {
+                 setExchangeRate(parseFloat(inv.exchangeRate));
+                 setTempExchangeRate(parseFloat(inv.exchangeRate));
+              }
               
               if (inv.items && inv.items.length > 0) {
                  setLineItems(inv.items.map(item => ({
@@ -464,7 +566,7 @@ export default function ProfessionalInvoiceView() {
   useEffect(() => {
     if (!id) {
         try {
-            const draft = localStorage.getItem('invoice_draft');
+            const draft = localStorage.getItem('invoice_draft_new');
             if (draft) {
                 const parsed = JSON.parse(draft);
                 if (parsed.customerId) setCustomerId(parsed.customerId);
@@ -481,11 +583,29 @@ export default function ProfessionalInvoiceView() {
                 if (parsed.gstPercent) setGstPercent(parsed.gstPercent);
                 if (parsed.notes) setNotes(parsed.notes);
                 if (parsed.termsText) setTermsText(parsed.termsText);
-                localStorage.removeItem('invoice_draft');
+                if (parsed.currencyCode) setCurrencyCode(parsed.currencyCode);
+                if (parsed.currencySymbol) setCurrencySymbol(parsed.currencySymbol);
+                if (parsed.exchangeRate) {
+                    setExchangeRate(parsed.exchangeRate);
+                    setTempExchangeRate(parsed.exchangeRate);
+                }
+                // Do not remove it here. It will be removed upon successful save.
             }
         } catch(e) {}
     }
   }, [id]);
+
+  // Auto-save draft
+  useEffect(() => {
+    if (!id && !loading) {
+      const draft = {
+        customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms,
+        salesperson, subject, lineItems, discountPercent, adjustment,
+        gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate
+      };
+      localStorage.setItem('invoice_draft_new', JSON.stringify(draft));
+    }
+  }, [id, loading, customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate]);
 
   // ─── Calculation Logic ──────────────────────────────────────────
   const filteredCustomers = useMemo(() => {
@@ -530,11 +650,20 @@ export default function ProfessionalInvoiceView() {
            } else {
               updated.rate = basePrice;
            }
-           updated.description = selected.description || '';
+           // Default quantity to 1 if not already set, to reflect rate in amount immediately
+           if (parseFloat(updated.quantity || 0) === 0) {
+              updated.quantity = 1;
+           }
+           updated.description = selected.salesDescription || selected.name || '';
         }
       }
-      updated.amount = parseFloat(updated.quantity || 0) * parseFloat(updated.rate || 0);
-      const disc = updated.discountType === '%' ? (updated.amount * (updated.discount / 100)) : parseFloat(updated.discount);
+      
+      const qty = parseFloat(updated.quantity || 0);
+      const rate = parseFloat(updated.rate || 0);
+      const discount = parseFloat(updated.discount || 0);
+      
+      updated.amount = qty * rate;
+      const disc = updated.discountType === '%' ? (updated.amount * (discount / 100)) : discount;
       updated.amount = updated.amount - disc;
       return updated;
     }));
@@ -552,6 +681,20 @@ export default function ProfessionalInvoiceView() {
         });
         return;
     }
+    
+    const validItems = lineItems.filter(l => l.itemId);
+    if (validItems.length === 0 || total <= 0) {
+        setModalConfig({
+            isOpen: true,
+            title: 'Invalid Invoice',
+            message: 'Please add at least one valid item with a rate greater than 0 before saving.',
+            type: 'warning',
+            showCancel: false,
+            confirmText: 'Got it'
+        });
+        return;
+    }
+
     setIsSaving(true);
     try {
       const payload = {
@@ -562,8 +705,7 @@ export default function ProfessionalInvoiceView() {
         status, // 'Draft' or 'Confirmed'
         currencyCode,
         exchangeRate,
-        tdsType,
-        items: lineItems.map(l => ({ 
+        items: lineItems.filter(l => l.itemId).map(l => ({ 
           itemId: l.itemId, 
           quantity: l.quantity, 
           rate: l.rate,
@@ -575,12 +717,45 @@ export default function ProfessionalInvoiceView() {
       
       if (id) {
          await salesAPI.updateInvoice(id, payload);
-         navigate(`/sales-invoices/${id}`);
+         if (status === 'Confirmed') {
+             const customer = customers.find(c => String(c.id) === String(customerId));
+             setSavedInvoiceData({
+                 ...payload,
+                 id: id,
+                 CompanyId: companyId,
+                 number: invoiceNo,
+                 total: total,
+                 date: invoiceDate,
+                 dueDate: dueDate,
+                 Customer: { email: customer?.email },
+                 customerName: customer?.displayName || customer?.name
+             });
+             setShowEmailModal(true);
+         } else {
+             navigate(`/sales-invoices/${id}`);
+         }
       } else {
          const res = await salesAPI.createInvoice(payload);
+         localStorage.removeItem('invoice_draft_new');
          const newId = res.data?.id;
          if (newId) {
-            navigate(`/sales-invoices/${newId}`);
+             if (status === 'Confirmed') {
+                 const customer = customers.find(c => String(c.id) === String(customerId));
+                 setSavedInvoiceData({
+                     ...payload,
+                     id: newId,
+                     CompanyId: companyId,
+                     number: invoiceNo,
+                     total: total,
+                     date: invoiceDate,
+                     dueDate: dueDate,
+                     Customer: { email: customer?.email },
+                     customerName: customer?.displayName || customer?.name
+                 });
+                 setShowEmailModal(true);
+             } else {
+                 navigate(`/sales-invoices/${newId}`);
+             }
          } else {
             navigate('/sales-invoices');
          }
@@ -688,6 +863,7 @@ export default function ProfessionalInvoiceView() {
                                     setCustomerSearch(c.displayName || c.name); 
                                     setCurrencySymbol(getCurrencyDisplay(c.currency));
                                     setCurrencyCode(c.currency || 'INR');
+                                    fetchLiveExchangeRate(c.currency); // Trigger re-fetch for new selection
                                     setShowCustomerDropdown(false); 
                                   }}
                                   className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] font-medium border-b border-slate-50 last:border-0 ${customerId === c.id ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
@@ -1044,20 +1220,21 @@ export default function ProfessionalInvoiceView() {
                             value={selectedItem?.name || ''}
                             onChange={(selected) => {
                               if (selected) {
-                                  const basePrice = parseFloat(selected.sellingPrice || 0);
-                                  let finalRate = basePrice;
-                                  
-                                  // Apply Conversion: Foreign Rate = Base Price / Exchange Rate
-                                  if (currencyCode !== 'INR' && exchangeRate > 0) {
-                                      finalRate = parseFloat((basePrice / exchangeRate).toFixed(2));
-                                  }
-                                  
                                   updateLine(line.id, 'itemId', selected.id);
-                                  updateLine(line.id, 'rate', finalRate);
                               }
                             }}
                             placeholder="Type or click to select an item."
+                            onNewItem={() => navigate('/inventory/new', { state: { returnTo: location.pathname } })}
                           />
+                          {line.description && (
+                             <textarea 
+                               value={line.description}
+                               onChange={(e) => updateLine(line.id, 'description', e.target.value)}
+                               placeholder="Add a description..."
+                               className="w-full mt-2 p-2 text-[11px] font-medium text-slate-500 bg-transparent border-none focus:bg-slate-50 rounded outline-none resize-none no-scrollbar"
+                               rows={1}
+                             />
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-4 border-r border-slate-100 align-top">
@@ -1096,7 +1273,7 @@ export default function ProfessionalInvoiceView() {
                       </td>
                       <td className="px-4 py-4 text-right align-top relative">
                         <span className="text-[14px] font-bold text-slate-900">
-                          {parseFloat(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          {getCurrencyDisplay(currencyCode)} {parseFloat(line.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </span>
 
                         {/* Floating Actions OUTSIDE the table */}
@@ -1297,7 +1474,7 @@ export default function ProfessionalInvoiceView() {
           salespersons={salespersons}
           onSave={setSalespersons}
           onSelect={(name) => { setSalesperson(name); }}
-        />
+           />
 
         <ConfirmModal
           isOpen={modalConfig.isOpen}
@@ -1308,6 +1485,21 @@ export default function ProfessionalInvoiceView() {
           type={modalConfig.type}
           showCancel={modalConfig.showCancel}
           confirmText={modalConfig.confirmText || 'OK'}
+        />
+
+        <EmailSendModal
+          isOpen={showEmailModal}
+          onClose={() => {
+              setShowEmailModal(false);
+              if (savedInvoiceData?.id) navigate(`/sales-invoices/${savedInvoiceData.id}`);
+          }}
+          documentData={savedInvoiceData || {}}
+          documentType="Invoice"
+          onSend={() => {
+              setShowEmailModal(false);
+              if (savedInvoiceData?.id) navigate(`/sales-invoices/${savedInvoiceData.id}`);
+          }}
+          apiFunc={(docId, payload) => mailAPI.send(payload)}
         />
       </div>
     );

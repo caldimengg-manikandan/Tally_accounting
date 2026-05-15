@@ -126,7 +126,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   useEffect(() => {
     if (companyId) {
       purchaseAPI.getVendors(companyId).then(res => setVendors(res.data || []));
-      inventoryAPI.getByCompany(companyId).then(res => {
+      inventoryAPI.getByCompany(companyId, 'purchase').then(res => {
         console.log('Inventory Items Loaded:', res.data?.length);
         setInventoryItems(res.data || []);
       });
@@ -691,7 +691,11 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                             {openItemDropdown === item.id && (
                                <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
                                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
-                                     {inventoryItems.filter(inv => inv.name.toLowerCase().includes((item.itemName || '').toLowerCase())).map(invItem => (
+                                     {inventoryItems.filter(inv => {
+                                        const matchesSearch = inv.name.toLowerCase().includes((item.itemName || '').toLowerCase());
+                                        const isPurchaseItem = inv.purchaseInformation !== false && inv.purchaseInformation !== 0 && inv.purchaseInformation !== 'false'; // Default to true if missing
+                                        return matchesSearch && isPurchaseItem;
+                                     }).map(invItem => (
                                         <div 
                                           key={invItem.id || invItem._id || invItem.name}
                                           onClick={() => handleItemSelect(item.id, invItem)}

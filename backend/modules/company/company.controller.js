@@ -64,7 +64,11 @@ exports.getCompanies = async (req, res) => {
       if (req.user.role === 'SUPER_ADMIN') {
         companies = await Company.findAll({ order: [['createdAt', 'ASC']] });
       } else {
-        companies = await req.user.getCompanies({
+        const userInstance = await User.findByPk(req.user.id);
+        if (!userInstance) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+        companies = await userInstance.getCompanies({
           order: [['createdAt', 'ASC']]
         });
       }

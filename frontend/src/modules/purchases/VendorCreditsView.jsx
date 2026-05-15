@@ -88,7 +88,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
         setLoading(true);
         Promise.all([
             ledgerAPI.getByCompany(companyId),
-            inventoryAPI.getByCompany(companyId),
+            inventoryAPI.getByCompany(companyId, 'purchase'),
             projectAPI.getByCompany(companyId)
         ]).then(([ledgersRes, itemsRes, projectsRes]) => {
             const allLedgers = ledgersRes.data || [];
@@ -333,7 +333,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                                     {openItemDropdown === line.id && (
                                                        <div className="absolute top-full left-0 w-[300px] bg-white border border-slate-200 shadow-2xl z-50 rounded-lg overflow-hidden animate-in zoom-in-95 duration-200">
                                                           <div className="max-h-[200px] overflow-y-auto py-1">
-                                                             {inventoryItems.map(invItem => (
+                                                             {inventoryItems.filter(invItem => invItem.purchaseInformation !== false && invItem.purchaseInformation !== 0 && invItem.purchaseInformation !== 'false').map(invItem => (
                                                                 <div key={invItem.id} onClick={() => handleItemSelect(line.id, invItem)} className="px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer flex flex-col">
                                                                    <span className="font-bold">{invItem.name}</span>
                                                                    <span className="text-[10px] opacity-80">Cost: ₹{invItem.costPrice}</span>

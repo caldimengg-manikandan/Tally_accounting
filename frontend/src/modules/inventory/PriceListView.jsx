@@ -139,7 +139,7 @@ const PriceListView = () => {
                         )}
                       </td>
                       <td className="px-6 py-3.5 text-[13px] text-slate-700 font-medium">
-                        {plist.priceListType === 'Individual Items' && plist.currency ? plist.currency.split('-')[0].trim() : '-'}
+                        {plist.priceListType === 'Individual Items' && plist.currency ? plist.currency.split(/[ -]/)[0].trim() : '-'}
                       </td>
                       <td className="px-6 py-3.5 text-[13px] text-slate-700 font-medium">
                         {plist.priceListType === 'All Items' ? `${plist.percentage}% ${plist.markupType}` : '-'}

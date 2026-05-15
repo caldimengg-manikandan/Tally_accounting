@@ -440,3 +440,66 @@ exports.applyCredit = async (req, res) => {
   }
 };
 
+
+exports.getNextNumber = async (req, res) => {
+  try {
+    const { companyId, type } = req.params;
+    const models = require('../../models');
+    let model;
+    let prefix;
+    let field;
+
+    switch (type) {
+      case 'invoice':
+        model = models.SalesInvoice;
+        prefix = 'INV-';
+        field = 'invoiceNumber';
+        break;
+      case 'order':
+        model = models.SalesOrder;
+        prefix = 'SO-';
+        field = 'orderNumber';
+        break;
+      case 'quote':
+        model = models.Quote;
+        prefix = 'QT-';
+        field = 'quoteNumber';
+        break;
+      case 'credit-note':
+        model = models.CreditNote;
+        prefix = 'CN-';
+        field = 'creditNoteNumber';
+        break;
+      case 'challan':
+        model = models.DeliveryChallan;
+        prefix = 'DC-';
+        field = 'challanNumber';
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid document type' });
+    }
+
+    const lastDoc = await model.findOne({
+      where: { CompanyId: companyId },
+      order: [['createdAt', 'DESC']]
+    });
+
+    if (!lastDoc || !lastDoc[field]) {
+      return res.json({ nextNumber: `${prefix}000001` });
+    }
+
+    const lastNumber = lastDoc[field];
+    const match = lastNumber.match(/(\d+)/);
+    if (match) {
+      const numStr = match[0];
+      const num = parseInt(numStr);
+      const nextNum = (num + 1).toString().padStart(numStr.length, '0');
+      const nextNumber = lastNumber.replace(numStr, nextNum);
+      return res.json({ nextNumber });
+    }
+
+    res.json({ nextNumber: lastNumber + '-001' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

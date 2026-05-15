@@ -17,7 +17,7 @@ import {
 import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import ComposeMailModal from '../../components/ComposeMailModal';
-import { getCurrencyDisplay } from '../../utils/currencies';
+import { getCurrencyDisplay, CURRENCIES } from '../../utils/currencies';
 
 const CustomerDetailView = ({ companyId }) => {
   const { id } = useParams();
@@ -60,6 +60,7 @@ const CustomerDetailView = ({ companyId }) => {
   const [addressType, setAddressType] = useState('billing'); // 'billing' or 'shipping'
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSideListCollapsed, setIsSideListCollapsed] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState(1);
   const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
   const [addressForm, setAddressForm] = useState({
     attention: '',
@@ -125,6 +126,15 @@ const CustomerDetailView = ({ companyId }) => {
     if (id) setSelectedId(id);
   }, [id]);
 
+  const customer = useMemo(() => {
+    const found = customers.find(c => String(c.id) === String(selectedId));
+    if (found) {
+      setPaymentTerms(found.paymentTerms || 'Due on Receipt');
+      setOpeningBalance(String(found.openingBalance || 0));
+    }
+    return found;
+  }, [customers, selectedId]);
+
   // 2. Data Fetching per Tab
   useEffect(() => {
     if (!selectedId || !activeCompanyId) return;
@@ -163,6 +173,29 @@ const CustomerDetailView = ({ companyId }) => {
     fetchTabData();
   }, [activeTab, selectedId, activeCompanyId]);
 
+  // 2.5 Fetch Live Exchange Rate for Receivables
+  useEffect(() => {
+    if (!customer || !customer.currency || customer.currency.startsWith('INR')) {
+      setExchangeRate(1);
+      return;
+    }
+    
+    const fetchRate = async () => {
+      try {
+        const code = customer.currency.split(/[ -]/)[0].trim();
+        const res = await fetch(`https://open.er-api.com/v6/latest/INR`);
+        const data = await res.json();
+        if (data && data.rates && data.rates[code]) {
+          // 1 ForeignCurrency = (1/rateToInr) INR
+          setExchangeRate(1 / data.rates[code]);
+        }
+      } catch (e) {
+        console.error("Fetch rate failed in DetailView", e);
+      }
+    };
+    fetchRate();
+  }, [customer]);
+
   // 3. ACTION HANDLERS
   const handleEditRow = (type, row) => {
     let path = '';
@@ -195,15 +228,6 @@ const CustomerDetailView = ({ companyId }) => {
   };
 
   // ─── HELPERS ──────────────────────────────────────────────────────────────
-
-  const customer = useMemo(() => {
-    const found = customers.find(c => String(c.id) === String(selectedId));
-    if (found) {
-      setPaymentTerms(found.paymentTerms || 'Due on Receipt');
-      setOpeningBalance(String(found.openingBalance || 0));
-    }
-    return found;
-  }, [customers, selectedId]);
 
   const handleUpdateField = async (field, value) => {
     try {
@@ -993,8 +1017,41 @@ const CustomerDetailView = ({ companyId }) => {
                         <h4 className="text-[20px] font-bold text-slate-900 tracking-tight flex items-center gap-3">Receivables <div className="h-0.5 flex-1 bg-slate-50"></div></h4>
                         <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-2xl shadow-slate-100 bg-white">
                            <table className="w-full text-left">
-                              <thead><tr className="bg-slate-50/50 border-b border-slate-100 font-bold text-[11px] text-slate-400 uppercase tracking-[0.2em]"><th className="px-8 py-5">CURRENCY</th><th className="px-8 py-5 text-right">OUTSTANDING</th><th className="px-8 py-5 text-right">CREDITS</th></tr></thead>
-                              <tbody><tr><td className="px-8 py-8 font-bold text-slate-700">{customer.currency || 'INR'}</td><td className="px-8 py-8 text-right font-bold text-[24px] text-slate-900">{getCurrencyDisplay(customer.currency)} {parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td><td className="px-8 py-8 text-right text-slate-300 font-mono font-bold">{getCurrencyDisplay(customer.currency)} 0.00</td></tr></tbody>
+                              <thead>
+                                <tr className="bg-slate-50/50 border-b border-slate-100 font-bold text-[11px] text-slate-400 uppercase tracking-[0.2em]">
+                                  <th className="px-8 py-5">CURRENCY</th>
+                                  <th className="px-8 py-5 text-right">OUTSTANDING RECEIVABLES</th>
+                                  <th className="px-8 py-5 text-right">UNUSED CREDITS</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                                  <td className="px-8 py-6 font-bold text-slate-700">
+                                    {(() => {
+                                      const code = (customer.currency || 'INR').split(/[ -]/)[0].trim();
+                                      const found = CURRENCIES.find(c => c.code === code);
+                                      return found ? found.display : (customer.currency || 'INR');
+                                    })()}
+                                  </td>
+                                  <td className="px-8 py-6 text-right font-bold text-[18px] text-slate-900 tabular-nums">
+                                    {getCurrencyDisplay(customer.currency)} {parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                  </td>
+                                  <td className="px-8 py-6 text-right text-slate-400 font-bold tabular-nums">
+                                    {getCurrencyDisplay(customer.currency)} 0.00
+                                  </td>
+                                </tr>
+                                {customer.currency && !customer.currency.startsWith('INR') && (
+                                  <tr className="bg-blue-50/30 hover:bg-blue-50/50 transition-colors border-b border-slate-50">
+                                    <td className="px-8 py-6 font-black text-slate-900 text-[13px] tracking-tight">TOTAL (INR)</td>
+                                    <td className="px-8 py-6 text-right font-black text-[18px] text-blue-600 tabular-nums">
+                                      ₹ {(parseFloat(customer.currentBalance || 0) * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-8 py-6 text-right text-blue-400 font-bold tabular-nums">
+                                      ₹ 0.00
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
                            </table>
                         </div>
                         <div className="flex items-center gap-3">

@@ -251,7 +251,9 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
         const n = it.name || '';
         const d = it.salesDescription || '';
         const s = search.toLowerCase();
-        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+        const matchesSearch = n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+        const isSalesItem = it.salesInformation !== false && it.salesInformation !== 0 && it.salesInformation !== 'false'; // Default to true if missing
+        return matchesSearch && isSalesItem;
     });
 
     return (
@@ -289,7 +291,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
                             filtered.map(it => (
                                 <div 
                                     key={it.id}
-                                    onClick={() => { onChange(it.id); setIsOpen(false); setSearch(''); }}
+                                    onClick={() => { onChange(it); setIsOpen(false); setSearch(''); }}
                                     className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-lg"
                                 >
                                     <div className="flex justify-between items-start mb-0.5">
@@ -357,7 +359,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
     });
 
     const [lineItems, setLineItems] = useState([
-        { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }
+        { id: Date.now(), itemId: '', name: '', description: '', quantity: 0, rate: 0, amount: 0 }
     ]);
 
     const [salespersons, setSalespersons] = useState(() => {
@@ -377,12 +379,19 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
             try {
                 const [cRes, iRes, projRes] = await Promise.all([
                     ledgerAPI.getByCompany(companyId),
-                    inventoryAPI.getByCompany(companyId),
+                    inventoryAPI.getByCompany(companyId, 'sales'),
                     projectAPI.getByCompany(companyId)
                 ]);
                 setCustomers(Array.isArray(cRes.data) ? cRes.data : []);
                 setItems(Array.isArray(iRes.data) ? iRes.data : []);
                 setProjects(Array.isArray(projRes.data) ? projRes.data : []);
+
+                if (!editId) {
+                    const nextNumRes = await salesAPI.getNextNumber(companyId, 'challan');
+                    if (nextNumRes.data && nextNumRes.data.nextNumber) {
+                        setFormData(prev => ({ ...prev, challanNumber: nextNumRes.data.nextNumber }));
+                    }
+                }
             } catch (err) {
                 addNotification('Failed to load form data', 'error');
             } finally {
@@ -439,8 +448,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
         }));
     };
 
-    const handleItemSelect = (rowId, itId) => {
-        const item = items.find(i => i.id === itId);
+    const handleItemSelect = (rowId, item) => {
         if (!item) return;
         setLineItems(prev => prev.map(row => {
             if (row.id === rowId) {
@@ -450,7 +458,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                     name: item.name,
                     description: item.salesDescription || '',
                     rate: item.sellingPrice || 0,
-                    amount: (item.sellingPrice || 0) * (row.quantity || 1)
+                    amount: (item.sellingPrice || 0) * (row.quantity || 0)
                 };
             }
             return row;
@@ -534,6 +542,13 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                         onChange={(cid) => {
                           const cust = customers.find(c => c.id === cid);
                           setFormData({...formData, customerLedgerId: cid, customerName: cust?.name || ''});
+                          if (!editId) {
+                            salesAPI.getNextNumber(companyId, 'challan').then(res => {
+                                if (res.data && res.data.nextNumber) {
+                                    setFormData(prev => ({ ...prev, challanNumber: res.data.nextNumber }));
+                                }
+                            });
+                          }
                         }}
                         customers={customers}
                         placeholder="Select a ledger..."
@@ -682,7 +697,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                               <td className="px-6 py-5">
                                 <ItemSearchSelector 
                                   value={line.name}
-                                  onChange={(itId) => handleItemSelect(line.id, itId)}
+                                  onChange={(selectedItem) => handleItemSelect(line.id, selectedItem)}
                                   items={items}
                                   placeholder="Select an item..."
                                   onNewItem={() => navigate('/inventory/new')}
@@ -725,7 +740,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                     </div>
                     
                     <button 
-                        onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }])}
+                        onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 0, rate: 0, amount: 0 }])}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#1e61f0] text-[12px] font-bold rounded shadow-sm hover:bg-slate-50 transition-all"
                     >
                       <Plus size={14} strokeWidth={3}/> Add Row

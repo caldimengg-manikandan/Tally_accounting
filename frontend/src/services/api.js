@@ -133,7 +133,7 @@ export const reportsAPI = {
 // ─── Inventory ───────────────────────────────────────
 export const inventoryAPI = {
   createItem: (data) => api.post('/inventory', data),
-  getByCompany: (companyId) => api.get(`/inventory/${companyId}`),
+  getByCompany: (companyId, type) => api.get(`/inventory/${companyId}`, { params: { type } }),
   updateItem: (itemId, data) => api.put(`/inventory/${itemId}`, data),
   updateStock: (itemId, data) => api.post(`/inventory/stock/${itemId}`, data),
   uploadImage: (formData) => api.post('/inventory/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
@@ -170,7 +170,8 @@ export const salesAPI = {
   deleteInvoice: (id) => api.delete(`/sales/invoices/${id}`),
   getOpenInvoices: (customerId) => api.get(`/sales/invoices/open/${customerId}`),
   recordPayment: (data) => api.post('/sales/payments/record', data),
-  applyCredit: (data) => api.post('/sales/credits/apply', data)
+  applyCredit: (data) => api.post('/sales/credits/apply', data),
+  getNextNumber: (companyId, type) => api.get(`/sales/next-number/${companyId}/${type}`)
 };
 
 // ─── Quotes ────────────────────────────────────────

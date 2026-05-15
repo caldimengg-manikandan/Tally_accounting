@@ -118,7 +118,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
     
     const fetchLatestRate = async () => {
       try {
-        const code = currency.split('-')[0].trim();
+        const code = (currency || 'INR').split(/[ -]/)[0].trim();
         // Fetching latest rates from a public API with INR as base
         const res = await fetch(`https://open.er-api.com/v6/latest/INR`);
         const data = await res.json();
@@ -134,10 +134,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         }
       } catch (err) {
         console.error('Failed to fetch real-time exchange rate', err);
-        // Fallback to approximate values if API is down
-        const fallbacks = { 'AED': '22.71', 'USD': '83.31', 'EUR': '89.41' };
-        const code = currency.split('-')[0].trim();
-        setExchangeRate(fallbacks[code] || '1.00');
+        // Relying purely on live online data as per requirement.
       }
     };
 
@@ -542,7 +539,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Opening Balance</label>
                             <div className="flex-1 flex items-center h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400">
                                 <span className="bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-400 border-r border-slate-100">
-                                    {currency ? currency.split('-')[0].trim() : 'INR'}
+                                    {currency ? currency.split(/[ -]/)[0].trim() : 'INR'}
                                 </span>
                                 <input 
                                     type="number"
@@ -558,7 +555,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                 <label className="w-48 text-[11px] font-bold text-blue-600 uppercase tracking-widest">Exchange Rate</label>
                                 <div className={`flex-1 flex items-center h-9 border rounded overflow-hidden transition-all ${isRateEditable ? 'border-blue-400 bg-white' : 'border-blue-200 bg-blue-50/30'}`}>
                                     <span className="px-3 py-2 text-[11px] font-bold text-blue-400 border-r border-blue-100 whitespace-nowrap">
-                                        1 {currency ? currency.split('-')[0].trim() : 'INR'} =
+                                        1 {currency ? currency.split(/[ -]/)[0].trim() : 'INR'} =
                                     </span>
                                     <input 
                                         type="text"

@@ -32,5 +32,9 @@ export const getCurrencyDisplay = (currency) => {
   // If the result is 'INR', return symbol
   if (code === 'INR') return '₹';
   
+  // Find symbol in CURRENCIES list
+  const found = CURRENCIES.find(c => c.code === code);
+  if (found && found.symbol) return found.symbol;
+  
   return code;
 };

@@ -24,6 +24,7 @@ router.delete('/orders/:orderId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_A
 router.delete('/invoices/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.deleteInvoice);
 // New Payment & Credit Application Routes
 router.get('/invoices/open/:customerId', salesController.getOpenInvoices);
+router.get('/next-number/:companyId/:type', salesController.getNextNumber);
 router.post('/payments/record', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.recordPayment);
 router.post('/credits/apply', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.applyCredit);
 

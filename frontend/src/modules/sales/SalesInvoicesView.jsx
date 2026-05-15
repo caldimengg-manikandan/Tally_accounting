@@ -149,7 +149,45 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
 
     const [to, setTo] = useState(invoice.CustomerLedger?.email || '');
     const [subject, setSubject] = useState(`Invoice - ${invoice.invoiceNumber} from ${companyName}`);
-    const [body, setBody] = useState(`Dear ${invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name || 'Customer'},\n\nThank you for your business. Your invoice can be viewed, printed and downloaded as PDF from the link below. You can also choose to pay it online.\n\nBest Regards,\n${senderName}\n${companyName}`);
+    const initialBody = `
+        <div style="font-family: Arial, sans-serif; color: #334155; line-height: 1.6;">
+            <div style="background-color: #3b82f6; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                <h2 style="margin: 0; font-size: 20px; font-style: italic;">Invoice #${invoice.invoiceNumber}</h2>
+            </div>
+            <div style="padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
+                <p style="font-weight: bold; font-size: 14px;">Dear ${invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name || 'Customer'},</p>
+                <p style="font-size: 14px;">Thank you for your business. Your invoice can be viewed, printed and downloaded as PDF from the link below. You can also choose to pay it online.</p>
+                
+                <div style="background-color: #fffbeb; border: 1px solid #fde68a; padding: 25px; border-radius: 12px; text-align: center; margin: 30px 0;">
+                    <p style="text-transform: uppercase; font-size: 11px; font-weight: 800; color: #92400e; margin: 0; letter-spacing: 0.1em;">Invoice Amount</p>
+                    <p style="font-size: 32px; font-weight: 900; color: #dc2626; margin: 10px 0;">${getCurrencyDisplay(invoice.CustomerLedger?.currency)} ${parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                    
+                    <table style="width: 100%; max-width: 250px; margin: 20px auto; border-collapse: collapse; text-align: left; font-size: 13px;">
+                        <tr>
+                            <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Invoice No</td>
+                            <td style="padding: 4px 0; font-weight: 900; text-align: right;">${invoice.invoiceNumber}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Invoice Date</td>
+                            <td style="padding: 4px 0; font-weight: 900; text-align: right;">${new Date(invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Due Date</td>
+                            <td style="padding: 4px 0; font-weight: 900; text-align: right;">${new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                        </tr>
+                    </table>
+                    
+                    <a href="#" style="display: inline-block; background-color: #22c55e; color: white; padding: 12px 40px; border-radius: 6px; text-decoration: none; font-weight: 900; font-size: 13px; text-transform: uppercase; margin-top: 10px;">Pay Now</a>
+                </div>
+                
+                <p style="margin-top: 30px; font-size: 14px; font-weight: bold;">Regards,</p>
+                <p style="font-size: 14px; margin: 0; font-weight: bold;">${senderName}</p>
+                <p style="font-size: 12px; color: #64748b; font-weight: bold;">${companyName}</p>
+            </div>
+        </div>
+    `;
+
+    const [body, setBody] = useState(initialBody);
     const [isSending, setIsSending] = useState(false);
 
     const handleSend = async () => {
@@ -216,13 +254,13 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                             </div>
                         </div>
                         
-                        {/* Body Editor Box */}
+                         {/* Body Editor Box */}
                         <div className="border-t border-slate-100 p-6 space-y-4 min-h-[400px]">
-                             <textarea 
-                                value={body}
-                                onChange={e => setBody(e.target.value)}
-                                className="w-full h-[300px] outline-none text-[15px] font-medium text-slate-700 leading-relaxed resize-none bg-transparent"
-                                placeholder="Write your message here..."
+                             <div 
+                                contentEditable
+                                onBlur={(e) => setBody(e.currentTarget.innerHTML)}
+                                dangerouslySetInnerHTML={{ __html: initialBody }}
+                                className="w-full h-[400px] outline-none text-[15px] font-medium text-slate-700 leading-relaxed overflow-y-auto no-scrollbar"
                              />
                              
                              <div className="pt-4 border-t border-slate-100 bg-slate-50 -mx-6 -mb-6 p-6">

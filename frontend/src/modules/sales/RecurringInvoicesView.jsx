@@ -33,7 +33,9 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder }) => {
         const n = it.name || '';
         const d = it.salesDescription || '';
         const s = search.toLowerCase();
-        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+        const matchesSearch = n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+        const isSalesItem = it.salesInformation !== false && it.salesInformation !== 0 && it.salesInformation !== 'false'; // Default to true if missing
+        return matchesSearch && isSalesItem;
     });
 
     return (
@@ -254,7 +256,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
     });
 
     const [lineItems, setLineItems] = useState([
-        { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }
+        { id: Date.now(), itemId: '', name: '', description: '', quantity: 0, rate: 0, amount: 0 }
     ]);
 
     const [errors, setErrors] = useState({});
@@ -277,7 +279,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
             try {
                 const [ledRes, itRes] = await Promise.all([
                     ledgerAPI.getByCompany(companyId),
-                    inventoryAPI.getByCompany(companyId)
+                    inventoryAPI.getByCompany(companyId, 'sales')
                 ]);
                 const allLedgers = ledRes.data || [];
                 const debtors = allLedgers.filter(l => {
@@ -346,7 +348,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                     name: item.name, 
                     description: item.salesDescription || '', 
                     rate: item.sellingPrice || 0, 
-                    amount: (item.sellingPrice || 0) * (row.quantity || 1) 
+                    amount: (item.sellingPrice || 0) * (row.quantity || 0) 
                 };
             }
             return row;
@@ -622,7 +624,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                 </tbody>
                             </table>
                         </div>
-                        <button onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-4 py-2 text-[#1e61f0] text-[12px] font-bold rounded hover:bg-blue-50 transition-all uppercase tracking-widest">+ Add New Row</button>
+                        <button onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 0, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-4 py-2 text-[#1e61f0] text-[12px] font-bold rounded hover:bg-blue-50 transition-all uppercase tracking-widest">+ Add New Row</button>
                     </div>
 
                     {/* Bottom Section */}

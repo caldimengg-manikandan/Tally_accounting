@@ -218,7 +218,9 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
         const n = it.name || '';
         const d = it.salesDescription || '';
         const s = search.toLowerCase();
-        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+        const matchesSearch = n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+        const isSalesItem = it.salesInformation !== false && it.salesInformation !== 0 && it.salesInformation !== 'false'; // Default to true if missing
+        return matchesSearch && isSalesItem;
     });
 
     return (
@@ -323,7 +325,7 @@ const SalesOrdersView = ({ companyId }) => {
         expectedShipmentDate: '',
         paymentTerms: 'Due on Receipt',
         salesperson: '',
-        items: [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
+        items: [{ id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0 }],
         subTotal: 0,
         discount: 0,
         taxPercent: 18,
@@ -343,7 +345,7 @@ const SalesOrdersView = ({ companyId }) => {
             const [oRes, cRes, iRes, projRes] = await Promise.all([
                 salesAPI.getOrders(companyId),
                 ledgerAPI.getByCompany(companyId),
-                inventoryAPI.getByCompany(companyId),
+                inventoryAPI.getByCompany(companyId, 'sales'),
                 projectAPI.getByCompany(companyId)
             ]);
 
@@ -404,7 +406,7 @@ const SalesOrdersView = ({ companyId }) => {
     const handleAddField = () => {
         setFormData(prev => ({
             ...prev,
-            items: [...prev.items, { id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }]
+            items: [...prev.items, { id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0 }]
         }));
     };
 
@@ -454,17 +456,25 @@ const SalesOrdersView = ({ companyId }) => {
         }
     };
 
-    const resetForm = () => {
+    const resetForm = async () => {
+        let nextNo = `SO-${String(orders.length + 1).padStart(5, '0')}`;
+        try {
+            const nextRes = await salesAPI.getNextNumber(companyId, 'order');
+            if (nextRes.data && nextRes.data.nextNumber) {
+                nextNo = nextRes.data.nextNumber;
+            }
+        } catch (e) { console.error("Next order number load error:", e); }
+
         setFormData({
             id: null,
             customerId: '',
-            orderNumber: `SO-${String(orders.length + 1).padStart(5, '0')}`,
+            orderNumber: nextNo,
             referenceNumber: '',
             date: new Date().toISOString().split('T')[0],
             expectedShipmentDate: '',
             paymentTerms: 'Due on Receipt',
             salesperson: '',
-            items: [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
+            items: [{ id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0 }],
             subTotal: 0,
             discount: 0,
             taxPercent: 18,
@@ -478,15 +488,15 @@ const SalesOrdersView = ({ companyId }) => {
         });
     };
 
-    const openForm = (order = null) => {
+    const openForm = async (order = null) => {
         if (order) {
             setFormData({
                 ...order,
                 customerId: order.LedgerId,
-                items: order.Items?.map(i => ({ ...i, id: i.id })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }]
+                items: order.Items?.map(i => ({ ...i, id: i.id })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0 }]
             });
         } else {
-            resetForm();
+            await resetForm();
         }
         setView('form');
     };

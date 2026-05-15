@@ -56,7 +56,7 @@ const CurrencyAdjustmentsView = ({ showNew }) => {
   const [calcLoading, setCalcLoading] = useState(false);
 
   const companyId = localStorage.getItem('companyId');
-  const currCode = formData.currency ? formData.currency.split('-')[0].trim() : '';
+  const currCode = formData.currency ? formData.currency.split(/[ -]/)[0].trim() : '';
 
   // ── Auto-fetch live exchange rate when currency changes ──
   useEffect(() => {

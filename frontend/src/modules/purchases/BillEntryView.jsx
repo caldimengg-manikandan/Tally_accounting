@@ -145,7 +145,7 @@ const BillEntryView = ({ companyId }) => {
     if (companyId) {
       purchaseAPI.getVendors(companyId).then(res => setVendors(res.data || []));
       projectAPI.getByCompany(companyId).then(res => setProjects(res.data || []));
-      inventoryAPI.getByCompany(companyId).then(res => {
+      inventoryAPI.getByCompany(companyId, 'purchase').then(res => {
         setInventoryItems(res.data || []);
       });
     }
@@ -480,7 +480,11 @@ const BillEntryView = ({ companyId }) => {
                             {openItemDropdown === item.id && (
                                <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
                                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
-                                     {inventoryItems.filter(inv => inv.name.toLowerCase().includes((item.itemName || '').toLowerCase())).map(invItem => (
+                                     {inventoryItems.filter(inv => {
+                                        const matchesSearch = inv.name.toLowerCase().includes((item.itemName || '').toLowerCase());
+                                        const isPurchaseItem = inv.purchaseInformation !== false && inv.purchaseInformation !== 0 && inv.purchaseInformation !== 'false';
+                                        return matchesSearch && isPurchaseItem;
+                                     }).map(invItem => (
                                         <div key={invItem.id || invItem._id} onClick={() => handleItemSelect(item.id, invItem)} className={`px-4 py-2 text-[13px] cursor-pointer border-b border-slate-100 last:border-0 ${item.itemName === invItem.name ? 'bg-blue-500 text-white' : 'hover:bg-slate-50'}`}>
                                            <div className="font-medium">{invItem.name}</div>
                                            <div className={`text-[12px] ${item.itemName === invItem.name ? 'text-blue-100' : 'text-slate-500'}`}>Rate: ₹{(invItem.costPrice || 0).toLocaleString()}</div>

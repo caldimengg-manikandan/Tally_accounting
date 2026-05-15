@@ -139,7 +139,7 @@ const RecurringBillEntryView = ({ companyId }) => {
   useEffect(() => {
     if (companyId) {
       purchaseAPI.getVendors(companyId).then(res => setVendors(res.data || []));
-      inventoryAPI.getByCompany(companyId).then(res => {
+      inventoryAPI.getByCompany(companyId, 'purchase').then(res => {
         console.log('Inventory Items Loaded:', res.data?.length);
         setInventoryItems(res.data || []);
       });
@@ -1103,7 +1103,7 @@ const RecurringBillEntryView = ({ companyId }) => {
                                 <div className="space-y-3 text-[13px]">
                                    <div className="flex justify-between">
                                       <span className="text-blue-500">Currency</span>
-                                      <span className="text-[#c47c2b] font-medium">{(selectedVendor.currency || 'INR- Indian Rupee').split('-')[0].trim()}</span>
+                                      <span className="text-[#c47c2b] font-medium">{(selectedVendor.currency || 'INR- Indian Rupee').split(/[ -]/)[0].trim()}</span>
                                    </div>
                                    <div className="flex justify-between">
                                       <span className="text-blue-500">Payment Terms</span>

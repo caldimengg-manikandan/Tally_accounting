@@ -54,7 +54,7 @@ exports.sendEmail = async (req, res) => {
       from: `"${fromName}" <${fromEmail}>`,
       to: toEmail,
       subject: subject,
-      text: body,
+      html: body,
       attachments
     };
 

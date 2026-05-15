@@ -238,16 +238,18 @@ class AccountingService {
     if (!company) throw new Error('CONFIG ERROR: Company not found.');
     if (!customer) throw new Error('CONFIG ERROR: Customer ledger not found.');
 
-    const isLocal = company.state === customer.state;
-
+    // 3. Self-Healing Ledger Discovery & Creation
     const salesGroup = await Group.findOne({ 
       where: { CompanyId: companyId, name: { [Op.like]: '%Sales%' } }, 
       ...options 
     });
+    
     let salesLedger = null;
     if (salesGroup) {
       salesLedger = await Ledger.findOne({ where: { CompanyId: companyId, GroupId: salesGroup.id }, ...options });
     }
+    
+    // Fallback: search by name
     if (!salesLedger) {
       salesLedger = await Ledger.findOne({ 
         where: { 
@@ -261,43 +263,53 @@ class AccountingService {
       });
     }
 
-    const missing = [];
-    if (!salesLedger) missing.push('Sales Ledger');
-
-    // 3. Prepare Journal Entries (only if ledgers found)
-    const journalEntries = [];
-    if (salesLedger) {
-      journalEntries.push({ ledgerId: customerLedgerId, debit: grandTotal, credit: 0 });
-      journalEntries.push({ ledgerId: salesLedger.id, debit: 0, credit: totalTaxableValue });
+    // Auto-Create if still missing
+    if (!salesLedger) {
+      const parentGroupId = salesGroup ? salesGroup.id : null;
+      salesLedger = await Ledger.create({
+        name: 'Sales',
+        code: 'SAL-001',
+        category: 'Income',
+        groupName: 'Sales Accounts',
+        GroupId: parentGroupId,
+        CompanyId: companyId,
+        currentBalance: 0
+      }, options);
     }
 
+    // 4. Prepare Journal Entries
+    const journalEntries = [
+      { ledgerId: customerLedgerId, debit: grandTotal, credit: 0 },
+      { ledgerId: salesLedger.id, debit: 0, credit: totalTaxableValue }
+    ];
+
     if (totalGstAmount > 0.01) {
+      const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } }, ...options });
+      
       if (isLocal) {
         // Intra-state: CGST + SGST
-        const cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
-        const sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
+        let cgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%CGST%' } }, ...options });
+        let sgstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%SGST%' } }, ...options });
 
-        if (!cgstLedger) missing.push('CGST Ledger');
-        if (!sgstLedger) missing.push('SGST Ledger');
-
-        if (missing.length === 0) {
-          journalEntries.push({ ledgerId: cgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
-          journalEntries.push({ ledgerId: sgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
+        if (!cgstLedger) {
+          cgstLedger = await Ledger.create({ name: 'CGST (Output)', category: 'Liability', groupName: 'Duties & Taxes', GroupId: taxGroup?.id, CompanyId: companyId, currentBalance: 0 }, options);
         }
+        if (!sgstLedger) {
+          sgstLedger = await Ledger.create({ name: 'SGST (Output)', category: 'Liability', groupName: 'Duties & Taxes', GroupId: taxGroup?.id, CompanyId: companyId, currentBalance: 0 }, options);
+        }
+
+        journalEntries.push({ ledgerId: cgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
+        journalEntries.push({ ledgerId: sgstLedger.id, debit: 0, credit: totalGstAmount / 2 });
       } else {
         // Inter-state: IGST
-        const igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%IGST%' } }, ...options });
-        if (!igstLedger) missing.push('IGST Ledger');
-
-        if (missing.length === 0) {
-          journalEntries.push({ ledgerId: igstLedger.id, debit: 0, credit: totalGstAmount });
+        let igstLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%IGST%' } }, ...options });
+        if (!igstLedger) {
+          igstLedger = await Ledger.create({ name: 'IGST (Output)', category: 'Liability', groupName: 'Duties & Taxes', GroupId: taxGroup?.id, CompanyId: companyId, currentBalance: 0 }, options);
         }
+        journalEntries.push({ ledgerId: igstLedger.id, debit: 0, credit: totalGstAmount });
       }
     }
 
-    if (missing.length > 0) {
-      throw new Error(`CONFIG ERROR: Missing ledgers -> ${missing.join(', ')}`);
-    }
 
     // 4. Post to Universal Journal Engine (which handles Audit)
     const voucher = await this.recordJournalEntry({

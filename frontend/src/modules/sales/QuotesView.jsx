@@ -164,7 +164,9 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
         const n = it.name || '';
         const d = it.salesDescription || '';
         const s = search.toLowerCase();
-        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+        const matchesSearch = n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
+        const isSalesItem = it.salesInformation !== false && it.salesInformation !== 0 && it.salesInformation !== 'false'; // Default to true if missing
+        return matchesSearch && isSalesItem;
     });
 
     return (
@@ -248,10 +250,12 @@ const BulkItemSelectorModal = ({ isOpen, onClose, onAdd, items }) => {
 
     if (!isOpen) return null;
 
-    const filtered = safeItems.filter(it => 
-        (it.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (it.salesDescription && it.salesDescription.toLowerCase().includes(search.toLowerCase()))
-    );
+    const filtered = safeItems.filter(it => {
+        const matchesSearch = (it.name || '').toLowerCase().includes(search.toLowerCase()) ||
+                             (it.salesDescription && it.salesDescription.toLowerCase().includes(search.toLowerCase()));
+        const isSalesItem = it.salesInformation !== false && it.salesInformation !== 0 && it.salesInformation !== 'false'; // Default to true if missing
+        return matchesSearch && isSalesItem;
+    });
 
     const toggleItem = (id) => {
         const idStr = String(id);
@@ -969,7 +973,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [attachedFiles, setAttachedFiles] = useState([]);
     const fileInputRef = useRef(null);
     
-    const [items, setItems] = useState([{ id: Date.now(), itemDetails: '', quantity: 1.00, rate: 0.00, amount: 0.00 }]);
+    const [items, setItems] = useState([{ id: Date.now(), itemDetails: '', quantity: 0, rate: 0, amount: 0 }]);
     const [discount, setDiscount] = useState(0);
     const [adjustment, setAdjustment] = useState(0);
     const [terms, setTerms] = useState('');
@@ -1028,7 +1032,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
 
             const newItems = jsonData.map((row, idx) => {
                 const name = row['Item Name'] || row['Item'] || row['item'] || row['Name'] || '';
-                const qty = parseFloat(row['Quantity'] || row['Qty'] || row['qty'] || 1);
+                const qty = parseFloat(row['Quantity'] || row['Qty'] || row['qty'] || 0);
                 const rate = parseFloat(row['Price'] || row['Rate'] || row['price'] || row['rate'] || 0);
                 
                 return {
@@ -1051,7 +1055,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
         const mapped = selectedItems.map(it => ({
             id: Date.now() + Math.random(),
             itemDetails: it.name,
-            quantity: 1,
+            quantity: 0,
             rate: it.sellingPrice || 0,
             amount: it.sellingPrice || 0
         }));
@@ -1104,25 +1108,37 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
         const activeCoId = companyId || localStorage.getItem('companyId');
         if (!activeCoId) return;
         
-        Promise.all([
-            ledgerAPI.getByCompany(activeCoId),
-            inventoryAPI.getByCompany(activeCoId),
-            priceListAPI.getByCompany(activeCoId),
-            projectAPI.getByCompany(activeCoId).catch(() => ({ data: [] }))
-        ])
-        .then(([ledgersRes, invRes, priceRes, projRes]) => {
-            const allLedgers = ledgersRes.data || [];
-            setCustomers(allLedgers.filter(l => {
-                const g = l.Group?.name || '';
-                const gDirect = l.groupName || '';
-                return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer')
-                    || gDirect.toLowerCase().includes('debtor') || gDirect.toLowerCase().includes('customer');
-            }));
-            setInventoryItems(invRes.data || []);
-            setPriceLists(priceRes.data || []);
-            setProjects(projRes.data || []);
-        })
-        .catch(err => console.error("DATA HYDRATION FAILED:", err));
+        const fetchData = async () => {
+            try {
+                const [ledgersRes, invRes, priceRes, projRes] = await Promise.all([
+                    ledgerAPI.getByCompany(activeCoId),
+                    inventoryAPI.getByCompany(activeCoId, 'sales'),
+                    priceListAPI.getByCompany(activeCoId),
+                    projectAPI.getByCompany(activeCoId).catch(() => ({ data: [] }))
+                ]);
+
+                const allLedgers = ledgersRes.data || [];
+                setCustomers(allLedgers.filter(l => {
+                    const g = l.Group?.name || '';
+                    const gDirect = l.groupName || '';
+                    return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer')
+                        || gDirect.toLowerCase().includes('debtor') || gDirect.toLowerCase().includes('customer');
+                }));
+                setInventoryItems(invRes.data || []);
+                setPriceLists(priceRes.data || []);
+                setProjects(projRes.data || []);
+
+                if (!editId) {
+                    const nextNumRes = await salesAPI.getNextNumber(activeCoId, 'quote');
+                    if (nextNumRes.data && nextNumRes.data.nextNumber) {
+                        setQuoteNo(nextNumRes.data.nextNumber);
+                    }
+                }
+            } catch (err) {
+                console.error("DATA HYDRATION FAILED:", err);
+            }
+        };
+        fetchData();
     }, [companyId]);
 
     useEffect(() => {
@@ -1601,7 +1617,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                 </table>
                             </div>
                             <div className="flex items-center gap-3 mt-4">
-                                <button onClick={() => setItems([...items, { id: Date.now(), itemDetails: '', quantity: 1, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-[12px] font-bold rounded hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all uppercase tracking-widest">
+                                <button onClick={() => setItems([...items, { id: Date.now(), itemDetails: '', quantity: 0, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-[12px] font-bold rounded hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all uppercase tracking-widest">
                                     <Plus size={14} strokeWidth={3}/> Add Row
                                 </button>
                                 <div className="ml-auto flex items-center gap-4 text-slate-400 font-bold text-[11px] uppercase tracking-[0.2em] pl-8 border-l border-slate-200">
