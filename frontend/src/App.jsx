@@ -694,12 +694,14 @@ function AuthenticatedApp() {
       <Route path="/recurring-expenses/edit/:id" element={shell(RecurringExpenseEntryView)} />
       <Route path="/bills"               element={shell(BillsView)} />
       <Route path="/bills/new"           element={shell(BillEntryView)} />
+      <Route path="/bills/edit/:id"      element={shell(BillEntryView)} />
       <Route path="/recurring-bills"     element={shell(RecurringBillsView)} />
       <Route path="/recurring-bills/new" element={shell(RecurringBillEntryView)} />
       <Route path="/purchase-orders"     element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/new" element={shell(PurchaseOrderEntryView)} />
       <Route path="/payments-made"       element={shell(PaymentsMadeListView)} />
       <Route path="/payments-made/new"   element={shell(PaymentsMadeEntryView)} />
+      <Route path="/payments-made/edit/:id" element={shell(PaymentsMadeEntryView)} />
       <Route path="/vendor-credits"      element={shell(VendorCreditsView)} />
       <Route path="/vendor-credits/new"  element={shell(VendorCreditsView)} />
       <Route path="/vendor-credits/edit/:id" element={shell(VendorCreditsView)} />

@@ -83,6 +83,7 @@ export const purchaseAPI = {
   deleteOrder: (id) => api.delete(`/purchases/orders/${id}`),
   getBills: (companyId) => api.get(`/purchases/bills/${companyId}`),
   createBill: (data) => api.post('/purchases/bills', data),
+  updateBill: (id, data) => api.put(`/purchases/bills/${id}`, data),
   getExpenses: (companyId) => api.get(`/purchases/expenses/${companyId}`),
   // Legacy support
   getByCompany: (companyId) => api.get(`/purchases/orders/${companyId}`),
@@ -91,8 +92,12 @@ export const purchaseAPI = {
 
 export const paymentMadeAPI = {
   getPayments: (companyId) => api.get(`/purchases/payments-made/${companyId}`),
+  getPayment: (id) => api.get(`/purchases/payments-made/payment/${id}`),
   create: (data) => api.post('/purchases/payments-made', data),
-  getUnpaidBills: (vendorId, companyId) => api.get(`/purchases/unpaid-bills/${vendorId}`, { params: { companyId } }),
+  update: (id, data) => api.put(`/purchases/payments-made/${id}`, data),
+  delete: (id) => api.delete(`/purchases/payments-made/${id}`),
+  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/purchases/unpaid-bills/${vendorId}`, { params: { companyId, excludePaymentId } }),
+  getNextNumber: (companyId) => api.get(`/purchases/payments-made/next-number/${companyId}`),
 };
 
 export const recurringExpenseAPI = {

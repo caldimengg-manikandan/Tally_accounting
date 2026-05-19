@@ -21,10 +21,15 @@ router.delete('/orders/:id', purchasesController.deleteOrder);
 // Bills
 router.get('/bills/:companyId', purchasesController.getBills);
 router.post('/bills', purchasesController.createBill);
+router.put('/bills/:id', purchasesController.updateBill);
 
 // Payments Made
+router.get('/payments-made/next-number/:companyId', paymentMadeController.getNextPaymentNumber);
+router.get('/payments-made/payment/:id', paymentMadeController.getPayment);
 router.get('/payments-made/:companyId', paymentMadeController.getPayments);
 router.post('/payments-made', paymentMadeController.createPayment);
+router.put('/payments-made/:id', paymentMadeController.updatePayment);
+router.delete('/payments-made/:id', paymentMadeController.deletePayment);
 router.get('/unpaid-bills/:vendorId', paymentMadeController.getUnpaidBills);
 
 // Expenses

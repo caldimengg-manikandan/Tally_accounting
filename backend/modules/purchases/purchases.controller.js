@@ -134,9 +134,79 @@ exports.getBills = async (req, res) => {
     }
 };
 
+// Helper function to process GST, TDS, discounts, and adjustments for Purchase Bills
+const processBillTaxesAndAdjustments = async (companyId, { taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries) => {
+    const { Op } = require('sequelize');
+    
+    // 1. GST Input (Debit)
+    if (taxAmount && parseFloat(taxAmount) > 0) {
+        let gstLedger = await Ledger.findOne({
+            where: { CompanyId: companyId, name: { [Op.or]: [{ [Op.like]: '%GST%Input%' }, { [Op.like]: 'Input%GST%' }] } }
+        });
+        if (!gstLedger) {
+            const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } } });
+            gstLedger = await Ledger.create({
+                name: 'Input GST', code: 'TAX-001', category: 'Asset', groupName: 'Duties & Taxes',
+                GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
+            });
+        }
+        journalEntries.push({ ledgerId: gstLedger.id, debit: parseFloat(taxAmount), credit: 0 });
+    }
+
+    // 2. TDS Payable (Credit)
+    if (tdsAmount && parseFloat(tdsAmount) > 0) {
+        let tdsLedger = await Ledger.findOne({
+            where: { CompanyId: companyId, name: { [Op.like]: '%TDS%Payable%' } }
+        });
+        if (!tdsLedger) {
+            const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } } });
+            tdsLedger = await Ledger.create({
+                name: 'TDS Payable', code: 'TAX-002', category: 'Liability', groupName: 'Duties & Taxes',
+                GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
+            });
+        }
+        journalEntries.push({ ledgerId: tdsLedger.id, debit: 0, credit: parseFloat(tdsAmount) });
+    }
+
+    // 3. Discount Received (Credit)
+    if (discountAmount && parseFloat(discountAmount) > 0) {
+        let discountLedger = await Ledger.findOne({
+            where: { CompanyId: companyId, name: { [Op.like]: '%Discount%Received%' } }
+        });
+        if (!discountLedger) {
+            const incGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Indirect%Income%' } } });
+            discountLedger = await Ledger.create({
+                name: 'Discount Received', code: 'INC-001', category: 'Income', groupName: 'Indirect Incomes',
+                GroupId: incGroup ? incGroup.id : null, CompanyId: companyId, currentBalance: 0
+            });
+        }
+        journalEntries.push({ ledgerId: discountLedger.id, debit: 0, credit: parseFloat(discountAmount) });
+    }
+
+    // 4. Rounding Adjustment (Debit/Credit)
+    if (adjustment && parseFloat(adjustment) !== 0) {
+        const adjVal = parseFloat(adjustment);
+        let adjLedger = await Ledger.findOne({
+            where: { CompanyId: companyId, name: { [Op.like]: '%Rounding%' } }
+        });
+        if (!adjLedger) {
+            const expGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Indirect%Expense%' } } });
+            adjLedger = await Ledger.create({
+                name: 'Rounding Adjustment', code: 'EXP-001', category: 'Expense', groupName: 'Indirect Expenses',
+                GroupId: expGroup ? expGroup.id : null, CompanyId: companyId, currentBalance: 0
+            });
+        }
+        if (adjVal > 0) {
+            journalEntries.push({ ledgerId: adjLedger.id, debit: adjVal, credit: 0 }); // Increases payable -> Expense (Debit)
+        } else {
+            journalEntries.push({ ledgerId: adjLedger.id, debit: 0, credit: Math.abs(adjVal) }); // Decreases payable -> Income (Credit)
+        }
+    }
+};
+
 exports.createBill = async (req, res) => {
     try {
-        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId } = req.body;
+        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms } = req.body;
         
         if (!supplierLedgerId) {
             return res.status(400).json({ error: 'Supplier Ledger is required' });
@@ -157,6 +227,7 @@ exports.createBill = async (req, res) => {
         // Credit the Supplier (Sundry Creditor) for the full bill amount
         journalEntries.push({ ledgerId: supplierLedgerId, debit: 0, credit: total });
 
+        let itemDebitsAdded = false;
         // Debit each item's account
         if (items && Array.isArray(items) && items.length > 0) {
             for (const item of items) {
@@ -169,25 +240,40 @@ exports.createBill = async (req, res) => {
                     }
                     if (accountLedger) {
                         journalEntries.push({ ledgerId: accountLedger.id, debit: parseFloat(item.amount), credit: 0 });
+                        itemDebitsAdded = true;
                     }
                 }
             }
         }
 
+        // Process Taxes, Discounts, and Adjustments
+        await processBillTaxesAndAdjustments(companyId, { taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries);
+
         // Fallback: if no item accounts found, debit a generic Purchases ledger
-        if (journalEntries.length === 1) {
+        if (!itemDebitsAdded) {
             const { Op } = require('sequelize');
-            const purchaseLedger = await Ledger.findOne({
+            let purchaseLedger = await Ledger.findOne({
                 where: { 
                     CompanyId: companyId,
                     name: { [Op.or]: [{ [Op.like]: '%Purchase%' }, { [Op.like]: '%Cost of Goods%' }] }
                 }
             });
-            if (purchaseLedger) {
-                journalEntries.push({ ledgerId: purchaseLedger.id, debit: total, credit: 0 });
-            } else {
-                return res.status(400).json({ error: 'No expense/purchase ledger found. Please set up a Purchases or Cost of Goods Sold ledger.' });
+            
+            if (!purchaseLedger) {
+                // Auto-create Purchases ledger to prevent save failure
+                const purchaseGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Purchase%' } } });
+                purchaseLedger = await Ledger.create({
+                    name: 'Purchases',
+                    code: 'PUR-001',
+                    category: 'Expense',
+                    groupName: 'Purchase Accounts',
+                    GroupId: purchaseGroup ? purchaseGroup.id : null,
+                    CompanyId: companyId,
+                    currentBalance: 0
+                });
             }
+            
+            journalEntries.push({ ledgerId: purchaseLedger.id, debit: total, credit: 0 });
         }
 
         const AccountingService = require('../../services/AccountingService');
@@ -204,7 +290,14 @@ exports.createBill = async (req, res) => {
                 notes,
                 items: items || [],
                 totalAmount: total,
-                reference: reference || ''
+                reference: reference || '',
+                taxRate: taxRate || 0,
+                tdsRate: tdsRate || 0,
+                tdsName: tdsName || '',
+                discount: discount || 0,
+                adjustment: adjustment || 0,
+                dueDate: dueDate || '',
+                paymentTerms: paymentTerms || 'Due on Receipt'
             }),
             entries: journalEntries,
             userId: req.user?.id,
@@ -217,6 +310,107 @@ exports.createBill = async (req, res) => {
         res.status(201).json(voucher);
     } catch (err) {
         console.error('Error creating bill:', err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.updateBill = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms } = req.body;
+        
+        if (!supplierLedgerId) {
+            return res.status(400).json({ error: 'Supplier Ledger is required' });
+        }
+
+        if (!totalAmount || parseFloat(totalAmount) <= 0) {
+            return res.status(400).json({ error: 'Bill total must be greater than zero' });
+        }
+
+        const total = parseFloat(totalAmount);
+
+        const journalEntries = [];
+
+        // Credit the Supplier (Sundry Creditor) for the full bill amount
+        journalEntries.push({ ledgerId: supplierLedgerId, debit: 0, credit: total });
+
+        let itemDebitsAdded = false;
+        // Debit each item's account
+        if (items && Array.isArray(items) && items.length > 0) {
+            for (const item of items) {
+                if (item.amount > 0 && item.account) {
+                    let accountLedger = await Ledger.findOne({
+                        where: { name: item.account, CompanyId: companyId }
+                    });
+                    if (!accountLedger) {
+                        accountLedger = await Ledger.findOne({ where: { name: item.account } });
+                    }
+                    if (accountLedger) {
+                        journalEntries.push({ ledgerId: accountLedger.id, debit: parseFloat(item.amount), credit: 0 });
+                        itemDebitsAdded = true;
+                    }
+                }
+            }
+        }
+
+        // Process Taxes, Discounts, and Adjustments
+        await processBillTaxesAndAdjustments(companyId, { taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries);
+
+        // Fallback: if no item accounts found, debit a generic Purchases ledger
+        if (!itemDebitsAdded) {
+            const { Op } = require('sequelize');
+            let purchaseLedger = await Ledger.findOne({
+                where: { 
+                    CompanyId: companyId,
+                    name: { [Op.or]: [{ [Op.like]: '%Purchase%' }, { [Op.like]: '%Cost of Goods%' }] }
+                }
+            });
+            
+            if (!purchaseLedger) {
+                // Auto-create Purchases ledger to prevent save failure
+                const purchaseGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Purchase%' } } });
+                purchaseLedger = await Ledger.create({
+                    name: 'Purchases',
+                    code: 'PUR-001',
+                    category: 'Expense',
+                    groupName: 'Purchase Accounts',
+                    GroupId: purchaseGroup ? purchaseGroup.id : null,
+                    CompanyId: companyId,
+                    currentBalance: 0
+                });
+            }
+            
+            journalEntries.push({ ledgerId: purchaseLedger.id, debit: total, credit: 0 });
+        }
+
+        const AccountingService = require('../../services/AccountingService');
+        const voucherNumber = billNumber || `BILL-${Date.now()}`;
+
+        const voucher = await AccountingService.updateJournalEntry(id, {
+            companyId,
+            date: date || new Date(),
+            narration: JSON.stringify({
+                notes,
+                items: items || [],
+                totalAmount: total,
+                reference: reference || '',
+                taxRate: taxRate || 0,
+                tdsRate: tdsRate || 0,
+                tdsName: tdsName || '',
+                discount: discount || 0,
+                adjustment: adjustment || 0,
+                dueDate: dueDate || '',
+                paymentTerms: paymentTerms || 'Due on Receipt'
+            }),
+            entries: journalEntries,
+            userId: req.user?.id,
+            voucherNumber,
+            projectId
+        });
+
+        res.json(voucher);
+    } catch (err) {
+        console.error('Error updating bill:', err);
         res.status(500).json({ error: err.message });
     }
 };

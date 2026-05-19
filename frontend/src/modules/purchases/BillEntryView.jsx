@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Plus, Trash2, ShoppingBag, PlusCircle, 
   ChevronDown, Search, Filter, MoreHorizontal,
@@ -9,7 +9,7 @@ import {
   Save, Send as SendIcon, UploadCloud, GripVertical, Paperclip,
   Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
-import { purchaseAPI, inventoryAPI, companyAPI, projectAPI } from '../../services/api';
+import { purchaseAPI, inventoryAPI, companyAPI, projectAPI, voucherAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
 import VendorForm from './VendorForm';
@@ -20,13 +20,14 @@ import { COUNTRY_CODES } from '../../utils/countryCodes';
 
 const BillEntryView = ({ companyId }) => {
   const navigate = useNavigate();
+  const { id } = useParams();
   // ── Form State ──────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     vendorName: '',
     vendorId: '',
     deliveryAddress: 'Organization',
     deliveryAddressText: 'No. 42, Innovation Hub,\nBangalore, Karnataka, 560001\nIndia',
-    billNumber: 'BILL-' + Math.floor(10000 + Math.random() * 90000),
+    billNumber: '',
     reference: '',
     date: new Date().toISOString().split('T')[0],
     deliveryDate: '',
@@ -151,6 +152,133 @@ const BillEntryView = ({ companyId }) => {
     }
   }, [companyId]);
 
+  useEffect(() => {
+    if (id && companyId) {
+      voucherAPI.getById(id).then(res => {
+        const voucher = res.data;
+        if (voucher) {
+          let notes = '';
+          let itemsList = [];
+          let reference = '';
+          let taxRate = 0;
+          let tdsRate = 0;
+          let tdsName = '';
+          let discount = 0;
+          let adjustment = 0;
+          let dueDate = '';
+          let paymentTerms = 'Due on Receipt';
+          try {
+            if (voucher.narration) {
+              const parsed = JSON.parse(voucher.narration);
+              notes = parsed.notes || '';
+              itemsList = parsed.items || [];
+              reference = parsed.reference || '';
+              taxRate = parsed.taxRate || 0;
+              tdsRate = parsed.tdsRate || 0;
+              tdsName = parsed.tdsName || '';
+              discount = parsed.discount || 0;
+              adjustment = parsed.adjustment || 0;
+              dueDate = parsed.dueDate || parsed.deliveryDate || '';
+              paymentTerms = parsed.paymentTerms || 'Due on Receipt';
+            }
+          } catch (e) {
+            console.error('Failed to parse narration JSON:', e);
+          }
+
+          // Find vendor credit transaction (Credit to vendor ledger)
+          const crTx = voucher.Transactions?.find(t => parseFloat(t.credit || 0) > 0);
+
+          // Dynamic Fallback Derivation for older bills that do not have rates in narration
+          if (!taxRate || !tdsRate || !discount || !adjustment) {
+            const purchaseAmount = voucher.Transactions?.reduce((sum, t) => {
+              const isGst = t.Ledger?.name?.toUpperCase().includes('GST');
+              const isTds = t.Ledger?.name?.toUpperCase().includes('TDS');
+              const isAdj = t.Ledger?.name?.toUpperCase().includes('ROUNDING') || t.Ledger?.name?.toUpperCase().includes('ADJUSTMENT');
+              if (parseFloat(t.debit || 0) > 0 && !isGst && !isTds && !isAdj) {
+                return sum + parseFloat(t.debit);
+              }
+              return sum;
+            }, 0) || 0;
+
+            if (purchaseAmount > 0) {
+              if (!taxRate) {
+                const gstTx = voucher.Transactions?.find(t => t.Ledger?.name?.toUpperCase().includes('GST'));
+                if (gstTx) {
+                  const gstVal = parseFloat(gstTx.debit || gstTx.credit || 0);
+                  taxRate = Math.round((gstVal / purchaseAmount) * 100);
+                }
+              }
+              if (!tdsRate) {
+                const tdsTx = voucher.Transactions?.find(t => t.Ledger?.name?.toUpperCase().includes('TDS'));
+                if (tdsTx) {
+                  const tdsVal = parseFloat(tdsTx.debit || tdsTx.credit || 0);
+                  tdsRate = Math.round((tdsVal / purchaseAmount) * 100);
+                  tdsName = tdsTx.Ledger?.name || '';
+                }
+              }
+              if (!discount) {
+                const discountTx = voucher.Transactions?.find(t => t.Ledger?.name?.toUpperCase().includes('DISCOUNT'));
+                if (discountTx) {
+                  const discVal = parseFloat(discountTx.debit || discountTx.credit || 0);
+                  discount = Math.round((discVal / (purchaseAmount + discVal)) * 100);
+                }
+              }
+            }
+
+            if (!adjustment) {
+              const adjTx = voucher.Transactions?.find(t => t.Ledger?.name?.toUpperCase().includes('ROUNDING') || t.Ledger?.name?.toUpperCase().includes('ADJUSTMENT'));
+              if (adjTx) {
+                const debitVal = parseFloat(adjTx.debit || 0);
+                const creditVal = parseFloat(adjTx.credit || 0);
+                adjustment = debitVal > 0 ? debitVal : -creditVal;
+              }
+            }
+          }
+          
+          setFormData(prev => ({
+            ...prev,
+            billNumber: voucher.voucherNumber || prev.billNumber,
+            date: voucher.date ? voucher.date.split('T')[0] : prev.date,
+            reference: reference || prev.reference,
+            notes: notes || prev.notes,
+            projectId: voucher.projectId || prev.projectId,
+            vendorId: crTx ? crTx.LedgerId : prev.vendorId,
+            vendorName: crTx && crTx.Ledger ? crTx.Ledger.name : prev.vendorName,
+            taxRate: parseFloat(taxRate),
+            tdsRate: parseFloat(tdsRate),
+            tdsName: tdsName,
+            discount: parseFloat(discount),
+            adjustment: parseFloat(adjustment),
+            deliveryDate: dueDate ? dueDate.split('T')[0] : prev.deliveryDate,
+            paymentTerms: paymentTerms || prev.paymentTerms
+          }));
+
+          if (itemsList && itemsList.length > 0) {
+            setItems(itemsList.map((item, idx) => ({
+              id: item.id || Date.now() + idx,
+              itemName: item.itemName || '',
+              account: item.account || '',
+              qty: item.qty || 1,
+              rate: item.rate || 0,
+              amount: item.amount || 0
+            })));
+          }
+        }
+      }).catch(err => {
+        console.error('Error fetching bill details:', err);
+      });
+    }
+  }, [id, companyId]);
+
+  useEffect(() => {
+    if (vendors.length > 0 && formData.vendorId) {
+      const match = vendors.find(v => v.id === formData.vendorId);
+      if (match) {
+        setSelectedVendor(match);
+      }
+    }
+  }, [vendors, formData.vendorId]);
+
   const handleItemSelect = (rowId, invItem) => {
     setItems(items.map(it => {
       if (it.id === rowId) {
@@ -260,6 +388,10 @@ const BillEntryView = ({ companyId }) => {
       alert('Please select a vendor');
       return;
     }
+    if (!formData.billNumber || !formData.billNumber.trim()) {
+      alert('Please enter a Bill number');
+      return;
+    }
     if (items.some(item => !item.itemName || item.qty <= 0)) {
       alert('Please ensure all items have a name and quantity');
       return;
@@ -269,29 +401,43 @@ const BillEntryView = ({ companyId }) => {
     try {
       const payload = {
         billNumber: formData.billNumber,
+        reference: formData.reference,
         date: formData.date,
         totalAmount: totals.total,
+        taxAmount: totals.taxAmount,
+        tdsAmount: totals.tdsAmount,
+        discountAmount: totals.discountAmount,
+        adjustment: parseFloat(formData.adjustment || 0),
+        taxRate: formData.taxRate,
+        tdsRate: formData.tdsRate,
+        tdsName: formData.tdsName,
+        discount: formData.discount,
         status: sendEmail ? 'Sent' : 'Draft',
         notes: formData.notes,
         supplierLedgerId: formData.vendorId,
         companyId,
         items,
-        projectId: formData.projectId || null
+        projectId: formData.projectId || null,
+        dueDate: formData.deliveryDate || '',
+        paymentTerms: formData.paymentTerms || 'Due on Receipt'
       };
 
-      const res = await purchaseAPI.createBill(payload);
+      const res = id 
+        ? await purchaseAPI.updateBill(id, payload)
+        : await purchaseAPI.createBill(payload);
       const savedData = res.data;
       setSavedPO(savedData);
       
       if (sendEmail) {
         setIsEmailModalOpen(true);
       } else {
-        alert('Bill saved successfully');
-        navigate('/bills');
+        const targetId = savedData?.id || savedData?.voucher?.id;
+        navigate('/bills', { state: { selectedBillId: targetId } });
       }
     } catch (err) {
       console.error('Error saving Bill:', err);
-      alert('Failed to save Bill. Please try again.');
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to save Bill. Please try again.';
+      alert('Error: ' + errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -303,7 +449,7 @@ const BillEntryView = ({ companyId }) => {
        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
              <ShoppingBag size={20} className="text-slate-800" />
-             <h1 className="text-[18px] text-slate-800">New Bill</h1>
+             <h1 className="text-[18px] text-slate-800">{id ? 'Edit Bill' : 'New Bill'}</h1>
           </div>
           <div className="flex items-center gap-3">
              {selectedVendor && (

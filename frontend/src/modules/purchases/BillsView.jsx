@@ -11,6 +11,52 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { purchaseAPI, voucherAPI, companyAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+const getDerivedTotal = (bill) => {
+  if (!bill) return 0;
+  if (bill.totalAmount) return parseFloat(bill.totalAmount);
+  
+  // 1. Try parsing from narration JSON
+  try {
+    if (bill.narration && bill.narration.startsWith('{')) {
+      const parsed = JSON.parse(bill.narration);
+      if (parsed && parsed.totalAmount) return parseFloat(parsed.totalAmount);
+      // Fallback: sum item amounts if totalAmount is missing
+      if (parsed && Array.isArray(parsed.items)) {
+        const sum = parsed.items.reduce((acc, item) => acc + parseFloat(item.amount || item.total || 0), 0);
+        if (sum > 0) return sum;
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing narration for total:", e);
+  }
+
+  // 2. Try looking for Credit transaction (credit > 0)
+  const crTx = bill.Transactions?.find(t => parseFloat(t.credit || 0) > 0);
+  if (crTx) return parseFloat(crTx.credit);
+
+  // 3. Fallback: sum of all Debit transactions (debits to expense/purchase ledgers)
+  const debitSum = bill.Transactions?.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0);
+  if (debitSum > 0) return debitSum;
+
+  return 0;
+};
+
+const getDueDate = (bill) => {
+  if (!bill) return null;
+  if (bill.dueDate) return bill.dueDate;
+  try {
+    if (bill.narration && bill.narration.startsWith('{')) {
+      const parsed = JSON.parse(bill.narration);
+      return parsed.dueDate || parsed.deliveryDate || null;
+    }
+  } catch (e) {
+    console.error("Error parsing narration for due date:", e);
+  }
+  return null;
+};
 
 const BillsView = ({ companyId }) => {
   const navigate = useNavigate();
@@ -46,6 +92,185 @@ const BillsView = ({ companyId }) => {
     } catch (err) {
       console.error("Failed to fetch company detail:", err);
     }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!billDetail) return;
+    const doc = new jsPDF();
+    
+    // Header styling
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59); // Slate 800
+    doc.text('BILL', 190, 25, { align: 'right' });
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139); // Slate 500
+    doc.text(`#${billDetail.voucherNumber || '—'}`, 190, 32, { align: 'right' });
+    
+    // Company details
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42); // Slate 900
+    doc.text(companyDetail?.name || 'Company Name', 20, 25);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${companyDetail?.city || ''}, ${companyDetail?.state || ''}`, 20, 30);
+    doc.text(`${companyDetail?.location || 'India'}`, 20, 35);
+    if (companyDetail?.email) {
+      doc.setTextColor(37, 99, 235); // Blue 600
+      doc.text(companyDetail.email, 20, 40);
+    }
+    
+    // Info section (two columns)
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    const rightX = 190;
+    const labelX = 125;
+    
+    // Date & Totals Info
+    const billDate = billDetail.date ? new Date(billDetail.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    const dueDateVal = getDueDate(billDetail);
+    const dueDate = dueDateVal ? new Date(dueDateVal).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    const derivedTotal = getDerivedTotal(billDetail);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Bill Date:', labelX, 55);
+    doc.setFont('helvetica', 'normal');
+    doc.text(billDate, rightX, 55, { align: 'right' });
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Due Date:', labelX, 62);
+    doc.setFont('helvetica', 'normal');
+    doc.text(dueDate, rightX, 62, { align: 'right' });
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Balance Due:', labelX, 69);
+    doc.setTextColor(37, 99, 235);
+    doc.text(`INR ${derivedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, rightX, 69, { align: 'right' });
+    doc.setTextColor(100, 116, 139);
+    
+    // Vendor Section (Bill From)
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILL FROM', 20, 55);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(37, 99, 235);
+    doc.text(billDetail?.Ledger?.name || 'Vendor Name', 20, 61);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    
+    let currentY = 66;
+    if (billDetail?.Ledger?.gstNumber) {
+      doc.text(`GSTIN: ${billDetail.Ledger.gstNumber}`, 20, currentY);
+      currentY += 5;
+    }
+    
+    const vendorAddress = billDetail?.Ledger?.billingAddress || billDetail?.Ledger?.address || '';
+    if (vendorAddress) {
+      const splitAddress = doc.splitTextToSize(vendorAddress, 85);
+      splitAddress.forEach((line) => {
+        doc.text(line, 20, currentY);
+        currentY += 4.5;
+      });
+    }
+    
+    if (billDetail?.Ledger?.email || billDetail?.Ledger?.phone || billDetail?.Ledger?.mobile) {
+      const contactInfo = [
+        billDetail?.Ledger?.email ? `Email: ${billDetail.Ledger.email}` : '',
+        (billDetail?.Ledger?.phone || billDetail?.Ledger?.mobile) ? `Phone: ${billDetail.Ledger.phone || billDetail.Ledger.mobile}` : ''
+      ].filter(Boolean).join(' | ');
+      if (contactInfo) {
+        doc.text(contactInfo, 20, currentY);
+        currentY += 5;
+      }
+    }
+    
+    doc.text(`Reference#: ${billDetail?.referenceNumber || '—'}`, 20, currentY);
+    
+    // Parse Items from narration JSON
+    let items = [];
+    try {
+      if (billDetail?.narration) {
+        if (billDetail.narration.startsWith('{')) {
+          const parsed = JSON.parse(billDetail.narration);
+          items = parsed.items || [];
+        } else if (billDetail.narration.includes('||')) {
+          const parts = billDetail.narration.split('||');
+          const itemData = parts.find(p => p.startsWith('items:'));
+          if (itemData) {
+            items = JSON.parse(itemData.replace('items:', ''));
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    
+    const tableData = (items && items.length > 0) ? items.map((item, idx) => [
+      idx + 1,
+      `${item.itemName || item.name || 'Service/Item'}${item.notes ? '\n' + item.notes : ''}`,
+      item.quantity || item.qty || '1.00',
+      `Rs ${parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      `Rs ${parseFloat(item.amount || item.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+    ]) : [
+      [
+        1,
+        `${billDetail?.Ledger?.name || 'Vendor'} Service/Supply`,
+        '1.00',
+        `Rs ${parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        `Rs ${parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+      ]
+    ];
+    
+    autoTable(doc, {
+      startY: Math.max(90, currentY + 8),
+      head: [['#', 'Item & Description', 'Qty', 'Rate', 'Amount']],
+      body: tableData,
+      theme: 'plain',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 4, lineColor: [241, 245, 249], lineWidth: 0.1 },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        1: { cellWidth: 100 },
+        2: { halign: 'right', cellWidth: 20 },
+        3: { halign: 'right', cellWidth: 30 },
+        4: { halign: 'right', cellWidth: 30 }
+      },
+      didDrawCell: (data) => {
+        if (data.section === 'body') {
+           doc.setDrawColor(241, 245, 249);
+           doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+        }
+      }
+    });
+    
+    // Totals
+    const finalY = doc.lastAutoTable.finalY + 15;
+    const totalsX = 130;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Sub Total', totalsX, finalY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Rs ${parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(totalsX - 5, finalY + 5, 65, 12, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('Total Amount', totalsX, finalY + 13);
+    doc.text(`Rs ${parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY + 13, { align: 'right' });
+    
+    // Save/Download PDF
+    doc.save(`${billDetail.voucherNumber || 'BILL'}.pdf`);
   };
 
   // Handle post-save navigation selection
@@ -303,7 +528,7 @@ const BillsView = ({ companyId }) => {
                 /* --- SPLIT PANE VIEW --- */
                 <div className="flex h-full overflow-hidden animate-in zoom-in-95 duration-500">
                     {/* LEFT MASTER LIST (Narrow) */}
-                    <div className="w-[320px] xl:w-[380px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-[4px_0_15px_rgba(0,0,0,0.02)]">
+                    <div className="w-[320px] xl:w-[380px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-[4px_0_15px_rgba(0,0,0,0.02)] no-print">
                         {/* Master List Header/Search */}
                         <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3">
                         <div className="relative group">
@@ -371,7 +596,7 @@ const BillsView = ({ companyId }) => {
                                 <div className="animate-in fade-in duration-500 flex flex-col min-h-full">
                                     
                                     {/* A. Detail Action Bar */}
-                                    <div className="sticky top-0 bg-white border-b border-slate-100 p-4 flex items-center justify-between px-8 z-30 shadow-[0_1px_5px_rgba(0,0,0,0.02)]">
+                                    <div className="sticky top-0 bg-white border-b border-slate-100 p-4 flex items-center justify-between px-8 z-30 shadow-[0_1px_5px_rgba(0,0,0,0.02)] no-print">
                                         <div className="flex items-center gap-4">
                                             <h2 className="text-[18px] font-bold text-slate-800">{billDetail?.voucherNumber}</h2>
                                             <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${parseFloat(billDetail?.balanceDue) > 0 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
@@ -388,13 +613,16 @@ const BillsView = ({ companyId }) => {
                                                     <Edit size={14} /> Edit
                                                 </button>
                                                 <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                                                <button className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold">
-                                                    <Printer size={14} /> PDF/Print
+                                                <button 
+                                                    onClick={handleDownloadPDF}
+                                                    className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold"
+                                                >
+                                                    <Printer size={14} /> PDF
                                                 </button>
                                                 <div className="w-px h-4 bg-slate-200 mx-1"></div>
                                                 <button 
                                                     onClick={() => billDetail && navigate('/payments-made/new', { state: { 
-                                                        vendorId: billDetail.Transactions?.find(t => t.type === 'Cr')?.LedgerId,
+                                                        vendorId: billDetail.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.LedgerId || billDetail?.Ledger?.id,
                                                         billDetail: billDetail 
                                                     } })}
                                                     className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold"
@@ -429,7 +657,7 @@ const BillsView = ({ companyId }) => {
 
                                     {/* B. "What's Next" Banner */}
                                     {(parseFloat(billDetail?.balanceDue) > 0) && (
-                                        <div className="mx-8 mt-6 p-5 bg-gradient-to-r from-blue-50 to-white border border-blue-100 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-700">
+                                        <div className="mx-8 mt-6 p-5 bg-gradient-to-r from-blue-50 to-white border border-blue-100 rounded-2xl flex items-center justify-between animate-in slide-in-from-top-4 duration-700 no-print">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
                                                     <AlertCircle size={24} />
@@ -440,7 +668,7 @@ const BillsView = ({ companyId }) => {
                                                 </div>
                                             </div>
                                             <button 
-                                            onClick={() => billDetail && navigate('/purchases/payments-made', { state: { vendorId: billDetail.Transactions?.find(t => t.type === 'Cr')?.LedgerId } })}
+                                            onClick={() => billDetail && navigate('/purchases/payments-made', { state: { vendorId: billDetail.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.LedgerId || billDetail?.Ledger?.id } })}
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all shadow-lg shadow-blue-100 active:scale-95"
                                             >
                                                 Record Payment
@@ -481,8 +709,8 @@ const BillsView = ({ companyId }) => {
                                                         <div className="space-y-1 mt-4">
                                                             <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill Date:</span><span className="font-bold text-slate-800">{billDetail?.date ? new Date(billDetail.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
                                                             <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill#:</span><span className="font-bold text-slate-800">{billDetail?.voucherNumber}</span></div>
-                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Due Date:</span><span className="font-bold text-slate-800">{billDetail?.dueDate ? new Date(billDetail.dueDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
-                                                            <div className="text-[14px] flex justify-end gap-3 pt-2 text-blue-600"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Balance Due:</span><span className="font-bold">₹{parseFloat(billDetail?.balanceDue || billDetail?.totalAmount || billDetail?.Transactions?.find(t => t.type === 'Cr')?.credit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Due Date:</span><span className="font-bold text-slate-800">{getDueDate(billDetail) ? new Date(getDueDate(billDetail)).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
+                                                            <div className="text-[14px] flex justify-end gap-3 pt-2 text-blue-600"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Balance Due:</span><span className="font-bold">₹{getDerivedTotal(billDetail).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -490,7 +718,23 @@ const BillsView = ({ companyId }) => {
                                                 <div className="mb-12">
                                                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Bill From</h4>
                                                     <h3 className="text-[16px] font-bold text-blue-600">{billDetail?.Ledger?.name || 'Vendor Name'}</h3>
-                                                    <p className="text-[13px] text-slate-500 font-medium mt-1 italic">Reference#: {billDetail?.referenceNumber || '---'}</p>
+                                                    {billDetail?.Ledger?.gstNumber && (
+                                                        <p className="text-[12px] text-slate-700 mt-1 font-bold">GSTIN: {billDetail.Ledger.gstNumber}</p>
+                                                    )}
+                                                    {(billDetail?.Ledger?.billingAddress || billDetail?.Ledger?.address) && (
+                                                        <p className="text-[12px] text-slate-500 mt-1.5 font-medium whitespace-pre-line leading-relaxed max-w-[280px]">
+                                                            {billDetail.Ledger.billingAddress || billDetail.Ledger.address}
+                                                        </p>
+                                                    )}
+                                                    {(billDetail?.Ledger?.email || billDetail?.Ledger?.phone || billDetail?.Ledger?.mobile) && (
+                                                        <div className="text-[12px] text-slate-400 font-semibold mt-2 space-y-0.5">
+                                                            {billDetail?.Ledger?.email && <p>Email: {billDetail.Ledger.email}</p>}
+                                                            {(billDetail?.Ledger?.phone || billDetail?.Ledger?.mobile) && (
+                                                                <p>Phone: {billDetail.Ledger.phone || billDetail.Ledger.mobile}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <p className="text-[12px] text-slate-400 mt-3 font-medium italic">Reference#: {billDetail?.referenceNumber || '---'}</p>
                                                 </div>
 
                                                 <table className="w-full mb-12 border-collapse">
@@ -543,9 +787,7 @@ const BillsView = ({ companyId }) => {
                                                             }
                                                             
                                                             // Fallback if no structured data
-                                                            // Calculate total from Cr transaction if billDetail.totalAmount is missing
-                                                            const derivedTotal = billDetail?.totalAmount || 
-                                                                               billDetail?.Transactions?.find(t => t.type === 'Cr')?.credit || 0;
+                                                            const derivedTotal = getDerivedTotal(billDetail);
 
                                                             return (
                                                                 <tr className="border-b border-slate-50">
@@ -573,8 +815,7 @@ const BillsView = ({ companyId }) => {
                                                     </div>
                                                     <div className="w-[320px] space-y-4">
                                                         {(() => {
-                                                            const derivedTotal = billDetail?.totalAmount || 
-                                                                               billDetail?.Transactions?.find(t => t.type === 'Cr')?.credit || 0;
+                                                            const derivedTotal = getDerivedTotal(billDetail);
                                                             return (
                                                                 <>
                                                                     <div className="flex justify-between text-[13px] py-1 border-b border-slate-50">
@@ -602,46 +843,71 @@ const BillsView = ({ companyId }) => {
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* --- JOURNAL SECTION (Conditional) --- */}
+                                                                      {/* --- JOURNAL SECTION (Conditional) --- */}
                                         {showVoucher && (
-                                            <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-700">
-                                                <div className="flex items-center gap-3 mb-6 px-2">
-                                                    <h3 className="text-[16px] font-bold text-slate-800 uppercase tracking-tighter">Journal</h3>
-                                                    <div className="flex-1 h-px bg-slate-100"></div>
-                                                    <span className="text-[11px] font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full">#{billDetail?.voucherNumber}</span>
+                                            <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-8 duration-700 bg-white p-8 border border-slate-200 rounded-2xl shadow-sm mt-8">
+                                                {/* Tab Header with bottom border */}
+                                                <div className="border-b border-slate-200 mb-6 flex gap-6">
+                                                    <button className="border-b-2 border-blue-600 pb-2 text-[14px] font-bold text-slate-800">
+                                                        Journal
+                                                    </button>
                                                 </div>
                                                 
-                                                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                                                    <table className="w-full text-left">
+                                                {/* Base Currency Indicator */}
+                                                <div className="flex items-center gap-2 text-slate-500 text-[12px] mb-4">
+                                                    <span>Amount is displayed in your base currency</span>
+                                                    <span className="bg-[#3e8a3a] text-white font-bold px-1.5 py-0.5 rounded text-[10px] tracking-tight">INR</span>
+                                                </div>
+                                                
+                                                {/* Subtitle */}
+                                                <h4 className="text-[14px] font-bold text-slate-800 mb-4">Bill</h4>
+
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-left text-[13px] border-collapse">
                                                         <thead>
-                                                            <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                                                <th className="px-10 py-5">Account / Ledger</th>
-                                                                <th className="px-10 py-5 text-right">Debit (Dr)</th>
-                                                                <th className="px-10 py-5 text-right">Credit (Cr)</th>
+                                                            <tr className="text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                                                                <th className="py-2 text-left text-slate-500">ACCOUNT</th>
+                                                                <th className="py-2 text-right text-slate-500 w-32">DEBIT</th>
+                                                                <th className="py-2 text-right text-slate-500 w-32">CREDIT</th>
                                                             </tr>
                                                         </thead>
-                                                        <tbody className="divide-y divide-slate-50">
-                                                            {billDetail?.Transactions?.map((tx, idx) => (
-                                                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                                <td className={`px-10 py-5 text-[14px] font-bold ${tx.debit > 0 ? 'text-blue-600' : 'text-slate-800 pl-16'}`}>
-                                                                    {tx.Ledger?.name || 'Unknown Ledger'}
-                                                                </td>
-                                                                <td className="px-10 py-5 text-right text-[14px] font-bold text-slate-900 tabular-nums">
-                                                                    {tx.debit > 0 ? `₹${tx.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '---'}
-                                                                </td>
-                                                                <td className="px-10 py-5 text-right text-[14px] font-bold text-slate-900 tabular-nums">
-                                                                    {tx.credit > 0 ? `₹${tx.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '---'}
-                                                                </td>
-                                                                </tr>
-                                                            ))}
+                                                        <tbody className="divide-y divide-slate-100">
+                                                            {billDetail?.Transactions?.map((tx, idx) => {
+                                                                const debitVal = parseFloat(tx.debit || 0);
+                                                                const creditVal = parseFloat(tx.credit || 0);
+                                                                
+                                                                return (
+                                                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                                        <td className="py-3 font-medium text-slate-700">
+                                                                            {tx.Ledger?.name || 'Unknown Ledger'}
+                                                                        </td>
+                                                                        <td className="py-3 text-right font-medium text-slate-700 tabular-nums">
+                                                                            {debitVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className="py-3 text-right font-medium text-slate-700 tabular-nums">
+                                                                            {creditVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
                                                         </tbody>
-                                                        <tfoot className="bg-slate-50/80">
-                                                            <tr className="text-[14px] font-bold text-slate-900">
-                                                                <td className="px-10 py-6">Total</td>
-                                                                <td className="px-10 py-6 text-right tabular-nums">₹{parseFloat(billDetail?.Transactions?.filter(t => t.type === 'Dr').reduce((s,t) => s+t.debit, 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                                <td className="px-10 py-6 text-right tabular-nums text-blue-600">₹{parseFloat(billDetail?.Transactions?.filter(t => t.type === 'Cr').reduce((s,t) => s+t.credit, 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                                                            </tr>
+                                                        <tfoot>
+                                                            {(() => {
+                                                                const totalDebits = billDetail?.Transactions?.reduce((s, t) => s + parseFloat(t.debit || 0), 0) || 0;
+                                                                const totalCredits = billDetail?.Transactions?.reduce((s, t) => s + parseFloat(t.credit || 0), 0) || 0;
+                                                                
+                                                                return (
+                                                                    <tr className="font-bold border-t border-slate-300 text-slate-800">
+                                                                        <td className="py-3 text-left"></td>
+                                                                        <td className="py-3 text-right tabular-nums border-b-2 border-slate-400">
+                                                                            {totalDebits.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className="py-3 text-right tabular-nums border-b-2 border-slate-400">
+                                                                            {totalCredits.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })()}
                                                         </tfoot>
                                                     </table>
                                                 </div>
