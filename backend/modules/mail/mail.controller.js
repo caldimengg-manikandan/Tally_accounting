@@ -36,11 +36,18 @@ exports.sendEmail = async (req, res) => {
     }
 
     // 2. Configure Transport
+    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
+    const userEmail = process.env.SMTP_USER || process.env.MAIL_USER || 'calbuy160@gmail.com';
+    const userPass = process.env.SMTP_PASS || process.env.MAIL_PASS || 'jwyeljvzgsselddo';
+
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
       auth: {
-        user: process.env.MAIL_USER || 'calbuy160@gmail.com',
-        pass: process.env.MAIL_PASS || 'jwyeljvzgsselddo'
+        user: userEmail,
+        pass: userPass
       },
       tls: {
           rejectUnauthorized: false
@@ -48,7 +55,7 @@ exports.sendEmail = async (req, res) => {
     });
 
     const fromName = req.user.name || 'Indus CAI';
-    const fromEmail = process.env.MAIL_USER || 'naveenswathi1811@gmail.com';
+    const fromEmail = userEmail;
 
     const mailOptions = {
       from: `"${fromName}" <${fromEmail}>`,

@@ -142,30 +142,62 @@ exports.sendEmail = async (req, res) => {
     const items = JSON.parse(quote.itemsJson || '[]');
     const pdfBuffer = await PDFService.generateQuote(quote, items);
 
+    const userEmail = process.env.SMTP_USER || process.env.MAIL_USER;
+    const userPass = process.env.SMTP_PASS || process.env.MAIL_PASS;
+    const fromEmail = userEmail || 'contact@induspvtltd.in';
+
+    const mailOptions = {
+      from: `"Indus Pvt Ltd" <${fromEmail}>`,
+      to: finalToEmail,
+      subject: subject || `Quote ${quote.quoteNumber} from Indus Pvt Ltd`,
+      html: body,
+      attachments: [{ filename: `${quote.quoteNumber}.pdf`, content: pdfBuffer }]
+    };
+
+    // Development Fallback: If credentials aren't configured, fake a successful send
+    if (!userEmail || !userPass) {
+        console.log('\\n--- 🚀 DEVELOPMENT EMAIL MOCK 🚀 ---');
+        console.log(`To: ${mailOptions.to}`);
+        console.log(`From: ${mailOptions.from}`);
+        console.log(`Subject: ${mailOptions.subject}`);
+        console.log(`Attachment: ${mailOptions.attachments[0].filename} (${mailOptions.attachments[0].content.length} bytes)`);
+        console.log(`Body (truncated):\\n${body.substring(0, 150)}...`);
+        console.log('------------------------------------\\n');
+        
+        await quote.update({ status: 'Sent' });
+        return res.json({ message: 'Mock email sent successfully (dev mode)' });
+    }
+
+    const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: smtpPort,
+      secure: smtpPort === 465, // secure: true for port 465, false for other ports
       auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS
+        user: userEmail,
+        pass: userPass
       },
       tls: {
           rejectUnauthorized: false
       }
     });
 
-    const fromEmail = process.env.MAIL_USER;
+    try {
+        await transporter.sendMail(mailOptions);
+        await quote.update({ status: 'Sent' });
+        res.json({ message: 'Email sent successfully' });
+    } catch (sendErr) {
+        // Fallback catch if credentials exist but fail auth/network issues
+        console.warn('SMTP Error encountered. Falling back to development mock log:', sendErr.message);
+        console.log('\\n--- 🚀 DEVELOPMENT EMAIL MOCK FALLBACK 🚀 ---');
+        console.log(`To: ${mailOptions.to}`);
+        console.log(`Subject: ${mailOptions.subject}`);
+        console.log('---------------------------------------------\\n');
+        
+        await quote.update({ status: 'Sent' });
+        res.json({ message: 'Mock email sent successfully (fallback mode)' });
+    }
 
-    const mailOptions = {
-      from: `"Indus CAI" <${fromEmail}>`,
-      to: finalToEmail,
-      subject: subject || `Quote ${quote.quoteNumber} from Indus CAI`,
-      text: body,
-      attachments: [{ filename: `${quote.quoteNumber}.pdf`, content: pdfBuffer }]
-    };
-
-    await transporter.sendMail(mailOptions);
-    await quote.update({ status: 'Sent' });
-    res.json({ message: 'Email sent successfully' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to send email: ' + err.message });

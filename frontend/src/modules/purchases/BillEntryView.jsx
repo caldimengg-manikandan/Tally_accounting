@@ -461,7 +461,7 @@ const BillEntryView = ({ companyId }) => {
                    <ArrowRight size={14} />
                 </button>
              )}
-             <button onClick={() => window.history.back()} className="text-slate-400 hover:text-slate-600 transition-colors">
+             <button onClick={() => navigate('/bills')} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X size={20} />
              </button>
           </div>
@@ -781,7 +781,7 @@ const BillEntryView = ({ companyId }) => {
        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-8 z-50">
           <div className="flex items-center gap-3">
              <button onClick={() => handleSaveOrder(false)} disabled={isSaving} className="px-6 h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors shadow-sm disabled:opacity-50">{isSaving ? 'Saving...' : 'Save'}</button>
-             <button onClick={() => window.history.back()} className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded border border-slate-200 transition-colors">Cancel</button>
+             <button onClick={() => navigate('/bills')} className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded border border-slate-200 transition-colors">Cancel</button>
           </div>
        </div>
 

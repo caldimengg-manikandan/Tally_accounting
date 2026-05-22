@@ -109,7 +109,7 @@ exports.getBills = async (req, res) => {
         });
 
         // Map bills to include derived fields for the frontend
-        const mappedBills = bills.map(bill => {
+        const mappedBills = await Promise.all(bills.map(async (bill) => {
             const plainBill = bill.toJSON();
             
             // The Credit transaction is the vendor/supplier
@@ -117,16 +117,39 @@ exports.getBills = async (req, res) => {
             // The total amount is the credit to the vendor
             const totalAmount = crTx ? parseFloat(crTx.credit || 0) : 0;
 
+            // Calculate payments made against this bill via BILL_REF transactions
+            const payments = await Transaction.findAll({
+                where: {
+                    description: { [Op.like]: `%BILL_REF:${bill.id}%` }
+                },
+                include: [{
+                    model: Voucher,
+                    where: { status: 'Paid' }
+                }]
+            });
+            const amountPaid = payments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
+            const balanceDue = Math.max(0, totalAmount - amountPaid);
+
+            // Derive status from balance
+            let status = bill.status; // Use persisted status if available
+            if (!status) {
+                if (totalAmount <= 0) status = 'DRAFT';
+                else if (balanceDue <= 0.01) status = 'PAID';
+                else if (amountPaid > 0) status = 'PARTIALLY_PAID';
+                else status = 'OPEN';
+            }
+
             return {
                 ...plainBill,
                 totalAmount,
-                balanceDue: totalAmount, // TODO: subtract payments made against this bill
+                balanceDue,
+                amountPaid,
                 billNumber: plainBill.voucherNumber,
                 Ledger: crTx?.Ledger || null,
                 LedgerId: crTx?.LedgerId || null,
-                status: totalAmount > 0 ? 'OPEN' : 'DRAFT'
+                status
             };
-        });
+        }));
 
         res.json(mappedBills);
     } catch (err) {

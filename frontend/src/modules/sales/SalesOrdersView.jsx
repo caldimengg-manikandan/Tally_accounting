@@ -392,6 +392,8 @@ const SalesOrdersView = ({ companyId }) => {
                         if (selected) {
                             updated.detail = selected.name;
                             updated.rate = selected.sellingPrice || 0;
+                            const currentQty = parseFloat(updated.quantity) || 0;
+                            updated.quantity = currentQty === 0 ? 1 : currentQty;
                         }
                     }
                     updated.amount = (parseFloat(updated.quantity) || 0) * (parseFloat(updated.rate) || 0);
@@ -406,7 +408,7 @@ const SalesOrdersView = ({ companyId }) => {
     const handleAddField = () => {
         setFormData(prev => ({
             ...prev,
-            items: [...prev.items, { id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0 }]
+            items: [...prev.items, { id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }]
         }));
     };
 
@@ -474,7 +476,7 @@ const SalesOrdersView = ({ companyId }) => {
             expectedShipmentDate: '',
             paymentTerms: 'Due on Receipt',
             salesperson: '',
-            items: [{ id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0 }],
+            items: [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }],
             subTotal: 0,
             discount: 0,
             taxPercent: 18,
@@ -493,7 +495,7 @@ const SalesOrdersView = ({ companyId }) => {
             setFormData({
                 ...order,
                 customerId: order.LedgerId,
-                items: order.Items?.map(i => ({ ...i, id: i.id })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 0, rate: 0, amount: 0 }]
+                items: order.Items?.map(i => ({ ...i, id: i.id })) || [{ id: Date.now(), itemId: '', detail: '', quantity: 1, rate: 0, amount: 0 }]
             });
         } else {
             await resetForm();
@@ -842,7 +844,7 @@ const SalesOrdersView = ({ companyId }) => {
                                 </button>
                             </div>
 
-                            <div className="border border-slate-200 rounded overflow-hidden shadow-sm bg-white">
+                            <div className="border border-slate-200 rounded overflow-visible shadow-sm bg-white">
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 font-bold uppercase tracking-widest">

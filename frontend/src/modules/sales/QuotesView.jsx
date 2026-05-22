@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { ledgerAPI, quoteAPI, companyAPI, priceListAPI, projectAPI } from '../../services/api';
+import { ledgerAPI, quoteAPI, companyAPI, priceListAPI, projectAPI, salesAPI } from '../../services/api';
 import { 
   Plus, MoreHorizontal, ChevronDown, Settings, 
   X, Info, Upload, Search, Tag, Paperclip, RefreshCw,
@@ -164,9 +164,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
         const n = it.name || '';
         const d = it.salesDescription || '';
         const s = search.toLowerCase();
-        const matchesSearch = n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
-        const isSalesItem = it.salesInformation !== false && it.salesInformation !== 0 && it.salesInformation !== 'false'; // Default to true if missing
-        return matchesSearch && isSalesItem;
+        return n.toLowerCase().includes(s) || d.toLowerCase().includes(s);
     });
 
     return (
@@ -979,6 +977,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const [terms, setTerms] = useState('');
     const [customerNotes, setCustomerNotes] = useState('');
     const [loading, setLoading] = useState(false);
+    const [savedQuote, setSavedQuote] = useState(null);
     const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false, confirmText: 'OK' });
     const location = useLocation();
 
@@ -1109,33 +1108,44 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
         if (!activeCoId) return;
         
         const fetchData = async () => {
-            try {
-                const [ledgersRes, invRes, priceRes, projRes] = await Promise.all([
-                    ledgerAPI.getByCompany(activeCoId),
-                    inventoryAPI.getByCompany(activeCoId, 'sales'),
-                    priceListAPI.getByCompany(activeCoId),
-                    projectAPI.getByCompany(activeCoId).catch(() => ({ data: [] }))
-                ]);
+            // Fetch all data sources independently so one failure doesn't block others
+            const [ledgersRes, invRes, priceRes, projRes] = await Promise.all([
+                ledgerAPI.getByCompany(activeCoId).catch(e => { console.error("Ledger fetch failed:", e); return { data: [] }; }),
+                inventoryAPI.getByCompany(activeCoId).catch(e => { console.error("Inventory fetch failed:", e); return { data: [] }; }),
+                priceListAPI.getByCompany(activeCoId).catch(e => { console.error("PriceList fetch failed:", e); return { data: [] }; }),
+                projectAPI.getByCompany(activeCoId).catch(() => ({ data: [] }))
+            ]);
 
-                const allLedgers = ledgersRes.data || [];
-                setCustomers(allLedgers.filter(l => {
-                    const g = l.Group?.name || '';
-                    const gDirect = l.groupName || '';
-                    return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer')
-                        || gDirect.toLowerCase().includes('debtor') || gDirect.toLowerCase().includes('customer');
-                }));
-                setInventoryItems(invRes.data || []);
-                setPriceLists(priceRes.data || []);
-                setProjects(projRes.data || []);
+            const allLedgers = ledgersRes.data || [];
+            setCustomers(allLedgers.filter(l => {
+                const g = l.Group?.name || '';
+                const gDirect = l.groupName || '';
+                return g.toLowerCase().includes('debtor') || g.toLowerCase().includes('customer')
+                    || gDirect.toLowerCase().includes('debtor') || gDirect.toLowerCase().includes('customer');
+            }));
 
-                if (!editId) {
+            // Load and filter inventory items to only include saleable ones (sellingPrice/salesRate > 0)
+            const allItems = invRes.data || [];
+            console.log('[QUOTES DEBUG] companyId:', activeCoId, 'All items from API:', allItems.length, allItems);
+            const saleableItems = allItems.filter(item => {
+                const rate = item.sellingPrice || item.salesRate || item.standardRate || 0;
+                return parseFloat(rate) > 0;
+            });
+            console.log('[QUOTES DEBUG] Saleable items loaded:', saleableItems.length, saleableItems);
+            setInventoryItems(saleableItems);
+            setPriceLists(priceRes.data || []);
+            setProjects(projRes.data || []);
+
+            // Fetch next quote number separately so it doesn't crash the main data load
+            if (!editId) {
+                try {
                     const nextNumRes = await salesAPI.getNextNumber(activeCoId, 'quote');
                     if (nextNumRes.data && nextNumRes.data.nextNumber) {
                         setQuoteNo(nextNumRes.data.nextNumber);
                     }
+                } catch (e) {
+                    console.error("Quote number fetch failed:", e);
                 }
-            } catch (err) {
-                console.error("DATA HYDRATION FAILED:", err);
             }
         };
         fetchData();
@@ -1239,11 +1249,13 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
 
         setLoading(true);
         try {
+            const activeCoId = companyId || localStorage.getItem('companyId');
+            
             const payload = {
-                companyId,
+                companyId: activeCoId,
                 quoteNumber: quoteNo,
                 customerName,
-                customerLedgerId,
+                customerLedgerId: customerLedgerId || null,
                 referenceNumber: refNo,
                 quoteDate,
                 expiryDate: expiryDate || null,
@@ -1258,15 +1270,29 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 totalAmount: total,
                 customerNotes,
                 termsConditions: terms,
-                projectId
+                projectId: projectId || null
             };
 
+            let savedData;
             if (editId) {
-                await quoteAPI.update(editId, payload);
+                const res = await quoteAPI.update(editId, payload);
+                savedData = res.data.quote;
             } else {
-                await quoteAPI.create(payload);
+                const res = await quoteAPI.create(payload);
+                savedData = res.data.quote;
             }
-            navigate('/quotes');
+            
+            const cust = customers.find(c => c.name === customerName);
+            setSavedQuote({
+                id: savedData.id,
+                number: savedData.quoteNumber,
+                customerName: savedData.customerName,
+                Customer: cust || { email: '' },
+                items: items,
+                total: total,
+                date: quoteDate
+            });
+            addNotification('Quote Saved Successfully', 'success');
         } catch (err) {
             console.error(err);
             addNotification('Failed to save quote', 'error');
@@ -1277,6 +1303,16 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
 
     return (
         <div className="flex flex-col h-full bg-[#f8fafc] relative">
+            {savedQuote && (
+                <EmailSendModal 
+                    isOpen={true}
+                    onClose={() => navigate('/quotes')}
+                    documentData={savedQuote}
+                    documentType="Quote"
+                    onSend={() => navigate('/quotes')}
+                    apiFunc={quoteAPI.sendEmail}
+                />
+            )}
             <BulkItemSelectorModal 
                 isOpen={isBulkModalOpen}
                 onClose={() => setIsBulkModalOpen(false)}
@@ -1533,14 +1569,14 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                     </div>
                         <div className="space-y-4 pt-8">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-widest">Item Table</h3>
+                                <h3 className="text-[14px] font-bold text-slate-800 uppercase tracking-widest">Item Table <span className="text-[10px] text-blue-500 bg-blue-50 px-2 py-0.5 rounded ml-2">{inventoryItems.length} items loaded</span></h3>
                                 <div className="flex items-center gap-3">
                                     <button onClick={() => setIsBulkModalOpen(true)} className="text-[11px] font-bold text-blue-600 flex items-center gap-2 hover:bg-blue-50 px-3 py-1.5 rounded transition-all border border-blue-200">
                                         <Package size={14} /> Bulk Add
                                     </button>
                                 </div>
                             </div>
-                            <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white">
+                            <div className="border border-slate-200 rounded-lg overflow-visible shadow-sm bg-white">
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50 border-b border-slate-200 text-[11px] text-slate-500 font-bold uppercase tracking-widest">
@@ -1562,7 +1598,13 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                                             const updated = [...items];
                                                             updated[idx].itemDetails = selected.name;
                                                             updated[idx].rate = selected.sellingPrice || 0;
-                                                            updated[idx].amount = (parseFloat(updated[idx].quantity) || 0) * (selected.sellingPrice || 0);
+                                                            
+                                                            const currentQty = parseFloat(updated[idx].quantity) || 0;
+                                                            const newQty = currentQty === 0 ? 1 : currentQty;
+                                                            
+                                                            updated[idx].quantity = newQty;
+                                                            updated[idx].amount = newQty * (selected.sellingPrice || 0);
+                                                            
                                                             setItems(updated);
                                                         }}
                                                         placeholder="Type to select item..."

@@ -96,6 +96,7 @@ export const paymentMadeAPI = {
   create: (data) => api.post('/purchases/payments-made', data),
   update: (id, data) => api.put(`/purchases/payments-made/${id}`, data),
   delete: (id) => api.delete(`/purchases/payments-made/${id}`),
+  markAsPaid: (id) => api.patch(`/purchases/payments-made/${id}/mark-paid`),
   getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/purchases/unpaid-bills/${vendorId}`, { params: { companyId, excludePaymentId } }),
   getNextNumber: (companyId) => api.get(`/purchases/payments-made/next-number/${companyId}`),
 };

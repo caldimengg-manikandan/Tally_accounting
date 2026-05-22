@@ -1,5 +1,57 @@
 const { Voucher, Transaction, Ledger, sequelize } = require('../../models');
 const { Op } = require('sequelize');
+const AccountingService = require('../../services/AccountingService');
+
+/**
+ * Helper to update linked bill statuses after a payment status change.
+ */
+async function updateBillsForPayment(paymentVoucherId, transaction = null) {
+    const voucher = await Voucher.findByPk(paymentVoucherId, {
+        include: [{ model: Transaction }],
+        transaction
+    });
+    if (!voucher || !voucher.Transactions) return;
+
+    for (const tx of voucher.Transactions) {
+        const match = (tx.description || '').match(/BILL_REF:([\w-]+)/);
+        if (!match) continue;
+        const billId = match[1];
+
+        // Find the bill voucher
+        const bill = await Voucher.findByPk(billId, {
+            include: [{ model: Transaction }],
+            transaction
+        });
+        if (!bill || bill.voucherType !== 'Purchase') continue;
+
+        // Get the vendor credit transaction (= bill total)
+        const vendorTx = bill.Transactions?.find(t => parseFloat(t.credit || 0) > 0);
+        const billTotal = parseFloat(vendorTx?.credit || 0);
+
+        // Sum ALL payments against this bill that are 'Paid'
+        const allPayments = await Transaction.findAll({
+            where: { description: { [Op.like]: `%BILL_REF:${billId}%` } },
+            include: [{
+                model: Voucher,
+                where: { status: 'Paid' }
+            }],
+            transaction
+        });
+        const totalPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
+
+        // Determine bill status
+        let billStatus;
+        if (totalPaid >= billTotal - 0.01) {
+            billStatus = 'PAID';
+        } else if (totalPaid > 0) {
+            billStatus = 'PARTIALLY_PAID';
+        } else {
+            billStatus = 'OPEN';
+        }
+
+        await bill.update({ status: billStatus }, { transaction });
+    }
+}
 
 exports.getNextPaymentNumber = async (req, res) => {
     try {
@@ -69,7 +121,11 @@ exports.getUnpaidBills = async (req, res) => {
             }
 
             const payments = await Transaction.findAll({
-                where: paymentWhere
+                where: paymentWhere,
+                include: [{
+                    model: Voucher,
+                    where: { status: 'Paid' }
+                }]
             });
 
             const amountPaid = payments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
@@ -116,62 +172,60 @@ exports.createPayment = async (req, res) => {
             reference, 
             amount, 
             billAllocations, // Array of { billId, amount }
-            companyId 
+            companyId,
+            status // 'Draft' or 'Paid'
         } = req.body;
 
         if (!vendorId || !paidThroughId || !amount) {
             return res.status(400).json({ error: "Vendor, Paid Through, and Payment Made amount are required fields." });
         }
 
-        // 1. Create the Payment Voucher
-        const voucher = await Voucher.create({
-            CompanyId: companyId,
-            voucherType: 'Payment',
-            voucherNumber: paymentNumber || `PAY-${Date.now()}`,
-            date: paymentDate || new Date(),
-            reference: reference || '',
-            narration: `Payment Made via ${paymentMode}. Ref: ${reference}`
-        }, { transaction: t });
+        // 1. Build journal entries
+        const entries = [
+            { ledgerId: paidThroughId, debit: 0, credit: amount }
+        ];
 
-        // 2. Credit the Bank/Cash account (Paid Through)
-        await Transaction.create({
-            VoucherId: voucher.id,
-            LedgerId: paidThroughId,
-            CompanyId: companyId,
-            credit: parseFloat(amount),
-            debit: 0,
-            description: `Payment to Vendor`
-        }, { transaction: t });
-
-        // 3. Debit the Vendor Account
-        // If billAllocations is provided, we create a transaction per bill for tracking
         if (billAllocations && billAllocations.length > 0) {
             for (const alloc of billAllocations) {
                 if (alloc.amount > 0) {
-                    await Transaction.create({
-                        VoucherId: voucher.id,
-                        LedgerId: vendorId,
-                        CompanyId: companyId,
-                        debit: parseFloat(alloc.amount),
+                    entries.push({
+                        ledgerId: vendorId,
+                        debit: alloc.amount,
                         credit: 0,
                         description: `Payment for Bill ${alloc.billNumber || ''}. BILL_REF:${alloc.billId}`
-                    }, { transaction: t });
+                    });
                 }
             }
         } else {
-            // Lump sum payment
-            await Transaction.create({
-                VoucherId: voucher.id,
-                LedgerId: vendorId,
-                CompanyId: companyId,
-                debit: parseFloat(amount),
+            entries.push({
+                ledgerId: vendorId,
+                debit: amount,
                 credit: 0,
                 description: `Lump sum payment`
-            }, { transaction: t });
+            });
         }
 
+        // 2. Post accounting entries via AccountingService
+        const voucher = await AccountingService.recordJournalEntry({
+            companyId,
+            date: paymentDate || new Date(),
+            voucherType: 'Payment',
+            voucherNumber: paymentNumber,
+            reference: reference || '',
+            narration: `Payment Made via ${paymentMode}. Ref: ${reference}`,
+            entries,
+            userId: req.user?.id
+        }, t);
+
+        // 3. Persist the payment status (Draft or Paid)
+        const paymentStatus = (status === 'Paid' || status === 'paid') ? 'Paid' : 'Draft';
+        await voucher.update({ status: paymentStatus }, { transaction: t });
+
+        // Update bills status based on this payment
+        await updateBillsForPayment(voucher.id, t);
+
         await t.commit();
-        res.status(201).json(voucher);
+        res.status(201).json({ ...voucher.toJSON(), status: paymentStatus });
     } catch (err) {
         await t.rollback();
         console.error(err);
@@ -183,59 +237,87 @@ exports.updatePayment = async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
-        const { vendorId, paymentDate, paymentMode, paidThroughId, reference, amount, billAllocations } = req.body;
+        const { vendorId, paymentDate, paymentMode, paidThroughId, reference, amount, billAllocations, status } = req.body;
         
-        const voucher = await Voucher.findByPk(id);
-        if (!voucher) return res.status(404).json({ error: "Payment not found" });
+        const oldVoucher = await Voucher.findByPk(id);
+        if (!oldVoucher) return res.status(404).json({ error: "Payment not found" });
 
-        // 1. Destroy old transactions
-        await Transaction.destroy({ where: { VoucherId: voucher.id }, transaction: t });
+        const entries = [
+            { ledgerId: paidThroughId, debit: 0, credit: amount }
+        ];
 
-        // 2. Update Voucher
-        voucher.date = paymentDate || voucher.date;
-        voucher.reference = reference || voucher.reference;
-        voucher.narration = `Payment Made via ${paymentMode}. Ref: ${reference}`;
-        await voucher.save({ transaction: t });
-
-        // 3. Re-create the Bank/Cash account credit
-        await Transaction.create({
-            VoucherId: voucher.id,
-            LedgerId: paidThroughId,
-            CompanyId: voucher.CompanyId,
-            credit: parseFloat(amount),
-            debit: 0,
-            description: `Payment to Vendor`
-        }, { transaction: t });
-
-        // 4. Re-create the Vendor account debits
         if (billAllocations && billAllocations.length > 0) {
             for (const alloc of billAllocations) {
                 if (alloc.amount > 0) {
-                    await Transaction.create({
-                        VoucherId: voucher.id,
-                        LedgerId: vendorId,
-                        CompanyId: voucher.CompanyId,
-                        debit: parseFloat(alloc.amount),
+                    entries.push({
+                        ledgerId: vendorId,
+                        debit: alloc.amount,
                         credit: 0,
                         description: `Payment for Bill ${alloc.billNumber || ''}. BILL_REF:${alloc.billId}`
-                    }, { transaction: t });
+                    });
                 }
             }
         } else {
-            await Transaction.create({
-                VoucherId: voucher.id,
-                LedgerId: vendorId,
-                CompanyId: voucher.CompanyId,
-                debit: parseFloat(amount),
+            entries.push({
+                ledgerId: vendorId,
+                debit: amount,
                 credit: 0,
                 description: `Lump sum payment`
-            }, { transaction: t });
+            });
         }
 
+        // Re-post accounting entries (AccountingService reverses old + writes new)
+        const voucher = await AccountingService.updateJournalEntry(id, {
+            companyId: oldVoucher.CompanyId,
+            date: paymentDate,
+            reference: reference || '',
+            narration: `Payment Made via ${paymentMode}. Ref: ${reference}`,
+            entries,
+            userId: req.user?.id
+        }, t);
+
+        // Persist status if provided
+        if (status) {
+            const paymentStatus = (status === 'Paid' || status === 'paid') ? 'Paid' : 'Draft';
+            await voucher.update({ status: paymentStatus }, { transaction: t });
+        }
+
+        // Update bills status based on this payment
+        await updateBillsForPayment(voucher.id, t);
+
         await t.commit();
-        res.json(voucher);
+        res.json({ ...voucher.toJSON(), status: voucher.status });
     } catch (err) {
         await t.rollback();
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.markAsPaid = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const voucher = await Voucher.findByPk(id, {
+            include: [{ model: Transaction }]
+        });
+        if (!voucher) return res.status(404).json({ error: 'Payment not found' });
+        if (voucher.voucherType !== 'Payment') {
+            return res.status(400).json({ error: 'This voucher is not a Payment record' });
+        }
+
+        // 1. Update payment status to Paid
+        await voucher.update({ status: 'Paid' });
+
+        // 2. Update linked bill statuses
+        await updateBillsForPayment(voucher.id);
+
+        res.json({ 
+            message: 'Payment marked as Paid successfully.',
+            id: voucher.id,
+            status: 'Paid'
+        });
+    } catch (err) {
+        console.error('markAsPaid error:', err);
         res.status(500).json({ error: err.message });
     }
 };
@@ -325,11 +407,61 @@ exports.deletePayment = async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
-        const voucher = await Voucher.findByPk(id);
+        const voucher = await Voucher.findByPk(id, {
+            include: [{ model: Transaction }]
+        });
         if (!voucher) return res.status(404).json({ error: "Payment not found" });
 
-        await Transaction.destroy({ where: { VoucherId: voucher.id }, transaction: t });
-        await voucher.destroy({ transaction: t });
+        // Get linked bill IDs before deletion
+        const billIds = [];
+        if (voucher.Transactions) {
+            for (const tx of voucher.Transactions) {
+                const match = (tx.description || '').match(/BILL_REF:([\w-]+)/);
+                if (match) billIds.push(match[1]);
+            }
+        }
+
+        await AccountingService.deleteJournalEntry(id, { 
+            companyId: voucher.CompanyId, 
+            userId: req.user?.id 
+        }, t);
+
+        // Update each linked bill's status after deleting this payment
+        for (const billId of billIds) {
+            const bill = await Voucher.findByPk(billId, {
+                include: [{ model: Transaction }],
+                transaction: t
+            });
+            if (!bill || bill.voucherType !== 'Purchase') continue;
+
+            const vendorTx = bill.Transactions?.find(tx => parseFloat(tx.credit || 0) > 0);
+            const billTotal = parseFloat(vendorTx?.credit || 0);
+
+            // Sum payments against this bill that are 'Paid' (excluding current payment because it is deleted)
+            const allPayments = await Transaction.findAll({
+                where: { 
+                    description: { [Op.like]: `%BILL_REF:${billId}%` },
+                    VoucherId: { [Op.ne]: id }
+                },
+                include: [{
+                    model: Voucher,
+                    where: { status: 'Paid' }
+                }],
+                transaction: t
+            });
+            const totalPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
+
+            let billStatus;
+            if (totalPaid >= billTotal - 0.01) {
+                billStatus = 'PAID';
+            } else if (totalPaid > 0) {
+                billStatus = 'PARTIALLY_PAID';
+            } else {
+                billStatus = 'OPEN';
+            }
+
+            await bill.update({ status: billStatus }, { transaction: t });
+        }
 
         await t.commit();
         res.json({ message: "Payment deleted successfully" });
@@ -365,7 +497,8 @@ exports.getPayments = async (req, res) => {
                 vendorName: p.Transactions[0]?.Ledger?.name || 'N/A',
                 reference: p.reference,
                 amount: totalAmount,
-                narration: p.narration
+                narration: p.narration,
+                status: p.status || 'Draft' // Return persisted status, default to Draft for legacy records
             };
         });
 

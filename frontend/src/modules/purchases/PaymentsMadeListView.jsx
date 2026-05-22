@@ -95,6 +95,19 @@ const PaymentsMadeListView = ({ companyId }) => {
     }
   };
 
+  const handleMarkAsPaid = async () => {
+    if (!selectedPaymentId) return;
+    try {
+      await paymentMadeAPI.markAsPaid(selectedPaymentId);
+      // Refresh both the list and the detail
+      await fetchPayments();
+      await fetchPaymentDetail(selectedPaymentId);
+    } catch (err) {
+      console.error('Mark as Paid failed:', err);
+      alert('Failed to mark payment as paid: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   // Derive fields from detail
   const vendorTx = paymentDetail?.Transactions?.find(t => parseFloat(t.debit) > 0);
   const cashBankTx = paymentDetail?.Transactions?.find(t => parseFloat(t.credit) > 0);
@@ -261,8 +274,12 @@ const PaymentsMadeListView = ({ companyId }) => {
                                         <span className="font-bold">#{payment.paymentNumber}</span>
                                     </div>
                                     <div className="mt-2">
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] text-slate-500">
-                                            Draft
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] ${
+                                            payment.status === 'Paid'
+                                              ? 'text-emerald-600 bg-emerald-50'
+                                              : 'text-slate-500 bg-slate-100'
+                                        }`}>
+                                            {payment.status || 'Draft'}
                                         </span>
                                     </div>
                                     
@@ -295,29 +312,35 @@ const PaymentsMadeListView = ({ companyId }) => {
                                         <Printer size={14} /> PDF/Print <ChevronDown size={14} />
                                     </button>
                                     <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                                    <button className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-all text-[12px] font-bold">
-                                        <CheckCircle2 size={14} /> Mark as Paid
-                                    </button>
+                                    {(!paymentDetail?.status || paymentDetail.status !== 'Paid') && (
+                                      <button onClick={handleMarkAsPaid} className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-all text-[12px] font-bold">
+                                          <CheckCircle2 size={14} /> Mark as Paid
+                                      </button>
+                                    )}
                                 </div>
 
-                                {/* Banner */}
+                                {/* Banner — only shown when status is Draft */}
+                                {(!paymentDetail?.status || paymentDetail.status !== 'Paid') && (
                                 <div className="mx-8 mt-6 p-4 bg-white border border-blue-100 rounded-xl flex items-center justify-between shadow-sm no-print">
                                     <div className="flex items-center gap-3">
                                         <AlertCircle size={16} className="text-blue-600" />
                                         <p className="text-[13px] text-slate-700"><b>WHAT'S NEXT?</b> Mark the payment as Paid to confirm that it has been sent.</p>
                                     </div>
-                                    <button className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-[12px] font-bold shadow-sm">
+                                    <button onClick={handleMarkAsPaid} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-[12px] font-bold shadow-sm hover:bg-blue-700 transition-colors">
                                         Mark as Paid
                                     </button>
                                 </div>
+                                )}
 
                                 {/* REAL DOCUMENT PREVIEW */}
                                 <div className="p-8 flex-1">
                                     <div className="max-w-[700px] mx-auto bg-white border border-slate-200 shadow-[0_10px_40px_rgba(0,0,0,0.04)] relative">
-                                        {/* Status Ribbon (Draft) */}
+                                        {/* Status Ribbon */}
                                         <div className="absolute top-0 left-0 w-24 h-24 overflow-hidden z-10">
-                                            <div className="absolute top-[24px] -left-[30px] w-[140px] bg-slate-400 text-white text-center py-1 text-[10px] font-bold uppercase tracking-widest -rotate-45 shadow-sm">
-                                                Draft
+                                            <div className={`absolute top-[24px] -left-[30px] w-[140px] text-white text-center py-1 text-[10px] font-bold uppercase tracking-widest -rotate-45 shadow-sm ${
+                                                paymentDetail?.status === 'Paid' ? 'bg-emerald-500' : 'bg-slate-400'
+                                            }`}>
+                                                {paymentDetail?.status || 'Draft'}
                                             </div>
                                         </div>
 

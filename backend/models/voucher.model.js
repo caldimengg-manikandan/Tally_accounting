@@ -45,6 +45,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     },
+    status: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: null
+    },
     UserId: {
       type: DataTypes.UUID,
       allowNull: true

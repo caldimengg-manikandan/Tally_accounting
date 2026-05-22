@@ -1,4 +1,5 @@
 const { Voucher, Transaction, Ledger, sequelize } = require('../../models');
+const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 const AuditService = require('../../services/AuditService');
 
@@ -137,7 +138,37 @@ exports.getVoucherById = async (req, res) => {
       }]
     });
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
-    res.json(voucher);
+
+    const plainVoucher = voucher.toJSON();
+    if (voucher.voucherType === 'Purchase') {
+      const crTx = plainVoucher.Transactions?.find(t => parseFloat(t.credit || 0) > 0);
+      const totalAmount = crTx ? parseFloat(crTx.credit || 0) : 0;
+
+      const payments = await Transaction.findAll({
+        where: {
+          description: { [Op.like]: `%BILL_REF:${voucher.id}%` }
+        },
+        include: [{
+          model: Voucher,
+          where: { status: 'Paid' }
+        }]
+      });
+      const amountPaid = payments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
+      plainVoucher.balanceDue = Math.max(0, totalAmount - amountPaid);
+      plainVoucher.amountPaid = amountPaid;
+      plainVoucher.totalAmount = totalAmount;
+
+      let status = voucher.status;
+      if (!status) {
+        if (totalAmount <= 0) status = 'DRAFT';
+        else if (plainVoucher.balanceDue <= 0.01) status = 'PAID';
+        else if (amountPaid > 0) status = 'PARTIALLY_PAID';
+        else status = 'OPEN';
+      }
+      plainVoucher.status = status;
+    }
+
+    res.json(plainVoucher);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

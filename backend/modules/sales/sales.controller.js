@@ -348,7 +348,7 @@ exports.getOpenInvoices = async (req, res) => {
 exports.recordPayment = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { companyId, customerId, paymentDate, amount, depositToId, reference, invoices, projectId } = req.body;
+    const { companyId, customerId, paymentDate, amount, depositToId, reference, invoices, projectId, paymentMode } = req.body;
     // invoices: [{ id, amountToApply }]
 
     // 1. Create Receipt Voucher
@@ -356,7 +356,7 @@ exports.recordPayment = async (req, res) => {
       companyId,
       date: paymentDate,
       voucherType: 'Receipt',
-      narration: `Payment received from customer. Ref: ${reference || 'N/A'}`,
+      narration: `Payment received from customer via ${paymentMode || 'Bank Transfer'}. Ref: ${reference || 'N/A'}`,
       reference,
       entries: [
         { ledgerId: depositToId, debit: amount, credit: 0 }, // Bank/Cash (Debit)

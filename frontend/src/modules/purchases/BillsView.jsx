@@ -292,6 +292,7 @@ const BillsView = ({ companyId }) => {
       setDetailLoading(true);
       const res = await voucherAPI.getById(id);
       setBillDetail(res.data);
+      setBills(prev => prev.map(b => b.id === id ? { ...b, ...res.data } : b));
     } catch (err) {
       console.error("Failed to fetch bill detail:", err);
     } finally {
@@ -492,15 +493,15 @@ const BillsView = ({ companyId }) => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-bold tracking-widest border
-                                                    ${parseFloat(bill.balanceDue || bill.totalAmount) === 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
-                                                    {parseFloat(bill.balanceDue || bill.totalAmount) === 0 ? 'Paid' : 'Unpaid'}
+                                                    ${parseFloat(bill.balanceDue ?? bill.totalAmount) === 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
+                                                    {parseFloat(bill.balanceDue ?? bill.totalAmount) === 0 ? 'Paid' : 'Unpaid'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right text-[14px] font-medium text-slate-900 tabular-nums">
                                                 ₹{parseFloat(bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="px-6 py-4 text-right text-[14px] font-medium text-orange-600 tabular-nums">
-                                                ₹{parseFloat(bill.balanceDue || bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                ₹{parseFloat(bill.balanceDue ?? bill.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex items-center justify-center gap-2">
@@ -571,8 +572,8 @@ const BillsView = ({ companyId }) => {
                                         <span className="text-[11px] text-slate-400 font-bold">{new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}</span>
                                     </div>
                                     <div className="mt-2 flex items-center justify-between">
-                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] ${parseFloat(bill.balanceDue) === 0 ? 'bg-emerald-100/80 text-emerald-600' : 'bg-orange-100/80 text-orange-600'}`}>
-                                            {parseFloat(bill.balanceDue) === 0 ? 'Paid' : 'Unpaid'}
+                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] ${parseFloat(bill.balanceDue ?? bill.totalAmount) === 0 ? 'bg-emerald-100/80 text-emerald-600' : 'bg-orange-100/80 text-orange-600'}`}>
+                                            {parseFloat(bill.balanceDue ?? bill.totalAmount) === 0 ? 'Paid' : 'Unpaid'}
                                         </span>
                                         <ChevronRight size={14} className={`transition-all duration-300 ${selectedBillId === bill.id ? 'translate-x-0 opacity-100 text-blue-500' : '-translate-x-2 opacity-0 text-slate-200'}`} />
                                     </div>
@@ -668,7 +669,10 @@ const BillsView = ({ companyId }) => {
                                                 </div>
                                             </div>
                                             <button 
-                                            onClick={() => billDetail && navigate('/purchases/payments-made', { state: { vendorId: billDetail.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.LedgerId || billDetail?.Ledger?.id } })}
+                                            onClick={() => billDetail && navigate('/payments-made/new', { state: { 
+                                                vendorId: billDetail.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.LedgerId || billDetail?.Ledger?.id,
+                                                billDetail: billDetail 
+                                            } })}
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all shadow-lg shadow-blue-100 active:scale-95"
                                             >
                                                 Record Payment

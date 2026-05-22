@@ -359,7 +359,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
     });
 
     const [lineItems, setLineItems] = useState([
-        { id: Date.now(), itemId: '', name: '', description: '', quantity: 0, rate: 0, amount: 0 }
+        { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }
     ]);
 
     const [salespersons, setSalespersons] = useState(() => {
@@ -452,13 +452,16 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
         if (!item) return;
         setLineItems(prev => prev.map(row => {
             if (row.id === rowId) {
+                const currentQty = parseFloat(row.quantity) || 0;
+                const newQty = currentQty === 0 ? 1 : currentQty;
                 return {
                     ...row,
                     itemId: item.id,
                     name: item.name,
                     description: item.salesDescription || '',
                     rate: item.sellingPrice || 0,
-                    amount: (item.sellingPrice || 0) * (row.quantity || 0)
+                    quantity: newQty,
+                    amount: (item.sellingPrice || 0) * newQty
                 };
             }
             return row;
@@ -680,7 +683,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                       </button>
                     </div>
 
-                    <div className="border border-slate-200 rounded overflow-hidden shadow-sm bg-white">
+                    <div className="border border-slate-200 rounded overflow-visible shadow-sm bg-white">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] text-slate-400 font-bold uppercase tracking-[0.15em]">
@@ -740,7 +743,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                     </div>
                     
                     <button 
-                        onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 0, rate: 0, amount: 0 }])}
+                        onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }])}
                         className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-[#1e61f0] text-[12px] font-bold rounded shadow-sm hover:bg-slate-50 transition-all"
                     >
                       <Plus size={14} strokeWidth={3}/> Add Row

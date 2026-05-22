@@ -193,6 +193,57 @@ class AccountingService {
     return voucher;
   }
 
+  static async deleteJournalEntry(voucherId, { companyId, userId }, dbTransaction = null) {
+    const { AuditLog } = require('../models');
+    const options = dbTransaction ? { transaction: dbTransaction } : {};
+
+    const voucher = await Voucher.findByPk(voucherId, {
+      include: [Transaction],
+      ...options
+    });
+
+    if (!voucher) throw new Error('Voucher not found');
+    if (voucher.CompanyId !== companyId) throw new Error('Unauthorized');
+
+    let totalDebit = 0;
+    // 1. Reverse old transactions
+    if (voucher.Transactions) {
+      for (const oldTx of voucher.Transactions) {
+        totalDebit += parseFloat(oldTx.debit || 0);
+        const ledger = await Ledger.findByPk(oldTx.LedgerId, options);
+        if (ledger) {
+          const delta = parseFloat(oldTx.debit || 0) - parseFloat(oldTx.credit || 0)
+          ledger.currentBalance = parseFloat(ledger.currentBalance || 0) - delta; // Reverse delta
+          await ledger.save(options);
+        }
+      }
+      // Delete old transactions
+      await Transaction.destroy({ where: { VoucherId: voucherId }, ...options });
+    }
+
+    // 2. Delete Voucher
+    await voucher.destroy(options);
+
+    // 3. Audit Log
+    if (AuditLog) {
+      await AuditLog.create({
+        action: 'DELETE_VOUCHER',
+        tableName: 'Vouchers',
+        recordId: voucherId,
+        newData: {
+          voucherNumber: voucher.voucherNumber,
+          voucherType: voucher.voucherType,
+          totalValue: totalDebit,
+          lines: voucher.Transactions ? voucher.Transactions.length : 0
+        },
+        CompanyId: companyId,
+        UserId: userId
+      }, options);
+    }
+
+    return true;
+  }
+
   /**
    * Professional Tax Invoice Engine (GST Compliant)
    * Enhanced with: Negative Stock Protection, Integrated Inventory, and Audit Trails.

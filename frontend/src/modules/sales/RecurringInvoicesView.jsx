@@ -248,7 +248,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
         invoiceType: 'TaxInvoice',
         discount: 0,
         adjustment: 0,
-        taxPercent: 18, 
+        taxPercent: 0, 
         salesperson: '',
         customerNotes: 'Thanks for your business.',
         termsConditions: '',
@@ -256,7 +256,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
     });
 
     const [lineItems, setLineItems] = useState([
-        { id: Date.now(), itemId: '', name: '', description: '', quantity: 0, rate: 0, amount: 0 }
+        { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }
     ]);
 
     const [errors, setErrors] = useState({});
@@ -342,13 +342,16 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
     const handleItemSelect = (rowId, item) => {
         setLineItems(prev => prev.map(row => {
             if (row.id === rowId) {
+                const currentQty = parseFloat(row.quantity) || 0;
+                const newQty = currentQty === 0 ? 1 : currentQty;
                 return { 
                     ...row, 
                     itemId: item.id, 
                     name: item.name, 
                     description: item.salesDescription || '', 
                     rate: item.sellingPrice || 0, 
-                    amount: (item.sellingPrice || 0) * (row.quantity || 0) 
+                    quantity: newQty,
+                    amount: (item.sellingPrice || 0) * newQty 
                 };
             }
             return row;
@@ -367,13 +370,30 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
         if (!validate()) { addNotification('Please fill all required fields', 'warning'); return; }
         setSaving(true);
         try {
+            // Sanitize dates to YYYY-MM-DD for PostgreSQL compatibility
+            const sanitizeDate = (dateStr) => {
+                if (!dateStr) return null;
+                // If already YYYY-MM-DD, pass through
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+                // If DD/MM/YYYY, convert
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+                    const [day, month, year] = dateStr.split('/');
+                    return `${year}-${month}-${day}`;
+                }
+                // Fallback: try to parse with Date constructor
+                const parsed = new Date(dateStr);
+                return isNaN(parsed.getTime()) ? dateStr : parsed.toISOString().split('T')[0];
+            };
+
             const payload = {
                 ...formData,
+                startDate: sanitizeDate(formData.startDate),
+                endDate: sanitizeDate(formData.endDate),
                 items: lineItems,
                 subTotal: totals.subTotal,
                 taxAmount: totals.taxAmt,
                 totalAmount: totals.total,
-                companyId
+                CompanyId: companyId
             };
             if (editId) await recurringInvoiceAPI.update(editId, payload);
             else await recurringInvoiceAPI.create(payload);
@@ -453,7 +473,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                                         {filteredCustomers.map(c => (
                                                             <div 
                                                                 key={c.id}
-                                                                onClick={() => { setFormData(prev => ({ ...prev, customerName: c.name, templateName: prev.templateName || `Subscription - ${c.name}` })); setCustomerSearch(c.name); setShowCustomerDropdown(false); setErrors({...errors, customerName: false}); }}
+                                                                onClick={() => { setFormData(prev => ({ ...prev, customerName: c.name })); setCustomerSearch(c.name); setShowCustomerDropdown(false); setErrors(prev => ({...prev, customerName: false})); }}
                                                                 className={`px-4 py-2 hover:bg-blue-50 cursor-pointer text-[14px] font-medium border-b border-slate-50 last:border-0 ${formData.customerName === c.name ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}`}
                                                             >
                                                                 {c.name}
@@ -481,8 +501,8 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                 <input 
                                     type="text"
                                     value={formData.templateName} 
-                                    onChange={e => { setFormData({...formData, templateName: e.target.value}); setErrors({...errors, templateName: false}); }}
-                                    placeholder="e.g. Monthly Maintenance"
+                                    onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, templateName: val})); setErrors(prev => ({...prev, templateName: false})); }}
+                                    placeholder={formData.customerName ? `e.g., Subscription - ${formData.customerName}` : "e.g., Monthly Maintenance"}
                                     className={`w-full h-11 px-4 bg-slate-50 border ${errors.templateName ? 'border-red-500' : 'border-slate-200'} rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm`}
                                 />
                             </div>
@@ -492,7 +512,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Billing Frequency</label>
                                 <select 
                                     value={formData.frequency} 
-                                    onChange={e => setFormData({...formData, frequency: e.target.value})}
+                                    onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, frequency: val})); }}
                                     className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none shadow-sm"
                                 >
                                     <option value="Weekly">Every Week</option>
@@ -512,7 +532,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                     <input 
                                         type="date" 
                                         value={formData.startDate} 
-                                        onChange={e => setFormData({...formData, startDate: e.target.value})}
+                                        onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, startDate: val})); }}
                                         className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm"
                                     />
                                 </div>
@@ -549,7 +569,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                             </div>
                                             <div className="max-h-48 overflow-y-auto no-scrollbar">
                                                 {salespersons.filter(s => s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).map(s => (
-                                                    <div key={s.id} onClick={() => { setFormData({...formData, salesperson: s.name}); setShowSalespersonDropdown(false); }} className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[13px] font-bold text-slate-700 border-b border-slate-50 last:border-0">{s.name}</div>
+                                                    <div key={s.id} onClick={() => { setFormData(prev => ({...prev, salesperson: s.name})); setShowSalespersonDropdown(false); }} className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-[13px] font-bold text-slate-700 border-b border-slate-50 last:border-0">{s.name}</div>
                                                 ))}
                                             </div>
                                             <button onClick={() => setShowManageSalespersons(true)} className="w-full py-3 bg-slate-50 hover:bg-blue-50 text-blue-600 font-bold text-[11px] uppercase tracking-widest border-t border-slate-100">+ Manage Staff</button>
@@ -579,7 +599,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                             </button>
                         </div>
 
-                        <div className="border border-slate-200 rounded-sm overflow-hidden shadow-sm bg-white">
+                        <div className="border border-slate-200 rounded-sm overflow-visible shadow-sm bg-white">
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em]">
@@ -624,7 +644,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                 </tbody>
                             </table>
                         </div>
-                        <button onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 0, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-4 py-2 text-[#1e61f0] text-[12px] font-bold rounded hover:bg-blue-50 transition-all uppercase tracking-widest">+ Add New Row</button>
+                        <button onClick={() => setLineItems([...lineItems, { id: Date.now(), itemId: '', name: '', description: '', quantity: 1, rate: 0, amount: 0 }])} className="flex items-center gap-2 px-4 py-2 text-[#1e61f0] text-[12px] font-bold rounded hover:bg-blue-50 transition-all uppercase tracking-widest">+ Add New Row</button>
                     </div>
 
                     {/* Bottom Section */}
@@ -632,18 +652,18 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                         <div className="flex-1 max-w-md space-y-8">
                             <div className="space-y-3">
                                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Customer Notes</label>
-                                <textarea value={formData.customerNotes} onChange={e => setFormData({...formData, customerNotes: e.target.value})} className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
+                                <textarea value={formData.customerNotes} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, customerNotes: val})); }} className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
                             </div>
                             <div className="space-y-3">
                                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Terms & Conditions</label>
-                                <textarea value={formData.termsConditions} onChange={e => setFormData({...formData, termsConditions: e.target.value})} className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
+                                <textarea value={formData.termsConditions} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, termsConditions: val})); }} className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
                             </div>
                         </div>
                         <div className="w-80 space-y-4">
                             <div className="flex justify-between text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Sub Total</span><span>{totals.subTotal.toFixed(2)}</span></div>
-                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Discount (%)</span><input type="number" value={formData.discount} onChange={e => setFormData({...formData, discount: e.target.value})} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
-                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Tax (GST %)</span><input type="number" value={formData.taxPercent} onChange={e => setFormData({...formData, taxPercent: e.target.value})} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
-                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Adjustment</span><input type="number" value={formData.adjustment} onChange={e => setFormData({...formData, adjustment: e.target.value})} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Discount (%)</span><input type="number" value={formData.discount} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, discount: val})); }} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Tax (GST %)</span><input type="number" value={formData.taxPercent} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, taxPercent: val})); }} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Adjustment</span><input type="number" value={formData.adjustment} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, adjustment: val})); }} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
                             <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
                                 <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
                                 <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter">{getCurrencyDisplay(customers.find(c => c.name === formData.customerName)?.currency)} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -1175,7 +1195,7 @@ const RecurringInvoicesView = () => {
         finally { setLoading(false); }
     };
 
-    useEffect(() => { if (companyId) fetchTemplates(); }, [companyId]);
+    useEffect(() => { if (companyId) fetchTemplates(); }, [companyId, location.pathname]);
 
     const selectedId = params.id;
 

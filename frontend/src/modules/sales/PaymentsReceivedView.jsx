@@ -227,6 +227,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
     const [depositTo, setDepositTo] = useState('');
     const [reference, setReference] = useState('');
+    const [paymentMode, setPaymentMode] = useState('Bank Transfer');
     const [bankLedgers, setBankLedgers] = useState([]);
     const [loadingInvoices, setLoadingInvoices] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -280,6 +281,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                 amount,
                 depositToId: depositTo,
                 reference,
+                paymentMode,
                 invoices: Object.entries(allocation).map(([id, amt]) => ({ id, amountToApply: amt }))
             });
             addNotification('Payment recorded successfully', 'success');
@@ -376,7 +378,24 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                       </div>
                     </div>
 
-                    <div className="space-y-2.5 col-span-2">
+                    <div className="space-y-2.5">
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Payment Mode*</label>
+                      <div className="relative group">
+                        <select 
+                          value={paymentMode} 
+                          onChange={e => setPaymentMode(e.target.value)}
+                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
+                        >
+                          <option value="Bank Transfer">Bank Transfer</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Cheque">Cheque</option>
+                          <option value="Credit Card">Credit Card</option>
+                        </select>
+                        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5">
                       <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Reference / Transaction ID</label>
                       <input 
                         type="text" 
@@ -537,7 +556,8 @@ const PaymentsEmptyState = ({ onGoToInvoices, onRecordPayment }) => {
 
 const PaymentsReceivedView = () => {
     const navigate = useNavigate();
-    const { id } = useParams();
+    const { id: routeId } = useParams();
+    const [selectedRecordId, setSelectedRecordId] = useState(null);
     const location = useLocation();
     const companyId = localStorage.getItem('companyId');
     const [payments, setPayments] = useState([]);
@@ -578,7 +598,7 @@ const PaymentsReceivedView = () => {
         <div className="flex h-screen bg-white font-sans overflow-hidden">
             {/* List Sidebar */}
             {payments.length > 0 && (
-                <div className={`flex flex-col border-r border-slate-100 transition-all duration-300 no-print ${id ? 'w-[380px]' : 'w-[420px]'}`}>
+                <div className={`flex flex-col border-r border-slate-100 transition-all duration-300 no-print ${selectedRecordId ? 'w-[380px]' : 'w-[420px]'}`}>
                 {/* Header Section */}
                 <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
                     <div>
@@ -627,12 +647,12 @@ const PaymentsReceivedView = () => {
                         filtered.map(p => {
                             const customerName = p.Transactions.find(t => t.Ledger?.Group?.name?.includes('Sundry Debtors') || t.Ledger?.Group?.name?.includes('Customer'))?.Ledger?.name || 'Customer';
                             const amount = p.Transactions.reduce((s, t) => s + parseFloat(t.credit || 0), 0);
-                            const isActive = id === p.id;
+                            const isActive = selectedRecordId === p.id;
                             
                             return (
                                 <div 
                                     key={p.id} 
-                                    onClick={() => navigate(`/payments/${p.id}`)}
+                                    onClick={() => setSelectedRecordId(p.id)}
                                     className={`px-8 py-6 cursor-pointer transition-all border-l-4 ${isActive ? 'bg-blue-50/50 border-blue-600' : 'bg-white border-transparent hover:bg-slate-50/50'}`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
@@ -671,8 +691,8 @@ const PaymentsReceivedView = () => {
                     onGoToInvoices={() => navigate('/sales-invoices', { state: { filter: 'unpaid' } })} 
                     onRecordPayment={() => navigate('/payments/new')}
                 />
-            ) : id ? (
-                <PaymentReceiptDetail id={id} navigate={navigate} companyId={companyId} />
+            ) : selectedRecordId ? (
+                <PaymentReceiptDetail id={selectedRecordId} navigate={() => setSelectedRecordId(null)} companyId={companyId} />
             ) : (
                <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/30 text-center p-20">
                     <div className="w-24 h-24 bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 flex items-center justify-center text-slate-200 mb-8 border border-slate-100">

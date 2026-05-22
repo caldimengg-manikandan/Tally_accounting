@@ -28,6 +28,7 @@ router.get('/payments-made/next-number/:companyId', paymentMadeController.getNex
 router.get('/payments-made/payment/:id', paymentMadeController.getPayment);
 router.get('/payments-made/:companyId', paymentMadeController.getPayments);
 router.post('/payments-made', paymentMadeController.createPayment);
+router.patch('/payments-made/:id/mark-paid', paymentMadeController.markAsPaid);
 router.put('/payments-made/:id', paymentMadeController.updatePayment);
 router.delete('/payments-made/:id', paymentMadeController.deletePayment);
 router.get('/unpaid-bills/:vendorId', paymentMadeController.getUnpaidBills);

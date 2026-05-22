@@ -165,18 +165,25 @@ exports.sendEmail = async (req, res) => {
 
     const pdfBuffer = await PDFService.generateDeliveryChallan(challan, items);
 
+    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
+    const userEmail = process.env.SMTP_USER || process.env.MAIL_USER || 'calbuy160@gmail.com';
+    const userPass = process.env.SMTP_PASS || process.env.MAIL_PASS || 'jwyeljvzgsselddo';
+
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
       auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS
+        user: userEmail,
+        pass: userPass
       },
       tls: {
         rejectUnauthorized: false
       }
     });
 
-    const fromEmail = process.env.MAIL_USER;
+    const fromEmail = userEmail;
     const finalToEmail = toEmail || challan.Customer?.email;
     if (!finalToEmail) {
         return res.status(400).json({ error: 'Customer email address missing. Please update the customer ledger.' });
