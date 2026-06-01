@@ -67,15 +67,22 @@ app.use('/api/quotes', require('./modules/sales/quote.routes'));
 app.use('/api/inventory', require('./modules/inventory/inventory.routes'));
 app.use('/api/reconciliation', require('./modules/reconciliation/reconciliation.routes'));
 app.use('/api/cost-centers', require('./modules/accounting/costCenter.routes'));
+app.use('/api/currencies', require('./modules/accounting/currency.routes'));
+app.use('/api/cost-categories', require('./modules/accounting/costCategory.routes'));
 app.use('/api/retainer-invoices', require('./modules/sales/retainerInvoice.routes'));
 app.use('/api/recurring-invoices', require('./modules/sales/recurringInvoice.routes'));
 app.use('/api/pricelists', require('./modules/inventory/pricelist.routes'));
 app.use('/api/purchases', require('./modules/purchases/purchases.routes'));
 app.use('/api/mail', require('./modules/mail/mail.routes'));
+app.use('/api/tax/gst', require('./modules/tax/gst.routes'));
+app.use('/api/payroll', require('./modules/payroll/payroll.routes'));
+app.use('/api/fixed-assets', require('./modules/fixed_assets/fixedAssets.routes'));
+app.use('/api/manufacturing', require('./modules/manufacturing/manufacturing.routes'));
+app.use('/api/budgets', require('./modules/budgeting/budgeting.routes'));
 app.use('/api/delivery-challans', require('./modules/sales/deliveryChallan.routes'));
 app.use('/api/credit-notes', require('./modules/sales/creditNote.routes'));
-app.use('/api/projects', require('./modules/time_tracking/project.routes'));
-app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
+// app.use('/api/projects', require('./modules/time_tracking/project.routes'));
+// app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
@@ -83,7 +90,7 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
 // Using alter:true to apply new company profile fields;
-const syncOptions = {}; // Disabled alter:true to prevent SQLite constraint errors
+const syncOptions = (dialect === 'postgres' || process.env.DATABASE_URL) ? { alter: true } : {};
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');

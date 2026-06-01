@@ -14,7 +14,8 @@ exports.createItem = async (req, res) => {
       name, unit, openingStock, standardRate, companyId,
       type, sellingPrice, salesAccount, salesDescription,
       costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl,
-      salesInformation, purchaseInformation
+      salesInformation, purchaseInformation,
+      reorderLevel, stockGroupId, stockCategoryId, unitOfMeasureId, godownId
     } = req.body;
     
     const item = await Item.create({
@@ -34,6 +35,11 @@ exports.createItem = async (req, res) => {
       imageUrl,
       salesInformation: salesInformation !== undefined ? salesInformation : true,
       purchaseInformation: purchaseInformation !== undefined ? purchaseInformation : true,
+      reorderLevel: reorderLevel || 0,
+      stockGroupId: stockGroupId && stockGroupId !== "" ? stockGroupId : null,
+      stockCategoryId: stockCategoryId && stockCategoryId !== "" ? stockCategoryId : null,
+      unitOfMeasureId: unitOfMeasureId && unitOfMeasureId !== "" ? unitOfMeasureId : null,
+      godownId: godownId && godownId !== "" ? godownId : null,
       CompanyId: companyId
     });
 
@@ -113,7 +119,8 @@ exports.updateItem = async (req, res) => {
     const {
       name, unit, type, sellingPrice, salesAccount, salesDescription,
       costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl,
-      salesInformation, purchaseInformation
+      salesInformation, purchaseInformation,
+      reorderLevel, stockGroupId, stockCategoryId, unitOfMeasureId, godownId
     } = req.body;
 
     await item.update({
@@ -127,7 +134,12 @@ exports.updateItem = async (req, res) => {
       preferredVendor,
       imageUrl,
       salesInformation: salesInformation !== undefined ? salesInformation : true,
-      purchaseInformation: purchaseInformation !== undefined ? purchaseInformation : true
+      purchaseInformation: purchaseInformation !== undefined ? purchaseInformation : true,
+      reorderLevel: reorderLevel || 0,
+      stockGroupId: stockGroupId && stockGroupId !== "" ? stockGroupId : null,
+      stockCategoryId: stockCategoryId && stockCategoryId !== "" ? stockCategoryId : null,
+      unitOfMeasureId: unitOfMeasureId && unitOfMeasureId !== "" ? unitOfMeasureId : null,
+      godownId: godownId && godownId !== "" ? godownId : null
     });
 
     await AuditService.log({

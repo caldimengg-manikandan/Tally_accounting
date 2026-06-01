@@ -33,7 +33,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
   const [currency, setCurrency] = useState('INR- Indian Rupee');
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
   
-  // Addresses
+  // Addresses (optional — not required to save)
   const initialAddress = { attention: '', country: 'India', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
   const [billingAddress, setBillingAddress] = useState({ ...initialAddress });
   const [shippingAddress, setShippingAddress] = useState({ ...initialAddress });
@@ -300,6 +300,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
         <section className="space-y-6 pt-10 border-t border-slate-50">
             <div className="flex items-center gap-4 mb-8">
                 <h3 className="text-[14px] font-bold text-slate-800">Address Details</h3>
+                <span className="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Optional</span>
                 <div className="h-px bg-slate-100 flex-1"></div>
             </div>
 

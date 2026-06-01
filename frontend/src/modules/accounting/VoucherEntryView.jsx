@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { ledgerAPI, voucherAPI, groupAPI, costCenterAPI, accountingAPI } from '../../services/api';
 
-const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra'];
+const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra', 'Sales', 'Purchase'];
 
 let _uid = 100;
 const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', costCenterId: '', type, amount, note: '' });

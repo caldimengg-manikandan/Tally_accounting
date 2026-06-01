@@ -4,7 +4,7 @@ import {
     ChevronRight, ChevronDown, Plus, 
     RefreshCcw, Search, MoreHorizontal, 
     Wallet, Shield, ArrowUpRight, ArrowDownRight, Activity, BarChart4,
-    Folder, FileText, CornerDownRight, BookOpen
+    Folder, FileText, CornerDownRight, BookOpen, Edit
 } from 'lucide-react';
 import { groupAPI, ledgerAPI } from '../../services/api';
 
@@ -16,6 +16,7 @@ const LedgersView = ({ showNew }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showDrawer, setShowDrawer] = useState(showNew || false);
+    const [editingId, setEditingId] = useState(null);
     const [seeding, setSeeding] = useState(false);
     const [seedStatus, setSeedStatus] = useState(null); // 'success' | 'error' | null
     
@@ -23,7 +24,7 @@ const LedgersView = ({ showNew }) => {
     const [flatGroupList, setFlatGroupList] = useState([]);
     
     const [formData, setFormData] = useState({ 
-        name: '', nature: 'Assets', type: 'Ledger', parent_id: ''
+        name: '', nature: 'Assets', type: 'Ledger', parent_id: '', description: '', openingBalance: '', openingBalanceType: 'Dr'
     });
     const companyId = localStorage.getItem('companyId');
     const user = React.useMemo(() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
@@ -173,6 +174,26 @@ const LedgersView = ({ showNew }) => {
         );
     };
 
+    const handleStartEdit = (node, type) => {
+        setEditingId(node.id);
+        setFormData({
+            name: node.name,
+            nature: node.nature || 'Assets',
+            type: type,
+            parent_id: type === 'Ledger' ? (node.GroupId || '') : (node.parent_id || ''),
+            description: node.description || '',
+            openingBalance: node.openingBalance || '',
+            openingBalanceType: node.openingBalanceType || 'Dr'
+        });
+        setShowDrawer(true);
+    };
+
+    const handleCloseDrawer = () => {
+        setShowDrawer(false);
+        setEditingId(null);
+        setFormData({ name: '', nature: 'Assets', type: 'Ledger', parent_id: '', description: '', openingBalance: '', openingBalanceType: 'Dr' });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const currentCompanyId = localStorage.getItem('companyId');
@@ -183,14 +204,24 @@ const LedgersView = ({ showNew }) => {
             // Standardize empty parent_id to null
             if (!payload.parent_id || payload.parent_id === '') payload.parent_id = null;
 
-            if (formData.type === 'Group') {
-                await groupAPI.create(payload);
+            if (editingId) {
+                if (formData.type === 'Group') {
+                    await groupAPI.update(editingId, payload);
+                } else {
+                    payload.groupId = payload.parent_id; 
+                    await ledgerAPI.update(editingId, payload);
+                }
             } else {
-                // IMPORTANT: Ledgers expect 'groupId', but groups expect 'parent_id'
-                payload.groupId = payload.parent_id; 
-                await ledgerAPI.create(payload);
+                if (formData.type === 'Group') {
+                    await groupAPI.create(payload);
+                } else {
+                    // IMPORTANT: Ledgers expect 'groupId', but groups expect 'parent_id'
+                    payload.groupId = payload.parent_id; 
+                    await ledgerAPI.create(payload);
+                }
             }
             setShowDrawer(false);
+            setEditingId(null);
             setFormData({ name: '', nature: 'Assets', type: 'Ledger', parent_id: '', description: '', openingBalance: '', openingBalanceType: 'Dr' });
             fetchData();
         } catch (err) { console.error(err); }
@@ -319,6 +350,16 @@ const LedgersView = ({ showNew }) => {
                                 </button>
                             )}
                             
+                            {canCreate && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleStartEdit(node, isGroup ? 'Group' : 'Ledger'); }}
+                                    title={isGroup ? "Edit Group" : "Edit Ledger"}
+                                    className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
+                                >
+                                    <Edit size={14} />
+                                </button>
+                            )}
+
                             {canDelete && (
                                 <button 
                                     onClick={(e) => {
@@ -367,7 +408,11 @@ const LedgersView = ({ showNew }) => {
                    </button>
                    {canCreate && (
                     <button 
-                       onClick={() => setShowDrawer(true)}
+                       onClick={() => {
+                           setEditingId(null);
+                           setFormData({ name: '', nature: 'Assets', type: 'Ledger', parent_id: '', description: '', openingBalance: '', openingBalanceType: 'Dr' });
+                           setShowDrawer(true);
+                       }}
                        className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold text-sm shadow-sm hover:bg-blue-700 transition-all flex items-center gap-2"
                     >
                        <Plus size={16}/> New Account
@@ -448,10 +493,10 @@ const LedgersView = ({ showNew }) => {
                     <div className="relative w-full max-w-[480px] max-h-[90vh] bg-white rounded-2xl shadow-2xl border border-slate-200 animate-fade-in flex flex-col overflow-hidden">
                         <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                            <div>
-                              <h2 className="text-lg font-bold text-slate-900">Create Account Node</h2>
-                              <span className="text-xs text-slate-500 font-medium mt-1">Add a new ledger or hierarchical group</span>
+                              <h2 className="text-lg font-bold text-slate-900">{editingId ? 'Edit Account Node' : 'Create Account Node'}</h2>
+                              <span className="text-xs text-slate-500 font-medium mt-1">{editingId ? 'Modify details of the selected group or ledger' : 'Add a new ledger or hierarchical group'}</span>
                            </div>
-                           <button onClick={() => setShowDrawer(false)} className="p-2 rounded-lg hover:bg-slate-200 text-slate-500 transition-colors">✕</button>
+                           <button onClick={handleCloseDrawer} className="p-2 rounded-lg hover:bg-slate-200 text-slate-500 transition-colors">✕</button>
                         </div>
 
                         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-6">
@@ -519,16 +564,46 @@ const LedgersView = ({ showNew }) => {
                                </div>
                            )}
 
+                            <div className="space-y-4">
+                               {/* RECORD TYPE SELECTOR */}
+                               {!editingId && (
+                                   <div>
+                                       <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1">Record Type</label>
+                                       <div className="flex gap-4">
+                                           <label className={`flex-1 flex items-center justify-center gap-2 h-12 border-2 rounded-xl cursor-pointer transition-all ${formData.type === 'Ledger' ? 'bg-blue-50 border-blue-500' : 'bg-[#f8fafc] border-[#e2e8f0] hover:border-blue-500'}`}>
+                                               <input 
+                                                   type="radio" 
+                                                   name="type" 
+                                                   value="Ledger" 
+                                                   checked={formData.type === 'Ledger'} 
+                                                   onChange={() => setFormData({ ...formData, type: 'Ledger' })}
+                                                   className="accent-blue-600"
+                                               />
+                                               <span className="text-sm font-bold text-[#1e293b]">Ledger</span>
+                                           </label>
+                                           <label className={`flex-1 flex items-center justify-center gap-2 h-12 border-2 rounded-xl cursor-pointer transition-all ${formData.type === 'Group' ? 'bg-blue-50 border-blue-500' : 'bg-[#f8fafc] border-[#e2e8f0] hover:border-blue-500'}`}>
+                                               <input 
+                                                   type="radio" 
+                                                   name="type" 
+                                                   value="Group" 
+                                                   checked={formData.type === 'Group'} 
+                                                   onChange={() => setFormData({ ...formData, type: 'Group' })}
+                                                   className="accent-blue-600"
+                                               />
+                                               <span className="text-sm font-bold text-[#1e293b]">Group</span>
+                                           </label>
+                                       </div>
+                                   </div>
+                               )}
 
-                           <div className="space-y-4">
                                {/* LEDGER NAME */}
                                <div>
-                                   <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1">Ledger Name</label>
+                                   <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1">{formData.type === 'Ledger' ? 'Ledger Name' : 'Group Name'}</label>
                                    <input 
                                        type="text"
                                        required
                                        className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-6 text-sm font-bold text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all placeholder:text-[#cbd5e1]"
-                                       placeholder="e.g. Rent, Salary..."
+                                       placeholder={formData.type === 'Ledger' ? 'e.g. Rent, Salary...' : 'e.g. Administrative Expenses, Bank Accounts...'}
                                        value={formData.name}
                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
                                    />
@@ -617,7 +692,24 @@ const LedgersView = ({ showNew }) => {
                                      )}
                                   </select>
                                </div>
-                           </div>
+
+                               {/* NATURE (ONLY FOR GROUPS UNDER PRIMARY/ROOT) */}
+                               {formData.type === 'Group' && !formData.parent_id && (
+                                   <div>
+                                       <label className="block text-[10px] uppercase font-bold tracking-widest text-[#64748b] mb-2 px-1">Group Nature</label>
+                                       <select
+                                           className="w-full h-14 bg-[#f8fafc] border-2 border-[#e2e8f0] rounded-xl px-6 text-sm font-bold text-[#1e293b] focus:border-[#2563eb] focus:bg-white outline-none transition-all appearance-none cursor-pointer"
+                                           value={formData.nature || 'Assets'}
+                                           onChange={e => setFormData({ ...formData, nature: e.target.value })}
+                                       >
+                                           <option value="Assets">Assets</option>
+                                           <option value="Liabilities">Liabilities</option>
+                                           <option value="Income">Income</option>
+                                           <option value="Expenses">Expenses</option>
+                                       </select>
+                                   </div>
+                               )}
+                            </div>
 
                         </form>
 
@@ -633,7 +725,7 @@ const LedgersView = ({ showNew }) => {
                                 onClick={handleSubmit}
                                 className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-blue-700 transition-colors"
                             >
-                                Save {formData.type}
+                                {editingId ? 'Update' : 'Save'} {formData.type}
                             </button>
                         </div>
                     </div>

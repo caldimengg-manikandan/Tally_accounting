@@ -178,26 +178,18 @@ exports.deleteVoucher = async (req, res) => {
   const t = await sequelize.transaction();
   try {
     const voucher = await Voucher.findByPk(req.params.id);
-    if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
+    if (!voucher) {
+      if (t) await t.rollback();
+      return res.status(404).json({ error: 'Voucher not found' });
+    }
 
-    // In a sophisticated system, we'd adjust balances here if not using dynamic totals
-    // Since we use dynamic totals, deleting the Transactions is enough
-    await Transaction.destroy({ where: { VoucherId: voucher.id }, transaction: t });
-    await voucher.destroy({ transaction: t });
+    // Call ledger service to reverse balances and delete entries atomically
+    await AccountingService.deleteJournalEntry(req.params.id, {
+      companyId: voucher.CompanyId,
+      userId: req.user?.id
+    }, t);
 
     await t.commit();
-
-    // Log the deletion
-    await AuditService.log({
-      action: 'DELETE_VOUCHER',
-      tableName: 'Vouchers',
-      recordId: voucher.id,
-      oldData: voucher,
-      companyId: voucher.CompanyId,
-      userId: req.user?.id,
-      req
-    });
-
     res.json({ message: 'Voucher deleted successfully.' });
   } catch (err) {
     if (t) await t.rollback();
