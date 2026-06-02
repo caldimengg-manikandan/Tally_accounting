@@ -35,6 +35,23 @@ const RecurringBillItem = require('./recurringBillItem.model')(sequelize, DataTy
 const VendorCredit = require('./vendorCredit.model')(sequelize, DataTypes);
 const VendorCreditItem = require('./vendorCreditItem.model')(sequelize, DataTypes);
 const Timesheet = require('./timesheet.model')(sequelize, DataTypes);
+const StockGroup = require('./stockGroup.model')(sequelize, DataTypes);
+const StockCategory = require('./stockCategory.model')(sequelize, DataTypes);
+const UnitOfMeasure = require('./unitOfMeasure.model')(sequelize, DataTypes);
+const Godown = require('./godown.model')(sequelize, DataTypes);
+const Currency = require('./currency.model')(sequelize, DataTypes);
+const CostCategory = require('./costCategory.model')(sequelize, DataTypes);
+const Employee = require('./employee.model')(sequelize, DataTypes);
+const Attendance = require('./attendance.model')(sequelize, DataTypes);
+const SalaryStructure = require('./salaryStructure.model')(sequelize, DataTypes);
+const Payslip = require('./payslip.model')(sequelize, DataTypes);
+const FixedAsset = require('./fixedAsset.model')(sequelize, DataTypes);
+const DepreciationLog = require('./depreciationLog.model')(sequelize, DataTypes);
+const BOM = require('./bom.model')(sequelize, DataTypes);
+const BOMItem = require('./bomItem.model')(sequelize, DataTypes);
+const ProductionOrder = require('./productionOrder.model')(sequelize, DataTypes);
+const Budget = require('./budget.model')(sequelize, DataTypes);
+const BudgetItem = require('./budgetItem.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -258,6 +275,100 @@ VendorCredit.belongsTo(Ledger, { as: 'APAccount', foreignKey: 'accountsPayableId
 VendorCreditItem.belongsTo(Item, { foreignKey: 'itemId' });
 VendorCreditItem.belongsTo(Ledger, { as: 'Account', foreignKey: 'accountId' });
 
+// 18. Stock & Inventory Masters
+Company.hasMany(StockGroup, { foreignKey: 'CompanyId' });
+StockGroup.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Company.hasMany(StockCategory, { foreignKey: 'CompanyId' });
+StockCategory.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Company.hasMany(UnitOfMeasure, { foreignKey: 'CompanyId' });
+UnitOfMeasure.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Company.hasMany(Godown, { foreignKey: 'CompanyId' });
+Godown.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Item.belongsTo(StockGroup, { foreignKey: 'stockGroupId' });
+StockGroup.hasMany(Item, { foreignKey: 'stockGroupId' });
+
+Item.belongsTo(StockCategory, { foreignKey: 'stockCategoryId' });
+StockCategory.hasMany(Item, { foreignKey: 'stockCategoryId' });
+
+Item.belongsTo(UnitOfMeasure, { foreignKey: 'unitOfMeasureId' });
+UnitOfMeasure.hasMany(Item, { foreignKey: 'unitOfMeasureId' });
+
+Item.belongsTo(Godown, { foreignKey: 'godownId' });
+Godown.hasMany(Item, { foreignKey: 'godownId' });
+
+// 19. Currency & Cost Category
+Company.hasMany(Currency, { foreignKey: 'CompanyId' });
+Currency.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Company.hasMany(CostCategory, { foreignKey: 'CompanyId' });
+CostCategory.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+CostCategory.hasMany(CostCenter, { foreignKey: 'costCategoryId' });
+CostCenter.belongsTo(CostCategory, { foreignKey: 'costCategoryId' });
+
+// 20. Payroll Models
+Company.hasMany(Employee, { foreignKey: 'CompanyId' });
+Employee.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Company.hasMany(Attendance, { foreignKey: 'CompanyId' });
+Attendance.belongsTo(Company, { foreignKey: 'CompanyId' });
+Employee.hasMany(Attendance, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
+Attendance.belongsTo(Employee, { foreignKey: 'EmployeeId' });
+
+Company.hasMany(SalaryStructure, { foreignKey: 'CompanyId' });
+SalaryStructure.belongsTo(Company, { foreignKey: 'CompanyId' });
+Employee.hasOne(SalaryStructure, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
+SalaryStructure.belongsTo(Employee, { foreignKey: 'EmployeeId' });
+
+Company.hasMany(Payslip, { foreignKey: 'CompanyId' });
+Payslip.belongsTo(Company, { foreignKey: 'CompanyId' });
+Employee.hasMany(Payslip, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
+Payslip.belongsTo(Employee, { foreignKey: 'EmployeeId' });
+Payslip.belongsTo(Voucher, { foreignKey: 'VoucherId', onDelete: 'SET NULL' });
+
+// 21. Fixed Assets
+Company.hasMany(FixedAsset, { foreignKey: 'CompanyId' });
+FixedAsset.belongsTo(Company, { foreignKey: 'CompanyId' });
+FixedAsset.belongsTo(Ledger, { as: 'AssetLedger', foreignKey: 'assetLedgerId' });
+FixedAsset.belongsTo(Ledger, { as: 'DepreciationLedger', foreignKey: 'depreciationLedgerId' });
+
+Company.hasMany(DepreciationLog, { foreignKey: 'CompanyId' });
+DepreciationLog.belongsTo(Company, { foreignKey: 'CompanyId' });
+FixedAsset.hasMany(DepreciationLog, { foreignKey: 'FixedAssetId', onDelete: 'CASCADE' });
+DepreciationLog.belongsTo(FixedAsset, { foreignKey: 'FixedAssetId' });
+DepreciationLog.belongsTo(Voucher, { foreignKey: 'VoucherId', onDelete: 'SET NULL' });
+
+// 22. Manufacturing / BOM
+Company.hasMany(BOM, { foreignKey: 'CompanyId' });
+BOM.belongsTo(Company, { foreignKey: 'CompanyId' });
+BOM.belongsTo(Item, { as: 'FinishedGood', foreignKey: 'finishedGoodItemId' });
+
+Company.hasMany(BOMItem, { foreignKey: 'CompanyId' });
+BOMItem.belongsTo(Company, { foreignKey: 'CompanyId' });
+BOM.hasMany(BOMItem, { as: 'ingredients', foreignKey: 'BOMId', onDelete: 'CASCADE' });
+BOMItem.belongsTo(BOM, { foreignKey: 'BOMId' });
+BOMItem.belongsTo(Item, { as: 'RawMaterial', foreignKey: 'rawMaterialItemId' });
+
+Company.hasMany(ProductionOrder, { foreignKey: 'CompanyId' });
+ProductionOrder.belongsTo(Company, { foreignKey: 'CompanyId' });
+ProductionOrder.belongsTo(BOM, { foreignKey: 'BOMId' });
+ProductionOrder.belongsTo(Item, { as: 'FinishedGood', foreignKey: 'finishedGoodItemId' });
+ProductionOrder.belongsTo(Voucher, { foreignKey: 'VoucherId', onDelete: 'SET NULL' });
+
+// 23. Budgets
+Company.hasMany(Budget, { foreignKey: 'CompanyId' });
+Budget.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+Company.hasMany(BudgetItem, { foreignKey: 'CompanyId' });
+BudgetItem.belongsTo(Company, { foreignKey: 'CompanyId' });
+Budget.hasMany(BudgetItem, { as: 'items', foreignKey: 'BudgetId', onDelete: 'CASCADE' });
+BudgetItem.belongsTo(Budget, { foreignKey: 'BudgetId' });
+BudgetItem.belongsTo(Ledger, { foreignKey: 'LedgerId' });
+
 module.exports = {
   sequelize,
   User,
@@ -293,5 +404,23 @@ module.exports = {
   RecurringBillItem,
   VendorCredit,
   VendorCreditItem,
-  Timesheet
+  Timesheet,
+  StockGroup,
+  StockCategory,
+  UnitOfMeasure,
+  Godown,
+  Currency,
+  CostCategory,
+  Employee,
+  Attendance,
+  SalaryStructure,
+  Payslip,
+  FixedAsset,
+  DepreciationLog,
+  BOM,
+  BOMItem,
+  ProductionOrder,
+  Budget,
+  BudgetItem
 };
+

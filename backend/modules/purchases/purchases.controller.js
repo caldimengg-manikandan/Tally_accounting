@@ -1,4 +1,4 @@
-const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit } = require('../../models');
+const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit, Item } = require('../../models');
 const { Op } = require('sequelize');
 
 exports.getVendors = async (req, res) => {
@@ -379,6 +379,19 @@ exports.createBill = async (req, res) => {
         // Override with user-provided bill number
         await voucher.update({ voucherNumber });
 
+        // Update inventory stock quantities
+        if (items && Array.isArray(items) && items.length > 0) {
+            for (const itemData of items) {
+                if (itemData.itemId && parseFloat(itemData.quantity) > 0) {
+                    const dbItem = await Item.findByPk(itemData.itemId);
+                    if (dbItem) {
+                        dbItem.currentStock = parseFloat(dbItem.currentStock || 0) + parseFloat(itemData.quantity);
+                        await dbItem.save();
+                    }
+                }
+            }
+        }
+
         res.status(201).json(voucher);
     } catch (err) {
         console.error('Error creating bill:', err);
@@ -458,6 +471,28 @@ exports.updateBill = async (req, res) => {
         const AccountingService = require('../../services/AccountingService');
         const voucherNumber = billNumber || `BILL-${Date.now()}`;
 
+        // 1. Reverse old stock quantities from current stock
+        const oldVoucher = await Voucher.findByPk(id);
+        if (oldVoucher && oldVoucher.narration) {
+            try {
+                const parsed = JSON.parse(oldVoucher.narration);
+                if (parsed && Array.isArray(parsed.items)) {
+                    for (const oldItem of parsed.items) {
+                        if (oldItem.itemId && parseFloat(oldItem.quantity) > 0) {
+                            const dbItem = await Item.findByPk(oldItem.itemId);
+                            if (dbItem) {
+                                dbItem.currentStock = parseFloat(dbItem.currentStock || 0) - parseFloat(oldItem.quantity);
+                                await dbItem.save();
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to parse old narration for stock reversal:', err);
+            }
+        }
+
+        // 2. Update journal entry
         const voucher = await AccountingService.updateJournalEntry(id, {
             companyId,
             date: date || new Date(),
@@ -479,6 +514,19 @@ exports.updateBill = async (req, res) => {
             voucherNumber,
             projectId
         });
+
+        // 3. Increment stock with new quantities
+        if (items && Array.isArray(items) && items.length > 0) {
+            for (const itemData of items) {
+                if (itemData.itemId && parseFloat(itemData.quantity) > 0) {
+                    const dbItem = await Item.findByPk(itemData.itemId);
+                    if (dbItem) {
+                        dbItem.currentStock = parseFloat(dbItem.currentStock || 0) + parseFloat(itemData.quantity);
+                        await dbItem.save();
+                    }
+                }
+            }
+        }
 
         res.json(voucher);
     } catch (err) {

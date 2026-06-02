@@ -166,3 +166,33 @@ body {
     display: none !important;
   }
 }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-up {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Recharts tooltip override */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar { width: 4px; height: 4px; }
+.dark ::-webkit-scrollbar-track { background: #2A2A3E; }
+.dark ::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 4px; }
+
+/* Smooth dark mode transition */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease;
+}
+

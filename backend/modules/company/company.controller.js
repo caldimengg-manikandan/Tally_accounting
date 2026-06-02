@@ -47,6 +47,30 @@ exports.createCompany = async (req, res) => {
         await user.save();
       }
     }
+
+    // Auto-seed Tally standard groups for the newly created company
+    const { standardGroups } = require('../../helpers/tallyGroups');
+    const primaryGroups = standardGroups.filter(g => !g.parent);
+    const groupMap = {};
+    for (const g of primaryGroups) {
+      const created = await Group.create({
+        name: g.name,
+        nature: g.nature,
+        category: 'Primary',
+        CompanyId: company.id
+      });
+      groupMap[g.name] = created.id;
+    }
+    const subGroups = standardGroups.filter(g => g.parent);
+    for (const g of subGroups) {
+      await Group.create({
+        name: g.name,
+        nature: g.nature,
+        category: 'Sub-Group',
+        parent_id: groupMap[g.parent] || null,
+        CompanyId: company.id
+      });
+    }
     
     res.status(201).json({
       ...company.toJSON(),
@@ -146,3 +170,110 @@ exports.updateCompany = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.closeFinancialYear = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company = await Company.findByPk(id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    // 1. Fetch all ledger groups for the company
+    const groups = await Group.findAll({ where: { CompanyId: id } });
+    const groupMap = {};
+    groups.forEach(g => { groupMap[g.id] = g; });
+
+    // 2. Fetch all ledgers
+    const ledgers = await Ledger.findAll({ where: { CompanyId: id } });
+
+    let netProfit = 0;
+    const incomeLedgers = [];
+    const expenseLedgers = [];
+    const assetLiabilityLedgers = [];
+
+    ledgers.forEach(l => {
+      const grp = groupMap[l.GroupId];
+      const nature = grp?.nature || l.category || '';
+      
+      // Calculate net profit/loss closing balance
+      if (nature === 'Income') {
+        netProfit += parseFloat(l.currentBalance || 0);
+        incomeLedgers.push(l);
+      } else if (nature === 'Expenses') {
+        netProfit -= parseFloat(l.currentBalance || 0);
+        expenseLedgers.push(l);
+      } else {
+        assetLiabilityLedgers.push(l);
+      }
+    });
+
+    // 3. Find or create a Retained Earnings / Reserves & Surplus ledger
+    let retainedEarningsLedger = ledgers.find(l => l.name === 'Retained Earnings');
+    if (!retainedEarningsLedger) {
+      const reservesGroup = groups.find(g => g.name.includes('Reserves') || g.name.includes('Capital'));
+      retainedEarningsLedger = await Ledger.create({
+        name: 'Retained Earnings',
+        code: 'CAP-RE',
+        category: 'Liability',
+        groupName: reservesGroup ? reservesGroup.name : 'Capital Account',
+        GroupId: reservesGroup ? reservesGroup.id : null,
+        CompanyId: id,
+        currentBalance: 0,
+        openingBalance: 0
+      });
+    }
+
+    // 4. Update Retained Earnings with net profit
+    retainedEarningsLedger.currentBalance = parseFloat(retainedEarningsLedger.currentBalance || 0) + netProfit;
+    retainedEarningsLedger.openingBalance = parseFloat(retainedEarningsLedger.openingBalance || 0) + netProfit;
+    await retainedEarningsLedger.save();
+
+    // 5. Reset Income & Expense ledgers to 0 current balance and 0 opening balance
+    for (const l of incomeLedgers) {
+      l.currentBalance = 0;
+      l.openingBalance = 0;
+      await l.save();
+    }
+    for (const l of expenseLedgers) {
+      l.currentBalance = 0;
+      l.openingBalance = 0;
+      await l.save();
+    }
+
+    // 6. Carry forward asset & liability balances as opening balances for the next year
+    for (const l of assetLiabilityLedgers) {
+      l.openingBalance = l.currentBalance;
+      await l.save();
+    }
+
+    // 7. Update financial year start in company model to the next year
+    const currentFYStart = new Date(company.financialYearStart || new Date());
+    const nextFYStart = new Date(currentFYStart);
+    nextFYStart.setFullYear(currentFYStart.getFullYear() + 1);
+    company.financialYearStart = nextFYStart;
+    await company.save();
+
+    // 8. Create Audit Log
+    const { AuditLog } = require('../../models');
+    await AuditLog.create({
+      action: 'CLOSE_FINANCIAL_YEAR',
+      tableName: 'Companies',
+      recordId: id,
+      newData: {
+        closedYearStart: currentFYStart.toISOString(),
+        nextYearStart: nextFYStart.toISOString(),
+        netProfitTransferred: netProfit
+      },
+      CompanyId: id,
+      UserId: req.user?.id
+    });
+
+    res.json({
+      message: 'Financial year closed successfully. Balances carried forward.',
+      netProfit,
+      nextFinancialYearStart: nextFYStart
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+

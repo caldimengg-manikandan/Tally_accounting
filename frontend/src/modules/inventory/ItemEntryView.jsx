@@ -66,14 +66,21 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
         purchaseAccount: editItem.purchaseAccount || 'Cost of Goods Sold',
         purchaseDescription: editItem.purchaseDescription || '',
         preferredVendor: editItem.preferredVendor || '',
-        imageUrl: editItem.imageUrl || ''
+        imageUrl: editItem.imageUrl || '',
+        reorderLevel: editItem.reorderLevel || '',
+        stockGroupId: editItem.stockGroupId || '',
+        stockCategoryId: editItem.stockCategoryId || '',
+        unitOfMeasureId: editItem.unitOfMeasureId || '',
+        godownId: editItem.godownId || '',
+        openingStock: editItem.openingStock || ''
       };
     }
     return {
       name: '', type: 'Goods', unit: '',
       salesInformation: true, sellingPrice: '', salesAccount: 'Sales', salesDescription: '',
       purchaseInformation: true, costPrice: '', purchaseAccount: 'Cost of Goods Sold', purchaseDescription: '',
-      preferredVendor: '', imageUrl: ''
+      preferredVendor: '', imageUrl: '',
+      reorderLevel: '', stockGroupId: '', stockCategoryId: '', unitOfMeasureId: '', godownId: '', openingStock: ''
     };
   });
 
@@ -97,14 +104,44 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [creationSource, setCreationSource] = useState('Purchase'); 
   const [vendors, setVendors] = useState([]);
+  const [stockGroups, setStockGroups] = useState([]);
+  const [stockCategories, setStockCategories] = useState([]);
+  const [uomUnits, setUomUnits] = useState([]);
+  const [godowns, setGodowns] = useState([]);
 
   useEffect(() => {
     if (companyId) {
       purchaseAPI.getVendors(companyId)
         .then(res => setVendors(res.data || []))
         .catch(err => console.error("Error fetching vendors:", err));
+      
+      inventoryAPI.getStockGroups(companyId)
+        .then(res => setStockGroups(res.data || []))
+        .catch(err => console.error("Error fetching stock groups:", err));
+
+      inventoryAPI.getStockCategories(companyId)
+        .then(res => setStockCategories(res.data || []))
+        .catch(err => console.error("Error fetching stock categories:", err));
+
+      inventoryAPI.getUnits(companyId)
+        .then(res => setUomUnits(res.data || []))
+        .catch(err => console.error("Error fetching units:", err));
+
+      inventoryAPI.getGodowns(companyId)
+        .then(res => setGodowns(res.data || []))
+        .catch(err => console.error("Error fetching godowns:", err));
     }
   }, [companyId]);
+
+  useEffect(() => {
+    if (uomUnits.length > 0) {
+      const formatted = uomUnits.map(u => `${u.symbol.toUpperCase()} - ${u.formalName}`);
+      setAvailableUnits(formatted);
+    } else {
+      setAvailableUnits(INITIAL_UNITS);
+    }
+  }, [uomUnits]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target)) setIsUnitOpen(false);
@@ -171,7 +208,17 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
   };
 
   const filteredUnits = availableUnits.filter(u => u.toLowerCase().includes(unitSearch.toLowerCase()));
-  const handleUnitSelect = (u) => { setNewItem({ ...newItem, unit: u }); setIsUnitOpen(false); setUnitSearch(''); };
+  const handleUnitSelect = (u) => {
+    const symbolPart = u.includes(' - ') ? u.split(' - ')[0].toLowerCase() : u.toLowerCase();
+    const foundUom = uomUnits.find(item => item.symbol.toLowerCase() === symbolPart);
+    setNewItem({ 
+      ...newItem, 
+      unit: u,
+      unitOfMeasureId: foundUom ? foundUom.id : ''
+    });
+    setIsUnitOpen(false);
+    setUnitSearch('');
+  };
   
   const handleSalesAccountSelect = (acc) => {
     setNewItem({ ...newItem, salesAccount: acc });
@@ -385,6 +432,76 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* TALLY MASTERS / INVENTORY FIELDS */}
+              <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Stock Group</label>
+                  <select
+                    value={newItem.stockGroupId}
+                    onChange={e => setNewItem({...newItem, stockGroupId: e.target.value})}
+                    className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none appearance-none focus:border-blue-500 transition-all bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')] bg-[length:14px] bg-[right_15px_center] bg-no-repeat cursor-pointer"
+                  >
+                    <option value="">Primary Group</option>
+                    {stockGroups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Stock Category</label>
+                  <select
+                    value={newItem.stockCategoryId}
+                    onChange={e => setNewItem({...newItem, stockCategoryId: e.target.value})}
+                    className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none appearance-none focus:border-blue-500 transition-all bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')] bg-[length:14px] bg-[right_15px_center] bg-no-repeat cursor-pointer"
+                  >
+                    <option value="">No Category</option>
+                    {stockCategories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-6 pt-2">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Godown / Warehouse</label>
+                  <select
+                    value={newItem.godownId}
+                    onChange={e => setNewItem({...newItem, godownId: e.target.value})}
+                    className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none appearance-none focus:border-blue-500 transition-all bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')] bg-[length:14px] bg-[right_15px_center] bg-no-repeat cursor-pointer"
+                  >
+                    <option value="">Main Location</option>
+                    {godowns.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Reorder Level</label>
+                  <input
+                    type="number"
+                    value={newItem.reorderLevel}
+                    onChange={e => setNewItem({...newItem, reorderLevel: e.target.value})}
+                    placeholder="0"
+                    className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none focus:border-blue-500 transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Opening Stock</label>
+                  <input
+                    type="number"
+                    value={newItem.openingStock}
+                    disabled={isEditMode}
+                    onChange={e => setNewItem({...newItem, openingStock: e.target.value})}
+                    placeholder="0.00"
+                    className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none focus:border-blue-500 transition-all disabled:opacity-50"
+                  />
                 </div>
               </div>
             </div>

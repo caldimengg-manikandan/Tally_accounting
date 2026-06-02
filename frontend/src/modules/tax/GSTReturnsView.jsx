@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, RefreshCcw, Download, AlertCircle } from 'lucide-react';
-import { reportsAPI } from '../../services/api';
+import { FileText, RefreshCcw, Download, AlertCircle, Calendar, ArrowRightLeft, TrendingUp, DollarSign } from 'lucide-react';
+import { gstAPI } from '../../services/api';
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
-// GST ledger name patterns
-const GST_PATTERNS = ['cgst', 'sgst', 'igst', 'gst', 'output tax', 'input tax', 'tax payable'];
-const isGstLedger = (name) => GST_PATTERNS.some(p => (name || '').toLowerCase().includes(p));
-
 export default function GSTReturnsView() {
   const companyId = localStorage.getItem('companyId');
-  const [data, setData] = useState(null);
+  const [activeTab, setActiveTab] = useState('gstr3b'); // 'gstr3b', 'gstr1', 'gstr2a'
+  const [gstr3bData, setGstr3bData] = useState(null);
+  const [gstr1Data, setGstr1Data] = useState(null);
+  const [gstr2aData, setGstr2aData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [period, setPeriod] = useState(() => {
@@ -19,67 +18,97 @@ export default function GSTReturnsView() {
   });
 
   const fetchData = async () => {
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
-      const res = await reportsAPI.trialBalance(companyId);
-      const tb = res.data?.trialBalance || [];
-      
-      // Separate GST ledgers from non-GST
-      const gstLedgers = tb.filter(l => isGstLedger(l.ledgerName));
-      const salesLedgers = tb.filter(l => (l.nature === 'Income') && !isGstLedger(l.ledgerName));
-      const purchaseLedgers = tb.filter(l => (l.nature === 'Expenses') && !isGstLedger(l.ledgerName));
-
-      const outputCGST = gstLedgers.filter(l => l.ledgerName.toLowerCase().includes('cgst') && l.ledgerName.toLowerCase().includes('output')).reduce((s, l) => s + parseFloat(l.totalCredit || 0), 0);
-      const outputSGST = gstLedgers.filter(l => l.ledgerName.toLowerCase().includes('sgst') && l.ledgerName.toLowerCase().includes('output')).reduce((s, l) => s + parseFloat(l.totalCredit || 0), 0);
-      const outputIGST = gstLedgers.filter(l => l.ledgerName.toLowerCase().includes('igst') && l.ledgerName.toLowerCase().includes('output')).reduce((s, l) => s + parseFloat(l.totalCredit || 0), 0);
-      const inputCGST = gstLedgers.filter(l => l.ledgerName.toLowerCase().includes('cgst') && l.ledgerName.toLowerCase().includes('input')).reduce((s, l) => s + parseFloat(l.totalDebit || 0), 0);
-      const inputSGST = gstLedgers.filter(l => l.ledgerName.toLowerCase().includes('sgst') && l.ledgerName.toLowerCase().includes('input')).reduce((s, l) => s + parseFloat(l.totalDebit || 0), 0);
-      const inputIGST = gstLedgers.filter(l => l.ledgerName.toLowerCase().includes('igst') && l.ledgerName.toLowerCase().includes('input')).reduce((s, l) => s + parseFloat(l.totalDebit || 0), 0);
-
-      // If no specific output/input tags, split all GST equally
-      const totalGSTCredit = gstLedgers.reduce((s, l) => s + parseFloat(l.totalCredit || 0), 0);
-      const totalGSTDebit = gstLedgers.reduce((s, l) => s + parseFloat(l.totalDebit || 0), 0);
-
-      const totalSales = salesLedgers.reduce((s, l) => s + parseFloat(l.totalCredit || 0), 0);
-      const totalPurchases = purchaseLedgers.reduce((s, l) => s + parseFloat(l.totalDebit || 0), 0);
-
-      setData({
-        gstLedgers,
-        salesLedgers,
-        purchaseLedgers,
-        outputTax: { cgst: outputCGST || totalGSTCredit / 2, sgst: outputSGST || totalGSTCredit / 2, igst: outputIGST },
-        inputTax: { cgst: inputCGST || totalGSTDebit / 2, sgst: inputSGST || totalGSTDebit / 2, igst: inputIGST },
-        totalSales,
-        totalPurchases,
-        netTaxPayable: (totalGSTCredit) - (totalGSTDebit),
-      });
+      const [res3b, res1, res2a] = await Promise.all([
+        gstAPI.getGSTR3B(companyId),
+        gstAPI.getGSTR1(companyId),
+        gstAPI.getGSTR2A(companyId)
+      ]);
+      setGstr3bData(res3b.data);
+      setGstr1Data(res1.data);
+      setGstr2aData(res2a.data);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load GST data');
+      console.error(err);
+      setError(err.response?.data?.error || 'Failed to load Indian GST compliance data. Ensure tax/gst routes are operational.');
     }
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    if (companyId) {
+      fetchData();
+    }
+  }, [companyId]);
 
   const exportCSV = () => {
-    if (!data) return;
-    const rows = [
-      ['GST Returns Summary', period],
-      ['', ''],
-      ['Section', 'CGST (₹)', 'SGST (₹)', 'IGST (₹)', 'Total (₹)'],
-      ['Output Tax (Sales)', data.outputTax.cgst.toFixed(2), data.outputTax.sgst.toFixed(2), data.outputTax.igst.toFixed(2), (data.outputTax.cgst + data.outputTax.sgst + data.outputTax.igst).toFixed(2)],
-      ['Input Tax Credit (Purchases)', data.inputTax.cgst.toFixed(2), data.inputTax.sgst.toFixed(2), data.inputTax.igst.toFixed(2), (data.inputTax.cgst + data.inputTax.sgst + data.inputTax.igst).toFixed(2)],
-      ['Net Tax Payable', '', '', '', data.netTaxPayable.toFixed(2)],
-    ];
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `gst-returns-${period}.csv`; a.click();
-  };
+    let rows = [];
+    let filename = `gst-report-${period}.csv`;
 
-  const outputTotal = data ? data.outputTax.cgst + data.outputTax.sgst + data.outputTax.igst : 0;
-  const inputTotal = data ? data.inputTax.cgst + data.inputTax.sgst + data.inputTax.igst : 0;
+    if (activeTab === 'gstr3b' && gstr3bData) {
+      filename = `gstr3b-${period}.csv`;
+      rows = [
+        ['GSTR-3B Monthly Consolidated Summary', period],
+        [],
+        ['Description', 'CGST (₹)', 'SGST (₹)', 'IGST (₹)', 'Total (₹)'],
+        ['3.1 Outward Tax Liability (Sales)', gstr3bData.outputTax?.cgst, gstr3bData.outputTax?.sgst, gstr3bData.outputTax?.igst, gstr3bData.outputTax?.total],
+        ['4 Eligible ITC (Purchases)', gstr3bData.inputTaxCredit?.cgst, gstr3bData.inputTaxCredit?.sgst, gstr3bData.inputTaxCredit?.igst, gstr3bData.inputTaxCredit?.total],
+        ['Net Tax Payable', '', '', '', gstr3bData.netPayable]
+      ];
+    } else if (activeTab === 'gstr1' && gstr1Data) {
+      filename = `gstr1-${period}.csv`;
+      rows = [
+        ['GSTR-1 Outward Supplies (B2B Invoices)', period],
+        [],
+        ['Invoice #', 'Date', 'Customer Name', 'Customer GSTIN', 'Place of Supply', 'Taxable Value (₹)', 'CGST (₹)', 'SGST (₹)', 'IGST (₹)', 'Total Value (₹)'],
+        ...(gstr1Data.b2bInvoices || []).map(inv => [
+          inv.invoiceNumber,
+          new Date(inv.date).toLocaleDateString('en-IN'),
+          inv.customerName,
+          inv.customerGSTIN,
+          inv.state,
+          inv.taxableValue,
+          inv.cgst,
+          inv.sgst,
+          inv.igst,
+          inv.totalAmount
+        ]),
+        [],
+        ['Totals', '', '', '', '', gstr1Data.totals?.taxableValue, gstr1Data.totals?.cgst, gstr1Data.totals?.sgst, gstr1Data.totals?.igst, gstr1Data.totals?.totalAmount]
+      ];
+    } else if (activeTab === 'gstr2a' && gstr2aData) {
+      filename = `gstr2a-${period}.csv`;
+      rows = [
+        ['GSTR-2A Auto-Drafted Inward Supplies (Purchase ITC Lookup)', period],
+        [],
+        ['Bill #', 'Date', 'Vendor Name', 'Vendor GSTIN', 'Place of Supply', 'Taxable Value (₹)', 'CGST (₹)', 'SGST (₹)', 'IGST (₹)', 'Total Value (₹)'],
+        ...(gstr2aData.b2bPurchases || []).map(p => [
+          p.billNumber,
+          new Date(p.date).toLocaleDateString('en-IN'),
+          p.vendorName,
+          p.vendorGSTIN,
+          p.state,
+          p.taxableValue,
+          p.cgst,
+          p.sgst,
+          p.igst,
+          p.totalAmount
+        ]),
+        [],
+        ['Totals', '', '', '', '', gstr2aData.totals?.taxableValue, gstr2aData.totals?.cgst, gstr2aData.totals?.sgst, gstr2aData.totals?.igst, gstr2aData.totals?.totalAmount]
+      ];
+    }
+
+    const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.map(val => `"${val}"`).join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto space-y-8 animate-fade-in">
@@ -87,23 +116,57 @@ export default function GSTReturnsView() {
       <div className="flex justify-between items-end border-b border-slate-100 pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white">
+            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
               <FileText size={18} />
             </div>
-            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">GST Compliance</span>
+            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">GST Compliance Center</span>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tighter">GST Returns (GSTR-3B)</h1>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tighter">GST Returns Filing Panel</h1>
         </div>
         <div className="flex gap-3">
-          <input type="month" value={period} onChange={e => setPeriod(e.target.value)}
-            className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-emerald-400 transition-all" />
-          <button onClick={fetchData} className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm">
+          <input 
+            type="month" 
+            value={period} 
+            onChange={e => setPeriod(e.target.value)}
+            className="border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-emerald-400 transition-all bg-white" 
+          />
+          <button 
+            onClick={fetchData} 
+            className="p-2.5 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400 shadow-sm transition-all"
+            title="Refresh Tax Data"
+          >
             <RefreshCcw size={16} />
           </button>
-          <button onClick={exportCSV} disabled={!data} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 disabled:opacity-40">
-            <Download size={16} /> Export
+          <button 
+            onClick={exportCSV} 
+            disabled={loading || error} 
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/10 flex items-center gap-2 disabled:opacity-40 transition-all"
+          >
+            <Download size={16} /> Export GSTR CSV
           </button>
         </div>
+      </div>
+
+      {/* Tabs Menu */}
+      <div className="flex border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('gstr3b')}
+          className={`px-6 py-3 text-sm font-bold tracking-tight border-b-2 transition-all ${activeTab === 'gstr3b' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+        >
+          GSTR-3B (Consolidated Summary)
+        </button>
+        <button
+          onClick={() => setActiveTab('gstr1')}
+          className={`px-6 py-3 text-sm font-bold tracking-tight border-b-2 transition-all ${activeTab === 'gstr1' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+        >
+          GSTR-1 (Outward Supplies)
+        </button>
+        <button
+          onClick={() => setActiveTab('gstr2a')}
+          className={`px-6 py-3 text-sm font-bold tracking-tight border-b-2 transition-all ${activeTab === 'gstr2a' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+        >
+          GSTR-2A (Inward Supplies - ITC)
+        </button>
       </div>
 
       {loading ? (
@@ -111,105 +174,245 @@ export default function GSTReturnsView() {
           <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex gap-3 text-red-600 font-bold">
-          <AlertCircle size={18} /> {error}
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex gap-3 text-red-600 font-semibold items-center">
+          <AlertCircle size={18} className="shrink-0" />
+          <span>{error}</span>
         </div>
       ) : (
         <>
-          {/* Summary Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="p-7 rounded-[2rem] bg-blue-50 border border-blue-100 shadow-sm">
-              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Total Taxable Sales</p>
-              <h3 className="text-2xl font-bold text-blue-700 tracking-tighter">{fmt(data.totalSales)}</h3>
-            </div>
-            <div className="p-7 rounded-[2rem] bg-orange-50 border border-orange-100 shadow-sm">
-              <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1">Total Taxable Purchases</p>
-              <h3 className="text-2xl font-bold text-orange-700 tracking-tighter">{fmt(data.totalPurchases)}</h3>
-            </div>
-            <div className={`p-7 rounded-[2rem] border shadow-sm ${data.netTaxPayable >= 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${data.netTaxPayable >= 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                Net Tax {data.netTaxPayable >= 0 ? 'Payable' : 'Refundable'}
-              </p>
-              <h3 className={`text-2xl font-bold tracking-tighter ${data.netTaxPayable >= 0 ? 'text-red-700' : 'text-emerald-700'}`}>
-                {fmt(Math.abs(data.netTaxPayable))}
-              </h3>
-            </div>
-          </div>
+          {/* TAB 1: GSTR-3B */}
+          {activeTab === 'gstr3b' && gstr3bData && (
+            <div className="space-y-6">
+              {/* Summary Widgets */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-7 rounded-[2rem] bg-blue-50 border border-blue-100 shadow-sm relative overflow-hidden">
+                  <div className="absolute right-4 top-4 text-blue-200"><TrendingUp size={48} /></div>
+                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">Total Output Liability</p>
+                  <h3 className="text-3xl font-black text-blue-700 tracking-tighter">{fmt(gstr3bData.outputTax?.total)}</h3>
+                  <div className="flex gap-3 mt-3 text-[11px] font-bold text-blue-600/80">
+                    <span>CGST: {fmt(gstr3bData.outputTax?.cgst)}</span>
+                    <span>SGST: {fmt(gstr3bData.outputTax?.sgst)}</span>
+                    <span>IGST: {fmt(gstr3bData.outputTax?.igst)}</span>
+                  </div>
+                </div>
 
-          {/* GST Breakdown Table */}
-          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
-            <div className="h-14 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GSTR-3B Summary</span>
-            </div>
-            <table className="w-full text-left">
-              <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
-                <tr>
-                  <th className="px-8 py-5">Description</th>
-                  <th className="px-8 py-5 text-right">CGST (₹)</th>
-                  <th className="px-8 py-5 text-right">SGST (₹)</th>
-                  <th className="px-8 py-5 text-right">IGST (₹)</th>
-                  <th className="px-8 py-5 text-right">Total (₹)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 text-[13px] font-semibold">
-                <tr className="hover:bg-blue-50/20">
-                  <td className="px-8 py-5 font-bold text-slate-900">3.1 — Output Tax Liability (Sales)</td>
-                  <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(data.outputTax.cgst)}</td>
-                  <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(data.outputTax.sgst)}</td>
-                  <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(data.outputTax.igst)}</td>
-                  <td className="px-8 py-5 text-right font-bold text-slate-900">{fmt(outputTotal)}</td>
-                </tr>
-                <tr className="hover:bg-emerald-50/20">
-                  <td className="px-8 py-5 font-bold text-slate-900">4 — Eligible ITC (Purchases)</td>
-                  <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(data.inputTax.cgst)}</td>
-                  <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(data.inputTax.sgst)}</td>
-                  <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(data.inputTax.igst)}</td>
-                  <td className="px-8 py-5 text-right font-bold text-slate-900">{fmt(inputTotal)}</td>
-                </tr>
-                <tr className="bg-slate-900 text-white">
-                  <td className="px-8 py-6 font-bold text-sm uppercase tracking-widest">Net Tax Payable</td>
-                  <td className="px-8 py-6 text-right font-bold">{fmt(data.outputTax.cgst - data.inputTax.cgst)}</td>
-                  <td className="px-8 py-6 text-right font-bold">{fmt(data.outputTax.sgst - data.inputTax.sgst)}</td>
-                  <td className="px-8 py-6 text-right font-bold">{fmt(data.outputTax.igst - data.inputTax.igst)}</td>
-                  <td className="px-8 py-6 text-right font-bold text-lg">{fmt(data.netTaxPayable)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                <div className="p-7 rounded-[2rem] bg-amber-50 border border-amber-100 shadow-sm relative overflow-hidden">
+                  <div className="absolute right-4 top-4 text-amber-200"><ArrowRightLeft size={48} /></div>
+                  <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Eligible Input Tax Credit (ITC)</p>
+                  <h3 className="text-3xl font-black text-amber-700 tracking-tighter">{fmt(gstr3bData.inputTaxCredit?.total)}</h3>
+                  <div className="flex gap-3 mt-3 text-[11px] font-bold text-amber-600/80">
+                    <span>CGST: {fmt(gstr3bData.inputTaxCredit?.cgst)}</span>
+                    <span>SGST: {fmt(gstr3bData.inputTaxCredit?.sgst)}</span>
+                    <span>IGST: {fmt(gstr3bData.inputTaxCredit?.igst)}</span>
+                  </div>
+                </div>
 
-          {/* GST Ledgers detail */}
-          {data.gstLedgers.length > 0 && (
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
-              <div className="h-14 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">GST Ledger Details</span>
+                <div className={`p-7 rounded-[2rem] border shadow-sm relative overflow-hidden ${gstr3bData.netPayable > 0 ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                  <div className="absolute right-4 top-4 opacity-15"><DollarSign size={48} /></div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${gstr3bData.netPayable > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                    Net GST Payable
+                  </p>
+                  <h3 className={`text-3xl font-black tracking-tighter ${gstr3bData.netPayable > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                    {fmt(gstr3bData.netPayable)}
+                  </h3>
+                  <p className="text-[11px] font-medium text-slate-500 mt-3">Calculated as (Output Liability - Eligible ITC)</p>
+                </div>
               </div>
-              <table className="w-full text-left">
-                <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
-                  <tr>
-                    <th className="px-8 py-4">Ledger</th>
-                    <th className="px-8 py-4">Group</th>
-                    <th className="px-8 py-4 text-right">Debit (₹)</th>
-                    <th className="px-8 py-4 text-right">Credit (₹)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 text-[13px] font-semibold text-slate-700">
-                  {data.gstLedgers.map(l => (
-                    <tr key={l.ledgerId} className="hover:bg-emerald-50/20">
-                      <td className="px-8 py-4 font-bold text-slate-900">{l.ledgerName}</td>
-                      <td className="px-8 py-4 text-slate-500">{l.group}</td>
-                      <td className="px-8 py-4 text-right text-blue-600 font-bold">{l.totalDebit > 0 ? fmt(l.totalDebit) : '—'}</td>
-                      <td className="px-8 py-4 text-right text-red-500 font-bold">{l.totalCredit > 0 ? fmt(l.totalCredit) : '—'}</td>
+
+              {/* Detail Table */}
+              <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+                <div className="h-16 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Consolidated GSTR-3B Statement</span>
+                </div>
+                <table className="w-full text-left">
+                  <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
+                    <tr>
+                      <th className="px-8 py-5">Filing Section</th>
+                      <th className="px-8 py-5 text-right">CGST (₹)</th>
+                      <th className="px-8 py-5 text-right">SGST (₹)</th>
+                      <th className="px-8 py-5 text-right">IGST (₹)</th>
+                      <th className="px-8 py-5 text-right">Total Tax (₹)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 text-[13px] font-semibold">
+                    <tr className="hover:bg-blue-50/20">
+                      <td className="px-8 py-5 font-bold text-slate-900">3.1 — Details of Outward Supplies (Sales)</td>
+                      <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(gstr3bData.outputTax?.cgst)}</td>
+                      <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(gstr3bData.outputTax?.sgst)}</td>
+                      <td className="px-8 py-5 text-right text-blue-600 font-bold">{fmt(gstr3bData.outputTax?.igst)}</td>
+                      <td className="px-8 py-5 text-right font-bold text-slate-900">{fmt(gstr3bData.outputTax?.total)}</td>
+                    </tr>
+                    <tr className="hover:bg-emerald-50/20">
+                      <td className="px-8 py-5 font-bold text-slate-900">4 — Eligible Input Tax Credit (Purchases)</td>
+                      <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(gstr3bData.inputTaxCredit?.cgst)}</td>
+                      <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(gstr3bData.inputTaxCredit?.sgst)}</td>
+                      <td className="px-8 py-5 text-right text-emerald-600 font-bold">{fmt(gstr3bData.inputTaxCredit?.igst)}</td>
+                      <td className="px-8 py-5 text-right font-bold text-slate-900">{fmt(gstr3bData.inputTaxCredit?.total)}</td>
+                    </tr>
+                    <tr className="bg-slate-950 text-white font-bold">
+                      <td className="px-8 py-6 uppercase tracking-wider text-xs">Net GST Payable (Electronic Cash Ledger)</td>
+                      <td className="px-8 py-6 text-right">{fmt(Math.max(0, gstr3bData.outputTax?.cgst - gstr3bData.inputTaxCredit?.cgst))}</td>
+                      <td className="px-8 py-6 text-right">{fmt(Math.max(0, gstr3bData.outputTax?.sgst - gstr3bData.inputTaxCredit?.sgst))}</td>
+                      <td className="px-8 py-6 text-right">{fmt(Math.max(0, gstr3bData.outputTax?.igst - gstr3bData.inputTaxCredit?.igst))}</td>
+                      <td className="px-8 py-6 text-right text-lg text-emerald-400">{fmt(gstr3bData.netPayable)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
-          {data.gstLedgers.length === 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-3 text-amber-700 font-bold text-sm">
-              <AlertCircle size={18} className="shrink-0 mt-0.5" />
-              No GST ledgers found. Create ledgers with names like "Output CGST", "Input SGST", "Output IGST" to see GST breakdowns here.
+          {/* TAB 2: GSTR-1 */}
+          {activeTab === 'gstr1' && gstr1Data && (
+            <div className="space-y-6">
+              {/* Totals Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Taxable Value</p>
+                  <h4 className="text-xl font-bold text-slate-900 mt-1">{fmt(gstr1Data.totals?.taxableValue)}</h4>
+                </div>
+                <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total CGST</p>
+                  <h4 className="text-xl font-bold text-blue-600 mt-1">{fmt(gstr1Data.totals?.cgst)}</h4>
+                </div>
+                <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total SGST</p>
+                  <h4 className="text-xl font-bold text-blue-600 mt-1">{fmt(gstr1Data.totals?.sgst)}</h4>
+                </div>
+                <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total IGST</p>
+                  <h4 className="text-xl font-bold text-purple-600 mt-1">{fmt(gstr1Data.totals?.igst)}</h4>
+                </div>
+              </div>
+
+              {/* Invoices List */}
+              <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+                <div className="h-16 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">GSTR-1 Outward Supplies B2B</span>
+                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    {gstr1Data.b2bInvoices?.length || 0} Invoices Listed
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left min-w-[900px]">
+                    <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
+                      <tr>
+                        <th className="px-6 py-4">Invoice #</th>
+                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4">Customer Name</th>
+                        <th className="px-6 py-4">GSTIN</th>
+                        <th className="px-6 py-4">Place of Supply</th>
+                        <th className="px-6 py-4 text-right">Taxable Value (₹)</th>
+                        <th className="px-6 py-4 text-right">CGST (₹)</th>
+                        <th className="px-6 py-4 text-right">SGST (₹)</th>
+                        <th className="px-6 py-4 text-right">IGST (₹)</th>
+                        <th className="px-6 py-4 text-right">Total Amount (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 text-[13px] font-semibold text-slate-700">
+                      {gstr1Data.b2bInvoices?.length > 0 ? (
+                        gstr1Data.b2bInvoices.map((inv, idx) => (
+                          <tr key={idx} className="hover:bg-emerald-50/10">
+                            <td className="px-6 py-4 font-bold text-slate-900">{inv.invoiceNumber}</td>
+                            <td className="px-6 py-4 text-slate-500">{new Date(inv.date).toLocaleDateString('en-IN')}</td>
+                            <td className="px-6 py-4 font-bold text-slate-800">{inv.customerName}</td>
+                            <td className="px-6 py-4 text-slate-600 font-mono">{inv.customerGSTIN}</td>
+                            <td className="px-6 py-4 text-slate-500">{inv.state}</td>
+                            <td className="px-6 py-4 text-right font-bold text-slate-900">{fmt(inv.taxableValue)}</td>
+                            <td className="px-6 py-4 text-right text-blue-600">{inv.cgst > 0 ? fmt(inv.cgst) : '—'}</td>
+                            <td className="px-6 py-4 text-right text-blue-600">{inv.sgst > 0 ? fmt(inv.sgst) : '—'}</td>
+                            <td className="px-6 py-4 text-right text-purple-600">{inv.igst > 0 ? fmt(inv.igst) : '—'}</td>
+                            <td className="px-6 py-4 text-right font-black text-slate-900">{fmt(inv.totalAmount)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={10} className="text-center py-10 text-slate-400 font-bold">
+                            No Sales invoices found with customer GST numbers.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: GSTR-2A */}
+          {activeTab === 'gstr2a' && gstr2aData && (
+            <div className="space-y-6">
+              {/* Totals Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Input Taxable</p>
+                  <h4 className="text-xl font-bold text-slate-900 mt-1">{fmt(gstr2aData.totals?.taxableValue)}</h4>
+                </div>
+                <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total CGST Credit</p>
+                  <h4 className="text-xl font-bold text-emerald-600 mt-1">{fmt(gstr2aData.totals?.cgst)}</h4>
+                </div>
+                <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total SGST Credit</p>
+                  <h4 className="text-xl font-bold text-emerald-600 mt-1">{fmt(gstr2aData.totals?.sgst)}</h4>
+                </div>
+                <div className="p-5 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total IGST Credit</p>
+                  <h4 className="text-xl font-bold text-purple-600 mt-1">{fmt(gstr2aData.totals?.igst)}</h4>
+                </div>
+              </div>
+
+              {/* Purchases List */}
+              <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden">
+                <div className="h-16 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">GSTR-2A Inward Supplies B2B (ITC Match)</span>
+                  <span className="bg-amber-50 text-amber-700 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    {gstr2aData.b2bPurchases?.length || 0} Bills Matched
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left min-w-[900px]">
+                    <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
+                      <tr>
+                        <th className="px-6 py-4">Bill #</th>
+                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4">Vendor Name</th>
+                        <th className="px-6 py-4">GSTIN</th>
+                        <th className="px-6 py-4">Place of Supply</th>
+                        <th className="px-6 py-4 text-right">Taxable Value (₹)</th>
+                        <th className="px-6 py-4 text-right">CGST (₹)</th>
+                        <th className="px-6 py-4 text-right">SGST (₹)</th>
+                        <th className="px-6 py-4 text-right">IGST (₹)</th>
+                        <th className="px-6 py-4 text-right">Total Amount (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 text-[13px] font-semibold text-slate-700">
+                      {gstr2aData.b2bPurchases?.length > 0 ? (
+                        gstr2aData.b2bPurchases.map((p, idx) => (
+                          <tr key={idx} className="hover:bg-emerald-50/10">
+                            <td className="px-6 py-4 font-bold text-slate-900">{p.billNumber}</td>
+                            <td className="px-6 py-4 text-slate-500">{new Date(p.date).toLocaleDateString('en-IN')}</td>
+                            <td className="px-6 py-4 font-bold text-slate-800">{p.vendorName}</td>
+                            <td className="px-6 py-4 text-slate-600 font-mono">{p.vendorGSTIN}</td>
+                            <td className="px-6 py-4 text-slate-500">{p.state}</td>
+                            <td className="px-6 py-4 text-right font-bold text-slate-900">{fmt(p.taxableValue)}</td>
+                            <td className="px-6 py-4 text-right text-emerald-600">{p.cgst > 0 ? fmt(p.cgst) : '—'}</td>
+                            <td className="px-6 py-4 text-right text-emerald-600">{p.sgst > 0 ? fmt(p.sgst) : '—'}</td>
+                            <td className="px-6 py-4 text-right text-purple-600">{p.igst > 0 ? fmt(p.igst) : '—'}</td>
+                            <td className="px-6 py-4 text-right font-black text-slate-900">{fmt(p.totalAmount)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={10} className="text-center py-10 text-slate-400 font-bold">
+                            No Purchase bills found with vendor GST numbers.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </>

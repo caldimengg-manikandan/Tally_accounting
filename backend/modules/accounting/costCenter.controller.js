@@ -1,13 +1,14 @@
-const { CostCenter, AuditLog } = require('../../models');
+const { CostCenter, CostCategory, AuditLog } = require('../../models');
 
 exports.createCostCenter = async (req, res) => {
   try {
-    const { name, category, description, companyId } = req.body;
+    const { name, category, description, companyId, costCategoryId } = req.body;
     const costCenter = await CostCenter.create({
       name,
       category: category || 'General',
       description,
-      CompanyId: companyId
+      CompanyId: companyId,
+      costCategoryId: costCategoryId || null
     });
 
     await AuditLog.create({
@@ -28,7 +29,10 @@ exports.createCostCenter = async (req, res) => {
 exports.getCostCenters = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const costCenters = await CostCenter.findAll({ where: { CompanyId: companyId } });
+    const costCenters = await CostCenter.findAll({ 
+      where: { CompanyId: companyId },
+      include: [{ model: CostCategory, attributes: ['id', 'name'] }]
+    });
     res.json(costCenters);
   } catch (err) {
     res.status(500).json({ error: err.message });

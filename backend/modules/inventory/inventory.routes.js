@@ -28,6 +28,32 @@ router.post('/upload', upload.single('image'), (req, res) => {
   res.json({ imageUrl });
 });
 
+const mastersController = require('./inventoryMasters.controller');
+
+// Stock Groups
+router.get('/groups/:companyId', mastersController.getStockGroups);
+router.post('/groups', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.createStockGroup);
+router.put('/groups/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.updateStockGroup);
+router.delete('/groups/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.deleteStockGroup);
+
+// Stock Categories
+router.get('/categories/:companyId', mastersController.getStockCategories);
+router.post('/categories', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.createStockCategory);
+router.put('/categories/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.updateStockCategory);
+router.delete('/categories/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.deleteStockCategory);
+
+// Units of Measure
+router.get('/units/:companyId', mastersController.getUnitsOfMeasure);
+router.post('/units', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.createUnitOfMeasure);
+router.put('/units/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.updateUnitOfMeasure);
+router.delete('/units/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.deleteUnitOfMeasure);
+
+// Godowns
+router.get('/godowns/:companyId', mastersController.getGodowns);
+router.post('/godowns', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.createGodown);
+router.put('/godowns/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.updateGodown);
+router.delete('/godowns/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), mastersController.deleteGodown);
+
 // View items — all roles
 router.get('/:companyId', inventoryController.getItems);
 
