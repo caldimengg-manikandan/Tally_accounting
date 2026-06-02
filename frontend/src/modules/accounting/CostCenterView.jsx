@@ -56,25 +56,25 @@ const CostCenterView = ({ showNew }) => {
     );
 
     return (
-        <div className="p-10 max-w-[1200px] mx-auto space-y-8 animate-fade-in">
+        <div className="p-8 max-w-[1400px] mx-auto space-y-8 animate-fade-in">
             
             {/* Header */}
             <div className="flex justify-between items-end border-b border-slate-100 pb-8">
                 <div>
                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
-                         <Target size={20}/>
+                      <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-slate-900/10">
+                         <Target size={18}/>
                       </div>
                       <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Resource Allocation</span>
                    </div>
-                   <h1 className="text-3xl font-bold text-slate-900 tracking-tighter">Cost Centers</h1>
-                   <p className="text-sm text-slate-500 mt-1">Track financials by Project, Department, or Business Unit.</p>
+                   <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Cost Centers</h1>
+                   <p className="text-slate-400 text-xs mt-1 font-medium">Track financials by Project, Department, or Business Unit.</p>
                 </div>
                 <div className="flex gap-3">
                    <button onClick={fetchCenters} className="p-3 border border-slate-100 rounded-xl bg-white hover:bg-slate-50 text-slate-400"><RefreshCcw size={18}/></button>
                    <button 
                       onClick={() => setShowModal(true)}
-                      className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center gap-2 hover:-translate-y-0.5 transition-all"
+                      className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-900/10 flex items-center gap-1.5 transition-all"
                    >
                       <Plus size={16}/> New Center
                    </button>
@@ -121,7 +121,7 @@ const CostCenterView = ({ showNew }) => {
                                         <Building2 size={20}/>
                                     </div>
                                     <div>
-                                        <div className="text-lg font-bold text-slate-900 leading-tight">{center.name}</div>
+                                        <div className="text-[13px] font-extrabold text-slate-900 leading-tight">{center.name}</div>
                                         <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">ID: {center.id.substring(0,8)}</div>
                                     </div>
                                 </div>
@@ -174,7 +174,7 @@ const CostCenterView = ({ showNew }) => {
                             </div>
                             <div className="flex gap-4 pt-4">
                                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 border-2 border-slate-50 rounded-2xl font-bold text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50">Cancel</button>
-                                <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:-translate-y-1 transition-all">Create Unit</button>
+                                <button type="submit" className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-slate-900/10 hover:-translate-y-1 transition-all">Create Unit</button>
                             </div>
                         </form>
                     </div>

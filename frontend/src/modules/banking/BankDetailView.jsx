@@ -4,9 +4,9 @@ import {
   Landmark, ArrowLeft, RefreshCw, Upload, MoreHorizontal, 
   Search, Filter, Download, ArrowUpRight, ArrowDownLeft,
   CreditCard, Building2, Globe, Hash, Edit3, X, Check,
-  MapPin, Info, Save
+  MapPin, Info, Save, Plus, Loader2
 } from 'lucide-react';
-import { ledgerAPI } from '../../services/api';
+import { ledgerAPI, voucherAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 
 const BankDetailView = () => {
@@ -27,6 +27,21 @@ const BankDetailView = () => {
   // IFSC Details State
   const [ifscDetails, setIfscDetails] = useState(null);
 
+  // Record Transaction Modal State
+  const [ledgers, setLedgers] = useState([]);
+  const [showRecordModal, setShowRecordModal] = useState(false);
+  const [savingTx, setSavingTx] = useState(false);
+  const [txForm, setTxForm] = useState({
+    type: 'Receipt',
+    partyLedgerId: '',
+    amount: '',
+    mode: 'UPI',
+    reference: '',
+    date: new Date().toISOString().split('T')[0],
+    linkedInvoice: ''
+  });
+  const companyId = localStorage.getItem('companyId');
+
   useEffect(() => {
     fetchData();
   }, [id]);
@@ -46,6 +61,11 @@ const BankDetailView = () => {
 
       const txRes = await ledgerAPI.getTransactions(id);
       setTransactions(txRes.data);
+
+      if (companyId) {
+        const ledgersRes = await ledgerAPI.getByCompany(companyId);
+        setLedgers(Array.isArray(ledgersRes.data) ? ledgersRes.data : []);
+      }
     } catch (err) {
       console.error('Failed to fetch bank details:', err);
       const serverError = err.response?.data?.error || err.message;
@@ -90,6 +110,57 @@ const BankDetailView = () => {
       currency: account?.currency || 'INR',
       minimumFractionDigits: 2
     }).format(amount || 0);
+  };
+
+  const handleSaveTransaction = async (e) => {
+    e.preventDefault();
+    if (!txForm.partyLedgerId || !txForm.amount) {
+      addNotification('Please select a party and specify amount.', 'error');
+      return;
+    }
+    setSavingTx(true);
+    try {
+      const isReceipt = txForm.type === 'Receipt';
+      const referenceNotes = {
+        mode: txForm.mode,
+        reference: txForm.reference,
+        linkedInvoice: txForm.linkedInvoice,
+        notes: `Recorded via Banking Hub on ${txForm.date}. Ref: ${txForm.reference}`
+      };
+
+      await voucherAPI.create({
+        companyId,
+        voucherType: txForm.type,
+        date: new Date(txForm.date).toISOString(),
+        narration: JSON.stringify(referenceNotes),
+        entries: isReceipt ? [
+          { ledgerId: id, debit: parseFloat(txForm.amount), credit: 0 },
+          { ledgerId: txForm.partyLedgerId, debit: 0, credit: parseFloat(txForm.amount) }
+        ] : [
+          { ledgerId: txForm.partyLedgerId, debit: parseFloat(txForm.amount), credit: 0 },
+          { ledgerId: id, debit: 0, credit: parseFloat(txForm.amount) }
+        ]
+      });
+
+      addNotification('Transaction recorded successfully!', 'success');
+      setShowRecordModal(false);
+      setTxForm({
+        type: 'Receipt',
+        partyLedgerId: '',
+        amount: '',
+        mode: 'UPI',
+        reference: '',
+        date: new Date().toISOString().split('T')[0],
+        linkedInvoice: ''
+      });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      const errorMsg = err.response?.data?.error || err.message;
+      addNotification(`Failed to record transaction: ${errorMsg}`, 'error');
+    } finally {
+      setSavingTx(false);
+    }
   };
 
   if (loading) {
@@ -153,12 +224,18 @@ const BankDetailView = () => {
                  </button>
                )}
                
-               <button onClick={fetchData} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-500">
-                 <RefreshCw size={18} />
-               </button>
-               <button className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/10">
-                 <Upload size={14} /> Import
-               </button>
+                <button onClick={fetchData} className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-500">
+                  <RefreshCw size={18} />
+                </button>
+                <button 
+                  onClick={() => setShowRecordModal(true)}
+                  className="px-5 py-2.5 bg-[#1e61f0] text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                >
+                  <Plus size={14} /> Record Transaction
+                </button>
+                <button className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[12px] font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/10">
+                  <Upload size={14} /> Import
+                </button>
             </div>
           </div>
         </div>
@@ -387,6 +464,138 @@ const BankDetailView = () => {
 
         </div>
       </div>
+
+      {/* Record Transaction Modal */}
+      {showRecordModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Record Transaction</h2>
+                <p className="text-xs text-slate-400 font-bold mt-0.5">Post an instant bank payment or receipt voucher</p>
+              </div>
+              <button 
+                onClick={() => setShowRecordModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTransaction} className="p-8 space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Transaction Type *</label>
+                  <select 
+                    value={txForm.type}
+                    onChange={e => setTxForm({ ...txForm, type: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                  >
+                    <option value="Receipt">Receipt (Cash In)</option>
+                    <option value="Payment">Payment (Cash Out)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Date *</label>
+                  <input 
+                    type="date"
+                    required
+                    value={txForm.date}
+                    onChange={e => setTxForm({ ...txForm, date: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Party Account (Customer / Vendor) *</label>
+                <select 
+                  value={txForm.partyLedgerId}
+                  required
+                  onChange={e => setTxForm({ ...txForm, partyLedgerId: e.target.value })}
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                >
+                  <option value="">— Select Party Ledger —</option>
+                  {ledgers.map(l => (
+                    <option key={l.id} value={l.id}>{l.name} ({l.Group?.name || 'No Group'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Amount (₹) *</label>
+                  <input 
+                    type="number"
+                    step="0.01"
+                    required
+                    placeholder="0.00"
+                    value={txForm.amount}
+                    onChange={e => setTxForm({ ...txForm, amount: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Payment Mode *</label>
+                  <select 
+                    value={txForm.mode}
+                    onChange={e => setTxForm({ ...txForm, mode: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                  >
+                    <option value="UPI">UPI / QR</option>
+                    <option value="NEFT">NEFT Transfer</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="RTGS">RTGS Transfer</option>
+                    <option value="IMPS">IMPS</option>
+                    <option value="Cash">Cash</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Reference # / Cheque #</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. UTR12345678"
+                    value={txForm.reference}
+                    onChange={e => setTxForm({ ...txForm, reference: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Linked Invoice / Bill Ref</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g. INV-2026-001"
+                    value={txForm.linkedInvoice}
+                    onChange={e => setTxForm({ ...txForm, linkedInvoice: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="px-2 py-5 border-t border-slate-100 flex justify-end gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setShowRecordModal(false)} 
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={savingTx}
+                  className="px-6 py-2.5 rounded-xl bg-[#1e61f0] text-white text-sm font-bold hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {savingTx ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                  Record
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

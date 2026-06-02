@@ -134,6 +134,10 @@ export const reportsAPI = {
   dashboard: (companyId) => api.get(`/reports/dashboard/${companyId}`),
   ledgerStatement: (ledgerId, from, to) => api.get(`/reports/ledger-statement/${ledgerId}`, { params: { from, to } }),
   auditTrail: (companyId) => api.get(`/reports/audit/${companyId}`),
+  cashFlow: (companyId, from, to) => api.get(`/reports/cash-flow/${companyId}`, { params: { from, to } }),
+  receivablesReport: (companyId, status) => api.get(`/reports/receivables-report/${companyId}`, { params: { status } }),
+  payablesReport: (companyId) => api.get(`/reports/payables-report/${companyId}`),
+  inventoryReport: (companyId) => api.get(`/reports/inventory-report/${companyId}`),
 };
 
 // ─── Inventory ───────────────────────────────────────
@@ -145,6 +149,30 @@ export const inventoryAPI = {
   uploadImage: (formData) => api.post('/inventory/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getItemHistory: (id) => api.get(`/inventory/${id}/history`),
   deleteItem: (id) => api.delete(`/inventory/${id}`),
+
+  // Stock Groups
+  getStockGroups: (companyId) => api.get(`/inventory/groups/${companyId}`),
+  createStockGroup: (data) => api.post('/inventory/groups', data),
+  updateStockGroup: (id, data) => api.put(`/inventory/groups/${id}`, data),
+  deleteStockGroup: (id) => api.delete(`/inventory/groups/${id}`),
+
+  // Stock Categories
+  getStockCategories: (companyId) => api.get(`/inventory/categories/${companyId}`),
+  createStockCategory: (data) => api.post('/inventory/categories', data),
+  updateStockCategory: (id, data) => api.put(`/inventory/categories/${id}`, data),
+  deleteStockCategory: (id) => api.delete(`/inventory/categories/${id}`),
+
+  // Units of Measure
+  getUnits: (companyId) => api.get(`/inventory/units/${companyId}`),
+  createUnit: (data) => api.post('/inventory/units', data),
+  updateUnit: (id, data) => api.put(`/inventory/units/${id}`, data),
+  deleteUnit: (id) => api.delete(`/inventory/units/${id}`),
+
+  // Godowns
+  getGodowns: (companyId) => api.get(`/inventory/godowns/${companyId}`),
+  createGodown: (data) => api.post('/inventory/godowns', data),
+  updateGodown: (id, data) => api.put(`/inventory/godowns/${id}`, data),
+  deleteGodown: (id) => api.delete(`/inventory/godowns/${id}`),
 };
 
 // ─── Price Lists ─────────────────────────────────────
@@ -265,5 +293,68 @@ export const accountingAPI = {
   scanReceipt: (data) => api.post('/accounting/scan-receipt', data),
 };
 
+// ─── Currencies ────────────────────────────────────
+export const currencyAPI = {
+  getByCompany: (companyId) => api.get(`/currencies/${companyId}`),
+  create: (data) => api.post('/currencies', data),
+  update: (id, data) => api.put(`/currencies/${id}`, data),
+  delete: (id) => api.delete(`/currencies/${id}`),
+};
+
+// ─── Cost Categories ───────────────────────────────
+export const costCategoryAPI = {
+  getByCompany: (companyId) => api.get(`/cost-categories/${companyId}`),
+  create: (data) => api.post('/cost-categories', data),
+  delete: (id) => api.delete(`/cost-categories/${id}`),
+};
+
+// ─── Fixed Assets ──────────────────────────────────
+export const fixedAssetsAPI = {
+  getByCompany: (companyId) => api.get(`/fixed-assets/${companyId}`),
+  create: (data) => api.post('/fixed-assets', data),
+  update: (id, data) => api.put(`/fixed-assets/${id}`, data),
+  delete: (id) => api.delete(`/fixed-assets/${id}`),
+  depreciate: (id, data) => api.post(`/fixed-assets/depreciate/${id}`, data),
+  dispose: (id, data) => api.post(`/fixed-assets/dispose/${id}`, data),
+};
+
+// ─── Manufacturing / BOM ───────────────────────────
+export const manufacturingAPI = {
+  getBOMs: (companyId) => api.get(`/manufacturing/bom/${companyId}`),
+  createBOM: (data) => api.post('/manufacturing/bom', data),
+  deleteBOM: (id) => api.delete(`/manufacturing/bom/${id}`),
+  getProductionOrders: (companyId) => api.get(`/manufacturing/orders/${companyId}`),
+  createProductionOrder: (data) => api.post('/manufacturing/orders', data),
+};
+
+// ─── Budgeting ─────────────────────────────────────
+export const budgetAPI = {
+  getByCompany: (companyId) => api.get(`/budgets/${companyId}`),
+  create: (data) => api.post('/budgets', data),
+  delete: (id) => api.delete(`/budgets/${id}`),
+  getVariance: (id) => api.get(`/budgets/variance/${id}`),
+};
+
+// ─── Payroll ───────────────────────────────────────
+export const payrollAPI = {
+  getEmployees: (companyId) => api.get(`/payroll/employees/${companyId}`),
+  createEmployee: (data) => api.post('/payroll/employees', data),
+  updateEmployee: (id, data) => api.put(`/payroll/employees/${id}`, data),
+  deleteEmployee: (id) => api.delete(`/payroll/employees/${id}`),
+  saveSalaryStructure: (data) => api.post('/payroll/salary-structure', data),
+  saveAttendance: (data) => api.post('/payroll/attendance', data),
+  getAttendance: (companyId) => api.get(`/payroll/attendance/${companyId}`),
+  process: (data) => api.post('/payroll/process', data),
+  getPayslips: (companyId) => api.get(`/payroll/payslips/${companyId}`),
+};
+
+// ─── Indian GST Returns ────────────────────────────
+export const gstAPI = {
+  getGSTR1: (companyId) => api.get(`/tax/gst/gstr1/${companyId}`),
+  getGSTR2A: (companyId) => api.get(`/tax/gst/gstr2a/${companyId}`),
+  getGSTR3B: (companyId) => api.get(`/tax/gst/gstr3b/${companyId}`),
+};
+
 export default api;
+
 

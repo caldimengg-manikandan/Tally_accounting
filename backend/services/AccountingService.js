@@ -289,6 +289,9 @@ class AccountingService {
     if (!company) throw new Error('CONFIG ERROR: Company not found.');
     if (!customer) throw new Error('CONFIG ERROR: Customer ledger not found.');
 
+    const isLocal = !company.state || !customer.state || 
+      company.state.trim().toLowerCase() === customer.state.trim().toLowerCase();
+
     // 3. Self-Healing Ledger Discovery & Creation
     const salesGroup = await Group.findOne({ 
       where: { CompanyId: companyId, name: { [Op.like]: '%Sales%' } }, 

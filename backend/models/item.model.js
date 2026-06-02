@@ -66,6 +66,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(5, 2),
       defaultValue: 18
     },
+    reorderLevel: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0
+    },
     salesInformation: {
       type: DataTypes.BOOLEAN,
       defaultValue: true

@@ -20,6 +20,7 @@ import DaybookView from './modules/reports/DaybookView';
 import AuditReportView from './modules/reports/AuditReportView';
 import InventoryView from './modules/inventory/InventoryView';
 import ItemEntryView from './modules/inventory/ItemEntryView';
+import InventoryMastersView from './modules/inventory/InventoryMastersView';
 import PriceListView from './modules/inventory/PriceListView';
 import PriceListEntryView from './modules/inventory/PriceListEntryView';
 import BankingView from './modules/banking/BankingView';
@@ -39,7 +40,11 @@ import RecurringInvoicesView from './modules/sales/RecurringInvoicesView';
 import DeliveryChallansView from './modules/sales/DeliveryChallansView';
 import CreditNotesView from './modules/sales/CreditNotesView';
 import PayrollView from './modules/payroll/PayrollView';
-import ProjectsView from './modules/time_tracking/ProjectsView';
+import CashFlowView from './modules/reports/CashFlowView';
+import ReceivablesReportView from './modules/reports/ReceivablesReportView';
+import PayablesReportView from './modules/reports/PayablesReportView';
+import InventoryReportView from './modules/reports/InventoryReportView';
+import AIAssistantView from './modules/dashboard/AIAssistantView';
 import VendorsListView from './modules/purchases/VendorsListView';
 import VendorsView from './modules/purchases/VendorsView';
 import VendorDetailView from './modules/purchases/VendorDetailView';
@@ -56,7 +61,12 @@ import RecurringBillsView from './modules/purchases/RecurringBillsView';
 import PaymentsMadeListView from './modules/purchases/PaymentsMadeListView';
 import PaymentsMadeEntryView from './modules/purchases/PaymentsMadeEntryView';
 import VendorCreditsView from './modules/purchases/VendorCreditsView';
-import { BudgetsView, TransactionLockingView } from './modules/accountant/AccountantSubModules';
+import BudgetsView from './modules/accountant/BudgetsView';
+import { TransactionLockingView } from './modules/accountant/AccountantSubModules';
+import ChartOfAccountsView from './modules/accounting/ChartOfAccountsView';
+import FixedAssetsView from './modules/fixed_assets/FixedAssetsView';
+import ManufacturingView from './modules/manufacturing/ManufacturingView';
+
 import BulkUpdateView from './modules/accountant/BulkUpdateView';
 import CurrencyAdjustmentsView from './modules/accountant/CurrencyAdjustmentsView';
 import ManualJournalEntryView from './modules/accountant/ManualJournalEntryView';
@@ -67,13 +77,13 @@ import { companyAPI, reportsAPI, voucherAPI } from './services/api';
 
 // ── Icons ─────────────────────────────────────────────────────────
 import {
-  LayoutDashboard, FileText, BookOpen, BarChart2,
+  LayoutDashboard, FileText, BookOpen, BarChart2, Folder,
   Package, ArrowLeftRight, Settings, Users, ShoppingBag,
   Receipt, Wallet, TrendingUp, Shield, LogOut,
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
   PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
-  RefreshCw, PanelLeftClose, PanelLeftOpen
+  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -91,8 +101,9 @@ const NAV = [
     group: 'Items',
     icon: Package,
     items: [
-      { label: 'Items',        path: '/inventory', icon: Package, showPlus: true, plusPath: '/inventory/new' },
-      { label: 'Price Lists',  path: '/price-lists', icon: ClipboardList, showPlus: true, plusPath: '/price-lists/new' },
+      { label: 'Items',             path: '/inventory', icon: Package, showPlus: true, plusPath: '/inventory/new' },
+      { label: 'Inventory Masters', path: '/inventory/masters', icon: Folder },
+      { label: 'Price Lists',       path: '/price-lists', icon: ClipboardList, showPlus: true, plusPath: '/price-lists/new' },
     ]
   },
   {
@@ -100,12 +111,11 @@ const NAV = [
     icon: ShoppingCart,
     items: [
       { icon: Users,           label: 'Customers',        path: '/customers', showPlus: true, plusPath: '/customers/new' },
-      { icon: FileText,        label: 'Quotes',           path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
+      { icon: FileText,        label: 'Quotations',       path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
       { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders', showPlus: true, plusPath: '/sales-orders/new' },
       { icon: Receipt,         label: 'Invoices',         path: '/sales-invoices', showPlus: true, plusPath: '/sales-invoices/new' },
       { icon: Repeat,          label: 'Recurring Invoices', path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
-      { icon: Truck,           label: 'Delivery Challans', path: '/delivery-challans', showPlus: true, plusPath: '/delivery-challans/new' },
-      { icon: Wallet,          label: 'Payments Received', path: '/payments', showPlus: true, plusPath: '/payments/new' },
+      { icon: Wallet,          label: 'Customer Payments', path: '/payments', showPlus: true, plusPath: '/payments/new' },
       { icon: Undo2,           label: 'Credit Notes',      path: '/credit-notes', showPlus: true, plusPath: '/credit-notes/new' },
     ]
   },
@@ -114,21 +124,11 @@ const NAV = [
     icon: ShoppingBag,
     items: [
       { label: 'Vendors',            path: '/vendors', icon: Users, showPlus: true, plusPath: '/vendors/new' },
-      { label: 'Expenses',           path: '/expenses', icon: Receipt, showPlus: true, plusPath: '/expenses/new' },
-      { label: 'Recurring Expenses', path: '/recurring-expenses', icon: Repeat, showPlus: true, plusPath: '/recurring-expenses/new' },
       { label: 'Purchase Orders',    path: '/purchase-orders', icon: ShoppingBag, showPlus: true, plusPath: '/purchase-orders/new' },
       { label: 'Bills',              path: '/bills', icon: FileStack, showPlus: true, plusPath: '/bills/new' },
       { label: 'Recurring Bills',    path: '/recurring-bills', icon: Repeat, showPlus: true, plusPath: '/recurring-bills/new' },
-      { label: 'Payments Made',      path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
-      { label: 'Vendor Credits',     path: '/vendor-credits', icon: Undo2, showPlus: true, plusPath: '/vendor-credits/new' },
-    ]
-  },
-  {
-    group: 'Time Tracking',
-    icon: Activity,
-    items: [
-      { label: 'Projects', path: '/time-tracking/projects', icon: Target, showPlus: true, plusPath: '/time-tracking/projects/new' },
-      { label: 'Timesheet', path: '/time-tracking/timesheet', icon: Clock, showPlus: true, plusPath: '/time-tracking/timesheet/new' },
+      { label: 'Vendor Payments',    path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
+      { label: 'Debit Notes',        path: '/vendor-credits', icon: Undo2, showPlus: true, plusPath: '/vendor-credits/new' },
     ]
   },
   {
@@ -141,44 +141,37 @@ const NAV = [
   },
   {
     group: 'Accountant',
-    icon: UserCheck,
+    icon: Settings,
     items: [
-      { label: 'Manual Journals',   path: '/accountant/journals', icon: BookOpen, showPlus: true, plusPath: '/accountant/journals/new' },
-      { label: 'Bulk Update',       path: '/accountant/bulk-update', icon: RefreshCw, showPlus: true, plusPath: '/accountant/bulk-update/new' },
-      { label: 'Currency Adjustments', path: '/accountant/currency-adjustments', icon: ArrowLeftRight, showPlus: true, plusPath: '/accountant/currency-adjustments/new' },
-      { label: 'Chart of Accounts', path: '/ledgers', icon: ClipboardList, showPlus: true, plusPath: '/ledgers/new' },
-      { label: 'Budgets',           path: '/accountant/budgets', icon: Target, showPlus: true, plusPath: '/accountant/budgets/new' },
-      { label: 'Transaction Locking', path: '/accountant/locking', icon: Shield, showPlus: true, plusPath: '/accountant/locking/new' },
-      { label: 'Cost Centers',      path: '/cost-centers', icon: Target, showPlus: true, plusPath: '/cost-centers/new' },
+      { label: 'Chart of Accounts', path: '/ledgers/chart-of-accounts', icon: BookOpen },
+      { label: 'Cost Centers',      path: '/cost-centers', icon: Folder },
+      { label: 'Budgets',           path: '/accountant/budgets', icon: Target },
+      { label: 'Fixed Assets',      path: '/fixed-assets', icon: Building2 },
+      { label: 'Manufacturing',     path: '/manufacturing', icon: Package },
+      { label: 'Payroll',           path: '/payroll', icon: UserCheck }
     ]
   },
   {
     group: 'Reports',
     icon: BarChart2,
     items: [
-      { label: 'Trial Balance',    path: '/reports/trial-balance', icon: BarChart2 },
-      { label: 'Profit & Loss',    path: '/reports/pl', icon: PieChart },
-      { label: 'Balance Sheet',    path: '/reports/bs', icon: FileBarChart2 },
-      { label: 'Day Book',         path: '/reports/daybook', icon: ClipboardList },
-      { label: 'GST Returns',      path: '/reports/gst', icon: Shield },
+      { label: 'Profit & Loss',      path: '/reports/pl', icon: PieChart },
+      { label: 'Balance Sheet',      path: '/reports/bs', icon: FileBarChart2 },
+      { label: 'Trial Balance',      path: '/reports/trial-balance', icon: BarChart2 },
+      { label: 'Cash Flow',          path: '/reports/cash-flow', icon: TrendingUp },
+      { label: 'Receivables Report', path: '/reports/receivables-report', icon: FileText },
+      { label: 'Payables Report',    path: '/reports/payables-report', icon: FileStack },
+      { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
+      { label: 'GST Returns',        path: '/reports/gst', icon: FileText },
     ]
   },
   {
-    group: 'Documents',
-    icon: FileStack,
+    group: 'AI Assistant',
+    icon: MessageSquare,
     items: [
-      { label: 'Documents', path: '/documents', icon: FileStack },
+      { label: 'AI Assistant',     path: '/ai-assistant', icon: MessageSquare }
     ]
-  },
-  {
-    group: 'Settings',
-    icon: Settings,
-    items: [
-      { label: 'Payroll',          path: '/payroll', icon: UserCheck },
-      { label: 'Company Settings', path: '/settings/company', icon: Building2 },
-      { label: 'Audit Trail',      path: '/reports/audit', icon: Shield },
-    ]
-  },
+  }
 ];
 
 // Helper to compute active paths, accounting for nested routing and context highlights
@@ -626,7 +619,7 @@ function AuthenticatedApp() {
   }, [companyId]);
 
   const shell = (Component, props = {}) => (
-    <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId}>
+    <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
       <Component companyId={companyId} {...props} />
     </AppShell>
   );
@@ -636,14 +629,14 @@ function AuthenticatedApp() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       <Route path="/dashboard" element={
-        <AppShell onLogout={handleLogout}>
+        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
           <DashboardView companyId={companyId} stats={stats} vouchers={vouchers} />
         </AppShell>
       } />
 
       {/* Accounting */}
       <Route path="/vouchers" element={
-        <AppShell onLogout={handleLogout}>
+        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
           <VoucherListView 
             onCreateNew={() => navigate('/vouchers/new')} 
             onEdit={(v) => navigate(`/vouchers/edit/${v.id}`)}
@@ -685,6 +678,7 @@ function AuthenticatedApp() {
       } />
       <Route path="/ledgers"              element={shell(LedgersView)} />
       <Route path="/ledgers/new"          element={shell(LedgersView, { showNew: true })} />
+      <Route path="/ledgers/chart-of-accounts" element={shell(ChartOfAccountsView)} />
       <Route path="/ledger-statement/:id" element={shell(LedgerStatementView)} />
       <Route path="/cost-centers"          element={shell(CostCenterView)} />
       <Route path="/cost-centers/new"      element={shell(CostCenterView, { showNew: true })} />
@@ -756,14 +750,11 @@ function AuthenticatedApp() {
       <Route path="/credit-notes/view/:id" element={shell(CreditNotesView)} />
       <Route path="/tax-invoices"       element={shell(GSTInvoiceView)} />
 
-      {/* Time Tracking */}
-      <Route path="/time-tracking/projects"      element={shell(ProjectsView)} />
-      <Route path="/time-tracking/projects/new"  element={shell(ProjectsView)} />
-      <Route path="/time-tracking/projects/edit/:id" element={shell(ProjectsView)} />
-      <Route path="/time-tracking/projects/view/:id" element={shell(ProjectsView)} />
+      {/* Time Tracking (Removed from main menu/routing shell, keeping definitions but routing to dashboard or disabled) */}
 
       {/* Operations */}
       <Route path="/inventory"          element={shell(InventoryView)} />
+      <Route path="/inventory/masters"  element={shell(InventoryMastersView)} />
       <Route path="/inventory/new"      element={shell(ItemEntryView, {
         onSaveSuccess: () => navigate('/inventory'),
         onCancel: () => navigate('/inventory')
@@ -777,6 +768,8 @@ function AuthenticatedApp() {
       <Route path="/banking/view/:id"   element={shell(BankDetailView)} />
       <Route path="/reconciliation"     element={shell(BankReconciliationView)} />
       <Route path="/payroll"            element={shell(PayrollView)} />
+      <Route path="/fixed-assets"       element={shell(FixedAssetsView)} />
+      <Route path="/manufacturing"      element={shell(ManufacturingView)} />
 
       {/* Tax */}
       <Route path="/reports/gst"           element={shell(GSTReturnsView)} />
@@ -787,6 +780,13 @@ function AuthenticatedApp() {
       <Route path="/reports/bs"            element={shell(BalanceSheetView)} />
       <Route path="/reports/daybook"       element={shell(DaybookView)} />
       <Route path="/reports/audit"         element={shell(AuditReportView)} />
+      <Route path="/reports/cash-flow"     element={shell(CashFlowView)} />
+      <Route path="/reports/receivables-report" element={shell(ReceivablesReportView)} />
+      <Route path="/reports/payables-report"    element={shell(PayablesReportView)} />
+      <Route path="/reports/inventory-report"   element={shell(InventoryReportView)} />
+
+      {/* AI Assistant */}
+      <Route path="/ai-assistant"          element={shell(AIAssistantView)} />
 
       {/* Settings */}
       <Route path="/settings/company"   element={shell(CompanyInfoView, { setActiveTab: () => {} })} />
