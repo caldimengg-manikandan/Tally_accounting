@@ -4,11 +4,10 @@ import { ledgerAPI } from '../../services/api';
 import CustomerForm from './CustomerForm';
 import { Loader2 } from 'lucide-react';
 
-const CustomersView = () => {
+const CustomersView = ({ companyId }) => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
-  const companyId = localStorage.getItem('companyId');
   const [customerToEdit, setCustomerToEdit] = useState(null);
   const [fetching, setFetching] = useState(false);
 
@@ -20,7 +19,7 @@ const CustomersView = () => {
           if (c) setCustomerToEdit(c);
        }).finally(() => setFetching(false));
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, companyId]);
 
   if (fetching) {
      return (
@@ -34,6 +33,7 @@ const CustomersView = () => {
     <CustomerForm 
         standalone={true}
         customerToEdit={customerToEdit}
+        companyId={companyId}
         onSaveSuccess={(newCustomer) => {
             const savedId = newCustomer?.ledger?.id || newCustomer?.id;
             if (savedId) {

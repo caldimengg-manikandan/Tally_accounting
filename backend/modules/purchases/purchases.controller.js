@@ -1,4 +1,4 @@
-const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit, Item } = require('../../models');
+const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit, Item, Company } = require('../../models');
 const { Op } = require('sequelize');
 
 exports.getVendors = async (req, res) => {
@@ -207,22 +207,92 @@ exports.getBills = async (req, res) => {
 };
 
 // Helper function to process GST, TDS, discounts, and adjustments for Purchase Bills
-const processBillTaxesAndAdjustments = async (companyId, { taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries) => {
+const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries) => {
     const { Op } = require('sequelize');
     
     // 1. GST Input (Debit)
     if (taxAmount && parseFloat(taxAmount) > 0) {
-        let gstLedger = await Ledger.findOne({
-            where: { CompanyId: companyId, name: { [Op.or]: [{ [Op.like]: '%GST%Input%' }, { [Op.like]: 'Input%GST%' }] } }
-        });
-        if (!gstLedger) {
-            const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } } });
-            gstLedger = await Ledger.create({
-                name: 'Input GST', code: 'TAX-001', category: 'Asset', groupName: 'Duties & Taxes',
-                GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
-            });
+        // Fetch company and vendor details to determine states
+        const company = await Company.findByPk(companyId);
+        const vendor = supplierLedgerId ? await Ledger.findByPk(supplierLedgerId) : null;
+
+        const vendorGstin = vendor?.gstNumber;
+        const companyGstin = company?.gstNumber;
+
+        const getGstinStateCode = (gstin) => (gstin && gstin.length >= 2 ? gstin.substring(0, 2) : null);
+        const vendorStateCode = getGstinStateCode(vendorGstin);
+        const companyStateCode = getGstinStateCode(companyGstin);
+
+        let isSameState = false;
+        let isUnregistered = !vendorGstin;
+
+        if (vendorStateCode && companyStateCode) {
+            isSameState = vendorStateCode === companyStateCode;
+        } else {
+            // Fallback comparison by state name
+            const vendorState = vendor?.state || '';
+            const companyState = company?.state || '';
+            if (vendorState && companyState) {
+                isSameState = vendorState.toLowerCase().trim() === companyState.toLowerCase().trim();
+            } else {
+                isSameState = true; // default fallback
+            }
         }
-        journalEntries.push({ ledgerId: gstLedger.id, debit: parseFloat(taxAmount), credit: 0 });
+
+        const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } } });
+
+        if (isUnregistered) {
+            // Unregistered Vendor: Apply standard GST, no split
+            let gstLedger = await Ledger.findOne({
+                where: { CompanyId: companyId, name: 'Input GST' }
+            });
+            if (!gstLedger) {
+                gstLedger = await Ledger.create({
+                    name: 'Input GST', code: 'TAX-001', category: 'Asset', groupName: 'Duties & Taxes',
+                    GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
+                });
+            }
+            journalEntries.push({ ledgerId: gstLedger.id, debit: parseFloat(taxAmount), credit: 0 });
+        } else if (isSameState) {
+            // Same State: Split into CGST and SGST
+            const halfTax = parseFloat((parseFloat(taxAmount) / 2).toFixed(2));
+            const otherHalfTax = parseFloat((parseFloat(taxAmount) - halfTax).toFixed(2));
+
+            let cgstLedger = await Ledger.findOne({
+                where: { CompanyId: companyId, name: { [Op.or]: ['Input CGST', 'CGST Input'] } }
+            });
+            if (!cgstLedger) {
+                cgstLedger = await Ledger.create({
+                    name: 'Input CGST', code: 'TAX-CGST', category: 'Asset', groupName: 'Duties & Taxes',
+                    GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
+                });
+            }
+
+            let sgstLedger = await Ledger.findOne({
+                where: { CompanyId: companyId, name: { [Op.or]: ['Input SGST', 'SGST Input'] } }
+            });
+            if (!sgstLedger) {
+                sgstLedger = await Ledger.create({
+                    name: 'Input SGST', code: 'TAX-SGST', category: 'Asset', groupName: 'Duties & Taxes',
+                    GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
+                });
+            }
+
+            journalEntries.push({ ledgerId: cgstLedger.id, debit: halfTax, credit: 0 });
+            journalEntries.push({ ledgerId: sgstLedger.id, debit: otherHalfTax, credit: 0 });
+        } else {
+            // Different State: Apply IGST
+            let igstLedger = await Ledger.findOne({
+                where: { CompanyId: companyId, name: { [Op.or]: ['Input IGST', 'IGST Input'] } }
+            });
+            if (!igstLedger) {
+                igstLedger = await Ledger.create({
+                    name: 'Input IGST', code: 'TAX-IGST', category: 'Asset', groupName: 'Duties & Taxes',
+                    GroupId: taxGroup ? taxGroup.id : null, CompanyId: companyId, currentBalance: 0
+                });
+            }
+            journalEntries.push({ ledgerId: igstLedger.id, debit: parseFloat(taxAmount), credit: 0 });
+        }
     }
 
     // 2. TDS Payable (Credit)
@@ -319,7 +389,7 @@ exports.createBill = async (req, res) => {
         }
 
         // Process Taxes, Discounts, and Adjustments
-        await processBillTaxesAndAdjustments(companyId, { taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries);
+        await processBillTaxesAndAdjustments(companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries);
 
         // Fallback: if no item accounts found, debit a generic Purchases ledger
         if (!itemDebitsAdded) {
@@ -439,7 +509,7 @@ exports.updateBill = async (req, res) => {
         }
 
         // Process Taxes, Discounts, and Adjustments
-        await processBillTaxesAndAdjustments(companyId, { taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries);
+        await processBillTaxesAndAdjustments(companyId, { supplierLedgerId, taxAmount, tdsAmount, discountAmount, adjustment }, journalEntries);
 
         // Fallback: if no item accounts found, debit a generic Purchases ledger
         if (!itemDebitsAdded) {

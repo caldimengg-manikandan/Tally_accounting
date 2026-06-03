@@ -6,22 +6,43 @@ exports.createLedger = async (req, res) => {
   console.log('[CREATE_LEDGER] Request Body:', JSON.stringify(req.body, null, 2));
   try {
     const { companyId, CompanyId, groupId, GroupId, name, openingBalance, openingBalanceType, description, address, gstNumber, groupName } = req.body;
+    const targetCompanyId = req.companyId || companyId || CompanyId;
     let finalGroupId = groupId || GroupId;
     
     // Auto-resolve groupName to GroupId
     if (!finalGroupId && groupName) {
       let foundGroup = await Group.findOne({ 
-        where: { name: groupName, CompanyId: companyId || CompanyId } 
+        where: { name: groupName, CompanyId: targetCompanyId } 
       });
 
-      // If banking group is missing, auto-create it (essential for Banking module)
-      if (!foundGroup && ['Bank Accounts', 'Bank OD A/c', 'Cash-in-Hand'].includes(groupName)) {
+      // Auto-create essential system groups if missing (Banking, Vendor, Customer, GST)
+      if (!foundGroup && ['Bank Accounts', 'Bank OD A/c', 'Cash-in-Hand', 'Sundry Creditors', 'Sundry Debtors', 'Duties & Taxes'].includes(groupName)) {
         console.log(`[LEDGER_CONTROLLER] Auto-creating missing system group: ${groupName}`);
+        let nature = 'Liabilities';
+        let category = 'Primary';
+        if (['Bank Accounts', 'Cash-in-Hand', 'Sundry Debtors'].includes(groupName)) {
+          nature = 'Assets';
+        }
+        if (['Sundry Creditors', 'Sundry Debtors', 'Duties & Taxes'].includes(groupName)) {
+          category = 'Sub-Group';
+        }
+
+        let parent_id = null;
+        let parentName = '';
+        if (groupName === 'Sundry Creditors' || groupName === 'Duties & Taxes') parentName = 'Current Liabilities';
+        if (groupName === 'Sundry Debtors') parentName = 'Current Assets';
+        
+        if (parentName) {
+          const parentGroup = await Group.findOne({ where: { name: parentName, CompanyId: targetCompanyId } });
+          if (parentGroup) parent_id = parentGroup.id;
+        }
+
         foundGroup = await Group.create({
           name: groupName,
-          nature: groupName === 'Bank Accounts' || groupName === 'Cash-in-Hand' ? 'Assets' : 'Liabilities',
-          category: 'Primary',
-          CompanyId: companyId || CompanyId
+          nature,
+          category,
+          parent_id,
+          CompanyId: targetCompanyId
         });
       }
 
@@ -42,7 +63,7 @@ exports.createLedger = async (req, res) => {
       ifsc: req.body.ifsc,
       accountCode: req.body.accountCode,
       GroupId: finalGroupId,
-      CompanyId: companyId || CompanyId
+      CompanyId: targetCompanyId
     });
 
     await AuditService.log({
