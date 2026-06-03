@@ -7,6 +7,18 @@ import { companyAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
 import { CURRENCIES } from '../../utils/currencies';
 
+const validateGSTIN = (gstin) => {
+  if (!gstin) return true;
+  const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  return regex.test(gstin.toUpperCase());
+};
+
+const validatePAN = (pan) => {
+  if (!pan) return true;
+  const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return regex.test(pan.toUpperCase());
+};
+
 const TabButton = ({ active, label, onClick }) => (
   <button
     onClick={onClick}
@@ -146,23 +158,19 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   }, []);
 
   const handleUpdateField = (key, val) => {
-    let cleanVal = val;
-    if (key === 'gstNumber') {
-      cleanVal = val.toUpperCase().slice(0, 15);
-    } else if (key === 'panNumber') {
-      cleanVal = val.toUpperCase().slice(0, 10);
+    let finalVal = val;
+    if (key === 'gstNumber' || key === 'panNumber') {
+      finalVal = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     }
-    setFormData(prev => ({ ...prev, [key]: cleanVal }));
+    setFormData(prev => ({ ...prev, [key]: finalVal }));
   };
 
   const handleCreateField = (key, val) => {
-    let cleanVal = val;
-    if (key === 'gstNumber') {
-      cleanVal = val.toUpperCase().slice(0, 15);
-    } else if (key === 'panNumber') {
-      cleanVal = val.toUpperCase().slice(0, 10);
+    let finalVal = val;
+    if (key === 'gstNumber' || key === 'panNumber') {
+      finalVal = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     }
-    setCreateData(prev => ({ ...prev, [key]: cleanVal }));
+    setCreateData(prev => ({ ...prev, [key]: finalVal }));
   };
 
   const handleLogoUpload = (e) => {
@@ -210,21 +218,16 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error'); 
       return; 
     }
-
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-    if (formData.gstNumber && !gstRegex.test(formData.gstNumber)) {
-      setErrorMsg('Invalid GST Number. Format: 33ABCDE1234F1Z5 (15 characters)');
+    if (formData.gstNumber && !validateGSTIN(formData.gstNumber)) {
+      setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
       setStatus('error');
       return;
     }
-
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (formData.panNumber && !panRegex.test(formData.panNumber)) {
-      setErrorMsg('Invalid PAN Number. Format: ABCDE1234F (10 characters)');
+    if (formData.panNumber && !validatePAN(formData.panNumber)) {
+      setErrorMsg('Invalid PAN format. Expected format: ABCDE1234F');
       setStatus('error');
       return;
     }
-
     setLoading(true);
     setStatus(null);
     try {
@@ -246,21 +249,16 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error');
       return;
     }
-
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-    if (createData.gstNumber && !gstRegex.test(createData.gstNumber)) {
-      setErrorMsg('Invalid GST Number. Format: 33ABCDE1234F1Z5 (15 characters)');
+    if (createData.gstNumber && !validateGSTIN(createData.gstNumber)) {
+      setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
       setStatus('error');
       return;
     }
-
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (createData.panNumber && !panRegex.test(createData.panNumber)) {
-      setErrorMsg('Invalid PAN Number. Format: ABCDE1234F (10 characters)');
+    if (createData.panNumber && !validatePAN(createData.panNumber)) {
+      setErrorMsg('Invalid PAN format. Expected format: ABCDE1234F');
       setStatus('error');
       return;
     }
-
     setLoading(true);
     setStatus(null);
     try {

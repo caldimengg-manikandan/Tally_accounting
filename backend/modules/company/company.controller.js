@@ -9,11 +9,17 @@ exports.createCompany = async (req, res) => {
       dateFormat, organizationId, logoUrl, additionalFields, state, panNumber
     } = req.body;
 
-    if (gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
-      return res.status(400).json({ error: 'Invalid GST Number format. Must be 15 characters like 33ABCDE1234F1Z5' });
+    if (gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(gstNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1' });
+      }
     }
-    if (panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)) {
-      return res.status(400).json({ error: 'Invalid PAN Number format. Must be 10 characters like ABCDE1234F' });
+    if (panNumber) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(panNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid PAN format. Expected format: ABCDE1234F' });
+      }
     }
 
     const company = await Company.create({
@@ -161,6 +167,19 @@ exports.updateCompany = async (req, res) => {
 
     if (company.userId !== req.user.id) {
       return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    }
+
+    if (req.body.gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(req.body.gstNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1' });
+      }
+    }
+    if (req.body.panNumber) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(req.body.panNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid PAN format. Expected format: ABCDE1234F' });
+      }
     }
 
     fieldsToUpdate.forEach(field => {
