@@ -9,6 +9,19 @@ exports.createCompany = async (req, res) => {
       dateFormat, organizationId, logoUrl, additionalFields, state, panNumber
     } = req.body;
 
+    if (gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(gstNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1' });
+      }
+    }
+    if (panNumber) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(panNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid PAN format. Expected format: ABCDE1234F' });
+      }
+    }
+
     const company = await Company.create({
       name,
       gstNumber,
@@ -153,6 +166,19 @@ exports.updateCompany = async (req, res) => {
     
     const company = await Company.findByPk(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    if (req.body.gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(req.body.gstNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1' });
+      }
+    }
+    if (req.body.panNumber) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(req.body.panNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid PAN format. Expected format: ABCDE1234F' });
+      }
+    }
 
     fieldsToUpdate.forEach(field => {
       if (req.body[field] !== undefined) {

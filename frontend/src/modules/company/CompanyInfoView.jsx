@@ -7,6 +7,18 @@ import { companyAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
 import { CURRENCIES } from '../../utils/currencies';
 
+const validateGSTIN = (gstin) => {
+  if (!gstin) return true;
+  const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  return regex.test(gstin.toUpperCase());
+};
+
+const validatePAN = (pan) => {
+  if (!pan) return true;
+  const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return regex.test(pan.toUpperCase());
+};
+
 const TabButton = ({ active, label, onClick }) => (
   <button
     onClick={onClick}
@@ -19,7 +31,7 @@ const TabButton = ({ active, label, onClick }) => (
   </button>
 );
 
-const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder = "", required = false, help = false, disabled = false }) => (
+const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder = "", required = false, help = false, disabled = false, maxLength }) => (
   <div className="flex flex-col gap-1.5 py-3.5 border-b border-slate-100 last:border-0 lg:flex-row lg:items-center">
     <label className="text-[13px] text-slate-600 font-bold lg:w-56 shrink-0 flex items-center gap-1.5">
       {label} {required && <span className="text-red-500 font-bold">*</span>}
@@ -31,6 +43,7 @@ const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder 
       value={value || ''}
       onChange={(e) => onChange(keyName, e.target.value)}
       disabled={disabled}
+      maxLength={maxLength}
       className={`flex-1 max-w-md h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300 font-sans ${disabled ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''}`}
     />
   </div>
@@ -144,11 +157,19 @@ const CompanyInfoView = () => {
   }, []);
 
   const handleUpdateField = (key, val) => {
-    setFormData(prev => ({ ...prev, [key]: val }));
+    let finalVal = val;
+    if (key === 'gstNumber' || key === 'panNumber') {
+      finalVal = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    }
+    setFormData(prev => ({ ...prev, [key]: finalVal }));
   };
 
   const handleCreateField = (key, val) => {
-    setCreateData(prev => ({ ...prev, [key]: val }));
+    let finalVal = val;
+    if (key === 'gstNumber' || key === 'panNumber') {
+      finalVal = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    }
+    setCreateData(prev => ({ ...prev, [key]: finalVal }));
   };
 
   const handleLogoUpload = (e) => {
@@ -196,6 +217,16 @@ const CompanyInfoView = () => {
       setStatus('error'); 
       return; 
     }
+    if (formData.gstNumber && !validateGSTIN(formData.gstNumber)) {
+      setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
+      setStatus('error');
+      return;
+    }
+    if (formData.panNumber && !validatePAN(formData.panNumber)) {
+      setErrorMsg('Invalid PAN format. Expected format: ABCDE1234F');
+      setStatus('error');
+      return;
+    }
     setLoading(true);
     setStatus(null);
     try {
@@ -214,6 +245,16 @@ const CompanyInfoView = () => {
   const handleCreateCompany = async () => {
     if (!createData.name.trim()) {
       setErrorMsg('Organization Name is required.');
+      setStatus('error');
+      return;
+    }
+    if (createData.gstNumber && !validateGSTIN(createData.gstNumber)) {
+      setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
+      setStatus('error');
+      return;
+    }
+    if (createData.panNumber && !validatePAN(createData.panNumber)) {
+      setErrorMsg('Invalid PAN format. Expected format: ABCDE1234F');
       setStatus('error');
       return;
     }
@@ -456,8 +497,8 @@ const CompanyInfoView = () => {
                 </div>
               </div>
 
-              <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={createData.gstNumber} onChange={handleCreateField} placeholder="e.g. 33AAAAA1111A1Z1" />
-              <InputRow label="PAN" keyName="panNumber" value={createData.panNumber} onChange={handleCreateField} placeholder="e.g. ABCDE1234F" />
+              <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={createData.gstNumber} onChange={handleCreateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} />
+              <InputRow label="PAN" keyName="panNumber" value={createData.panNumber} onChange={handleCreateField} placeholder="e.g. ABCDE1234F" maxLength={10} />
 
               <div className="bg-slate-50 rounded-xl p-6 mt-6 border border-slate-100 space-y-4">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
@@ -628,8 +669,8 @@ const CompanyInfoView = () => {
                   <Landmark size={16} className="text-blue-500" /> Tax Identification details
                 </h3>
                 <SelectRow label="Registration State" keyName="state" value={formData.state} onChange={handleUpdateField} options={INDIAN_STATES} />
-                <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={formData.gstNumber} onChange={handleUpdateField} placeholder="e.g. 33AAAAA1111A1Z1" />
-                <InputRow label="PAN Number" keyName="panNumber" value={formData.panNumber} onChange={handleUpdateField} placeholder="e.g. ABCDE1234F" />
+                <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={formData.gstNumber} onChange={handleUpdateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} />
+                <InputRow label="PAN Number" keyName="panNumber" value={formData.panNumber} onChange={handleUpdateField} placeholder="e.g. ABCDE1234F" maxLength={10} />
               </div>
 
               <div>
