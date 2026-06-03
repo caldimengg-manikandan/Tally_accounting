@@ -89,8 +89,8 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-// Using alter:true to apply new company profile fields;
-const syncOptions = (dialect === 'postgres' || process.env.DATABASE_URL) ? { alter: true } : {};
+// Disabling alter:true to prevent slow boot times and connection pool starvation
+const syncOptions = {};
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');

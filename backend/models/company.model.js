@@ -118,6 +118,10 @@ module.exports = (sequelize, DataTypes) => {
     additionalFields: {
       type: DataTypes.JSON,
       defaultValue: []
+    },
+    userId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
 

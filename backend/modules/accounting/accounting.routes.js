@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const accountingService = require('./accounting.service');
+const { verifyToken, tenantAccess } = require('../../middleware/auth.middleware');
+
+router.use(verifyToken, tenantAccess);
 
 router.post('/calculate-gst', async (req, res) => {
   try {

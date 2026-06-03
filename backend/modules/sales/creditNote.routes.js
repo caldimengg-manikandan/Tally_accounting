@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('./creditNote.controller');
+const { verifyToken, tenantAccess } = require('../../middleware/auth.middleware');
+
+router.use(verifyToken, tenantAccess);
 
 router.post('/', controller.createCreditNote);
 router.get('/company/:companyId', controller.getCreditNotes);

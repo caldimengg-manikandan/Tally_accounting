@@ -178,8 +178,18 @@ exports.getGSTR3B = async (req, res) => {
       } else if (name.includes('igst')) {
         if (isInput) inputIGST += debitTotal - creditTotal;
         else outputIGST += creditTotal - debitTotal;
+      } else if (isOutput) {
+        // Generic output GST -> split 50/50
+        const amount = creditTotal - debitTotal;
+        outputCGST += amount / 2;
+        outputSGST += amount / 2;
+      } else if (isInput) {
+        // Generic input GST -> split 50/50
+        const amount = debitTotal - creditTotal;
+        inputCGST += amount / 2;
+        inputSGST += amount / 2;
       } else {
-        // Unspecified fallback (split 50/50 output/input by default nature of transaction)
+        // Unspecified fallback
         if (creditTotal > debitTotal) {
           outputCGST += (creditTotal - debitTotal) / 2;
           outputSGST += (creditTotal - debitTotal) / 2;

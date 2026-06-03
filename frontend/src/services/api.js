@@ -19,7 +19,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Clear local storage and force login if token is invalid/expired
-      ['token', 'user', 'companyId'].forEach(k => localStorage.removeItem(k));
+      ['token', 'user', 'companyId', 'companyName'].forEach(k => localStorage.removeItem(k));
       if (!window.location.pathname.includes('/auth')) {
         window.location.href = '/';
       }

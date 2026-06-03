@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const projectController = require('./project.controller');
+const { verifyToken, tenantAccess } = require('../../middleware/auth.middleware');
+
+router.use(verifyToken, tenantAccess);
 
 router.post('/', projectController.createProject);
 router.get('/:companyId', projectController.getProjectsByCompany);

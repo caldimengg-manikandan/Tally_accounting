@@ -31,33 +31,37 @@ exports.getTrialBalance = async (req, res) => {
     });
 
     const trialBalance = ledgers.map(l => {
-      const opening = parseFloat(l.openingBalance || 0);
+      const rawOpening = parseFloat(l.openingBalance || 0);
+      const opening = l.openingBalanceType === 'Cr' ? -rawOpening : rawOpening;
       const debit = parseFloat(l.totalDebit || 0);
       const credit = parseFloat(l.totalCredit || 0);
-      const closing = opening + debit - credit;
+      const closingRaw = opening + debit - credit;
 
       return {
         ledgerId: l.id,
         ledgerName: l.name,
         group: l.Group?.name || 'Ungrouped',
         nature: l.Group?.nature || 'Unknown',
-        openingBalance: opening,
+        openingBalance: rawOpening,
+        openingBalanceType: l.openingBalanceType || 'Dr',
         totalDebit: debit,
         totalCredit: credit,
-        closingBalance: closing
+        closingBalance: closingRaw,
+        debitBalance: closingRaw > 0 ? closingRaw : 0,
+        creditBalance: closingRaw < 0 ? Math.abs(closingRaw) : 0
       };
     });
 
     // Summary
-    const totalDebitSum = trialBalance.reduce((s, r) => s + r.totalDebit, 0);
-    const totalCreditSum = trialBalance.reduce((s, r) => s + r.totalCredit, 0);
+    const totalDebitBal = trialBalance.reduce((s, r) => s + r.debitBalance, 0);
+    const totalCreditBal = trialBalance.reduce((s, r) => s + r.creditBalance, 0);
 
     res.json({
       trialBalance,
       summary: {
-        totalDebit: totalDebitSum,
-        totalCredit: totalCreditSum,
-        isBalanced: Math.abs(totalDebitSum - totalCreditSum) < 0.01
+        totalDebit: totalDebitBal,
+        totalCredit: totalCreditBal,
+        isBalanced: Math.abs(totalDebitBal - totalCreditBal) < 0.01
       }
     });
   } catch (err) {
@@ -208,12 +212,21 @@ exports.getBalanceSheet = async (req, res) => {
     
     // 3. Inject Profit/Loss into Liabilities side
     if (netProfit !== 0) {
-      liabilities.push({
-        ledgerName: netProfit > 0 ? 'Profit & Loss A/c (Profit)' : 'Profit & Loss A/c (Loss)',
-        group: 'RETAINED EARNINGS',
-        balance: Math.abs(netProfit)
-      });
-      totalLiabilities += Math.abs(netProfit);
+      if (netProfit > 0) {
+        liabilities.push({
+          ledgerName: 'Profit & Loss A/c (Profit)',
+          group: 'RETAINED EARNINGS',
+          balance: netProfit
+        });
+        totalLiabilities += netProfit;
+      } else {
+        liabilities.push({
+          ledgerName: 'Profit & Loss A/c (Loss)',
+          group: 'RETAINED EARNINGS',
+          balance: Math.abs(netProfit)
+        });
+        totalLiabilities -= Math.abs(netProfit); // Subtract net loss
+      }
     }
 
     res.json({
@@ -336,12 +349,13 @@ exports.getDashboardStats = async (req, res) => {
 
     ledgers.forEach(l => {
       const nature = l.Group?.nature || '';
-      const opening = parseFloat(l.openingBalance || 0);
+      const rawOpening = parseFloat(l.openingBalance || 0);
+      const opening = l.openingBalanceType === 'Cr' ? -rawOpening : rawOpening;
       const debit  = parseFloat(l.totalDebit  || 0);
       const credit = parseFloat(l.totalCredit || 0);
       const closing = opening + debit - credit;
 
-      if (nature === 'Income')   totalIncome   += credit - debit + opening;
+      if (nature === 'Income')   totalIncome   += credit - debit - opening;
       if (nature === 'Expenses') totalExpenses += debit - credit + opening;
 
       const name = (l.name || '').toLowerCase();
@@ -532,16 +546,17 @@ exports.getDashboardStats = async (req, res) => {
     let gstPayable = 0, gstReceivable = 0;
     ledgers.forEach(l => {
       const name = (l.name || '').toLowerCase();
+      const rawOpening = parseFloat(l.openingBalance || 0);
+      const opening = l.openingBalanceType === 'Cr' ? -rawOpening : rawOpening;
       const debit  = parseFloat(l.totalDebit  || 0);
       const credit = parseFloat(l.totalCredit || 0);
-      const opening = parseFloat(l.openingBalance || 0);
       const closing = opening + debit - credit;
 
-      if (name.includes('output gst') || name.includes('gst payable') || name.includes('cgst') || name.includes('sgst') || name.includes('igst')) {
+      if (name.includes('output gst') || name.includes('gst output') || name.includes('gst payable') || name.includes('cgst') || name.includes('sgst') || name.includes('igst')) {
         if (closing < 0) gstPayable += Math.abs(closing);
         else gstReceivable += closing;
       }
-      if (name.includes('input gst') || name.includes('gst receivable') || name.includes('itc')) {
+      if (name.includes('input gst') || name.includes('gst input') || name.includes('gst receivable') || name.includes('itc')) {
         gstReceivable += Math.max(0, closing);
       }
     });
@@ -658,11 +673,7 @@ exports.getDashboardStats = async (req, res) => {
       console.error("Top products error:", e);
     }
     if (topProducts.length === 0) {
-      topProducts = [
-        { name: 'Steel Office Table', salesCount: 42, revenue: 168000 },
-        { name: 'Ergonomic Mesh Chair', salesCount: 38, revenue: 114000 },
-        { name: 'Computer Desk', salesCount: 25, revenue: 125000 }
-      ];
+      topProducts = [];
     }
 
     res.json({

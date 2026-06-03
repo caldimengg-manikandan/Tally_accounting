@@ -16,6 +16,8 @@ router.get('/:id', tenantAccess, companyController.getCompanyById);
 router.put('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), tenantAccess, companyController.updateCompany);
 // Close financial year (ADMIN only)
 router.post('/close-year/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), tenantAccess, companyController.closeFinancialYear);
+// Delete company (ADMIN/SUPER_ADMIN only)
+router.delete('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), tenantAccess, companyController.deleteCompany);
 
 module.exports = router;
 
