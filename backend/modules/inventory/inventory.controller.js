@@ -15,7 +15,8 @@ exports.createItem = async (req, res) => {
       type, sellingPrice, salesAccount, salesDescription,
       costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl,
       salesInformation, purchaseInformation,
-      reorderLevel, stockGroupId, stockCategoryId, unitOfMeasureId, godownId
+      reorderLevel, stockGroupId, stockCategoryId, unitOfMeasureId, godownId,
+      hsnCode, gstRate, itemCode
     } = req.body;
     
     const item = await Item.create({
@@ -40,7 +41,10 @@ exports.createItem = async (req, res) => {
       stockCategoryId: stockCategoryId && stockCategoryId !== "" ? stockCategoryId : null,
       unitOfMeasureId: unitOfMeasureId && unitOfMeasureId !== "" ? unitOfMeasureId : null,
       godownId: godownId && godownId !== "" ? godownId : null,
-      CompanyId: companyId
+      CompanyId: companyId,
+      hsnCode,
+      gstRate: gstRate !== undefined ? gstRate : 18,
+      itemCode
     });
 
     await AuditService.log({
@@ -120,7 +124,8 @@ exports.updateItem = async (req, res) => {
       name, unit, type, sellingPrice, salesAccount, salesDescription,
       costPrice, purchaseAccount, purchaseDescription, preferredVendor, imageUrl,
       salesInformation, purchaseInformation,
-      reorderLevel, stockGroupId, stockCategoryId, unitOfMeasureId, godownId
+      reorderLevel, stockGroupId, stockCategoryId, unitOfMeasureId, godownId,
+      hsnCode, gstRate, itemCode
     } = req.body;
 
     await item.update({
@@ -139,7 +144,10 @@ exports.updateItem = async (req, res) => {
       stockGroupId: stockGroupId && stockGroupId !== "" ? stockGroupId : null,
       stockCategoryId: stockCategoryId && stockCategoryId !== "" ? stockCategoryId : null,
       unitOfMeasureId: unitOfMeasureId && unitOfMeasureId !== "" ? unitOfMeasureId : null,
-      godownId: godownId && godownId !== "" ? godownId : null
+      godownId: godownId && godownId !== "" ? godownId : null,
+      hsnCode,
+      gstRate: gstRate !== undefined ? gstRate : 18,
+      itemCode
     });
 
     await AuditService.log({

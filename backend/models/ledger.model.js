@@ -70,7 +70,20 @@ module.exports = (sequelize, DataTypes) => {
     },
     gstNumber: {
       type: DataTypes.STRING,
-      allowNull: true
+      allowNull: true,
+      validate: {
+        isValidGstin(value) {
+          if (value && value.trim() !== '') {
+            if (value.length !== 15) {
+              throw new Error('GSTIN must be exactly 15 characters');
+            }
+            const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+            if (!gstRegex.test(value.toUpperCase())) {
+              throw new Error('Invalid GSTIN format');
+            }
+          }
+        }
+      }
     },
     state: {
       type: DataTypes.STRING,

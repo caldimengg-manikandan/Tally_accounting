@@ -17,6 +17,7 @@ import PurchaseDeliveryAddressModal from './PurchaseDeliveryAddressModal';
 import CreateItemModal from '../inventory/CreateItemModal';
 import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
+import { getGstinStateName } from '../../utils/gstinUtils';
 
 const BillEntryView = ({ companyId }) => {
   const navigate = useNavigate();
@@ -75,6 +76,7 @@ const BillEntryView = ({ companyId }) => {
   const [activeRowForItemModal, setActiveRowForItemModal] = useState(null);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [isVendorDetailsOpen, setIsVendorDetailsOpen] = useState(false);
+  const [currentCompany, setCurrentCompany] = useState(null);
   
   // Custom Payment Terms Dropdown State
   const [isTermsDropdownOpen, setIsTermsDropdownOpen] = useState(false);
@@ -151,6 +153,9 @@ const BillEntryView = ({ companyId }) => {
       projectAPI.getByCompany(companyId).then(res => setProjects(res.data || []));
       inventoryAPI.getByCompany(companyId, 'purchase').then(res => {
         setInventoryItems(res.data || []);
+      });
+      companyAPI.getById(companyId).then(res => {
+        setCurrentCompany(res.data);
       });
     }
   }, [companyId]);
@@ -277,7 +282,9 @@ const BillEntryView = ({ companyId }) => {
               account: item.account || '',
               qty: item.qty || 1,
               rate: item.rate || 0,
-              amount: item.amount || 0
+              amount: item.amount || 0,
+              hsnCode: item.hsnCode || '',
+              gstRate: item.gstRate !== undefined ? item.gstRate : 18
             })));
           }
         }
@@ -304,11 +311,19 @@ const BillEntryView = ({ companyId }) => {
           itemName: invItem.name,
           rate: invItem.costPrice || invItem.sellingPrice || 0,
           account: invItem.purchaseAccount || it.account || 'Cost of Goods Sold',
-          amount: (invItem.costPrice || invItem.sellingPrice || 0) * it.qty
+          amount: (invItem.costPrice || invItem.sellingPrice || 0) * it.qty,
+          hsnCode: invItem.hsnCode || '',
+          gstRate: invItem.gstRate !== undefined ? invItem.gstRate : 18
         };
       }
       return it;
     }));
+    if (invItem.gstRate !== undefined) {
+      setFormData(prev => ({
+        ...prev,
+        taxRate: parseFloat(invItem.gstRate)
+      }));
+    }
     setOpenItemDropdown(null);
   };
 
@@ -358,6 +373,44 @@ const BillEntryView = ({ companyId }) => {
 
     return { subtotal, discountAmount, taxableAmount, taxAmount, tdsAmount, total };
   }, [items, formData.discount, formData.taxRate, formData.tdsRate, formData.adjustment]);
+
+  const gstDetails = useMemo(() => {
+    if (!formData.taxRate) return null;
+
+    const vendorGstin = selectedVendor?.gstNumber;
+    const companyGstin = currentCompany?.gstNumber;
+
+    const getGstinStateCode = (gstin) => (gstin && gstin.length >= 2 ? gstin.substring(0, 2) : null);
+    const vendorStateCode = getGstinStateCode(vendorGstin);
+    const companyStateCode = getGstinStateCode(companyGstin);
+
+    let isSameState = false;
+    let isUnregistered = !vendorGstin;
+
+    if (vendorStateCode && companyStateCode) {
+      isSameState = vendorStateCode === companyStateCode;
+    } else {
+      const vendorState = selectedVendor?.state || (getVendorBillingAddress(selectedVendor)?.state) || '';
+      const companyState = currentCompany?.state || '';
+      if (vendorState && companyState) {
+        isSameState = vendorState.toLowerCase().trim() === companyState.toLowerCase().trim();
+      } else {
+        isSameState = true;
+      }
+    }
+
+    const halfRate = (formData.taxRate / 2).toFixed(1);
+    const halfTaxAmount = (totals.taxAmount / 2).toFixed(2);
+
+    return {
+      isSameState,
+      isUnregistered,
+      halfRate,
+      halfTaxAmount,
+      vendorStateCode,
+      companyStateCode
+    };
+  }, [formData.taxRate, selectedVendor, currentCompany, totals.taxAmount]);
 
   // ── Handlers ────────────────────────────────────────────────────
   const handleItemChange = (id, field, value) => {
@@ -655,6 +708,12 @@ const BillEntryView = ({ companyId }) => {
                          <div className="absolute left-1 top-4 text-slate-300 opacity-0 group-hover/row:opacity-100 cursor-grab"><GripVertical size={14} /></div>
                          <div className="px-6 py-2 relative" ref={openItemDropdown === item.id ? itemDropdownRef : null}>
                             <textarea placeholder="Type or click to select an item." value={item.itemName} onClick={() => setOpenItemDropdown(openItemDropdown === item.id ? null : item.id)} onChange={(e) => { handleItemChange(item.id, 'itemName', e.target.value); setOpenItemDropdown(item.id); }} className={`w-full bg-transparent text-[13px] text-slate-800 resize-none h-[50px] px-2 py-1.5 outline-none border border-transparent rounded ${openItemDropdown === item.id ? 'border-blue-500 ring-1 ring-blue-500 bg-white' : 'hover:border-slate-300'}`} />
+                            {(item.hsnCode || item.gstRate !== undefined) && (
+                               <div className="flex gap-3 mt-0.5 px-2 text-[11px] font-medium text-slate-400">
+                                  {item.hsnCode && <span>HSN/SAC: <strong className="text-slate-600">{item.hsnCode}</strong></span>}
+                                  {item.gstRate !== undefined && <span>GST: <strong className="text-slate-600">{item.gstRate}%</strong></span>}
+                               </div>
+                            )}
                             {openItemDropdown === item.id && (
                                <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
                                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
@@ -738,6 +797,32 @@ const BillEntryView = ({ companyId }) => {
                       </div>
                       <div className="font-medium text-slate-800 text-[13px]">{totals.taxAmount.toFixed(2)}</div>
                    </div>
+
+                   {gstDetails && (
+                     <div className="pl-6 pb-2 text-[12px] space-y-1 text-slate-500 border-b border-slate-200/30 animate-fade-in">
+                       {gstDetails.isUnregistered ? (
+                         <div className="text-[11px] text-amber-600 font-bold bg-amber-50 px-2.5 py-1 rounded border border-amber-200 inline-block">
+                           ⚠️ Unregistered Vendor (No ITC claim available)
+                         </div>
+                       ) : gstDetails.isSameState ? (
+                         <div className="space-y-1">
+                           <div className="flex justify-between pr-4">
+                             <span>CGST @ {gstDetails.halfRate}%</span>
+                             <span className="font-semibold text-slate-700">₹{gstDetails.halfTaxAmount}</span>
+                           </div>
+                           <div className="flex justify-between pr-4">
+                             <span>SGST @ {gstDetails.halfRate}%</span>
+                             <span className="font-semibold text-slate-700">₹{(totals.taxAmount - parseFloat(gstDetails.halfTaxAmount)).toFixed(2)}</span>
+                           </div>
+                         </div>
+                       ) : (
+                         <div className="flex justify-between pr-4">
+                           <span>IGST @ {formData.taxRate}%</span>
+                           <span className="font-semibold text-slate-700">₹{totals.taxAmount.toFixed(2)}</span>
+                         </div>
+                       )}
+                     </div>
+                   )}
 
                    {/* Standardized TDS Dropdown */}
                    <div className="py-3 border-b border-slate-200/50 flex items-center justify-between gap-4">

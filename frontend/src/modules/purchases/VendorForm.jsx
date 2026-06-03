@@ -11,8 +11,9 @@ import { COUNTRY_CODES } from '../../utils/countryCodes';
 import { INDIAN_STATES } from '../../utils/indianStates';
 import useNotificationStore from '../../store/notificationStore';
 import { CURRENCIES } from '../../utils/currencies';
+import { STATE_CODE_TO_NAME } from '../../utils/gstinUtils';
 
-const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
+const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, companyId: propCompanyId }) => {
   const navigate = useNavigate();
   const isEditMode = Boolean(editId);
   
@@ -32,6 +33,8 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
   const [pan, setPan] = useState('');
   const [currency, setCurrency] = useState('INR- Indian Rupee');
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
+  const [gstNumber, setGstNumber] = useState('');
+  const [gstError, setGstError] = useState('');
   
   // Addresses (optional — not required to save)
   const initialAddress = { attention: '', country: '', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
@@ -39,8 +42,45 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
   const [shippingAddress, setShippingAddress] = useState({ ...initialAddress });
 
   const [loading, setLoading] = useState(false);
+
+  const handleGstChange = (val) => {
+    const cleanedVal = val.replace(/\s+/g, '').toUpperCase();
+    setGstNumber(cleanedVal);
+
+    if (!cleanedVal) {
+      setGstError('');
+      return;
+    }
+
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+    if (cleanedVal.length !== 15) {
+      setGstError('GSTIN must be exactly 15 characters');
+    } else if (!gstRegex.test(cleanedVal)) {
+      setGstError('Invalid GSTIN format');
+    } else {
+      setGstError('');
+    }
+
+    if (cleanedVal.length >= 2) {
+      const stateCode = cleanedVal.substring(0, 2);
+      const stateName = STATE_CODE_TO_NAME[stateCode];
+      if (stateName) {
+        setBillingAddress(prev => ({ ...prev, state: stateName, country: prev.country || 'India' }));
+        setShippingAddress(prev => ({ ...prev, state: stateName, country: prev.country || 'India' }));
+      }
+    }
+
+    if (cleanedVal.length >= 12) {
+      const extractedPan = cleanedVal.substring(2, 12);
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (panRegex.test(extractedPan)) {
+        setPan(extractedPan);
+      }
+    }
+  };
   const [groupId, setGroupId] = useState(null);
-  const companyId = localStorage.getItem('companyId');
+  const companyId = propCompanyId || localStorage.getItem('companyId');
   const addNotification = useNotificationStore(state => state.addNotification);
 
   // Generate Display Name Options
@@ -94,6 +134,22 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
              setPan(c.pan || '');
              setCurrency(c.currency || 'INR- Indian Rupee');
              setPaymentTerms(c.paymentTerms || 'Due on Receipt');
+             if (c.gstNumber) {
+                 const cleanedGst = c.gstNumber.replace(/\s+/g, '').toUpperCase();
+                 setGstNumber(cleanedGst);
+                 // Trigger validation on load
+                 const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+                 if (cleanedGst.length !== 15) {
+                    setGstError('GSTIN must be exactly 15 characters');
+                 } else if (!gstRegex.test(cleanedGst)) {
+                    setGstError('Invalid GSTIN format');
+                 } else {
+                    setGstError('');
+                 }
+              } else {
+                 setGstNumber('');
+                 setGstError('');
+              }
              
              if (c.billingAddressJson) setBillingAddress(JSON.parse(c.billingAddressJson));
              else if (c.billingAddress) setBillingAddress(JSON.parse(c.billingAddress));
@@ -110,6 +166,10 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
 
   const handleSave = async (e) => {
     if (e) e.preventDefault();
+    if (!companyId || companyId === 'null' || companyId === 'undefined') {
+      addNotification('No active company selected. Please select a company first.', 'error');
+      return;
+    }
     let ledgerName = displayName || (vendorType === 'Business' ? companyName : `${salutation} ${firstName} ${lastName}`.trim());
     
     if (!ledgerName) {
@@ -121,6 +181,24 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
          addNotification('First and Last Name are required.', 'error');
          return;
       }
+    }
+
+    if (gstNumber) {
+      const cleanedGst = gstNumber.replace(/\s+/g, '').toUpperCase();
+      if (cleanedGst.length !== 15) {
+        addNotification('GSTIN must be exactly 15 characters', 'error');
+        return;
+      }
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(cleanedGst)) {
+        addNotification('Invalid GSTIN format', 'error');
+        return;
+      }
+    }
+
+    if (gstError) {
+      addNotification(gstError, 'error');
+      return;
     }
 
     setLoading(true);
@@ -136,6 +214,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
         mobile,
         website,
         pan,
+        gstNumber: gstNumber || null,
         companyId,
         CompanyId: companyId,
         groupId,
@@ -432,10 +511,49 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel }) => {
                 <div className="flex items-center">
                     <label className="w-48 text-[13px] font-medium text-slate-500 text-red-500">PAN Number</label>
                     <input 
-                        value={pan} onChange={e => setPan(e.target.value)}
+                        value={pan} onChange={e => setPan(e.target.value.toUpperCase())}
                         className="flex-1 max-w-lg h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 capitalize" 
                         placeholder="ABCDE1234F"
                     />
+                </div>
+
+                <div className="flex items-start">
+                    <label className="w-48 text-[13px] font-medium text-slate-500 mt-2">GSTIN Number</label>
+                    <div className="flex-1 max-w-lg space-y-1">
+                        <div className="relative flex items-center">
+                            <input 
+                                value={gstNumber} 
+                                onChange={e => handleGstChange(e.target.value)}
+                                className={`w-full h-9 px-3 pr-10 border rounded text-[13px] outline-none font-mono focus:ring-1 focus:ring-opacity-50 ${
+                                  gstNumber 
+                                    ? gstError 
+                                      ? 'border-red-400 focus:border-red-500 focus:ring-red-100 bg-red-50/10' 
+                                      : 'border-green-400 focus:border-green-500 focus:ring-green-100 bg-green-50/10' 
+                                    : 'border-slate-200 focus:border-blue-400 focus:ring-blue-100'
+                                }`} 
+                                placeholder="Ex: 33AABCR5678B1Z5"
+                            />
+                            {gstNumber && (
+                              <div className="absolute right-3 top-2.5">
+                                {gstError ? (
+                                  <AlertCircle size={16} className="text-red-500" />
+                                ) : (
+                                  <CheckCircle2 size={16} className="text-green-500" />
+                                )}
+                              </div>
+                            )}
+                        </div>
+                        {gstNumber && gstError && (
+                          <p className="text-[11px] font-medium text-red-500 flex items-center gap-1">
+                            <AlertCircle size={12} /> {gstError}
+                          </p>
+                        )}
+                        {gstNumber && !gstError && (
+                          <p className="text-[11px] font-medium text-green-600 flex items-center gap-1">
+                            <CheckCircle2 size={12} /> Valid GSTIN Format
+                          </p>
+                        )}
+                    </div>
                 </div>
             </div>
         </section>

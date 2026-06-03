@@ -232,6 +232,12 @@ const VendorDetailView = ({ companyId }) => {
 
   // 1. Fetch Company & Ledgers
   useEffect(() => {
+    console.log("[VendorDetailView] activeCompanyId:", activeCompanyId);
+    if (!activeCompanyId || activeCompanyId === 'null' || activeCompanyId === 'undefined') {
+      console.warn("[VendorDetailView] No valid activeCompanyId found");
+      setLoading(false);
+      return;
+    }
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -241,10 +247,12 @@ const VendorDetailView = ({ companyId }) => {
         ]);
         
         const allLedgersData = ledgersRes.data || [];
+        console.log("[VendorDetailView] allLedgersData fetched:", allLedgersData);
         setAllLedgers(allLedgersData);
         setCurrentCompany(companyRes.data);
       } catch (err) {
-        console.error("Failed to fetch data", err);
+        console.error("[VendorDetailView] Failed to fetch data", err);
+        addNotification(err.response?.data?.error || err.message || "Failed to fetch company vendor records", "error");
       } finally {
         setLoading(false);
       }
@@ -495,7 +503,12 @@ const VendorDetailView = ({ companyId }) => {
         {/* Vendor List */}
         <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
           {vendors.length === 0 ? (
-            <div className="p-10 text-center text-[12px] text-slate-400 font-semibold uppercase tracking-widest opacity-45 mt-20">NO VENDORS FOUND</div>
+            <div className="p-10 text-center mt-20 space-y-2">
+              <div className="text-[12px] text-slate-400 font-semibold uppercase tracking-widest opacity-45">NO VENDORS FOUND</div>
+              <div className="text-[10px] font-mono text-slate-300">
+                Company: {activeCompanyId || 'none'} | Ledgers: {allLedgers.length}
+              </div>
+            </div>
           ) : vendors.map(v => (
             <div 
               key={v.id} 

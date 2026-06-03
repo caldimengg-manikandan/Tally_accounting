@@ -41,12 +41,13 @@ exports.resolveCompanyGroups = async (req, res) => {
 exports.createGroup = async (req, res) => {
   try {
     const { companyId, CompanyId, name, nature, category, parentId, parent_id } = req.body;
+    const targetCompanyId = req.companyId || companyId || CompanyId;
     const group = await Group.create({
       name,
       nature,
       category: category || 'Sub-Group',
       parent_id: parentId || parent_id || null,
-      CompanyId: companyId || CompanyId
+      CompanyId: targetCompanyId
     });
     res.status(201).json(group);
   } catch (err) {

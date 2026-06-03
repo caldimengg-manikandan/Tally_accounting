@@ -8,8 +8,11 @@ import {
   User, 
   Mail, 
   Phone, 
-  Smartphone 
+  Smartphone,
+  Copy,
+  Check
 } from 'lucide-react';
+import { getGstinStateName } from '../../utils/gstinUtils';
 
 /**
  * Premium Vendor Overview Left Sidebar Card Component
@@ -29,6 +32,17 @@ const VendorOverviewSidebar = ({
   onAddContact,
   onSettingsClick
 }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyGstin = (e) => {
+    e.stopPropagation();
+    if (vendor.gstNumber) {
+      navigator.clipboard.writeText(vendor.gstNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   // Collapsible sections state
   const [sections, setSections] = useState({
     address: true,
@@ -270,6 +284,40 @@ const VendorOverviewSidebar = ({
                 <span className="text-slate-900 font-semibold">
                   {vendor.language || 'English'}
                 </span>
+              </div>
+
+              {/* GSTIN Details */}
+              <div className="border-t border-slate-100 pt-3.5 space-y-2.5">
+                <div className="flex justify-between items-center text-[13.5px]">
+                  <span className="text-slate-500 font-medium">GSTIN</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-900 font-bold font-mono">
+                      {vendor.gstNumber || 'Unregistered'}
+                    </span>
+                    {vendor.gstNumber && (
+                      <button 
+                        onClick={handleCopyGstin}
+                        className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-all flex items-center justify-center shrink-0 border border-slate-100 shadow-sm bg-white"
+                        title="Copy GSTIN"
+                      >
+                        {copied ? (
+                          <Check size={12} className="text-green-500 stroke-[3]" />
+                        ) : (
+                          <Copy size={12} className="stroke-[2.5]" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {vendor.gstNumber && (
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-slate-500 font-medium">GSTIN State</span>
+                    <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      {getGstinStateName(vendor.gstNumber) || 'Unknown State'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

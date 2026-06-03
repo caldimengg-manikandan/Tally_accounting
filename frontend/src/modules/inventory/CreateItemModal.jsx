@@ -38,7 +38,8 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
     name: '', type: 'Goods', unit: '',
     salesInformation: true, sellingPrice: '', salesAccount: 'Sales', salesDescription: '',
     purchaseInformation: true, costPrice: '', purchaseAccount: 'Cost of Goods Sold', purchaseDescription: '',
-    preferredVendor: '', imageUrl: ''
+    preferredVendor: '', imageUrl: '',
+    hsnCode: '', gstRate: 18, itemCode: ''
   });
 
   const [isUnitOpen, setIsUnitOpen] = useState(false);
@@ -168,6 +169,59 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
                     placeholder="Enter item name..."
                     className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm"
                   />
+                </div>
+              </div>
+
+              {/* Item Code, HSN Code, GST Rate */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">
+                    Item Code / SKU <span className="text-slate-400 font-normal normal-case">(Optional)</span>
+                  </label>
+                  <input
+                    value={newItem.itemCode || ''}
+                    onChange={e => setNewItem({...newItem, itemCode: e.target.value})}
+                    placeholder="Ex: ELEC-001"
+                    className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 transition-all shadow-sm"
+                  />
+                  <p className="text-[10px] text-slate-400 font-normal ml-1 mt-1 leading-normal">
+                    Leave empty if not needed.<br />Used for easy product identification.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">HSN / SAC Code</label>
+                    <div className="group relative cursor-pointer">
+                      <HelpCircle size={12} className="text-slate-400 hover:text-slate-600" />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 hidden group-hover:block bg-slate-800 text-white text-[10px] font-medium p-2 rounded shadow-lg z-[200] leading-normal text-center normal-case">
+                        8 digit HSN code for goods, 6 digit SAC code for services
+                      </div>
+                    </div>
+                  </div>
+                  <input
+                    value={newItem.hsnCode || ''}
+                    onChange={e => setNewItem({...newItem, hsnCode: e.target.value})}
+                    placeholder="Ex: 85340000"
+                    className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 transition-all shadow-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">GST Rate</label>
+                  <select
+                    value={newItem.gstRate !== undefined ? newItem.gstRate : 18}
+                    onChange={e => setNewItem({...newItem, gstRate: parseFloat(e.target.value)})}
+                    className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 outline-none appearance-none focus:border-blue-500 transition-all bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')] bg-[length:14px] bg-[right_15px_center] bg-no-repeat cursor-pointer shadow-sm"
+                  >
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                  </select>
+                  <div className="mt-1 space-y-0.5 text-[10px] text-slate-500">
+                    <p>Same state: CGST {(newItem.gstRate || 0) / 2}% + SGST {(newItem.gstRate || 0) / 2}%</p>
+                    <p>Diff state: IGST {newItem.gstRate || 0}%</p>
+                  </div>
                 </div>
               </div>
 
