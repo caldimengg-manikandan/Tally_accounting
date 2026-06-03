@@ -19,7 +19,7 @@ const TabButton = ({ active, label, onClick }) => (
   </button>
 );
 
-const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder = "", required = false, help = false, disabled = false }) => (
+const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder = "", required = false, help = false, disabled = false, maxLength }) => (
   <div className="flex flex-col gap-1.5 py-3.5 border-b border-slate-100 last:border-0 lg:flex-row lg:items-center">
     <label className="text-[13px] text-slate-600 font-bold lg:w-56 shrink-0 flex items-center gap-1.5">
       {label} {required && <span className="text-red-500 font-bold">*</span>}
@@ -31,6 +31,8 @@ const InputRow = ({ label, keyName, value, onChange, type = "text", placeholder 
       value={value || ''}
       onChange={(e) => onChange(keyName, e.target.value)}
       disabled={disabled}
+      maxLength={maxLength}
+      style={keyName === 'gstNumber' || keyName === 'panNumber' ? { textTransform: 'uppercase' } : {}}
       className={`flex-1 max-w-md h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-300 font-sans ${disabled ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''}`}
     />
   </div>
@@ -53,8 +55,8 @@ const SelectRow = ({ label, keyName, value, onChange, options, required = false,
   </div>
 );
 
-const CompanyInfoView = () => {
-  const [activeTab, setActiveTab] = useState('switch'); // 'switch' | 'edit' | 'gst_fy' | 'create'
+const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
+  const [activeTab, setActiveTab] = useState(firstTime ? 'create' : 'switch'); // 'switch' | 'edit' | 'gst_fy' | 'create'
   const [loading, setLoading]     = useState(false);
   const [fetching, setFetching] = useState(true);
   const [status, setStatus]     = useState(null); // 'success' | 'error' | null
@@ -144,11 +146,23 @@ const CompanyInfoView = () => {
   }, []);
 
   const handleUpdateField = (key, val) => {
-    setFormData(prev => ({ ...prev, [key]: val }));
+    let cleanVal = val;
+    if (key === 'gstNumber') {
+      cleanVal = val.toUpperCase().slice(0, 15);
+    } else if (key === 'panNumber') {
+      cleanVal = val.toUpperCase().slice(0, 10);
+    }
+    setFormData(prev => ({ ...prev, [key]: cleanVal }));
   };
 
   const handleCreateField = (key, val) => {
-    setCreateData(prev => ({ ...prev, [key]: val }));
+    let cleanVal = val;
+    if (key === 'gstNumber') {
+      cleanVal = val.toUpperCase().slice(0, 15);
+    } else if (key === 'panNumber') {
+      cleanVal = val.toUpperCase().slice(0, 10);
+    }
+    setCreateData(prev => ({ ...prev, [key]: cleanVal }));
   };
 
   const handleLogoUpload = (e) => {
@@ -196,6 +210,21 @@ const CompanyInfoView = () => {
       setStatus('error'); 
       return; 
     }
+
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (formData.gstNumber && !gstRegex.test(formData.gstNumber)) {
+      setErrorMsg('Invalid GST Number. Format: 33ABCDE1234F1Z5 (15 characters)');
+      setStatus('error');
+      return;
+    }
+
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (formData.panNumber && !panRegex.test(formData.panNumber)) {
+      setErrorMsg('Invalid PAN Number. Format: ABCDE1234F (10 characters)');
+      setStatus('error');
+      return;
+    }
+
     setLoading(true);
     setStatus(null);
     try {
@@ -217,6 +246,21 @@ const CompanyInfoView = () => {
       setStatus('error');
       return;
     }
+
+    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (createData.gstNumber && !gstRegex.test(createData.gstNumber)) {
+      setErrorMsg('Invalid GST Number. Format: 33ABCDE1234F1Z5 (15 characters)');
+      setStatus('error');
+      return;
+    }
+
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (createData.panNumber && !panRegex.test(createData.panNumber)) {
+      setErrorMsg('Invalid PAN Number. Format: ABCDE1234F (10 characters)');
+      setStatus('error');
+      return;
+    }
+
     setLoading(true);
     setStatus(null);
     try {
@@ -251,7 +295,11 @@ const CompanyInfoView = () => {
         // Refresh companies list and activate it
         await fetchCompanies();
         setActiveTab('switch');
-        window.location.reload();
+        if (onCompanyCreated) {
+          onCompanyCreated(res.data.id, res.data.name);
+        } else {
+          window.location.reload();
+        }
       }
     } catch (err) {
       console.error(err);
@@ -302,7 +350,7 @@ const CompanyInfoView = () => {
           <Building2 className="text-blue-600" size={24} />
           <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             Company Info Hub
-            {formData.name && (
+            {formData.name && !firstTime && (
               <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100 uppercase tracking-widest">
                 Active: {formData.name}
               </span>
@@ -310,12 +358,14 @@ const CompanyInfoView = () => {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={() => window.location.href = '/dashboard'}
-            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 font-semibold px-4 py-2 border border-slate-200 rounded-lg bg-white shadow-sm hover:bg-slate-50 transition-colors"
-          >
-            Close Settings <X size={16} className="text-red-400" />
-          </button>
+          {!firstTime && (
+            <button 
+              onClick={() => window.location.href = '/dashboard'}
+              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 font-semibold px-4 py-2 border border-slate-200 rounded-lg bg-white shadow-sm hover:bg-slate-50 transition-colors"
+            >
+              Close Settings <X size={16} className="text-red-400" />
+            </button>
+          )}
         </div>
       </nav>
 
@@ -330,14 +380,16 @@ const CompanyInfoView = () => {
       )}
 
       {/* TABS CONTAINER */}
-      <div className="bg-white border-b border-slate-200 sticky top-16 z-40 shadow-sm">
-        <div className="max-w-6xl mx-auto px-8 flex gap-2">
-          <TabButton active={activeTab === 'switch'} label="Switch Company" onClick={() => setActiveTab('switch')} />
-          <TabButton active={activeTab === 'create'} label="Create Company" onClick={() => setActiveTab('create')} />
-          <TabButton active={activeTab === 'edit'} label="Edit Active Company" onClick={() => setActiveTab('edit')} />
-          <TabButton active={activeTab === 'gst_fy'} label="GST & Financial Year" onClick={() => setActiveTab('gst_fy')} />
+      {!firstTime && (
+        <div className="bg-white border-b border-slate-200 sticky top-16 z-40 shadow-sm">
+          <div className="max-w-6xl mx-auto px-8 flex gap-2">
+            <TabButton active={activeTab === 'switch'} label="Switch Company" onClick={() => setActiveTab('switch')} />
+            <TabButton active={activeTab === 'create'} label="Create Company" onClick={() => setActiveTab('create')} />
+            <TabButton active={activeTab === 'edit'} label="Edit Active Company" onClick={() => setActiveTab('edit')} />
+            <TabButton active={activeTab === 'gst_fy'} label="GST & Financial Year" onClick={() => setActiveTab('gst_fy')} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* CONTENT AREA */}
       <div className="max-w-6xl mx-auto px-8 py-10">
@@ -456,8 +508,8 @@ const CompanyInfoView = () => {
                 </div>
               </div>
 
-              <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={createData.gstNumber} onChange={handleCreateField} placeholder="e.g. 33AAAAA1111A1Z1" />
-              <InputRow label="PAN" keyName="panNumber" value={createData.panNumber} onChange={handleCreateField} placeholder="e.g. ABCDE1234F" />
+              <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={createData.gstNumber} onChange={handleCreateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} />
+              <InputRow label="PAN" keyName="panNumber" value={createData.panNumber} onChange={handleCreateField} placeholder="e.g. ABCDE1234F" maxLength={10} />
 
               <div className="bg-slate-50 rounded-xl p-6 mt-6 border border-slate-100 space-y-4">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
@@ -628,8 +680,8 @@ const CompanyInfoView = () => {
                   <Landmark size={16} className="text-blue-500" /> Tax Identification details
                 </h3>
                 <SelectRow label="Registration State" keyName="state" value={formData.state} onChange={handleUpdateField} options={INDIAN_STATES} />
-                <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={formData.gstNumber} onChange={handleUpdateField} placeholder="e.g. 33AAAAA1111A1Z1" />
-                <InputRow label="PAN Number" keyName="panNumber" value={formData.panNumber} onChange={handleUpdateField} placeholder="e.g. ABCDE1234F" />
+                <InputRow label="GSTIN (GST Number)" keyName="gstNumber" value={formData.gstNumber} onChange={handleUpdateField} placeholder="e.g. 33AAAAA1111A1Z1" maxLength={15} />
+                <InputRow label="PAN Number" keyName="panNumber" value={formData.panNumber} onChange={handleUpdateField} placeholder="e.g. ABCDE1234F" maxLength={10} />
               </div>
 
               <div>

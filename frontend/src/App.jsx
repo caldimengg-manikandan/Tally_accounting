@@ -98,6 +98,13 @@ const NAV = [
     ]
   },
   {
+    group: 'Setup',
+    icon: Settings,
+    items: [
+      { label: 'Company Settings', path: '/settings/company', icon: Building2 }
+    ]
+  },
+  {
     group: 'Items',
     icon: Package,
     items: [
@@ -598,6 +605,11 @@ function AuthenticatedApp() {
           return;
         }
 
+        if (allCos.length === 0) {
+          navigate('/setup-company');
+          return;
+        }
+
         if (currentId) {
           const activeCo = allCos.find(c => c.id === currentId);
           if (activeCo) localStorage.setItem('companyName', activeCo.name);
@@ -627,6 +639,16 @@ function AuthenticatedApp() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      <Route path="/setup-company" element={
+        <CompanyInfoView firstTime={true} onCompanyCreated={(id, name) => {
+          localStorage.setItem('companyId', id);
+          localStorage.setItem('companyName', name);
+          setCompanyId(id);
+          navigate('/dashboard');
+          window.location.reload();
+        }} />
+      } />
 
       <Route path="/dashboard" element={
         <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>

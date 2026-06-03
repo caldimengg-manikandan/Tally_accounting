@@ -68,6 +68,9 @@ Company.belongsToMany(User, {
   otherKey: { name: 'userId', type: DataTypes.UUID }
 });
 
+Company.belongsTo(User, { foreignKey: { name: 'userId', type: DataTypes.UUID } });
+User.hasMany(Company, { foreignKey: { name: 'userId', type: DataTypes.UUID } });
+
 // 2. Structural Hierarchy
 Company.hasMany(Group, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 Group.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });

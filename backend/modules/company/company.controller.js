@@ -9,6 +9,13 @@ exports.createCompany = async (req, res) => {
       dateFormat, organizationId, logoUrl, additionalFields, state, panNumber
     } = req.body;
 
+    if (gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
+      return res.status(400).json({ error: 'Invalid GST Number format. Must be 15 characters like 33ABCDE1234F1Z5' });
+    }
+    if (panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)) {
+      return res.status(400).json({ error: 'Invalid PAN Number format. Must be 10 characters like ABCDE1234F' });
+    }
+
     const company = await Company.create({
       name,
       gstNumber,
@@ -34,17 +41,19 @@ exports.createCompany = async (req, res) => {
       logoUrl,
       additionalFields,
       state,
-      panNumber
+      panNumber,
+      userId: req.user?.id || userId
     });
     
-    const user = req.user || (userId ? await User.findByPk(userId) : null);
-    if (user) {
-      await company.addUser(user);
+    const userIdToFind = req.user?.id || userId;
+    const userInstance = userIdToFind ? await User.findByPk(userIdToFind) : null;
+    if (userInstance) {
+      await company.addUser(userInstance);
       
       // Auto-set as active company if user doesn't have one
-      if (!user.activeCompanyId) {
-        user.activeCompanyId = company.id;
-        await user.save();
+      if (!userInstance.activeCompanyId) {
+        userInstance.activeCompanyId = company.id;
+        await userInstance.save();
       }
     }
 
@@ -83,31 +92,15 @@ exports.createCompany = async (req, res) => {
 
 exports.getCompanies = async (req, res) => {
   try {
-    let companies;
-    if (req.user) {
-      if (req.user.role === 'SUPER_ADMIN') {
-        companies = await Company.findAll({ order: [['createdAt', 'ASC']] });
-      } else {
-        const userInstance = await User.findByPk(req.user.id);
-        if (!userInstance) {
-          return res.status(404).json({ error: 'User not found' });
-        }
-        companies = await userInstance.getCompanies({
-          order: [['createdAt', 'ASC']]
-        });
-      }
-
-      // Special rescue: If ADMIN or SUPER_ADMIN has no linked companies, show all existing ones
-      if (companies.length === 0 && (req.user.role === 'ADMIN' || req.user.role === 'SUPER_ADMIN')) {
-        companies = await Company.findAll({
-          order: [['createdAt', 'ASC']]
-        });
-      }
-    } else {
-      companies = await Company.findAll({
-        order: [['createdAt', 'ASC']]
-      });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    const companies = await Company.findAll({
+      where: { userId: req.user.id },
+      order: [['createdAt', 'ASC']]
+    });
+
     // Attach counts
     const result = await Promise.all(companies.map(async (c) => ({
       ...c.toJSON(),
@@ -127,6 +120,10 @@ exports.getCompanyById = async (req, res) => {
     });
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
+    if (company.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    }
+
     // Get counts
     const groupCount = await Group.count({ where: { CompanyId: company.id } });
     const ledgerCount = await Ledger.count({ where: { CompanyId: company.id } });
@@ -143,6 +140,14 @@ exports.getCompanyById = async (req, res) => {
 
 exports.updateCompany = async (req, res) => {
   try {
+    const { gstNumber, panNumber } = req.body;
+    if (gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
+      return res.status(400).json({ error: 'Invalid GST Number format. Must be 15 characters like 33ABCDE1234F1Z5' });
+    }
+    if (panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)) {
+      return res.status(400).json({ error: 'Invalid PAN Number format. Must be 10 characters like ABCDE1234F' });
+    }
+
     const fieldsToUpdate = [
       'name', 'gstNumber', 'address', 'features', 'financialYearStart', 
       'booksBeginningFrom', 'industry', 'location', 'street1', 'street2', 
@@ -153,6 +158,10 @@ exports.updateCompany = async (req, res) => {
     
     const company = await Company.findByPk(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    if (company.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    }
 
     fieldsToUpdate.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -176,6 +185,10 @@ exports.closeFinancialYear = async (req, res) => {
     const { id } = req.params;
     const company = await Company.findByPk(id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    if (company.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    }
 
     // 1. Fetch all ledger groups for the company
     const groups = await Group.findAll({ where: { CompanyId: id } });
@@ -272,6 +285,23 @@ exports.closeFinancialYear = async (req, res) => {
       netProfit,
       nextFinancialYearStart: nextFYStart
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteCompany = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company = await Company.findByPk(id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    if (company.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    }
+
+    await company.destroy();
+    res.json({ message: 'Company deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

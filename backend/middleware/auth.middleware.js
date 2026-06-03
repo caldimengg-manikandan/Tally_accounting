@@ -33,15 +33,11 @@ exports.tenantAccess = async (req, res, next) => {
     return res.status(401).json({ error: 'User not attached to request' });
   }
 
-  // SUPER_ADMIN bypass
-  if (req.user.role === 'SUPER_ADMIN' && !req.user.activeCompanyId) {
-    return next();
-  }
-
   // Safely extract companyId
   const paramCompanyId = (req.params && req.params.companyId) || 
                          (req.body && req.body.companyId) || 
-                         (req.query && req.query.companyId);
+                         (req.query && req.query.companyId) ||
+                         req.headers['x-company-id'];
                          
   const userActiveCompanyId = req.user.activeCompanyId || req.user.companyId;
 
@@ -49,6 +45,20 @@ exports.tenantAccess = async (req, res, next) => {
     return res.status(403).json({ error: 'Please switch to an active company first.' });
   }
 
-  req.companyId = paramCompanyId || userActiveCompanyId;
+  const companyIdToCheck = paramCompanyId || userActiveCompanyId;
+  const { Company } = require('../models');
+  
+  try {
+    const companyInstance = await Company.findOne({
+      where: { id: companyIdToCheck, userId: req.user.id }
+    });
+    if (!companyInstance) {
+      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+
+  req.companyId = companyIdToCheck;
   next();
 };

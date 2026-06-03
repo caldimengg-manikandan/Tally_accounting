@@ -64,8 +64,8 @@ const TrialBalanceView = () => {
       const group = row.group || 'Ungrouped';
       if (!acc[group]) acc[group] = { ledgers: [], totalDebit: 0, totalCredit: 0 };
       acc[group].ledgers.push(row);
-      acc[group].totalDebit += (parseFloat(row.totalDebit) || 0);
-      acc[group].totalCredit += (parseFloat(row.totalCredit) || 0);
+      acc[group].totalDebit += (parseFloat(row.debitBalance) || 0);
+      acc[group].totalCredit += (parseFloat(row.creditBalance) || 0);
       return acc;
     }, {});
   }, [data]);
@@ -219,9 +219,8 @@ const TrialBalanceView = () => {
                     <th className="px-8 py-4">Account / Group</th>
                     <th className="px-6 py-4">Nature</th>
                     <th className="px-6 py-4 text-right">Opening (₹)</th>
-                    <th className="px-6 py-4 text-right">Debit (₹)</th>
-                    <th className="px-6 py-4 text-right">Credit (₹)</th>
-                    <th className="px-8 py-4 text-right">Closing (₹)</th>
+                    <th className="px-6 py-4 text-right">Debit Balance (₹)</th>
+                    <th className="px-8 py-4 text-right">Credit Balance (₹)</th>
                   </tr>
                 </thead>
                 <tbody className="text-[12px] text-slate-600">
@@ -234,9 +233,8 @@ const TrialBalanceView = () => {
                           <td className="px-8 py-2.5 text-[11px] font-bold text-[#1e61f0] uppercase tracking-widest" colSpan={3}>
                             {groupName}
                           </td>
-                          <td className="px-6 py-2.5 text-right text-[11px] font-bold text-slate-400">{fmt(groupData.totalDebit)}</td>
-                          <td className="px-6 py-2.5 text-right text-[11px] font-bold text-slate-400">{fmt(groupData.totalCredit)}</td>
-                          <td className="px-8 py-2.5" />
+                          <td className="px-6 py-2.5 text-right text-[11px] font-bold text-slate-400">{groupData.totalDebit > 0 ? fmt(groupData.totalDebit) : '—'}</td>
+                          <td className="px-8 py-2.5 text-right text-[11px] font-bold text-slate-400">{groupData.totalCredit > 0 ? fmt(groupData.totalCredit) : '—'}</td>
                         </tr>
                         {groupData.ledgers.map(row => (
                           <DataRow key={row.ledgerId} row={row} navigate={navigate} fmt={fmt} />
@@ -252,14 +250,17 @@ const TrialBalanceView = () => {
                 </tbody>
                 <tfoot className="bg-slate-50/80 text-slate-900 font-bold border-t-2 border-slate-200">
                   <tr>
-                    <td className="px-8 py-5 text-[11px] uppercase tracking-[0.2em] font-black text-slate-500" colSpan={3}>Grand Totals</td>
-                    <td className="px-6 py-5 text-right text-[15px] font-black tracking-tight">{fmt(summary?.totalDebit)}</td>
-                    <td className="px-6 py-5 text-right text-[15px] font-black tracking-tight">{fmt(summary?.totalCredit)}</td>
-                    <td className="px-8 py-5 text-right">
-                       <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${summary?.isBalanced ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-rose-50 border-rose-200 text-rose-600'}`}>
-                         {summary?.isBalanced ? 'Integrated' : 'Discrepancy'}
-                       </span>
+                    <td className="px-8 py-5 text-[11px] uppercase tracking-[0.2em] font-black text-slate-500" colSpan={2}>
+                      <div className="flex items-center gap-4">
+                        <span>Grand Totals</span>
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${summary?.isBalanced ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-rose-50 border-rose-200 text-rose-600'}`}>
+                          {summary?.isBalanced ? 'Integrated' : 'Discrepancy'}
+                        </span>
+                      </div>
                     </td>
+                    <td className="px-6 py-5" />
+                    <td className="px-6 py-5 text-right text-[15px] font-black tracking-tight">{fmt(summary?.totalDebit)}</td>
+                    <td className="px-8 py-5 text-right text-[15px] font-black tracking-tight">{fmt(summary?.totalCredit)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -331,18 +332,15 @@ const DataRow = ({ row, navigate, fmt }) => (
     </td>
     <td className="px-6 py-4 text-right text-slate-500 font-medium">
       {fmt(row.openingBalance)}
-    </td>
-    <td className="px-6 py-4 text-right font-bold text-slate-900 border-x border-slate-50/30">
-      {row.totalDebit > 0 ? fmt(row.totalDebit) : '—'}
+      <span className="text-[9px] ml-1 text-slate-300 uppercase">
+        {row.openingBalanceType || 'Dr'}
+      </span>
     </td>
     <td className="px-6 py-4 text-right font-bold text-slate-900">
-      {row.totalCredit > 0 ? fmt(row.totalCredit) : '—'}
+      {row.debitBalance > 0 ? fmt(row.debitBalance) : '—'}
     </td>
-    <td className={`px-8 py-4 text-right font-bold ${(row.closingBalance || 0) >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
-      {fmt(Math.abs(row.closingBalance || 0))}
-      <span className="text-[10px] ml-1.5 font-bold text-slate-300 uppercase">
-        {(row.closingBalance || 0) >= 0 ? 'Dr' : 'Cr'}
-      </span>
+    <td className="px-8 py-4 text-right font-bold text-slate-900">
+      {row.creditBalance > 0 ? fmt(row.creditBalance) : '—'}
     </td>
   </tr>
 );
