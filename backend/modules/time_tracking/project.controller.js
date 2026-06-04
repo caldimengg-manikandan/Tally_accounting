@@ -58,7 +58,8 @@ exports.getProjectsByCompany = async (req, res) => {
 
 exports.getProjectById = async (req, res) => {
   try {
-    const project = await Project.findByPk(req.params.id, {
+    const project = await Project.findOne({
+      where: { id: req.params.id, CompanyId: req.companyId },
       include: [
         { model: Ledger, as: 'Customer' },
         { model: ProjectTask, as: 'tasks' },
@@ -75,7 +76,7 @@ exports.getProjectById = async (req, res) => {
 exports.updateProject = async (req, res) => {
   try {
     const { tasks, users, ...projectData } = req.body;
-    const project = await Project.findByPk(req.params.id);
+    const project = await Project.findOne({ where: { id: req.params.id, CompanyId: req.companyId } });
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
     await project.update(projectData);
@@ -102,7 +103,7 @@ exports.updateProject = async (req, res) => {
 
 exports.deleteProject = async (req, res) => {
   try {
-    const project = await Project.findByPk(req.params.id);
+    const project = await Project.findOne({ where: { id: req.params.id, CompanyId: req.companyId } });
     if (!project) return res.status(404).json({ error: 'Project not found' });
     await project.destroy();
     res.json({ message: 'Project deleted' });
@@ -116,7 +117,7 @@ exports.getProjectPurchases = async (req, res) => {
     const { id } = req.params;
     // Bills (VoucherType 'Purchase') and Expenses (VoucherType 'Payment')
     const vouchers = await Voucher.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [
         { 
           model: Transaction, 
@@ -128,21 +129,21 @@ exports.getProjectPurchases = async (req, res) => {
 
     // Purchase Orders
     const orders = await PurchaseOrder.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [{ model: Ledger, attributes: ['id', 'name'] }],
       order: [['date', 'DESC']]
     });
 
     // Vendor Credits
     const credits = await VendorCredit.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [{ model: Ledger, as: 'Vendor', attributes: ['id', 'name'] }],
       order: [['date', 'DESC']]
     });
 
     // Timesheets
     const timesheets = await Timesheet.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [
         { model: User, attributes: ['name'] },
         { model: ProjectTask, attributes: ['name'] }
@@ -168,31 +169,31 @@ exports.getProjectSales = async (req, res) => {
     const { SalesOrder, Quote, DeliveryChallan, CreditNote } = require('../../models');
 
     const invoices = await SalesInvoice.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [{ model: Ledger, as: 'CustomerLedger', attributes: ['id', 'name'] }],
       order: [['date', 'DESC']]
     });
 
     const orders = await SalesOrder.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [{ model: Ledger, as: 'Customer', attributes: ['id', 'name'] }],
       order: [['date', 'DESC']]
     });
 
     const quotes = await Quote.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [{ model: Ledger, as: 'Customer', attributes: ['id', 'name'] }],
       order: [['date', 'DESC']]
     });
 
     const challans = await DeliveryChallan.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [{ model: Ledger, as: 'Customer', attributes: ['id', 'name'] }],
       order: [['date', 'DESC']]
     });
 
     const creditNotes = await CreditNote.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [{ model: Ledger, as: 'Customer', attributes: ['id', 'name'] }],
       order: [['date', 'DESC']]
     });
@@ -207,7 +208,7 @@ exports.getProjectActivity = async (req, res) => {
   try {
     const { id } = req.params;
     const logs = await AuditLog.findAll({
-      where: { ProjectId: id },
+      where: { ProjectId: id, CompanyId: req.companyId },
       include: [{ model: User, attributes: ['id', 'name', 'email'] }],
       order: [['createdAt', 'DESC']]
     });

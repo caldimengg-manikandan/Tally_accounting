@@ -167,9 +167,6 @@ exports.processDue = async (req, res) => {
            let accountLedger = await Ledger.findOne({
                where: { name: item.account, CompanyId: template.CompanyId }
            });
-           if (!accountLedger) {
-               accountLedger = await Ledger.findOne({ where: { name: item.account } });
-           }
 
            if (accountLedger) {
                await Transaction.create({

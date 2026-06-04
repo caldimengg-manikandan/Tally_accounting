@@ -377,9 +377,6 @@ exports.createBill = async (req, res) => {
                     let accountLedger = await Ledger.findOne({
                         where: { name: item.account, CompanyId: companyId }
                     });
-                    if (!accountLedger) {
-                        accountLedger = await Ledger.findOne({ where: { name: item.account } });
-                    }
                     if (accountLedger) {
                         journalEntries.push({ ledgerId: accountLedger.id, debit: parseFloat(item.amount), credit: 0 });
                         itemDebitsAdded = true;
@@ -497,9 +494,6 @@ exports.updateBill = async (req, res) => {
                     let accountLedger = await Ledger.findOne({
                         where: { name: item.account, CompanyId: companyId }
                     });
-                    if (!accountLedger) {
-                        accountLedger = await Ledger.findOne({ where: { name: item.account } });
-                    }
                     if (accountLedger) {
                         journalEntries.push({ ledgerId: accountLedger.id, debit: parseFloat(item.amount), credit: 0 });
                         itemDebitsAdded = true;

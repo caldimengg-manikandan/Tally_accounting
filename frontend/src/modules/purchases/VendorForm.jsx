@@ -16,6 +16,14 @@ import { STATE_CODE_TO_NAME } from '../../utils/gstinUtils';
 const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, companyId: propCompanyId }) => {
   const navigate = useNavigate();
   const isEditMode = Boolean(editId);
+
+  const handleCancelOrBack = () => {
+    if (isEditMode && editId) {
+      navigate(-1);
+    } else {
+      navigate('/vendors');
+    }
+  };
   
   // Basic Info
   const [vendorType, setVendorType] = useState('Business');
@@ -239,7 +247,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
       if (onSaveSuccess) {
         onSaveSuccess(result.data);
       } else if (standalone) {
-        navigate(`/vendors/view/${result.data.id}`);
+        navigate(`/vendors/view/${result.data.id}`, { replace: true });
       }
     } catch (err) {
       console.error(err.response?.data);
@@ -567,7 +575,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
           {renderContent()}
         </div>
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-6 flex justify-end gap-3 rounded-b-lg">
-           <button onClick={onCancel} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded">Cancel</button>
+           <button type="button" onClick={handleCancelOrBack} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded">Cancel</button>
            <button 
               onClick={handleSave} 
               disabled={loading}
@@ -584,7 +592,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
     <div className="flex flex-col min-h-screen bg-white">
         <header className="px-8 py-3 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-50">
             <div className="flex items-center gap-3">
-                <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-50 rounded-full text-slate-400">
+                <button type="button" onClick={handleCancelOrBack} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 cursor-pointer">
                     <ArrowLeft size={18} />
                 </button>
                 <div className="flex items-center gap-2">
@@ -595,8 +603,8 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <button onClick={() => navigate(-1)} className="px-4 py-1.5 text-slate-600 text-[13px] font-medium hover:bg-slate-50 rounded border border-slate-200">Cancel</button>
-                <button onClick={handleSave} disabled={loading} className="px-6 py-1.5 bg-blue-600 text-white text-[13px] font-bold rounded hover:bg-blue-700 shadow-sm transition-all">
+                <button type="button" onClick={handleCancelOrBack} className="px-4 py-1.5 text-slate-600 text-[13px] font-medium hover:bg-slate-50 rounded border border-slate-200 cursor-pointer">Cancel</button>
+                <button type="button" onClick={handleSave} disabled={loading} className="px-6 py-1.5 bg-blue-600 text-white text-[13px] font-bold rounded hover:bg-blue-700 shadow-sm transition-all cursor-pointer">
                     {loading ? 'Saving...' : 'Save'}
                 </button>
             </div>
@@ -613,8 +621,9 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                     <ShieldCheck size={14} className="text-blue-500" /> Encrypted & Secure Record Storage
                  </div>
                  <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded">Discard</button>
+                    <button type="button" onClick={handleCancelOrBack} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded cursor-pointer">Discard</button>
                     <button 
+                        type="button"
                         onClick={handleSave} 
                         disabled={loading}
                         className="px-10 py-2 bg-blue-600 text-white rounded font-bold text-[14px] hover:bg-blue-700 shadow-xl shadow-blue-500/10 transition-all uppercase tracking-widest disabled:opacity-50"

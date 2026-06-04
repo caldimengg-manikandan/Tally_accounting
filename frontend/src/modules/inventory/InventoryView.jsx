@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, ChevronRight, ChevronDown, Plus, MoreVertical, Search, Package, RefreshCcw, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { inventoryAPI } from '../../services/api';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 import ItemDetailView from './ItemDetailView';
@@ -10,6 +10,7 @@ import ItemEntryView from './ItemEntryView';
 const InventoryView = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -27,13 +28,33 @@ const InventoryView = () => {
     fetchData(); 
   }, [companyId]);
 
+  useEffect(() => { 
+    fetchData(); 
+  }, [companyId]);
+
+  const itemIdParam = searchParams.get('id');
+
   useEffect(() => {
     if (location.state?.openItem) {
-      setSelectedItem(location.state.openItem);
-      setViewMode('split');
+      setSearchParams({ id: location.state.openItem.id }, { replace: true });
       navigate(location.pathname, { replace: true, state: {} });
+      return;
     }
-  }, [location.state, navigate, location.pathname]);
+    
+    if (itemIdParam && items.length > 0) {
+      const item = items.find(i => i.id === itemIdParam);
+      if (item) {
+        setSelectedItem(item);
+        setViewMode('split');
+      } else {
+        setSelectedItem(null);
+        setViewMode('table');
+      }
+    } else if (!itemIdParam) {
+      setSelectedItem(null);
+      setViewMode('table');
+    }
+  }, [itemIdParam, items, location.state, navigate, location.pathname, setSearchParams]);
 
   const fetchData = async () => {
     if (!companyId) return;
@@ -58,8 +79,7 @@ const InventoryView = () => {
   };
 
   const handleItemClick = (item) => {
-    setSelectedItem(item);
-    setViewMode('split');
+    setSearchParams({ id: item.id });
   };
 
   const handleEdit = (item) => {
@@ -235,7 +255,7 @@ const InventoryView = () => {
           {/* Left Panel: High-Fidelity Sidebar */}
           <div className="w-[380px] border-r border-slate-100 flex flex-col bg-white shrink-0 shadow-sm z-20">
             <div className="px-6 py-5 flex items-center justify-between border-b border-slate-50 bg-[#fbfcff]">
-              <div className="flex items-center gap-2 cursor-pointer group hover:opacity-80 transition-all" onClick={() => setViewMode('table')}>
+              <div className="flex items-center gap-2 cursor-pointer group hover:opacity-80 transition-all" onClick={() => setSearchParams({})}>
                 <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-[#1e61f0]">
                    <Package size={16} />
                 </div>
@@ -270,7 +290,7 @@ const InventoryView = () => {
               {filteredItems.map(item => (
                 <div 
                   key={item.id}
-                  onClick={() => setSelectedItem(item)}
+                  onClick={() => setSearchParams({ id: item.id })}
                   className={`flex items-center justify-between px-6 py-4 cursor-pointer border-b border-slate-50 transition-all ${
                     selectedItem?.id === item.id 
                       ? 'bg-blue-50/40' 
@@ -303,7 +323,7 @@ const InventoryView = () => {
           <div className="flex-1 bg-white relative">
             <ItemDetailView 
               item={selectedItem} 
-              onClose={() => { setViewMode('table'); setSelectedItem(null); }}
+              onClose={() => setSearchParams({})}
               onEdit={(item) => handleEdit(item)}
             />
           </div>

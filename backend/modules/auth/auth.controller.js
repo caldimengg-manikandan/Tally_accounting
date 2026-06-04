@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 exports.register = async (req, res) => {
   try {
-    const { email, password, name, role } = req.body;
+    const { email, password, name } = req.body;
     
     // Check if user already exists to prevent generic 'Validation error'
     const existingUser = await User.findOne({ where: { email } });
@@ -18,7 +18,7 @@ exports.register = async (req, res) => {
       email, 
       password: hashedPassword, 
       name: name || undefined,
-      role: role || 'ADMIN' 
+      role: 'ADMIN' // Strictly enforce ADMIN role for new registrations to prevent SUPER_ADMIN bypass
     });
     res.status(201).json({ message: 'User created', user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {

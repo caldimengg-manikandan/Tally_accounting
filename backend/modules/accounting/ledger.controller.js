@@ -52,6 +52,9 @@ exports.createLedger = async (req, res) => {
   try {
     const { companyId, CompanyId, groupId, GroupId, name, openingBalance, openingBalanceType, description, address, gstNumber, groupName } = req.body;
     const targetCompanyId = req.companyId || companyId || CompanyId;
+    if (!targetCompanyId) {
+      return res.status(400).json({ error: 'SECURITY ERROR: Company ID is strictly required.' });
+    }
     let finalGroupId = groupId || GroupId;
 
     // Auto-resolve groupName → GroupId

@@ -26,6 +26,9 @@ const AuthPage = ({ onLogin }) => {
         localStorage.setItem('user', JSON.stringify(res.data.user));
         if (res.data.companies && res.data.companies.length > 0) {
           localStorage.setItem('companyId', res.data.companies[0].id);
+        } else {
+          localStorage.removeItem('companyId');
+          localStorage.removeItem('companyName');
         }
         onLogin();
       } else {

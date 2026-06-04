@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { inventoryAPI } from '../../services/api';
 import {
-  X, Edit2, ChevronRight, Calendar, Package, Coins, ShoppingCart, 
+  X, Edit2, ChevronRight, ChevronLeft, Calendar, Package, Coins, ShoppingCart, 
   Trash2, ArrowUpRight, Box, User, Info, Tag, Layers, ArrowDownLeft,
   CheckCircle2, Clock, List, RefreshCcw, ChevronDown
 } from 'lucide-react';
@@ -274,7 +274,12 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
       
       {/* ── HEADER ─────────────────────────────────────── */}
       <div className="bg-white px-8 py-4 flex items-center justify-between border-b border-slate-150">
-        <h1 className="text-[20px] font-bold text-slate-900">{item.name}</h1>
+        <div className="flex items-center gap-4">
+          <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-slate-100 cursor-pointer text-slate-500 hover:text-slate-800 transition-colors" title="Go back to items list">
+             <ChevronLeft size={20}/>
+          </button>
+          <h1 className="text-[20px] font-bold text-slate-900">{item.name}</h1>
+        </div>
         
         <div className="flex items-center gap-2">
            <button

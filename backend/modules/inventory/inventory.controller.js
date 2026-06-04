@@ -174,6 +174,7 @@ exports.getItemHistory = async (req, res) => {
     
     const logs = await AuditLog.findAll({
       where: {
+        CompanyId: req.companyId,
         tableName: 'Items',
         recordId: itemId
       },

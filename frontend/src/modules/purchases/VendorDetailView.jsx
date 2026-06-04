@@ -677,7 +677,9 @@ const VendorDetailView = ({ companyId }) => {
           <>
             <header className="px-8 py-5 flex items-center justify-between border-b border-slate-50 bg-[#fbfcff]">
                <div className="flex items-center gap-4">
-                  <button onClick={() => navigate('/vendors')} className="p-1.5 rounded hover:bg-slate-100"><ChevronLeft size={18}/></button>
+                  <button type="button" onClick={() => navigate('/vendors')} className="p-1.5 rounded hover:bg-slate-100 cursor-pointer relative z-10" title="Go back to vendors list">
+                    <ChevronLeft size={18}/>
+                  </button>
                   <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{vendor.name}</h1>
                </div>
                <div className="flex items-center gap-2.5">
@@ -742,7 +744,7 @@ const VendorDetailView = ({ companyId }) => {
                   <button className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 flex items-center gap-1.5 hover:bg-white shadow-sm">
                      More <ChevronDown size={14}/>
                   </button>
-                  <button className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors duration-150" onClick={() => navigate('/vendors')}><X size={20}/></button>
+                  <button type="button" className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors duration-150 cursor-pointer relative z-10" onClick={() => navigate('/vendors')} title="Close and go back"><X size={20}/></button>
                </div>
             </header>
 

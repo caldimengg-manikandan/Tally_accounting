@@ -114,16 +114,27 @@ const VendorOverviewSidebar = ({
             </div>
 
             {/* Primary Phone */}
-            <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
-              <Phone size={13} className="text-slate-500 stroke-[2] shrink-0" />
-              <span>{vendor.phone || '+91-4567890123'}</span>
-            </div>
+            {vendor.phone && (
+              <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
+                <Phone size={13} className="text-slate-500 stroke-[2] shrink-0" />
+                <span>{vendor.phone}</span>
+              </div>
+            )}
 
             {/* Mobile Phone */}
-            <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
-              <Smartphone size={13} className="text-slate-500 stroke-[2] shrink-0" />
-              <span>{vendor.mobile || '+91-4567890123'}</span>
-            </div>
+            {vendor.mobile && (
+              <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
+                <Smartphone size={13} className="text-slate-500 stroke-[2] shrink-0" />
+                <span>{vendor.mobile}</span>
+              </div>
+            )}
+
+            {/* Fallback if neither exists */}
+            {!vendor.phone && !vendor.mobile && (
+              <div className="text-[12.5px] text-slate-400 italic mt-1">
+                No phone number provided
+              </div>
+            )}
 
             {/* Invite to Portal Link */}
             <div className="pt-2">
@@ -180,11 +191,15 @@ const VendorOverviewSidebar = ({
                   )}
                 </div>
               ) : (
-                <div className="text-[13.5px] text-slate-800 leading-relaxed font-medium">
-                  Karnataka<br />
-                  Tamil Nadu India<br />
-                  Phone: +91-4567890123
-                </div>
+                <p className="text-[13.5px] text-slate-500 leading-relaxed font-medium">
+                  No Billing Address -{' '}
+                  <button 
+                    onClick={() => onEditAddress && onEditAddress('billing')}
+                    className="text-blue-600 font-semibold hover:underline"
+                  >
+                    Add Address
+                  </button>
+                </p>
               )}
 
               {/* Inline edit pencil icon */}

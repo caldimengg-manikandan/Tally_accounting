@@ -30,10 +30,10 @@ async function updateBillsForPayment(paymentVoucherId, transaction = null) {
 
         // Sum ALL payments against this bill that are 'Paid'
         const allPayments = await Transaction.findAll({
-            where: { description: { [Op.like]: `%BILL_REF:${billId}%` } },
+            where: { CompanyId: bill.CompanyId, description: { [Op.like]: `%BILL_REF:${billId}%` } },
             include: [{
                 model: Voucher,
-                where: { status: 'Paid' }
+                where: { status: 'Paid', CompanyId: bill.CompanyId }
             }],
             transaction
         });
@@ -114,8 +114,8 @@ exports.getUnpaidBills = async (req, res) => {
             const vendorTx = bill.Transactions.find(t => t.LedgerId == vendorId && parseFloat(t.credit || 0) > 0);
             const billAmount = parseFloat(vendorTx?.credit || 0);
 
-            // Find payments linked to this bill via BILL_REF description
             const paymentWhere = {
+                CompanyId: companyId,
                 LedgerId: vendorId,
                 description: { [Op.like]: `%BILL_REF:${bill.id}%` }
             };
@@ -127,7 +127,7 @@ exports.getUnpaidBills = async (req, res) => {
                 where: paymentWhere,
                 include: [{
                     model: Voucher,
-                    where: { status: 'Paid' }
+                    where: { status: 'Paid', CompanyId: companyId }
                 }]
             });
 
@@ -443,12 +443,13 @@ exports.deletePayment = async (req, res) => {
             // Sum payments against this bill that are 'Paid' (excluding current payment because it is deleted)
             const allPayments = await Transaction.findAll({
                 where: { 
+                    CompanyId: bill.CompanyId,
                     description: { [Op.like]: `%BILL_REF:${billId}%` },
                     VoucherId: { [Op.ne]: id }
                 },
                 include: [{
                     model: Voucher,
-                    where: { status: 'Paid' }
+                    where: { status: 'Paid', CompanyId: bill.CompanyId }
                 }],
                 transaction: t
             });

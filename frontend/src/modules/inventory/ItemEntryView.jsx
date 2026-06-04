@@ -202,7 +202,16 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
         const res = await inventoryAPI.createItem({ ...newItem, companyId });
         savedItem = res.data;
       }
-      navigate('/inventory', { state: { openItem: savedItem } });
+      
+      // Fix browser history so clicking the browser's Back arrow returns to the Items list
+      // 1. Replace the /inventory/new page with the /inventory list page
+      navigate('/inventory', { replace: true });
+      
+      // 2. Push the item detail view onto the history stack using standard search params
+      setTimeout(() => {
+        navigate(`/inventory?id=${savedItem.id}`);
+      }, 50);
+
     } catch (err) {
       if (err.response?.status === 401) return;
       alert("Error saving item: " + (err.response?.data?.error || err.message));
@@ -311,7 +320,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
             onClick={() => {
               if (onCancel) onCancel();
               else if (location.state?.returnTo) navigate(location.state.returnTo);
-              else window.history.length > 2 ? navigate(-1) : navigate('/inventory');
+              else navigate('/inventory');
             }} 
             className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition-colors" 
             title="Go Back"
@@ -328,7 +337,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
             onClick={() => {
               if (onCancel) onCancel();
               else if (location.state?.returnTo) navigate(location.state.returnTo);
-              else window.history.length > 2 ? navigate(-1) : navigate('/inventory');
+              else navigate('/inventory');
             }} 
             className="px-6 py-2 text-[13px] font-bold text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
           >
@@ -491,11 +500,18 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                         </div>
                       </div>
                       <div className="max-h-[200px] overflow-y-auto py-1">
+                        {unitSearch && !availableUnits.some(u => u.toLowerCase() === unitSearch.toLowerCase()) && (
+                           <div onClick={() => handleUnitSelect(unitSearch)} className="px-4 py-2.5 text-[13px] font-bold cursor-pointer text-blue-600 hover:bg-blue-50 transition-colors flex items-center gap-2 border-b border-slate-50">
+                             <Plus size={14}/> Add "{unitSearch}"
+                           </div>
+                        )}
                         {filteredUnits.length > 0 ? filteredUnits.map(u => (
                           <div key={u} onClick={() => handleUnitSelect(u)} className={`px-4 py-2.5 text-[13px] font-bold cursor-pointer transition-colors ${newItem.unit === u ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
                             {u}
                           </div>
-                        )) : <div className="px-4 py-6 text-center text-slate-400 text-xs italic">No units found...</div>}
+                        )) : (
+                          !unitSearch && <div className="px-4 py-6 text-center text-slate-400 text-xs italic">No units found...</div>
+                        )}
                       </div>
                     </div>
                   )}

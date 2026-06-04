@@ -12,6 +12,11 @@ class AccountingService {
     const { AuditLog } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
 
+    // 0. Validate CompanyId explicitly
+    if (!companyId) {
+      throw new Error('SECURITY ERROR: companyId is strictly required to record a journal entry.');
+    }
+
     // 1. Validate Balance (Dr = Cr)
     const totalDebit = entries.reduce((sum, e) => sum + (parseFloat(e.debit) || 0), 0);
     const totalCredit = entries.reduce((sum, e) => sum + (parseFloat(e.credit) || 0), 0);
@@ -103,6 +108,11 @@ class AccountingService {
   }, dbTransaction = null) {
     const { AuditLog } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
+
+    // 0. Validate CompanyId explicitly
+    if (!companyId) {
+      throw new Error('SECURITY ERROR: companyId is strictly required to update a journal entry.');
+    }
 
     // 1. Validate Balance (Dr = Cr)
     const totalDebit = entries.reduce((sum, e) => sum + (parseFloat(e.debit) || 0), 0);
@@ -272,6 +282,11 @@ class AccountingService {
 
     let totalTaxableValue = 0;
     let totalGstAmount = 0;
+    
+    // 0. Validate CompanyId explicitly
+    if (!companyId) {
+      throw new Error('SECURITY ERROR: companyId is strictly required to record a tax invoice.');
+    }
 
     // 1. Calculate & VALIDATE STOCK (Negative Stock Safety)
     const processedItems = [];

@@ -46,10 +46,18 @@ exports.tenantAccess = async (req, res, next) => {
   }
 
   const companyIdToCheck = paramCompanyId || userActiveCompanyId;
+  
+  // Basic validation to prevent SQL injection or null string bypassing
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (companyIdToCheck && !uuidRegex.test(companyIdToCheck)) {
+    return res.status(400).json({ error: 'Invalid Company ID format.' });
+  }
+
   const { Company, User } = require('../models');
   
   try {
     if (req.user.role === 'SUPER_ADMIN') {
+      console.warn(`[SECURITY WARNING] User ${req.user.id} bypassed tenant access as SUPER_ADMIN for company ${companyIdToCheck}`);
       req.companyId = companyIdToCheck;
       return next();
     }
@@ -64,6 +72,7 @@ exports.tenantAccess = async (req, res, next) => {
 
     const hasAccess = user.Companies && user.Companies.some(c => c.id === companyIdToCheck);
     if (!hasAccess) {
+      console.warn(`[SECURITY ALERT] User ${req.user.id} (${user.email || 'Unknown'}) attempted to access data for unauthorized company: ${companyIdToCheck}`);
       return res.status(403).json({ error: 'Access denied: You do not have access to this company' });
     }
   } catch (err) {
