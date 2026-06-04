@@ -12,6 +12,8 @@ router.post('/', companyController.createCompany);
 router.get('/', companyController.getCompanies);
 // Get a specific company (must belong to it)
 router.get('/:id', tenantAccess, companyController.getCompanyById);
+// Seed groups for a company
+router.post('/:id/seed-groups', tenantAccess, companyController.seedGroupsForCompany);
 // Update company info (ADMIN only)
 router.put('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), tenantAccess, companyController.updateCompany);
 // Close financial year (ADMIN only)

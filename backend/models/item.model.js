@@ -63,8 +63,20 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0
     },
     gstRate: {
-      type: DataTypes.DECIMAL(5, 2),
-      defaultValue: 18
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 18,
+      comment: 'GST percentage (0,5,12,18,28)'
+    },
+    hsnCode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'HSN/SAC code for GST'
+    },
+    itemCode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'SKU or item code'
     },
     reorderLevel: {
       type: DataTypes.DECIMAL(15, 2),

@@ -46,14 +46,25 @@ exports.tenantAccess = async (req, res, next) => {
   }
 
   const companyIdToCheck = paramCompanyId || userActiveCompanyId;
-  const { Company } = require('../models');
+  const { Company, User } = require('../models');
   
   try {
-    const companyInstance = await Company.findOne({
-      where: { id: companyIdToCheck, userId: req.user.id }
+    if (req.user.role === 'SUPER_ADMIN') {
+      req.companyId = companyIdToCheck;
+      return next();
+    }
+
+    const user = await User.findByPk(req.user.id, {
+      include: [Company]
     });
-    if (!companyInstance) {
-      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const hasAccess = user.Companies && user.Companies.some(c => c.id === companyIdToCheck);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied: You do not have access to this company' });
     }
   } catch (err) {
     return res.status(500).json({ error: err.message });

@@ -11,9 +11,9 @@ import { INDIAN_STATES } from '../../utils/indianStates';
 import useNotificationStore from '../../store/notificationStore';
 import { CURRENCIES } from '../../utils/currencies';
 
-const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalone = true }) => {
+const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalone = true, companyId: propCompanyId }) => {
   const [loading, setLoading] = useState(false);
-  const companyId = localStorage.getItem('companyId');
+  const companyId = propCompanyId || localStorage.getItem('companyId');
   const addNotification = useNotificationStore(state => state.addNotification);
 
   // Basic Info
@@ -42,7 +42,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   const [showDisplayNameDropdown, setShowDisplayNameDropdown] = useState(false);
   
   // Addresses
-  const initialAddress = { attention: '', country: 'India', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
+  const initialAddress = { attention: '', country: '', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
   const [billingAddress, setBillingAddress] = useState({ ...initialAddress });
   const [shippingAddress, setShippingAddress] = useState({ ...initialAddress });
 
@@ -143,6 +143,10 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
   const handleSave = async (e) => {
     if (e) e.preventDefault();
+    if (!companyId || companyId === 'null' || companyId === 'undefined') {
+      addNotification('No active company selected. Please select a company first.', 'error');
+      return;
+    }
     let ledgerName = displayName || (customerType === 'Business' ? companyName : `${salutation} ${firstName} ${lastName}`.trim());
     
     if (!ledgerName) {

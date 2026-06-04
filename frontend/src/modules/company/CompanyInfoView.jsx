@@ -8,6 +8,41 @@ import { companyAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
 import { CURRENCIES } from '../../utils/currencies';
 
+const validateGSTIN = (gstin) => {
+  if (!gstin) return true;
+  const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+  return regex.test(gstin.toUpperCase());
+};
+
+const validatePAN = (pan) => {
+  if (!pan) return true;
+  const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+  return regex.test(pan.toUpperCase());
+};
+
+const INDUSTRY_OPTIONS = [
+  "General Business",
+  "Trading",
+  "Manufacturing",
+  "Services",
+  "Retail",
+  "Wholesale",
+  "Construction & Real Estate",
+  "Transport & Logistics",
+  "Healthcare & Pharmacy",
+  "Education & Training",
+  "Hotel & Restaurant",
+  "Agriculture & Farming",
+  "Textile & Garments",
+  "Jewellery & Gold",
+  "IT & Software Services",
+  "Printing & Publishing",
+  "Automobile & Auto Parts",
+  "Electronics & Electrical",
+  "Food & Beverages",
+  "Professional Services (CA, Lawyer, Consultant)"
+];
+
 const TabButton = ({ active, label, onClick }) => (
   <button
     onClick={onClick}
@@ -70,7 +105,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   
   const [formData, setFormData] = useState({
     name: '',
-    industry: 'Computer Software',
+    industry: 'General Business',
     location: 'India',
     street1: '',
     street2: '',
@@ -97,7 +132,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
 
   const [createData, setCreateData] = useState({
     name: '',
-    industry: 'Computer Software',
+    industry: 'General Business',
     location: 'India',
     street1: '',
     street2: '',
@@ -172,23 +207,19 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   };
 
   const handleUpdateField = (key, val) => {
-    let cleanVal = val;
-    if (key === 'gstNumber') {
-      cleanVal = val.toUpperCase().slice(0, 15);
-    } else if (key === 'panNumber') {
-      cleanVal = val.toUpperCase().slice(0, 10);
+    let finalVal = val;
+    if (key === 'gstNumber' || key === 'panNumber') {
+      finalVal = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     }
-    setFormData(prev => ({ ...prev, [key]: cleanVal }));
+    setFormData(prev => ({ ...prev, [key]: finalVal }));
   };
 
   const handleCreateField = (key, val) => {
-    let cleanVal = val;
-    if (key === 'gstNumber') {
-      cleanVal = val.toUpperCase().slice(0, 15);
-    } else if (key === 'panNumber') {
-      cleanVal = val.toUpperCase().slice(0, 10);
+    let finalVal = val;
+    if (key === 'gstNumber' || key === 'panNumber') {
+      finalVal = val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     }
-    setCreateData(prev => ({ ...prev, [key]: cleanVal }));
+    setCreateData(prev => ({ ...prev, [key]: finalVal }));
   };
 
   const handleLogoUpload = (e) => {
@@ -236,21 +267,16 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error'); 
       return; 
     }
-
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-    if (formData.gstNumber && !gstRegex.test(formData.gstNumber)) {
-      setErrorMsg('Invalid GST Number. Format: 33ABCDE1234F1Z5 (15 characters)');
+    if (formData.gstNumber && !validateGSTIN(formData.gstNumber)) {
+      setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
       setStatus('error');
       return;
     }
-
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (formData.panNumber && !panRegex.test(formData.panNumber)) {
-      setErrorMsg('Invalid PAN Number. Format: ABCDE1234F (10 characters)');
+    if (formData.panNumber && !validatePAN(formData.panNumber)) {
+      setErrorMsg('Invalid PAN format. Expected format: ABCDE1234F');
       setStatus('error');
       return;
     }
-
     setLoading(true);
     setStatus(null);
     try {
@@ -280,21 +306,16 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error');
       return;
     }
-
-    const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-    if (createData.gstNumber && !gstRegex.test(createData.gstNumber)) {
-      setErrorMsg('Invalid GST Number. Format: 33ABCDE1234F1Z5 (15 characters)');
+    if (createData.gstNumber && !validateGSTIN(createData.gstNumber)) {
+      setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
       setStatus('error');
       return;
     }
-
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (createData.panNumber && !panRegex.test(createData.panNumber)) {
-      setErrorMsg('Invalid PAN Number. Format: ABCDE1234F (10 characters)');
+    if (createData.panNumber && !validatePAN(createData.panNumber)) {
+      setErrorMsg('Invalid PAN format. Expected format: ABCDE1234F');
       setStatus('error');
       return;
     }
-
     setLoading(true);
     setStatus(null);
     try {
@@ -308,7 +329,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
         // Reset creation form
         setCreateData({
           name: '',
-          industry: 'Computer Software',
+          industry: 'General Business',
           location: 'India',
           street1: '',
           street2: '',
@@ -534,7 +555,8 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
 
             <div className="space-y-2">
               <InputRow label="Organization Name" keyName="name" value={createData.name} onChange={handleCreateField} required={true} placeholder="e.g. Acme Corp Pvt Ltd" />
-              <SelectRow label="Industry" keyName="industry" value={createData.industry} onChange={handleCreateField} options={["Computer Software", "Accounting", "Manufacturing", "Retail", "Services", "Construction", "Distribution"]} />
+              <SelectRow label="Industry" keyName="industry" value={createData.industry} onChange={handleCreateField} options={INDUSTRY_OPTIONS} />
+              <SelectRow label="State" keyName="state" value={createData.state} onChange={handleCreateField} options={INDIAN_STATES} />
               <SelectRow label="Organization Location" keyName="location" value={createData.location} onChange={handleCreateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
               
               <div className="flex flex-col gap-1.5 py-4 border-b border-slate-100 lg:flex-row lg:items-start">
@@ -546,9 +568,6 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                     <input type="text" placeholder="City" value={createData.city} onChange={e => handleCreateField('city', e.target.value)} className="h-10 border border-slate-200 rounded-lg px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-300" />
                     <input type="text" placeholder="PIN Code" value={createData.pincode} onChange={e => handleCreateField('pincode', e.target.value)} className="h-10 border border-slate-200 rounded-lg px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-300" />
                   </div>
-                  <select value={createData.state} onChange={e => handleCreateField('state', e.target.value)} className="w-full h-10 border border-slate-200 bg-white rounded-lg px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10">
-                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
                 </div>
               </div>
 
@@ -679,7 +698,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
 
               <div className="space-y-1">
                 <InputRow label="Organization Name" keyName="name" value={formData.name} onChange={handleUpdateField} required={true} />
-                <SelectRow label="Industry" keyName="industry" value={formData.industry} onChange={handleUpdateField} options={["Computer Software", "Accounting", "Manufacturing", "Retail", "Services", "Construction", "Distribution"]} />
+                <SelectRow label="Industry" keyName="industry" value={formData.industry} onChange={handleUpdateField} options={INDUSTRY_OPTIONS} />
                 <SelectRow label="Organization Location" keyName="location" value={formData.location} onChange={handleUpdateField} options={["India", "USA", "UK", "UAE", "Singapore"]} required={true} />
                 <InputRow label="Website URL" keyName="website" value={formData.website} onChange={handleUpdateField} placeholder="www.yourcompany.com" />
                 <SelectRow label="Language" keyName="language" value={formData.language} onChange={handleUpdateField} options={["English", "Hindi", "Tamil", "Spanish", "French", "German"]} />
@@ -692,7 +711,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
               <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest border-b border-slate-50 pb-2">
                 2. Address & Contacts
               </h3>
-              <div className="flex flex-col gap-1.5 py-3 lg:flex-row lg:items-start">
+              <div className="flex flex-col gap-1.5 py-4 border-b border-slate-100 lg:flex-row lg:items-start">
                 <label className="text-[13px] text-slate-600 font-bold lg:w-56 shrink-0 pt-2">Address Details</label>
                 <div className="flex-1 max-w-md space-y-3">
                   <input type="text" placeholder="Street Address 1" value={formData.street1 || ''} onChange={e => handleUpdateField('street1', e.target.value)} className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 placeholder:text-slate-300" />

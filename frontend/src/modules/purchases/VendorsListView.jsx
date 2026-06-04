@@ -5,12 +5,14 @@ import {
   ArrowDownUp, Download, Upload as UploadIcon, Settings, 
   ChevronRight, ArrowUp, ArrowDown, Edit, Trash2, ShoppingBag, Search
 } from 'lucide-react';
-import { ledgerAPI } from '../../services/api';
+import { purchaseAPI, ledgerAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import { getCurrencyDisplay } from '../../utils/currencies';
 
 const VendorsListView = ({ companyId }) => {
   const navigate = useNavigate();
+  const { addNotification } = useNotificationStore();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,6 +100,7 @@ const VendorsListView = ({ companyId }) => {
     } catch (err) {
       console.error("Failed to fetch vendors:", err);
       setError("Unable to load vendors. There might be a database synchronization issue. Please check the backend server.");
+      addNotification(err.response?.data?.error || err.message || "Failed to fetch vendors list", "error");
     } finally {
       setLoading(false);
     }
@@ -118,6 +121,7 @@ const VendorsListView = ({ companyId }) => {
     if (!deleteId) return;
     try {
       await ledgerAPI.delete(deleteId);
+      addNotification("Vendor deleted successfully!", "success");
       setVendors(vendors.filter(v => v.id !== deleteId));
     } catch (err) {
       setModalConfig({
@@ -128,6 +132,7 @@ const VendorsListView = ({ companyId }) => {
         showCancel: false,
         confirmText: 'Continue'
       });
+      addNotification(err.response?.data?.error || "Failed to delete vendor", "error");
     } finally {
       setIsDeleteModalOpen(false);
       setDeleteId(null);
@@ -240,6 +245,7 @@ const VendorsListView = ({ companyId }) => {
                    <th className="px-6 py-4">Company</th>
                    <th className="px-6 py-4">Email</th>
                    <th className="px-6 py-4">Work Phone</th>
+                   <th className="px-6 py-4">GSTIN</th>
                    <th className="px-6 py-4 text-right">Payables</th>
                    <th className="px-6 py-4 text-right">Unused Credits (BCY)</th>
                    <th className="px-6 py-4 text-center">Actions</th>
@@ -257,6 +263,13 @@ const VendorsListView = ({ companyId }) => {
                         <td className="px-6 py-4 text-[14px] text-slate-600">{v.companyName || '-'}</td>
                         <td className="px-6 py-4 text-[14px] text-slate-600">{v.email || '-'}</td>
                         <td className="px-6 py-4 text-[14px] text-slate-600">{v.workPhone || '-'}</td>
+                        <td className="px-6 py-4 text-[14px] text-slate-600">
+                           {v.gstNumber ? (
+                             <span title={v.gstNumber} className="cursor-help border-b border-dotted border-slate-400 font-mono">
+                               {v.gstNumber.slice(0, 6)}***
+                             </span>
+                           ) : '-'}
+                        </td>
                         <td className="px-6 py-4 text-right">
                            <span className="text-[14px] text-slate-900 font-medium whitespace-nowrap">
                               {getCurrencyDisplay(v.currency)} {v.currentBalance?.toLocaleString() || '0.00'}
@@ -287,7 +300,7 @@ const VendorsListView = ({ companyId }) => {
                    ))
                  ) : (
                    <tr>
-                     <td colSpan="7" className="px-6 py-40 text-center bg-white">
+                     <td colSpan="8" className="px-6 py-40 text-center bg-white">
                         <div className="flex flex-col items-center justify-center max-w-[600px] mx-auto animate-fade-in">
                            <div className="relative mb-10 group">
                              <div className="w-28 h-28 bg-blue-50/50 rounded-[2.5rem] flex items-center justify-center text-[#1e61f0] border border-blue-100 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-3">
@@ -298,9 +311,12 @@ const VendorsListView = ({ companyId }) => {
                              </div>
                            </div>
                            <h2 className="text-[26px] font-bold text-slate-900 mb-3 tracking-tight">Your Procurement Engine Starts Here</h2>
-                           <p className="text-slate-500 text-[16px] mb-10 leading-relaxed max-w-[440px]">
+                           <p className="text-slate-500 text-[16px] mb-6 leading-relaxed max-w-[440px]">
                               Centralize your vendor ecosystem, optimize your supply chain, and maintain crystal-clear payables—all from a single, intuitive interface.
                            </p>
+                           <div className="text-[11px] font-mono text-slate-300 mb-8">
+                              Company: {companyId || 'none'} | Vendors: {vendors.length}
+                           </div>
                            <div className="flex items-center gap-5">
                               <button 
                                 onClick={() => navigate('/vendors/new')}

@@ -1,6 +1,38 @@
-const { Company, User, Group, Ledger } = require('../../models');
+const { Company, User, Group, Ledger, sequelize } = require('../../models');
+
+const seedDefaultGroups = async (companyId, transaction = null) => {
+  const { Group: GroupModel } = require('../../models');
+  const { standardGroups } = require('../../helpers/tallyGroups');
+  
+  const options = transaction ? { transaction } : {};
+  
+  const primaryGroups = standardGroups.filter(g => !g.parent);
+  const groupMap = {};
+  for (const g of primaryGroups) {
+    const created = await GroupModel.create({
+      name: g.name,
+      nature: g.nature,
+      category: 'Primary',
+      CompanyId: companyId
+    }, options);
+    groupMap[g.name] = created.id;
+  }
+  
+  const subGroups = standardGroups.filter(g => g.parent);
+  for (const g of subGroups) {
+    const created = await GroupModel.create({
+      name: g.name,
+      nature: g.nature,
+      category: 'Sub-Group',
+      parent_id: groupMap[g.parent] || null,
+      CompanyId: companyId
+    }, options);
+    groupMap[g.name] = created.id;
+  }
+};
 
 exports.createCompany = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const { 
       name, gstNumber, address, financialYearStart, booksBeginningFrom, userId,
@@ -9,11 +41,19 @@ exports.createCompany = async (req, res) => {
       dateFormat, organizationId, logoUrl, additionalFields, state, panNumber
     } = req.body;
 
-    if (gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
-      return res.status(400).json({ error: 'Invalid GST Number format. Must be 15 characters like 33ABCDE1234F1Z5' });
+    if (gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(gstNumber.toUpperCase())) {
+        await transaction.rollback();
+        return res.status(400).json({ error: 'Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1' });
+      }
     }
-    if (panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)) {
-      return res.status(400).json({ error: 'Invalid PAN Number format. Must be 10 characters like ABCDE1234F' });
+    if (panNumber) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(panNumber.toUpperCase())) {
+        await transaction.rollback();
+        return res.status(400).json({ error: 'Invalid PAN format. Expected format: ABCDE1234F' });
+      }
     }
 
     const company = await Company.create({
@@ -43,49 +83,31 @@ exports.createCompany = async (req, res) => {
       state,
       panNumber,
       userId: req.user?.id || userId
-    });
+    }, { transaction });
     
     const userIdToFind = req.user?.id || userId;
-    const userInstance = userIdToFind ? await User.findByPk(userIdToFind) : null;
+    const userInstance = userIdToFind ? await User.findByPk(userIdToFind, { transaction }) : null;
     if (userInstance) {
-      await company.addUser(userInstance);
+      await company.addUser(userInstance, { transaction });
       
       // Auto-set as active company if user doesn't have one
       if (!userInstance.activeCompanyId) {
         userInstance.activeCompanyId = company.id;
-        await userInstance.save();
+        await userInstance.save({ transaction });
       }
     }
 
     // Auto-seed Tally standard groups for the newly created company
-    const { standardGroups } = require('../../helpers/tallyGroups');
-    const primaryGroups = standardGroups.filter(g => !g.parent);
-    const groupMap = {};
-    for (const g of primaryGroups) {
-      const created = await Group.create({
-        name: g.name,
-        nature: g.nature,
-        category: 'Primary',
-        CompanyId: company.id
-      });
-      groupMap[g.name] = created.id;
-    }
-    const subGroups = standardGroups.filter(g => g.parent);
-    for (const g of subGroups) {
-      await Group.create({
-        name: g.name,
-        nature: g.nature,
-        category: 'Sub-Group',
-        parent_id: groupMap[g.parent] || null,
-        CompanyId: company.id
-      });
-    }
+    await seedDefaultGroups(company.id, transaction);
     
+    await transaction.commit();
+
     res.status(201).json({
       ...company.toJSON(),
       message: 'Company created and set as active'
     });
   } catch (err) {
+    await transaction.rollback();
     res.status(500).json({ error: err.message });
   }
 };
@@ -96,10 +118,12 @@ exports.getCompanies = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const companies = await Company.findAll({
-      where: { userId: req.user.id },
-      order: [['createdAt', 'ASC']]
+    const user = await User.findByPk(req.user.id, {
+      include: [{ model: Company }]
     });
+
+    const companies = user ? (user.Companies || []) : [];
+    companies.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     // Attach counts
     const result = await Promise.all(companies.map(async (c) => ({
@@ -115,13 +139,17 @@ exports.getCompanies = async (req, res) => {
 
 exports.getCompanyById = async (req, res) => {
   try {
-    const company = await Company.findByPk(req.params.id, {
-      include: [User]
-    });
+    const company = await Company.findByPk(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    if (company.userId !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const user = await User.findByPk(req.user.id, {
+        include: [Company]
+      });
+      const hasAccess = user.Companies && user.Companies.some(c => c.id === company.id);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied: You do not have access to this company' });
+      }
     }
 
     // Get counts
@@ -159,8 +187,27 @@ exports.updateCompany = async (req, res) => {
     const company = await Company.findByPk(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    if (company.userId !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const user = await User.findByPk(req.user.id, {
+        include: [Company]
+      });
+      const hasAccess = user.Companies && user.Companies.some(c => c.id === company.id);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied: You do not have access to this company' });
+      }
+    }
+
+    if (req.body.gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstRegex.test(req.body.gstNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1' });
+      }
+    }
+    if (req.body.panNumber) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(req.body.panNumber.toUpperCase())) {
+        return res.status(400).json({ error: 'Invalid PAN format. Expected format: ABCDE1234F' });
+      }
     }
 
     fieldsToUpdate.forEach(field => {
@@ -186,8 +233,14 @@ exports.closeFinancialYear = async (req, res) => {
     const company = await Company.findByPk(id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    if (company.userId !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const user = await User.findByPk(req.user.id, {
+        include: [Company]
+      });
+      const hasAccess = user.Companies && user.Companies.some(c => c.id === company.id);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied: You do not have access to this company' });
+      }
     }
 
     // 1. Fetch all ledger groups for the company
@@ -296,12 +349,37 @@ exports.deleteCompany = async (req, res) => {
     const company = await Company.findByPk(id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
-    if (company.userId !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied: You do not own this company' });
+    if (req.user.role !== 'SUPER_ADMIN' && company.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: Only the owner or SUPER_ADMIN can delete this company' });
     }
 
     await company.destroy();
     res.json({ message: 'Company deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.seedGroupsForCompany = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    const company = await Company.findByPk(companyId);
+    if (!company) {
+      return res.status(404).json({ error: 'Company not found' });
+    }
+
+    const count = await Group.count({ where: { CompanyId: companyId } });
+    if (count > 0) {
+      return res.status(400).json({ error: `Company already has ${count} groups. Seeding aborted.` });
+    }
+
+    await seedDefaultGroups(companyId);
+
+    const finalCount = await Group.count({ where: { CompanyId: companyId } });
+    res.json({ 
+      message: 'Default Tally standard groups seeded successfully', 
+      count: finalCount 
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
