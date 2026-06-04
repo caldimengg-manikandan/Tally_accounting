@@ -12,7 +12,10 @@ router.post('/bulk-update', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN')
 // Create voucher (ACCOUNTANT and ADMIN only)
 router.post('/', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.createVoucher);
 router.put('/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.updateVoucher);
+router.delete('/:id', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), voucherController.deleteVoucher);
+
 // View vouchers (all roles)
+router.get('/transactions/:companyId', voucherController.getTransactions);
 router.get('/:companyId', voucherController.getVouchers);
 router.get('/detail/:id', voucherController.getVoucherById);
 router.put('/:id/narration', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'DATA_ENTRY'), voucherController.updateVoucherNarration);
