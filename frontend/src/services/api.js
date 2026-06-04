@@ -129,7 +129,7 @@ export const vendorCreditAPI = {
 // ─── Reports ───────────────────────────────────────
 export const reportsAPI = {
   trialBalance: (companyId) => api.get(`/reports/trial-balance/${companyId}`),
-  profitLoss: (companyId) => api.get(`/reports/profit-loss/${companyId}`),
+  profitLoss: (companyId, basis, from, to) => api.get(`/reports/profit-loss/${companyId}`, { params: { basis, from, to } }),
   balanceSheet: (companyId) => api.get(`/reports/balance-sheet/${companyId}`),
   daybook: (companyId, from, to) => api.get(`/reports/daybook/${companyId}`, { params: { from, to } }),
   dashboard: (companyId) => api.get(`/reports/dashboard/${companyId}`),
@@ -138,8 +138,10 @@ export const reportsAPI = {
   cashFlow: (companyId, from, to) => api.get(`/reports/cash-flow/${companyId}`, { params: { from, to } }),
   receivablesReport: (companyId, status) => api.get(`/reports/receivables-report/${companyId}`, { params: { status } }),
   payablesReport: (companyId) => api.get(`/reports/payables-report/${companyId}`),
-  inventoryReport: (companyId) => api.get(`/reports/inventory-report/${companyId}`),
+  inventoryReport: (companyId, params) => api.get(`/reports/inventory-report/${companyId}`, { params }),
+  costCenterReport: (companyId) => api.get(`/reports/cost-centers/${companyId}`),
 };
+
 
 // ─── Inventory ───────────────────────────────────────
 export const inventoryAPI = {
@@ -280,8 +282,10 @@ export const timesheetAPI = {
 export const costCenterAPI = {
   create: (data) => api.post('/cost-centers', data),
   getByCompany: (companyId) => api.get(`/cost-centers/${companyId}`),
+  update: (id, data) => api.put(`/cost-centers/${id}`, data),
   delete: (id) => api.delete(`/cost-centers/${id}`),
 };
+
 
 // ─── Accounting Utilities ──────────────────────────
 export const mailAPI = {

@@ -17,8 +17,16 @@ module.exports = (sequelize, DataTypes) => {
     description: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    parentCostCenterId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
+  }, {
+    paranoid: true
   });
 
   return CostCenter;
 };
+
+

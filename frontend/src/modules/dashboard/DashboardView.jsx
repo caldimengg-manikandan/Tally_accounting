@@ -143,7 +143,7 @@ const ACT_ICONS = {
   payment:  { Icon: CheckCircle,    bg: 'bg-emerald-50',color: 'text-emerald-600'},
   bill:     { Icon: ShoppingBag,    bg: 'bg-orange-50', color: 'text-orange-600' },
   gst:      { Icon: Shield,         bg: 'bg-purple-50', color: 'text-purple-600' },
-  voucher:  { Icon: BookOpen,       bg: 'bg-indigo-50', color: 'text-indigo-600' },
+  voucher:  { Icon: BookOpen,       bg: 'bg-blue-50', color: 'text-blue-600' },
 };
 
 // ── Top Ranked List ────────────────────────────────────────────────
@@ -171,7 +171,7 @@ const TopRankedList = ({ title, items, valueKey, navigate, path, loading }) => (
               </div>
               <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-[#1A73E8] to-violet-500 rounded-full transition-all duration-700"
+                  className="h-full bg-gradient-to-r from-[#1A73E8] to-blue-500 rounded-full transition-all duration-700"
                   style={{ width: `${item.pct || 0}%` }}
                 />
               </div>
@@ -300,7 +300,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
               { label: 'Net Profit',    value: data.netProfit,      icon: TrendingUp,   color: data.netProfit >= 0 ? 'text-emerald-600' : 'text-red-500', bg: 'bg-emerald-50'  },
               { label: 'Total Revenue', value: data.totalIncome,    icon: Activity,     color: 'text-blue-600',   bg: 'bg-blue-50'    },
               { label: 'Expenses',      value: data.totalExpenses,  icon: TrendingDown, color: 'text-orange-600', bg: 'bg-orange-50'  },
-              { label: 'Cash & Bank',   value: data.cashBalance,    icon: Landmark,     color: 'text-indigo-600', bg: 'bg-indigo-50'  },
+              { label: 'Cash & Bank',   value: data.cashBalance,    icon: Landmark,     color: 'text-blue-600', bg: 'bg-blue-50'  },
               { label: 'Budget Utilized', value: `${budgetAchievement.toFixed(1)}%`, icon: Target, color: 'text-purple-650', bg: 'bg-purple-50', isPercent: true },
             ].map(k => (
               <div key={k.label} className="bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-slate-100 px-5 py-4 flex items-center gap-3 hover:shadow-md transition-all">
@@ -432,7 +432,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
           {/* Inventory Value */}
           <SummaryCard
             title="Inventory Value" icon={Package}
-            iconColor="text-indigo-600" iconBg="bg-indigo-50"
+            iconColor="text-blue-600" iconBg="bg-blue-50"
             canCreate={canCreate} loading={loading}
             dropdownItems={[
               { label: 'New Item',            icon: Package,      onClick: () => navigate('/inventory/new') },
@@ -443,7 +443,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
               <p className="text-[11px] text-slate-400 font-medium mb-1">Stock Asset Valuation</p>
               <p className="text-2xl font-bold text-slate-900">{fmt(data?.inventoryValue || 0)}</p>
               <div className="mt-3 text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-                <Landmark size={12} className="text-indigo-500" />
+                <Landmark size={12} className="text-blue-500" />
                 <span>Standard cost asset value</span>
               </div>
             </div>
@@ -672,7 +672,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
                 { label: 'New Bill',         icon: FileStack,      path: '/bills/new',                color: 'text-orange-600', bg: 'bg-orange-50' },
                 { label: 'Receive Payment',  icon: ArrowDownRight, path: '/payments/new',             color: 'text-emerald-600',bg: 'bg-emerald-50'},
                 { label: 'Make Payment',     icon: ArrowUpRight,   path: '/payments-made/new',        color: 'text-rose-600',   bg: 'bg-rose-50'   },
-                { label: 'Bank Recon',       icon: RefreshCcw,     path: '/reconciliation',           color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                { label: 'Bank Recon',       icon: RefreshCcw,     path: '/reconciliation',           color: 'text-blue-600', bg: 'bg-blue-50' },
                 { label: 'GST Report',       icon: Shield,         path: '/reports/gst',              color: 'text-purple-600', bg: 'bg-purple-50' },
                 { label: 'Journal Entry',    icon: BookOpen,       path: '/accountant/journals/new',  color: 'text-amber-600',  bg: 'bg-amber-50'  },
                 { label: 'P&L Report',       icon: BarChart2,      path: '/reports/pl',               color: 'text-teal-600',   bg: 'bg-teal-50'   },
@@ -719,7 +719,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
                       ${darkMode ? 'hover:bg-slate-700/40' : 'hover:bg-slate-50/50'}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isReceipt ? 'bg-emerald-50 text-emerald-600' : v.voucherType === 'Payment' ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isReceipt ? 'bg-emerald-50 text-emerald-600' : v.voucherType === 'Payment' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
                         {isReceipt ? <ArrowDownRight size={15} /> : <ArrowUpRight size={15} />}
                       </div>
                       <div>

@@ -62,7 +62,7 @@ const PurchaseOrdersView = ({ companyId }) => {
              </button>
              <button 
                 onClick={() => window.location.href = '/purchase-orders/new'}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-2xl font-bold text-[14px] flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 active:scale-95 group"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-bold text-[14px] flex items-center gap-2 transition-all shadow-lg shadow-blue-600/20 active:scale-95 group"
              >
                 <Plus size={18} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
                 New Order
@@ -78,11 +78,11 @@ const PurchaseOrdersView = ({ companyId }) => {
                   key={status}
                   onClick={() => setFilterStatus(status)}
                   className={`text-[13px] font-bold px-1 py-4 transition-all relative
-                    ${filterStatus === status ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600 font-bold'}`}
+                    ${filterStatus === status ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600 font-bold'}`}
                 >
                    {status}
                    {filterStatus === status && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full animate-in slide-in-from-left duration-300"></div>
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full animate-in slide-in-from-left duration-300"></div>
                    )}
                 </button>
              ))}
@@ -106,7 +106,7 @@ const PurchaseOrdersView = ({ companyId }) => {
                          {filteredOrders.map(order => (
                             <tr key={order.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer group">
                                <td className="px-6 py-4 text-[14px] text-slate-600 font-medium">{new Date(order.date).toLocaleDateString()}</td>
-                               <td className="px-6 py-4 text-[14px] font-bold text-indigo-600">{order.orderNumber}</td>
+                               <td className="px-6 py-4 text-[14px] font-bold text-blue-600">{order.orderNumber}</td>
                                <td className="px-6 py-4 text-[14px] text-slate-900 font-bold border-l border-slate-100/50">{order.Ledger?.name || '-'}</td>
                                <td className="px-6 py-4 text-[14px]">
                                   <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${getStatusStyle(order.status).replace('bg-', 'bg-opacity-10 border-')}`}>
@@ -116,7 +116,7 @@ const PurchaseOrdersView = ({ companyId }) => {
                                <td className="px-6 py-4 text-right text-[14px] font-bold text-slate-900 tracking-tight whitespace-nowrap">₹ {parseFloat(order.totalAmount || 0).toLocaleString()}</td>
                                <td className="px-6 py-4">
                                   <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0">
-                                     <button className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                                     <button className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
                                         <Edit size={16} />
                                      </button>
                                      <button className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
@@ -133,13 +133,13 @@ const PurchaseOrdersView = ({ companyId }) => {
                 <div className="flex-1 flex flex-col items-center justify-center bg-white min-h-[600px]">
                    {/* High-Fidelity Procurement Hero */}
                    <div className="w-full max-w-[800px] flex flex-col items-center text-center px-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                      <div className="w-24 h-24 bg-indigo-50 rounded-[32px] flex items-center justify-center text-indigo-600 mb-10 shadow-sm border border-indigo-100 rotate-3 hover:rotate-0 transition-transform duration-500">
+                      <div className="w-24 h-24 bg-blue-50 rounded-[32px] flex items-center justify-center text-blue-600 mb-10 shadow-sm border border-blue-100 rotate-3 hover:rotate-0 transition-transform duration-500">
                          <ShoppingBag size={48} strokeWidth={1.5} />
                       </div>
                       
                       <h2 className="text-[36px] font-bold text-slate-900 mb-4 tracking-tight leading-tight">
                          Streamline Your Procurement: <br/>
-                         <span className="text-indigo-600">Master Your Purchase Orders</span>
+                         <span className="text-blue-600">Master Your Purchase Orders</span>
                       </h2>
                       
                       <p className="text-slate-500 text-[17px] mb-12 max-w-[620px] leading-relaxed font-bold opacity-80">
@@ -165,7 +165,7 @@ const PurchaseOrdersView = ({ companyId }) => {
 
                          {/* Step 2 */}
                          <div className="flex flex-col items-center gap-4 relative z-10 group">
-                            <div className="w-14 h-14 rounded-2xl bg-white border-2 border-slate-100 flex items-center justify-center text-slate-300 group-hover:text-indigo-500 group-hover:border-indigo-100 transition-all shadow-sm">
+                            <div className="w-14 h-14 rounded-2xl bg-white border-2 border-slate-100 flex items-center justify-center text-slate-300 group-hover:text-blue-500 group-hover:border-blue-100 transition-all shadow-sm">
                                <Send size={24} />
                             </div>
                             <div className="text-center">
@@ -189,7 +189,7 @@ const PurchaseOrdersView = ({ companyId }) => {
                       <div className="flex items-center gap-4">
                          <button 
                             onClick={() => window.location.href = '/purchase-orders/new'}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-[24px] font-bold text-[16px] flex items-center gap-3 transition-all shadow-xl shadow-indigo-600/30 active:scale-95 group"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-[24px] font-bold text-[16px] flex items-center gap-3 transition-all shadow-xl shadow-blue-600/30 active:scale-95 group"
                          >
                             <Plus size={20} strokeWidth={3} className="group-hover:rotate-90 transition-transform" />
                             Create Your First Order

@@ -46,7 +46,8 @@ exports.createBudget = async (req, res) => {
     if (items && Array.isArray(items) && items.length > 0) {
       const budgetItems = items.map(it => ({
         BudgetId: budget.id,
-        LedgerId: it.ledgerId,
+        LedgerId: it.ledgerId || null,
+        GroupId: it.groupId || null,
         targetAmount: parseFloat(it.targetAmount || 0),
         CompanyId: companyId
       }));
@@ -70,7 +71,10 @@ exports.getBudgets = async (req, res) => {
       include: [{
         model: BudgetItem,
         as: 'items',
-        include: [{ model: Ledger, attributes: ['name'] }]
+        include: [
+          { model: Ledger, attributes: ['name'] },
+          { model: Group, attributes: ['name'] }
+        ]
       }]
     });
     res.json(budgets);
@@ -100,11 +104,17 @@ exports.getBudgetVariance = async (req, res) => {
       include: [{
         model: BudgetItem,
         as: 'items',
-        include: [{ 
-          model: Ledger, 
-          attributes: ['id', 'name', 'openingBalance'],
-          include: [{ model: Group, attributes: ['nature'] }]
-        }]
+        include: [
+          { 
+            model: Ledger, 
+            attributes: ['id', 'name', 'openingBalance', 'openingBalanceType'],
+            include: [{ model: Group, attributes: ['nature'] }]
+          },
+          {
+            model: Group,
+            attributes: ['id', 'name', 'nature']
+          }
+        ]
       }]
     });
 
@@ -114,46 +124,90 @@ exports.getBudgetVariance = async (req, res) => {
 
     const reports = [];
 
+    // Get all groups for recursive lookup
+    const allGroups = await Group.findAll({ where: { CompanyId: budget.CompanyId }, raw: true });
+
+    const getDescendantGroupIds = (parentGroupId) => {
+      const ids = [parentGroupId];
+      const queue = [parentGroupId];
+      while (queue.length > 0) {
+        const currentId = queue.shift();
+        const children = allGroups.filter(g => g.parent_id === currentId);
+        children.forEach(child => {
+          if (!ids.includes(child.id)) {
+            ids.push(child.id);
+            queue.push(child.id);
+          }
+        });
+      }
+      return ids;
+    };
+
     for (const item of budget.items) {
-      const ledger = item.Ledger;
-      if (!ledger) continue;
+      let ledgersInGroup = [];
 
-      // Query sum of all transaction debits/credits in the period
-      const txs = await Transaction.findAll({
-        where: {
-          LedgerId: ledger.id,
-          createdAt: { [Op.between]: [startDate, endDate] }
-        },
-        include: [{
-          model: Voucher,
-          where: { date: { [Op.between]: [startDate, endDate] } },
-          attributes: []
-        }]
-      });
+      if (item.GroupId) {
+        const descendantGroupIds = getDescendantGroupIds(item.GroupId);
+        ledgersInGroup = await Ledger.findAll({
+          where: { GroupId: { [Op.in]: descendantGroupIds } },
+          include: [{ model: Group, attributes: ['nature'] }]
+        });
+      } else if (item.LedgerId && item.Ledger) {
+        ledgersInGroup = [item.Ledger];
+      }
 
-      const totalDebit = txs.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0);
-      const totalCredit = txs.reduce((sum, t) => sum + parseFloat(t.credit || 0), 0);
+      let totalDebit = 0;
+      let totalCredit = 0;
+      let totalOpening = 0;
 
-      const nature = ledger.Group?.nature || 'Expenses';
+      for (const led of ledgersInGroup) {
+        const txs = await Transaction.findAll({
+          where: {
+            LedgerId: led.id,
+            createdAt: { [Op.between]: [startDate, endDate] }
+          },
+          include: [{
+            model: Voucher,
+            where: { date: { [Op.between]: [startDate, endDate] } },
+            attributes: []
+          }]
+        });
+
+        totalDebit += txs.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0);
+        totalCredit += txs.reduce((sum, t) => sum + parseFloat(t.credit || 0), 0);
+
+        const nature = led.Group?.nature || 'Expenses';
+        const opBalance = parseFloat(led.openingBalance || 0);
+        const opType = (led.openingBalanceType || 'Dr').trim().toUpperCase();
+
+        if (nature === 'Expenses' || nature === 'Assets') {
+          totalOpening += opType === 'DR' ? opBalance : -opBalance;
+        } else {
+          totalOpening += opType === 'CR' ? opBalance : -opBalance;
+        }
+      }
+
+      const nature = item.GroupId ? item.Group?.nature : item.Ledger?.Group?.nature;
+      const isDr = nature === 'Expenses' || nature === 'Assets';
+      
       let actualAmount = 0;
-
-      if (nature === 'Expenses' || nature === 'Assets') {
+      if (isDr) {
         actualAmount = totalDebit - totalCredit;
       } else {
         actualAmount = totalCredit - totalDebit;
       }
-
-      // Add opening balance contribution if appropriate
-      actualAmount += parseFloat(ledger.openingBalance || 0);
-
+      actualAmount += totalOpening;
       actualAmount = Math.max(0, actualAmount);
+
       const target = parseFloat(item.targetAmount || 0);
       const variance = target - actualAmount;
       const pctAchieved = target > 0 ? (actualAmount / target) * 100 : 0;
 
       reports.push({
-        ledgerId: ledger.id,
-        ledgerName: ledger.name,
+        ledgerId: item.LedgerId,
+        groupId: item.GroupId,
+        name: item.GroupId ? item.Group?.name : item.Ledger?.name,
+        type: item.GroupId ? 'Group' : 'Ledger',
         targetAmount: target,
         actualAmount: parseFloat(actualAmount.toFixed(2)),
         variance: parseFloat(variance.toFixed(2)),
@@ -174,3 +228,4 @@ exports.getBudgetVariance = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+

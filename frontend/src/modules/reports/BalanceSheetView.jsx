@@ -155,7 +155,7 @@ const BalanceSheetView = () => {
                    <div>
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Equation Status</p>
                       <h3 className={`text-[16px] font-black tracking-tight ${Math.abs(data.totalAssets - data.totalLiabilities) < 0.01 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {Math.abs(data.totalAssets - data.totalLiabilities) < 0.01 ? 'Books Balanced' : 'System Imbalance Detected'}
+                        {Math.abs(data.totalAssets - data.totalLiabilities) < 0.01 ? 'Books Balanced' : 'Balance Sheet does not balance'}
                       </h3>
                    </div>
                 </div>
@@ -168,6 +168,17 @@ const BalanceSheetView = () => {
                 </div>
              </div>
           </div>
+
+          {Math.abs(data.totalAssets - data.totalLiabilities) >= 0.01 && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5 flex gap-3 text-rose-800 text-xs font-bold leading-relaxed no-print">
+              <AlertCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-extrabold text-[13px] text-rose-900 mb-1">Balance Sheet does not balance</p>
+                <p>The total Assets (₹{Number(data.totalAssets || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}) do not match the total Liabilities & Capital (₹{Number(data.totalLiabilities || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}).</p>
+                <p className="mt-1 font-normal text-rose-700">This is usually caused by incomplete opening balances. Please go to Accountant → Ledgers → Capital Account and enter a Credit opening balance equal to the Trial Balance imbalance.</p>
+              </div>
+            </div>
+          )}
 
           {/* ══ DUAL COLUMN CONTENT ═════════════════════════════════════ */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

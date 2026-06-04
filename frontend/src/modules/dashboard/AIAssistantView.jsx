@@ -24,7 +24,7 @@ const ChatBubble = ({ msg, onActionClick }) => {
     <div className={`flex gap-4 ${isUser ? 'flex-row-reverse' : 'flex-row'} animate-slide-up`}>
       {/* Avatar */}
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-md
-        ${isUser ? 'bg-[#1A73E8]' : 'bg-gradient-to-br from-violet-600 to-blue-600'}`}>
+        ${isUser ? 'bg-[#1A73E8]' : 'bg-gradient-to-br from-blue-600 to-blue-700'}`}>
         {isUser ? <User size={16} color="#fff" /> : <Bot size={16} color="#fff" />}
       </div>
 
@@ -168,7 +168,7 @@ const AIAssistantView = () => {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#1A73E8] to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/10">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#1A73E8] to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/10">
             <Sparkles size={18} color="#fff" />
           </div>
           <div>
@@ -195,7 +195,7 @@ const AIAssistantView = () => {
 
             {loading && (
               <div className="flex gap-4 animate-slide-up">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shrink-0">
                   <Bot size={16} color="#fff" />
                 </div>
                 <div className="px-5 py-4 bg-white rounded-2xl rounded-tl-sm border border-slate-100 flex items-center gap-1.5 shadow-sm">

@@ -1,5 +1,6 @@
 const { Group, Company } = require('../../models');
 const { standardGroups } = require('../../helpers/tallyGroups');
+const { Op } = require('sequelize');
 
 /**
  * Auto-resolve: finds the first company, seeds groups if empty,
@@ -13,7 +14,10 @@ exports.resolveCompanyGroups = async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found.' });
 
     let groups = await Group.findAll({
-      where: { CompanyId: company.id },
+      where: { 
+        CompanyId: company.id,
+        name: { [Op.ne]: 'Suspense Account' }
+      },
       order: [['nature', 'ASC'], ['name', 'ASC']]
     });
 
@@ -81,7 +85,10 @@ exports.getGroups = async (req, res) => {
 
       // Fetch groups with Ledgers
       const groups = await Group.findAll({
-        where: { CompanyId: companyId },
+        where: { 
+          CompanyId: companyId,
+          name: { [Op.ne]: 'Suspense Account' }
+        },
         include: [
           { model: Group, as: 'SubGroups' },
           { model: Ledger, as: 'Ledgers' }

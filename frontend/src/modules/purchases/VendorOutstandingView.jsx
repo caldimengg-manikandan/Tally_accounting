@@ -96,7 +96,7 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
       <div className="flex justify-between items-end border-b border-slate-100 pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-600/20">
+            <div className="w-10 h-10 bg-[#1e61f0] rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
               <ShoppingBag size={18} />
             </div>
             <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Accounts Payable</span>
@@ -113,10 +113,10 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-5">
         {[
-          { label: 'Total Bills',    value: fmt(totals.total),       color: 'bg-slate-900 text-white',                                     Icon: TrendingDown },
-          { label: 'Total Paid',     value: fmt(totals.paid),        color: 'bg-emerald-50 text-emerald-700 border border-emerald-100',    Icon: CheckCircle2 },
-          { label: 'Outstanding',    value: fmt(totals.outstanding), color: 'bg-orange-50 text-orange-700 border border-orange-100',       Icon: AlertCircle },
-          { label: 'Overdue',        value: fmt(totals.overdue),     color: 'bg-rose-50 text-rose-700 border border-rose-100',             Icon: Clock },
+          { label: 'Total Bills',    value: fmt(totals.total),       color: 'bg-blue-50/50 text-blue-900 border border-blue-100/70',                       Icon: TrendingDown },
+          { label: 'Total Paid',     value: fmt(totals.paid),        color: 'bg-emerald-50/50 text-emerald-900 border border-emerald-100/70',              Icon: CheckCircle2 },
+          { label: 'Outstanding',    value: fmt(totals.outstanding), color: 'bg-orange-50/50 text-orange-900 border border-orange-100/70',                 Icon: AlertCircle },
+          { label: 'Overdue',        value: fmt(totals.overdue),     color: 'bg-rose-50/50 text-rose-900 border border-rose-100/70',                       Icon: Clock },
         ].map(({ label, value, color, Icon }) => (
           <div key={label} className={`${color} rounded-2xl px-6 py-5 flex flex-col gap-2`}>
             <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ const VendorOutstandingView = ({ companyId: propCompanyId }) => {
           {['', 'Unpaid', 'Partially Paid', 'Overdue', 'Paid'].map(s => (
             <button key={s} onClick={() => setStatusFilter(s)}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider border transition-all
-                ${statusFilter === s ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}>
+                ${statusFilter === s ? 'bg-[#1e61f0] text-white border-[#1e61f0]' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'}`}>
               {s || 'All'}
             </button>
           ))}

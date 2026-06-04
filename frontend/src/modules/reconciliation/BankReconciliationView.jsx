@@ -82,7 +82,7 @@ const BankReconciliationView = () => {
 
     return (
         <div className="space-y-8 animate-fade-up">
-            <div className="bg-gradient-to-br from-primary-600 to-indigo-700 p-10 rounded-4xl text-white shadow-xl relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-primary-600 to-primary-700 p-10 rounded-4xl text-white shadow-xl relative overflow-hidden group">
                <div className="relative z-10 flex justify-between items-center">
                   <div className="space-y-2">
                      <h3 className="text-2xl font-bold flex items-center gap-3"><Wallet size={28}/> Bank Reconciliation Engine</h3>

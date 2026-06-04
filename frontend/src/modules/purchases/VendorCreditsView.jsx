@@ -419,14 +419,14 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                                     <div className="max-h-[220px] overflow-y-auto py-2 custom-scrollbar text-left">
                                                         <div className="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Taxes</div>
                                                         {filteredTdsOptions.map((opt, idx) => (
-                                                            <div key={idx} onClick={() => { setFormData({ ...formData, taxRate: opt.rate, tdsName: opt.name }); setIsTDSDropdownOpen(false); }} className={`px-4 py-2 text-[13px] cursor-pointer flex items-center justify-between transition-colors ${formData.tdsName === opt.name ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
+                                                            <div key={idx} onClick={() => { setFormData({ ...formData, taxRate: opt.rate, tdsName: opt.name }); setIsTDSDropdownOpen(false); }} className={`px-4 py-2 text-[13px] cursor-pointer flex items-center justify-between transition-colors ${formData.tdsName === opt.name ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
                                                                 <span className="font-bold">{opt.name} [{opt.rate}%]</span>
                                                                 {formData.tdsName === opt.name && <CheckCircle2 size={14} className="text-white fill-white" />}
                                                             </div>
                                                         ))}
                                                     </div>
                                                     <div className="p-3 bg-slate-50 border-t border-slate-100">
-                                                        <button className="flex items-center gap-2 text-[11px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors">
+                                                        <button className="flex items-center gap-2 text-[11px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors">
                                                             <Settings size={14} /> Manage TDS
                                                         </button>
                                                     </div>
@@ -457,7 +457,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                 <button 
                   onClick={() => handleSave('Open')} 
                   disabled={saving}
-                  className="px-8 h-10 bg-indigo-600 text-white rounded-xl font-bold text-[13px] hover:bg-indigo-700 shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  className="px-8 h-10 bg-blue-600 text-white rounded-xl font-bold text-[13px] hover:bg-blue-700 shadow-md transition-all active:scale-95 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save as Open'}
                 </button>
@@ -514,14 +514,14 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
             {/* Header Bar */}
             <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between sticky top-0 z-10 no-print shadow-sm">
                 <div className="flex items-center gap-2">
-                    <button onClick={() => navigate('/vendor-credits')} className="text-[13px] font-bold text-indigo-600 hover:underline flex items-center gap-1.5 transition-all">
+                    <button onClick={() => navigate('/vendor-credits')} className="text-[13px] font-bold text-blue-600 hover:underline flex items-center gap-1.5 transition-all">
                        <ChevronDown size={14} className="rotate-90"/> All Vendor Credits
                     </button>
                     <span className="text-slate-300">|</span>
                     <span className="text-[13px] font-bold text-slate-800 tracking-tight">{note.vendorCreditNumber}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={() => navigate(`/vendor-credits/edit/${note.id}`)} className="h-8 px-4 bg-indigo-600 text-white rounded-lg flex items-center gap-1.5 text-[12px] font-bold hover:bg-indigo-700 shadow-sm transition-all">
+                    <button onClick={() => navigate(`/vendor-credits/edit/${note.id}`)} className="h-8 px-4 bg-blue-600 text-white rounded-lg flex items-center gap-1.5 text-[12px] font-bold hover:bg-blue-700 shadow-sm transition-all">
                         <Edit2 size={13}/> Edit
                     </button>
                     <button onClick={() => window.print()} className="h-8 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg flex items-center gap-1.5 text-[12px] font-bold hover:bg-slate-50 shadow-sm transition-all">
@@ -536,13 +536,13 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                 <div className="bg-white shadow-2xl rounded-[2.5rem] w-full max-w-4xl mx-auto p-16 relative border border-slate-100 mb-20">
                     <div className="flex justify-between items-start mb-20">
                         <div>
-                            <div className="w-16 h-16 bg-gradient-to-br from-slate-800 to-indigo-950 rounded-2xl mb-6 flex items-center justify-center text-white font-bold text-[32px] shadow-xl">V</div>
+                            <div className="w-16 h-16 bg-gradient-to-br from-slate-800 to-blue-950 rounded-2xl mb-6 flex items-center justify-center text-white font-bold text-[32px] shadow-xl">V</div>
                             <h2 className="text-[24px] font-bold text-slate-900 tracking-tighter uppercase mb-2">{localStorage.getItem('companyName')?.toUpperCase() || 'COMPANY'}</h2>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">Voucher: {note.vendorCreditNumber}</p>
                         </div>
                         <div className="text-right">
                             <h1 className="text-[42px] font-bold text-slate-900 tracking-tighter uppercase -mb-2 opacity-95">Vendor Credit</h1>
-                            <div className="h-1.5 w-32 bg-indigo-600 ml-auto mt-4 rounded-full"></div>
+                            <div className="h-1.5 w-32 bg-blue-600 ml-auto mt-4 rounded-full"></div>
                         </div>
                     </div>
 
@@ -550,14 +550,14 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                         <div className="p-10 border-r border-slate-200 bg-slate-50/20 flex flex-col gap-3">
                              <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-0.5">Vendor Details</h4>
                              <div>
-                                <p className="text-[20px] font-bold text-indigo-700 tracking-tighter mb-1">{note.Vendor?.name || 'Vendor Not Specified'}</p>
+                                <p className="text-[20px] font-bold text-blue-700 tracking-tighter mb-1">{note.Vendor?.name || 'Vendor Not Specified'}</p>
                                 <p className="text-[13px] text-slate-500 font-medium">Ref: {note.referenceNumber || 'N/A'}</p>
                              </div>
                         </div>
                         <div className="p-10 flex flex-col justify-center gap-4 bg-slate-50/50">
                              <div className="flex justify-between items-center text-[13px] font-bold"><span className="text-slate-400 uppercase tracking-widest text-[10px]">Credit Number</span><span className="text-slate-900">: {note.vendorCreditNumber}</span></div>
                              <div className="flex justify-between items-center text-[13px] font-bold"><span className="text-slate-400 uppercase tracking-widest text-[10px]">Issue Date</span><span className="text-slate-900">: {new Date(note.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
-                             <div className="flex justify-between items-center text-[13px] font-bold"><span className="text-slate-400 uppercase tracking-widest text-[10px]">Status</span><span className="text-[10px] font-bold uppercase bg-indigo-600 text-white px-3 py-1 rounded-full">{note.status}</span></div>
+                             <div className="flex justify-between items-center text-[13px] font-bold"><span className="text-slate-400 uppercase tracking-widest text-[10px]">Status</span><span className="text-[10px] font-bold uppercase bg-blue-600 text-white px-3 py-1 rounded-full">{note.status}</span></div>
                         </div>
                     </div>
 
@@ -697,7 +697,7 @@ const VendorCreditsView = ({ companyId }) => {
             <div className={`flex-col border-r border-slate-200 bg-white transition-all duration-300 flex no-print ${isDetail ? 'w-[380px]' : 'w-0 opacity-0 overflow-hidden'}`}>
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shadow-sm">
                     <h3 className="text-[12px] font-bold text-slate-800 uppercase tracking-widest">Vendor Credits</h3>
-                    <button onClick={() => navigate('/vendor-credits/new')} className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md transition-all active:scale-95">
+                    <button onClick={() => navigate('/vendor-credits/new')} className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-md transition-all active:scale-95">
                         <Plus size={16} />
                     </button>
                 </div>
@@ -709,7 +709,7 @@ const VendorCreditsView = ({ companyId }) => {
                             placeholder="Quick search..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] font-bold outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[12px] font-bold outline-none focus:bg-white focus:border-blue-500 transition-all"
                         />
                     </div>
                 </div>
@@ -718,15 +718,15 @@ const VendorCreditsView = ({ companyId }) => {
                         <div 
                             key={n.id}
                             onClick={() => navigate(`/vendor-credits/view/${n.id}`)}
-                            className={`px-6 py-5 cursor-pointer transition-all border-l-4 ${id === n.id ? 'bg-indigo-50/50 border-indigo-600' : 'hover:bg-slate-50 border-transparent'}`}
+                            className={`px-6 py-5 cursor-pointer transition-all border-l-4 ${id === n.id ? 'bg-blue-50/50 border-blue-600' : 'hover:bg-slate-50 border-transparent'}`}
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <span className={`text-[13px] font-bold ${id === n.id ? 'text-indigo-600' : 'text-slate-900'}`}>{n.vendorCreditNumber}</span>
+                                <span className={`text-[13px] font-bold ${id === n.id ? 'text-blue-600' : 'text-slate-900'}`}>{n.vendorCreditNumber}</span>
                                 <span className="text-[13px] font-bold text-slate-900">₹{parseFloat(n.totalAmount || 0).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                <span className="text-[11px] font-bold text-slate-400 truncate max-w-[180px]">{n.Vendor?.name}</span>
-                               <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full tracking-widest ${n.status === 'Open' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>{n.status}</span>
+                               <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full tracking-widest ${n.status === 'Open' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>{n.status}</span>
                             </div>
                         </div>
                     ))}
@@ -744,7 +744,7 @@ const VendorCreditsView = ({ companyId }) => {
                                 <h1 className="text-[32px] font-bold text-slate-950 tracking-tighter uppercase leading-none">Vendor Credits</h1>
                                 <p className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-3">Purchase returns & supplier adjustments</p>
                             </div>
-                            <button onClick={() => navigate('/vendor-credits/new')} className="px-8 h-12 bg-indigo-600 text-white rounded-2xl font-bold text-[13px] hover:bg-indigo-700 shadow-xl transition-all flex items-center gap-3 uppercase tracking-widest active:scale-95">
+                            <button onClick={() => navigate('/vendor-credits/new')} className="px-8 h-12 bg-blue-600 text-white rounded-2xl font-bold text-[13px] hover:bg-blue-700 shadow-xl transition-all flex items-center gap-3 uppercase tracking-widest active:scale-95">
                                 <PlusCircle size={20} /> New Record
                             </button>
                         </div>
@@ -759,10 +759,10 @@ const VendorCreditsView = ({ companyId }) => {
                                             placeholder="Search by vendor or credit#..." 
                                             value={searchTerm} 
                                             onChange={e => setSearchTerm(e.target.value)} 
-                                            className="w-full pl-12 pr-4 py-2.5 border border-slate-200 rounded-2xl text-[13px] font-bold outline-none focus:border-indigo-500 shadow-sm transition-all"
+                                            className="w-full pl-12 pr-4 py-2.5 border border-slate-200 rounded-2xl text-[13px] font-bold outline-none focus:border-blue-500 shadow-sm transition-all"
                                         />
                                     </div>
-                                    <button className="p-2.5 text-slate-400 hover:text-indigo-600 transition-colors"><Filter size={18}/></button>
+                                    <button className="p-2.5 text-slate-400 hover:text-blue-600 transition-colors"><Filter size={18}/></button>
                                 </div>
                                 <table className="w-full text-left">
                                     <thead>
@@ -786,10 +786,10 @@ const VendorCreditsView = ({ companyId }) => {
                                             <tr 
                                                 key={n.id} 
                                                 onClick={() => navigate(`/vendor-credits/view/${n.id}`)}
-                                                className="hover:bg-indigo-50/20 transition-all cursor-pointer group"
+                                                className="hover:bg-blue-50/20 transition-all cursor-pointer group"
                                             >
                                                 <td className="px-10 py-7 text-[14px] font-bold text-slate-500">{new Date(n.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                                                <td className="px-10 py-7 text-[15px] font-bold text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{n.vendorCreditNumber}</td>
+                                                <td className="px-10 py-7 text-[15px] font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{n.vendorCreditNumber}</td>
                                                 <td className="px-10 py-7">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[11px] font-bold text-slate-500">{(n.Vendor?.name || 'V').charAt(0)}</div>
@@ -797,7 +797,7 @@ const VendorCreditsView = ({ companyId }) => {
                                                     </div>
                                                 </td>
                                                 <td className="px-10 py-7">
-                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${n.status === 'Open' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}>{n.status}</span>
+                                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${n.status === 'Open' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-400'}`}>{n.status}</span>
                                                 </td>
                                                 <td className="px-10 py-7 text-right font-bold text-slate-950 text-lg tracking-tighter">₹{parseFloat(n.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                             </tr>

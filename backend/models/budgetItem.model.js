@@ -9,8 +9,13 @@ module.exports = (sequelize, DataTypes) => {
     targetAmount: {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0
+    },
+    GroupId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   });
 
   return BudgetItem;
 };
+

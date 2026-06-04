@@ -27,7 +27,7 @@ const ChatBubble = ({ msg, onActionClick }) => {
     <div className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'} animate-slide-up`}>
       {/* Avatar */}
       <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5
-        ${isUser ? 'bg-blue-600' : 'bg-gradient-to-br from-violet-600 to-blue-600'}`}>
+        ${isUser ? 'bg-blue-600' : 'bg-gradient-to-br from-blue-600 to-blue-700'}`}>
         {isUser ? <User size={14} color="#fff" /> : <Bot size={14} color="#fff" />}
       </div>
 
@@ -181,7 +181,7 @@ const AIAssistant = ({ role = 'admin' }) => {
           style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.18)' }}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-3.5 flex items-center justify-between shrink-0">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3.5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
                 <Sparkles size={16} color="#fff" />
@@ -215,7 +215,7 @@ const AIAssistant = ({ role = 'admin' }) => {
 
             {loading && (
               <div className="flex gap-2.5 animate-slide-up">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shrink-0">
                   <Bot size={14} color="#fff" />
                 </div>
                 <div className="px-4 py-3 bg-white rounded-2xl rounded-tl-sm shadow-sm border border-slate-100 flex items-center gap-1.5">
@@ -283,7 +283,7 @@ const AIAssistant = ({ role = 'admin' }) => {
       {/* ── COLLAPSED FAB ──────────────────────────────────── */}
       <button
         onClick={() => setOpen(v => !v)}
-        className="fixed bottom-6 right-6 z-[200] flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-full shadow-2xl hover:shadow-blue-500/40 hover:scale-105 transition-all duration-200 group"
+        className="fixed bottom-6 right-6 z-[200] flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full shadow-2xl hover:shadow-blue-500/40 hover:scale-105 transition-all duration-200 group"
         style={{ boxShadow: '0 8px 30px rgba(99,102,241,0.45)' }}
       >
         <div className="relative">

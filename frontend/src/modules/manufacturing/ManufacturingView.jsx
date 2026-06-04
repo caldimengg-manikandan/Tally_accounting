@@ -177,7 +177,7 @@ export default function ManufacturingView() {
       <div className="flex justify-between items-end border-b border-slate-100 pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-slate-900/10">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/15">
               <Cpu size={18} />
             </div>
             <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Operations & Production</span>
@@ -190,7 +190,7 @@ export default function ManufacturingView() {
           {activeTab === 'boms' && (
             <button 
               onClick={() => setActiveTab('create_bom')}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-900/10 flex items-center gap-1.5 transition-all"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-600/15 flex items-center gap-1.5 transition-all"
             >
               <Plus size={16} /> Define BOM Recipe
             </button>
@@ -198,7 +198,7 @@ export default function ManufacturingView() {
           {activeTab === 'orders' && (
             <button 
               onClick={() => setActiveTab('run_production')}
-              className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-900/10 flex items-center gap-1.5 transition-all"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-600/15 flex items-center gap-1.5 transition-all"
             >
               <Play size={14} fill="currentColor" /> Compile Production Run
             </button>
@@ -210,13 +210,13 @@ export default function ManufacturingView() {
       <div className="flex border-b border-slate-200">
         <button
           onClick={() => { setActiveTab('boms'); fetchData(); }}
-          className={`px-6 py-3 text-sm font-bold tracking-tight border-b-2 transition-all ${activeTab === 'boms' || activeTab === 'create_bom' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-900'}`}
+          className={`px-6 py-3 text-sm font-bold tracking-tight border-b-2 transition-all ${activeTab === 'boms' || activeTab === 'create_bom' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-blue-600'}`}
         >
           Bill of Materials (BOM Recipes)
         </button>
         <button
           onClick={() => { setActiveTab('orders'); fetchData(); }}
-          className={`px-6 py-3 text-sm font-bold tracking-tight border-b-2 transition-all ${activeTab === 'orders' || activeTab === 'run_production' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-900'}`}
+          className={`px-6 py-3 text-sm font-bold tracking-tight border-b-2 transition-all ${activeTab === 'orders' || activeTab === 'run_production' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400 hover:text-blue-600'}`}
         >
           Production Orders (Run Logs)
         </button>
@@ -224,7 +224,7 @@ export default function ManufacturingView() {
 
       {loading ? (
         <div className="py-20 flex justify-center">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+          <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
         </div>
       ) : error ? (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex gap-3 text-red-600 font-semibold items-center">
@@ -238,7 +238,7 @@ export default function ManufacturingView() {
             <div className="space-y-6">
               {boms.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-xl space-y-6 max-w-3xl mx-auto p-10">
-                  <div className="w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                     <FolderGit2 size={36} />
                   </div>
                   <h2 className="text-xl font-black text-slate-800 tracking-tight">Define Finished Goods Recipes</h2>
@@ -247,7 +247,7 @@ export default function ManufacturingView() {
                   </p>
                   <button 
                     onClick={() => setActiveTab('create_bom')}
-                    className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg transition-all"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg transition-all"
                   >
                     Define First BOM Recipe
                   </button>
@@ -300,7 +300,7 @@ export default function ManufacturingView() {
                               setProdForm({ ...prodForm, BOMId: bom.id });
                               setActiveTab('run_production');
                             }}
-                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
                           >
                             Post Production Order &rarr;
                           </button>
@@ -318,7 +318,7 @@ export default function ManufacturingView() {
             <div className="space-y-6">
               {orders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-xl space-y-6 max-w-3xl mx-auto p-10">
-                  <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                  <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center text-emerald-600">
                     <ClipboardList size={36} />
                   </div>
                   <h2 className="text-xl font-black text-slate-800 tracking-tight">Run Finished Goods Assembly</h2>
@@ -327,7 +327,7 @@ export default function ManufacturingView() {
                   </p>
                   <button 
                     onClick={() => setActiveTab('run_production')}
-                    className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg transition-all"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg transition-all"
                   >
                     Post Assembly Order
                   </button>
@@ -336,7 +336,7 @@ export default function ManufacturingView() {
                 <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
                   <div className="h-16 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Production Order Register</span>
-                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    <span className="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
                       {orders.length} Completed Runs
                     </span>
                   </div>
@@ -360,7 +360,7 @@ export default function ManufacturingView() {
                             <td className="px-8 py-5 text-slate-500">
                               {new Date(ord.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </td>
-                            <td className="px-8 py-5 font-bold text-indigo-650">{ord.BOM?.name || 'Recipe Reference'}</td>
+                            <td className="px-8 py-5 font-bold text-blue-650">{ord.BOM?.name || 'Recipe Reference'}</td>
                             <td className="px-8 py-5 font-extrabold text-slate-900">{ord.FinishedGood?.name}</td>
                             <td className="px-8 py-5 text-right font-black text-slate-800">
                               {ord.quantity} {ord.FinishedGood?.unit || 'Units'}
@@ -371,7 +371,7 @@ export default function ManufacturingView() {
                               </span>
                             </td>
                             <td className="px-8 py-5 text-center">
-                              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                              <span className="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
                                 {ord.status}
                               </span>
                             </td>
@@ -405,7 +405,7 @@ export default function ManufacturingView() {
                       value={bomForm.name}
                       onChange={e => setBomForm({ ...bomForm, name: e.target.value })}
                       placeholder="e.g. Premium Office Desk Configuration"
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 transition-all bg-white"
+                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
                     />
                   </div>
 
@@ -417,7 +417,7 @@ export default function ManufacturingView() {
                       value={bomForm.quantity}
                       onChange={e => setBomForm({ ...bomForm, quantity: e.target.value })}
                       placeholder="1.00"
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 transition-all bg-white"
+                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
                     />
                   </div>
 
@@ -427,7 +427,7 @@ export default function ManufacturingView() {
                       required
                       value={bomForm.finishedGoodItemId}
                       onChange={e => setBomForm({ ...bomForm, finishedGoodItemId: e.target.value })}
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 transition-all bg-white"
+                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
                     >
                       <option value="">-- Choose Assembled Output Item --</option>
                       {items.map(it => (
@@ -443,7 +443,7 @@ export default function ManufacturingView() {
                       value={bomForm.description}
                       onChange={e => setBomForm({ ...bomForm, description: e.target.value })}
                       placeholder="Assembly specifications"
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 transition-all bg-white"
+                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
                     />
                   </div>
                 </div>
@@ -458,7 +458,7 @@ export default function ManufacturingView() {
                       <select 
                         value={selIngredientId}
                         onChange={e => setSelIngredientId(e.target.value)}
-                        className="border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all bg-white"
+                        className="border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 transition-all bg-white"
                       >
                         <option value="">-- Choose Raw Material --</option>
                         {items.map(it => (
@@ -474,7 +474,7 @@ export default function ManufacturingView() {
                         value={ingQty}
                         onChange={e => setIngQty(e.target.value)}
                         placeholder="e.g. 10"
-                        className="border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all bg-white"
+                        className="border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500 transition-all bg-white"
                       />
                     </div>
 
@@ -482,7 +482,7 @@ export default function ManufacturingView() {
                       <button 
                         type="button" 
                         onClick={addIngredient}
-                        className="w-full bg-slate-900 hover:bg-slate-850 text-white py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-1"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-1"
                       >
                         <Plus size={14} /> Add Ingredient
                       </button>
@@ -508,7 +508,7 @@ export default function ManufacturingView() {
                               <td className="px-6 py-3.5">{ing.name}</td>
                               <td className="px-6 py-3.5 text-right">{ing.quantity} {ing.unit}</td>
                               <td className="px-6 py-3.5 text-right">{fmt(ing.costPrice)}</td>
-                              <td className="px-6 py-3.5 text-right text-indigo-650">{fmt(ing.quantity * ing.costPrice)}</td>
+                              <td className="px-6 py-3.5 text-right text-blue-650">{fmt(ing.quantity * ing.costPrice)}</td>
                               <td className="px-6 py-3.5 text-center">
                                 <button 
                                   type="button" 
@@ -543,7 +543,7 @@ export default function ManufacturingView() {
                   <button 
                     type="submit"
                     disabled={loading}
-                    className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-slate-900/10 transition-all disabled:opacity-50"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-600/15 transition-all disabled:opacity-50"
                   >
                     {loading ? 'Registering...' : 'Register BOM Recipe'}
                   </button>
@@ -570,7 +570,7 @@ export default function ManufacturingView() {
                     required 
                     value={prodForm.productionOrderNumber}
                     onChange={e => setProdForm({ ...prodForm, productionOrderNumber: e.target.value })}
-                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 transition-all bg-white font-mono"
+                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white font-mono"
                   />
                 </div>
 
@@ -580,7 +580,7 @@ export default function ManufacturingView() {
                     required
                     value={prodForm.BOMId}
                     onChange={e => setProdForm({ ...prodForm, BOMId: e.target.value })}
-                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 transition-all bg-white"
+                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
                   >
                     <option value="">-- Choose BOM Formulation --</option>
                     {boms.map(bom => (
@@ -597,7 +597,7 @@ export default function ManufacturingView() {
                     value={prodForm.quantity}
                     onChange={e => setProdForm({ ...prodForm, quantity: e.target.value })}
                     placeholder="e.g. 10"
-                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 transition-all bg-white"
+                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
                   />
                 </div>
 
@@ -608,7 +608,7 @@ export default function ManufacturingView() {
                     required 
                     value={prodForm.date}
                     onChange={e => setProdForm({ ...prodForm, date: e.target.value })}
-                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-indigo-500 transition-all bg-white"
+                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
                   />
                 </div>
 
@@ -623,7 +623,7 @@ export default function ManufacturingView() {
                   <button 
                     type="submit"
                     disabled={loading}
-                    className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-slate-900/10 transition-all disabled:opacity-50"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-600/15 transition-all disabled:opacity-50"
                   >
                     {loading ? 'Assembling...' : 'Compile Assembly Order'}
                   </button>

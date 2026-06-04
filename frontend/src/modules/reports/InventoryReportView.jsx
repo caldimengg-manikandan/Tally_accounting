@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   RefreshCcw, Printer, Mail, Download, AlertCircle, Package, Layers, AlertTriangle, ShieldCheck
 } from 'lucide-react';
-import { reportsAPI } from '../../services/api';
+import { reportsAPI, inventoryAPI } from '../../services/api';
 
 const InventoryReportView = () => {
   const navigate = useNavigate();
@@ -11,13 +11,20 @@ const InventoryReportView = () => {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('All'); // 'All', 'In Stock', 'Low Stock', 'Out of Stock'
+  const [categories, setCategories] = useState([]);
+  const [godowns, setGodowns] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedGodown, setSelectedGodown] = useState('');
   const companyId = localStorage.getItem('companyId');
 
-  const fetchReport = async () => {
+  const fetchReport = async (catId = selectedCategory, gdId = selectedGodown) => {
     if (!companyId) return;
     setLoading(true);
     try {
-      const res = await reportsAPI.inventoryReport(companyId);
+      const params = {};
+      if (catId) params.stockCategoryId = catId;
+      if (gdId) params.godownId = gdId;
+      const res = await reportsAPI.inventoryReport(companyId, params);
       setItems(res.data.items || []);
       setSummary(res.data.summary || null);
     } catch (err) {
@@ -29,7 +36,27 @@ const InventoryReportView = () => {
 
   useEffect(() => {
     fetchReport();
+    if (companyId) {
+      inventoryAPI.getStockCategories(companyId)
+        .then(res => setCategories(res.data || []))
+        .catch(e => console.error('Failed to fetch stock categories:', e));
+      inventoryAPI.getGodowns(companyId)
+        .then(res => setGodowns(res.data || []))
+        .catch(e => console.error('Failed to fetch godowns:', e));
+    }
   }, [companyId]);
+
+  const handleCategoryChange = (e) => {
+    const val = e.target.value;
+    setSelectedCategory(val);
+    fetchReport(val, selectedGodown);
+  };
+
+  const handleGodownChange = (e) => {
+    const val = e.target.value;
+    setSelectedGodown(val);
+    fetchReport(selectedCategory, val);
+  };
 
   const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
@@ -92,6 +119,34 @@ const InventoryReportView = () => {
                   <option value="In Stock">In Stock</option>
                   <option value="Low Stock">Low Stock</option>
                   <option value="Out of Stock">Out of Stock</option>
+               </select>
+            </div>
+            
+            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Category:</span>
+               <select 
+                 value={selectedCategory}
+                 onChange={handleCategoryChange}
+                 className="bg-transparent text-[11px] font-bold text-slate-700 uppercase outline-none cursor-pointer hover:text-[#1e61f0]"
+               >
+                  <option value="">All Categories</option>
+                  {categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+               </select>
+            </div>
+
+            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Godown:</span>
+               <select 
+                 value={selectedGodown}
+                 onChange={handleGodownChange}
+                 className="bg-transparent text-[11px] font-bold text-slate-700 uppercase outline-none cursor-pointer hover:text-[#1e61f0]"
+               >
+                  <option value="">All Godowns</option>
+                  {godowns.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
                </select>
             </div>
          </div>

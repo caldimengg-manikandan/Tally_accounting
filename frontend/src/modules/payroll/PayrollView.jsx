@@ -159,7 +159,7 @@ export default function PayrollView() {
       <div className="flex justify-between items-end border-b border-slate-100 pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg shadow-slate-900/10">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/10">
               <Users size={18} />
             </div>
             <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">HR & Payroll</span>
@@ -169,7 +169,7 @@ export default function PayrollView() {
         </div>
         <div className="flex gap-3">
           <button onClick={() => setShowEmpModal(true)}
-            className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-900/10 flex items-center gap-1.5 transition-all">
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-600/10 flex items-center gap-1.5 transition-all">
             <Plus size={16} /> Add Employee
           </button>
         </div>
@@ -195,7 +195,7 @@ export default function PayrollView() {
             onClick={() => { setActiveTab(tab.id); setError(''); setSuccess(''); }}
             className={`flex items-center gap-2 px-6 py-3.5 border-b-2 text-xs font-bold uppercase tracking-wider transition-all
               ${activeTab === tab.id 
-                ? 'border-slate-900 text-slate-900 bg-slate-50/30' 
+                ? 'border-blue-600 text-blue-600 bg-slate-50/30' 
                 : 'border-transparent text-slate-400 hover:text-slate-600'}`}
           >
             <tab.icon size={14} />
@@ -206,7 +206,7 @@ export default function PayrollView() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-violet-600" size={32} />
+          <Loader2 className="animate-spin text-blue-600" size={32} />
         </div>
       ) : (
         <div className="space-y-6">
@@ -229,7 +229,7 @@ export default function PayrollView() {
                     <tr><td colSpan={6} className="py-16 text-center text-slate-300 font-bold">No employees found.</td></tr>
                   ) : employees.map(emp => (
                     <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-8 py-4 text-violet-600 font-bold">#{emp.employeeId}</td>
+                      <td className="px-8 py-4 text-blue-600 font-bold">#{emp.employeeId}</td>
                       <td className="px-8 py-4 font-bold text-slate-900">{emp.name}</td>
                       <td className="px-8 py-4 text-slate-500">
                         {emp.department || '—'} <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded-full ml-1 font-bold">{emp.designation || 'Staff'}</span>
@@ -266,7 +266,7 @@ export default function PayrollView() {
                       </div>
                       <button 
                         onClick={() => { setSelectedEmp(emp); setShowAttModal(true); }}
-                        className="px-4 py-2 border border-slate-200 hover:border-violet-600 hover:text-violet-600 rounded-xl text-xs font-bold transition-all"
+                        className="px-4 py-2 border border-slate-200 hover:border-blue-600 hover:text-blue-600 rounded-xl text-xs font-bold transition-all"
                       >
                         Log Status
                       </button>
@@ -332,7 +332,7 @@ export default function PayrollView() {
                               });
                               setShowStructModal(true);
                             }}
-                            className="bg-slate-100 hover:bg-violet-600 hover:text-white text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                            className="bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all"
                           >
                             Setup Structure
                           </button>
@@ -349,7 +349,7 @@ export default function PayrollView() {
           {activeTab === 'process' && (
             <div className="max-w-2xl bg-white rounded-[2rem] border border-slate-100 p-8 shadow-xl space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
                   <DollarSign size={20} />
                 </div>
                 <div>
@@ -368,21 +368,21 @@ export default function PayrollView() {
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Month</label>
                   <select value={processForm.month} onChange={e => setProcessForm({ ...processForm, month: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-violet-400 transition-all appearance-none">
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none">
                     {MONTHS.map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Year</label>
                   <input type="number" value={processForm.year} onChange={e => setProcessForm({ ...processForm, year: parseInt(e.target.value) })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-violet-400 transition-all" />
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Paid From (Bank / Cash Ledger)*</label>
                 <select value={processForm.paymentLedgerId} onChange={e => setProcessForm({ ...processForm, paymentLedgerId: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-violet-400 transition-all appearance-none">
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none">
                   <option value="">— Select Cash/Bank Ledger —</option>
                   {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
@@ -391,7 +391,7 @@ export default function PayrollView() {
               <button 
                 onClick={handleProcessPayroll}
                 disabled={saving}
-                className="w-full bg-violet-600 hover:bg-violet-700 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
                 {saving ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : 'Process & Post G/L Voucher'}
               </button>
@@ -427,7 +427,7 @@ export default function PayrollView() {
                         <td className="px-8 py-4 text-slate-600 font-bold">{slip.month} {slip.year}</td>
                         <td className="px-8 py-4 text-right text-slate-600">{fmt(gross)}</td>
                         <td className="px-8 py-4 text-right text-rose-500">-{fmt(ded)}</td>
-                        <td className="px-8 py-4 text-right font-black text-violet-700">{fmt(slip.netSalary)}</td>
+                        <td className="px-8 py-4 text-right font-black text-blue-700">{fmt(slip.netSalary)}</td>
                         <td className="px-8 py-4 text-center">
                           <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-wider">
                             {slip.status}
@@ -458,57 +458,57 @@ export default function PayrollView() {
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Employee ID*</label>
                 <input value={empForm.employeeId} onChange={e => setEmpForm({ ...empForm, employeeId: e.target.value })}
-                  placeholder="e.g. EMP-001" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. EMP-001" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Full Name*</label>
                 <input value={empForm.name} onChange={e => setEmpForm({ ...empForm, name: e.target.value })}
-                  placeholder="e.g. Manikandan" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. Manikandan" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Department</label>
                 <input value={empForm.department} onChange={e => setEmpForm({ ...empForm, department: e.target.value })}
-                  placeholder="e.g. Engineering" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. Engineering" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Designation</label>
                 <input value={empForm.designation} onChange={e => setEmpForm({ ...empForm, designation: e.target.value })}
-                  placeholder="e.g. ERP Architect" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. ERP Architect" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Bank Name</label>
                 <input value={empForm.bankName} onChange={e => setEmpForm({ ...empForm, bankName: e.target.value })}
-                  placeholder="e.g. HDFC Bank" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. HDFC Bank" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Account Number</label>
                 <input value={empForm.bankAccount} onChange={e => setEmpForm({ ...empForm, bankAccount: e.target.value })}
-                  placeholder="e.g. 501002342345" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. 501002342345" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">IFSC Code</label>
                 <input value={empForm.ifsc} onChange={e => setEmpForm({ ...empForm, ifsc: e.target.value })}
-                  placeholder="e.g. HDFC0000123" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. HDFC0000123" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">PAN Number</label>
                 <input value={empForm.pan} onChange={e => setEmpForm({ ...empForm, pan: e.target.value })}
-                  placeholder="e.g. ABCDE1234F" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. ABCDE1234F" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">PF Number</label>
                 <input value={empForm.pfNumber} onChange={e => setEmpForm({ ...empForm, pfNumber: e.target.value })}
-                  placeholder="e.g. KN/BG/12345/678" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. KN/BG/12345/678" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">ESI Number</label>
                 <input value={empForm.esiNumber} onChange={e => setEmpForm({ ...empForm, esiNumber: e.target.value })}
-                  placeholder="e.g. 31000123450001234" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. 31000123450001234" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
             </div>
             <div className="px-8 py-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setShowEmpModal(false)} className="px-5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50">Cancel</button>
-              <button onClick={handleCreateEmployee} disabled={saving} className="px-6 py-2.5 bg-violet-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-violet-700 transition-all">
+              <button onClick={handleCreateEmployee} disabled={saving} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all">
                 Save Employee
               </button>
             </div>
@@ -532,22 +532,22 @@ export default function PayrollView() {
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Basic Pay (₹)*</label>
                   <input type="number" value={structForm.basic} onChange={e => setStructForm({ ...structForm, basic: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">HRA (₹)</label>
                   <input type="number" value={structForm.hra} onChange={e => setStructForm({ ...structForm, hra: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">DA (₹)</label>
                   <input type="number" value={structForm.da} onChange={e => setStructForm({ ...structForm, da: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Incentives (₹)</label>
                   <input type="number" value={structForm.incentives} onChange={e => setStructForm({ ...structForm, incentives: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
                 </div>
               </div>
               <div className="pt-4 border-t border-slate-100 space-y-4">
@@ -556,24 +556,24 @@ export default function PayrollView() {
                   <div>
                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">PF (₹)</label>
                     <input type="number" value={structForm.pfDeduction} onChange={e => setStructForm({ ...structForm, pfDeduction: e.target.value })}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-violet-400" />
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-blue-400" />
                   </div>
                   <div>
                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">ESI (₹)</label>
                     <input type="number" value={structForm.esiDeduction} onChange={e => setStructForm({ ...structForm, esiDeduction: e.target.value })}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-violet-400" />
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-blue-400" />
                   </div>
                   <div>
                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Prof Tax (₹)</label>
                     <input type="number" value={structForm.profTaxDeduction} onChange={e => setStructForm({ ...structForm, profTaxDeduction: e.target.value })}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-violet-400" />
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold outline-none focus:border-blue-400" />
                   </div>
                 </div>
               </div>
             </div>
             <div className="px-8 py-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setShowStructModal(false)} className="px-5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50">Cancel</button>
-              <button onClick={handleSaveStructure} disabled={saving} className="px-6 py-2.5 bg-violet-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-violet-700 transition-all">
+              <button onClick={handleSaveStructure} disabled={saving} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all">
                 Save Structure
               </button>
             </div>
@@ -596,14 +596,14 @@ export default function PayrollView() {
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date*</label>
                 <input type="date" value={attForm.date} onChange={e => setAttForm({ ...attForm, date: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status*</label>
                 <div className="flex border border-slate-200 rounded-xl overflow-hidden">
                   {['Present', 'Absent', 'Leave'].map(st => (
                     <button key={st} onClick={() => setAttForm({ ...attForm, status: st })}
-                      className={`flex-1 py-3 text-xs font-bold transition-all ${attForm.status === st ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
+                      className={`flex-1 py-3 text-xs font-bold transition-all ${attForm.status === st ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}>
                       {st}
                     </button>
                   ))}
@@ -612,12 +612,12 @@ export default function PayrollView() {
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Remarks</label>
                 <input value={attForm.remarks} onChange={e => setAttForm({ ...attForm, remarks: e.target.value })}
-                  placeholder="e.g. Unpaid sick leave" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-violet-400" />
+                  placeholder="e.g. Unpaid sick leave" className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:border-blue-400" />
               </div>
             </div>
             <div className="px-8 py-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
               <button onClick={() => setShowAttModal(false)} className="px-5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50">Cancel</button>
-              <button onClick={handleSaveAttendance} disabled={saving} className="px-6 py-2.5 bg-violet-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-violet-700 transition-all">
+              <button onClick={handleSaveAttendance} disabled={saving} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all">
                 Save Status
               </button>
             </div>

@@ -37,8 +37,13 @@ module.exports = (sequelize, DataTypes) => {
     accumulatedDepreciation: {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0
+    },
+    depreciationRate: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 10.0
     }
   });
 
   return FixedAsset;
 };
+

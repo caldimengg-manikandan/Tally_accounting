@@ -21,6 +21,35 @@ const ProfitLossView = () => {
   const [sendingMail, setSendingMail] = useState(false);
   const companyId = localStorage.getItem('companyId');
 
+  const getDates = (range) => {
+    const now = new Date();
+    let fromDate, toDate;
+    if (range === 'This Month') {
+      fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (range === 'Last Month') {
+      fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      toDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+    } else if (range === 'This Quarter') {
+      const q = Math.floor(now.getMonth() / 3);
+      fromDate = new Date(now.getFullYear(), q * 3, 1);
+      toDate = new Date(now.getFullYear(), (q + 1) * 3, 0, 23, 59, 59, 999);
+    } else if (range === 'Financial Year') {
+      const currentYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      fromDate = new Date(currentYear, 3, 1); // April 1
+      toDate = new Date(currentYear + 1, 2, 31, 23, 59, 59, 999); // March 31
+    } else {
+      // fallback to financial year
+      const currentYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      fromDate = new Date(currentYear, 3, 1);
+      toDate = new Date(currentYear + 1, 2, 31, 23, 59, 59, 999);
+    }
+    return {
+      from: fromDate.toISOString().split('T')[0],
+      to: toDate.toISOString().split('T')[0]
+    };
+  };
+
   const fetchReport = useCallback(async () => {
     if (!companyId) {
       setLoading(false);
@@ -28,14 +57,15 @@ const ProfitLossView = () => {
     }
     setLoading(true);
     try {
-      const res = await reportsAPI.profitLoss(companyId, basis);
+      const dates = getDates(dateRange);
+      const res = await reportsAPI.profitLoss(companyId, basis, dates.from, dates.to);
       setData(res.data);
     } catch (err) { 
       console.error(err);
       setData(null);
     }
     setLoading(false);
-  }, [companyId, basis]);
+  }, [companyId, basis, dateRange]);
 
   useEffect(() => { fetchReport(); }, [fetchReport]);
 

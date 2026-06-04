@@ -313,6 +313,10 @@ CostCategory.belongsTo(Company, { foreignKey: 'CompanyId' });
 CostCategory.hasMany(CostCenter, { foreignKey: 'costCategoryId' });
 CostCenter.belongsTo(CostCategory, { foreignKey: 'costCategoryId' });
 
+CostCenter.hasMany(CostCenter, { as: 'SubCostCenters', foreignKey: 'parentCostCenterId', onDelete: 'SET NULL' });
+CostCenter.belongsTo(CostCenter, { as: 'ParentCostCenter', foreignKey: 'parentCostCenterId', onDelete: 'SET NULL' });
+
+
 // 20. Payroll Models
 Company.hasMany(Employee, { foreignKey: 'CompanyId' });
 Employee.belongsTo(Company, { foreignKey: 'CompanyId' });
@@ -371,6 +375,9 @@ BudgetItem.belongsTo(Company, { foreignKey: 'CompanyId' });
 Budget.hasMany(BudgetItem, { as: 'items', foreignKey: 'BudgetId', onDelete: 'CASCADE' });
 BudgetItem.belongsTo(Budget, { foreignKey: 'BudgetId' });
 BudgetItem.belongsTo(Ledger, { foreignKey: 'LedgerId' });
+BudgetItem.belongsTo(Group, { foreignKey: 'GroupId' });
+Group.hasMany(BudgetItem, { foreignKey: 'GroupId' });
+
 
 module.exports = {
   sequelize,

@@ -2,7 +2,7 @@ const { CostCenter, CostCategory, AuditLog } = require('../../models');
 
 exports.createCostCenter = async (req, res) => {
   try {
-    const { name, category, description, companyId, CompanyId, costCategoryId } = req.body;
+    const { name, category, description, companyId, CompanyId, costCategoryId, parentCostCenterId } = req.body;
     const finalCompanyId = req.companyId || companyId || CompanyId;
     
     const costCenter = await CostCenter.create({
@@ -10,7 +10,8 @@ exports.createCostCenter = async (req, res) => {
       category: category || 'General',
       description,
       CompanyId: finalCompanyId,
-      costCategoryId: costCategoryId || null
+      costCategoryId: costCategoryId || null,
+      parentCostCenterId: parentCostCenterId || null
     });
 
     await AuditLog.create({
@@ -33,9 +34,43 @@ exports.getCostCenters = async (req, res) => {
     const { companyId } = req.params;
     const costCenters = await CostCenter.findAll({ 
       where: { CompanyId: companyId },
-      include: [{ model: CostCategory, attributes: ['id', 'name'] }]
+      include: [
+        { model: CostCategory, attributes: ['id', 'name'] },
+        { model: CostCenter, as: 'ParentCostCenter', attributes: ['id', 'name'] }
+      ]
     });
     res.json(costCenters);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateCostCenter = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, description, costCategoryId, parentCostCenterId } = req.body;
+    
+    const costCenter = await CostCenter.findByPk(id);
+    if (!costCenter) return res.status(404).json({ error: 'Cost Center not found' });
+
+    await costCenter.update({
+      name,
+      category: category || costCenter.category,
+      description,
+      costCategoryId: costCategoryId === undefined ? costCenter.costCategoryId : costCategoryId,
+      parentCostCenterId: parentCostCenterId === undefined ? costCenter.parentCostCenterId : parentCostCenterId
+    });
+
+    await AuditLog.create({
+      action: 'UPDATE_COST_CENTER',
+      tableName: 'CostCenters',
+      recordId: costCenter.id,
+      newData: costCenter,
+      CompanyId: costCenter.CompanyId,
+      UserId: req.user?.id
+    });
+
+    res.json(costCenter);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -46,9 +81,19 @@ exports.deleteCostCenter = async (req, res) => {
     const costCenter = await CostCenter.findByPk(req.params.id);
     if (!costCenter) return res.status(404).json({ error: 'Cost Center not found' });
 
-    await costCenter.destroy();
+    await costCenter.destroy(); // Soft delete because of paranoid: true
+    
+    await AuditLog.create({
+      action: 'DELETE_COST_CENTER',
+      tableName: 'CostCenters',
+      recordId: costCenter.id,
+      CompanyId: costCenter.CompanyId,
+      UserId: req.user?.id
+    });
+
     res.json({ message: 'Cost Center deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+

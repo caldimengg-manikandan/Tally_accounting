@@ -119,22 +119,76 @@ exports.getTrialBalance = async (req, res) => {
 exports.getProfitAndLoss = async (req, res) => {
   try {
     const { companyId } = req.params;
+    const { from, to } = req.query;
 
+    let startDate, endDate;
+    if (from && to) {
+      startDate = new Date(from);
+      endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
+    } else {
+      // Default to current financial year (April to March)
+      const now = new Date();
+      const currentYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      startDate = new Date(currentYear, 3, 1);
+      endDate = new Date(currentYear + 1, 2, 31, 23, 59, 59, 999);
+    }
+
+    // 1. Fetch all groups to resolve hierarchies
+    const groups = await Group.findAll({ where: { CompanyId: companyId } });
+    const groupMap = {};
+    groups.forEach(g => {
+      groupMap[g.id] = g;
+    });
+
+    const getPrimaryGroup = (groupId) => {
+      let current = groupMap[groupId];
+      for (let i = 0; i < 10; i++) {
+        if (!current) break;
+        const name = (current.name || '').trim().toLowerCase();
+        if ([
+          'sales accounts', 'direct incomes', 'indirect incomes',
+          'purchase accounts', 'direct expenses', 'indirect expenses'
+        ].includes(name)) {
+          return current.name;
+        }
+        if (!current.parent_id) break;
+        current = groupMap[current.parent_id];
+      }
+      return current ? current.name : null;
+    };
+
+    // 2. Fetch all ledgers that belong to Income or Expense groups
     const ledgers = await Ledger.findAll({
       where: { CompanyId: companyId },
+      include: [{ model: Group, attributes: ['id', 'name', 'nature', 'parent_id'] }]
+    });
+
+    // 3. Fetch all transactions for this company within the date range
+    const txs = await Transaction.findAll({
       include: [
-        { model: Group, attributes: ['name', 'nature'], where: { nature: { [Op.in]: ['Income', 'Expenses'] } } },
-        { model: Transaction, attributes: [] }
-      ],
-      attributes: {
-        include: [
-          [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.debit')), 0), 'totalDebit'],
-          [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.credit')), 0), 'totalCredit']
-        ]
-      },
-      group: ['Ledger.id', 'Group.id'],
-      raw: true,
-      nest: true
+        {
+          model: Voucher,
+          where: {
+            CompanyId: companyId,
+            date: { [Op.between]: [startDate, endDate] }
+          },
+          attributes: ['date']
+        }
+      ]
+    });
+
+    // 4. Sum debits and credits per ledger
+    const ledgerTotals = {};
+    ledgers.forEach(l => {
+      ledgerTotals[l.id] = { debit: 0, credit: 0 };
+    });
+
+    txs.forEach(t => {
+      if (ledgerTotals[t.LedgerId]) {
+        ledgerTotals[t.LedgerId].debit += parseFloat(t.debit || 0);
+        ledgerTotals[t.LedgerId].credit += parseFloat(t.credit || 0);
+      }
     });
 
     const income = [];
@@ -143,15 +197,41 @@ exports.getProfitAndLoss = async (req, res) => {
     let totalExpenses = 0;
 
     ledgers.forEach(l => {
-      const amount = parseFloat(l.totalCredit || 0) - parseFloat(l.totalDebit || 0);
-      const entry = { ledgerId: l.id, name: l.name, group: l.Group?.name, amount: Math.abs(amount) };
+      const primaryGroup = getPrimaryGroup(l.GroupId);
+      if (!primaryGroup) return;
 
-      if (l.Group?.nature === 'Income') {
-        income.push(entry);
-        totalIncome += entry.amount;
-      } else {
-        expenses.push(entry);
-        totalExpenses += entry.amount;
+      const primaryGroupLower = primaryGroup.toLowerCase();
+      const isIncomeGroup = ['sales accounts', 'direct incomes', 'indirect incomes'].includes(primaryGroupLower);
+      const isExpenseGroup = ['purchase accounts', 'direct expenses', 'indirect expenses'].includes(primaryGroupLower);
+
+      if (!isIncomeGroup && !isExpenseGroup) return;
+
+      const totals = ledgerTotals[l.id] || { debit: 0, credit: 0 };
+      
+      if (isIncomeGroup) {
+        const netCredit = totals.credit - totals.debit;
+        if (netCredit !== 0) {
+          const entry = {
+            ledgerId: l.id,
+            name: l.name,
+            group: primaryGroup,
+            amount: Math.abs(netCredit)
+          };
+          income.push(entry);
+          totalIncome += entry.amount;
+        }
+      } else if (isExpenseGroup) {
+        const netDebit = totals.debit - totals.credit;
+        if (netDebit !== 0) {
+          const entry = {
+            ledgerId: l.id,
+            name: l.name,
+            group: primaryGroup,
+            amount: Math.abs(netDebit)
+          };
+          expenses.push(entry);
+          totalExpenses += entry.amount;
+        }
       }
     });
 
@@ -175,117 +255,151 @@ exports.getBalanceSheet = async (req, res) => {
   try {
     const { companyId } = req.params;
 
+    // Default to current financial year for P&L calculation
+    const now = new Date();
+    const currentYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    const startDate = new Date(currentYear, 3, 1);
+    const endDate = new Date(currentYear + 1, 2, 31, 23, 59, 59, 999);
+
+    // 1. Fetch all groups
+    const groups = await Group.findAll({ where: { CompanyId: companyId } });
+    const groupMap = {};
+    groups.forEach(g => {
+      groupMap[g.id] = g;
+    });
+
+    const getPrimaryGroup = (groupId) => {
+      let current = groupMap[groupId];
+      for (let i = 0; i < 10; i++) {
+        if (!current) break;
+        const name = (current.name || '').trim().toLowerCase();
+        if ([
+          'fixed assets', 'current assets', 'investments',
+          'capital account', 'loans (liability)', 'current liabilities'
+        ].includes(name)) {
+          return current.name;
+        }
+        if (!current.parent_id) break;
+        current = groupMap[current.parent_id];
+      }
+      return current ? current.name : null;
+    };
+
+    // 2. Fetch all ledgers
     const ledgers = await Ledger.findAll({
       where: { CompanyId: companyId },
+      include: [Group]
+    });
+
+    // 3. Fetch all transactions
+    const txs = await Transaction.findAll({
       include: [
-        { model: Group, attributes: ['name', 'nature'], where: { nature: { [Op.in]: ['Assets', 'Liabilities'] } } },
-        { model: Transaction, attributes: [] }
-      ],
-      attributes: {
-        include: [
-          [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.debit')), 0), 'totalDebit'],
-          [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.credit')), 0), 'totalCredit']
-        ]
-      },
-      group: ['Ledger.id', 'Group.id'],
-      raw: true,
-      nest: true
+        {
+          model: Voucher,
+          where: { CompanyId: companyId },
+          attributes: ['date']
+        }
+      ]
     });
 
-    const assets = [];
-    const liabilities = [];
-    let totalAssets = 0;
-    let totalLiabilities = 0;
-
-    // 1. Map Ledgers to Assets/Liabilities
+    const ledgerTotals = {};
     ledgers.forEach(l => {
-      const rawOpening = parseFloat(l.openingBalance || 0);
-      const openingType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
-      const nature = l.Group?.nature || 'Assets';
-      const isDrNature = ['Assets', 'Expenses'].includes(nature);
-      const debit = parseFloat(l.totalDebit || 0);
-      const credit = parseFloat(l.totalCredit || 0);
+      ledgerTotals[l.id] = { debit: 0, credit: 0 };
+    });
 
-      // Nature-aware closing balance
-      let closing;
-      if (isDrNature) {
-        const openingDr = openingType === 'DR' ? rawOpening : -rawOpening;
-        closing = openingDr + debit - credit;
-      } else {
-        const openingCr = openingType === 'CR' ? rawOpening : -rawOpening;
-        closing = openingCr + credit - debit;
-      }
-
-      const absBalance = Math.abs(closing);
-      const entry = { ledgerId: l.id, ledgerName: l.name, group: l.Group?.name, balance: absBalance };
-
-      // closing > 0 means the ledger has its natural balance
-      // For Assets: positive = Asset (show on assets side)
-      // For Liabilities: positive = Liability (show on liabilities side)
-      if (isDrNature) {
-        if (closing >= 0) {
-          assets.push(entry);
-          totalAssets += absBalance;
-        } else {
-          // Reversed: asset has credit balance → show on liabilities side
-          liabilities.push(entry);
-          totalLiabilities += absBalance;
-        }
-      } else {
-        if (closing >= 0) {
-          liabilities.push(entry);
-          totalLiabilities += absBalance;
-        } else {
-          // Reversed: liability has debit balance → show on assets side
-          assets.push(entry);
-          totalAssets += absBalance;
-        }
+    txs.forEach(t => {
+      if (ledgerTotals[t.LedgerId]) {
+        ledgerTotals[t.LedgerId].debit += parseFloat(t.debit || 0);
+        ledgerTotals[t.LedgerId].credit += parseFloat(t.credit || 0);
       }
     });
 
-
-    // 2. Fetch Net Profit to make the BS Balance (Crucial Step)
-    const incomeLedgers = await Ledger.findAll({
-      where: { CompanyId: companyId },
-      include: [{ model: Group, where: { nature: { [Op.in]: ['Income', 'Expenses'] } } }, { model: Transaction, attributes: [] }],
-      attributes: {
-        include: [
-          [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.debit')), 0), 'totalDebit'],
-          [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('Transactions.credit')), 0), 'totalCredit']
-        ]
-      },
-      group: ['Ledger.id', 'Group.id'],
-      raw: true, nest: true
-    });
+    // Sum up by primary group
+    const groupBalances = {
+      'Fixed Assets': 0,
+      'Current Assets': 0,
+      'Investments': 0,
+      'Capital Account': 0,
+      'Loans (Liability)': 0,
+      'Current Liabilities': 0
+    };
 
     let totalIncome = 0;
     let totalExpenses = 0;
-    incomeLedgers.forEach(l => {
-      const amount = parseFloat(l.totalCredit || 0) - parseFloat(l.totalDebit || 0);
-      if (l.Group?.nature === 'Income') totalIncome += amount;
-      else totalExpenses += Math.abs(amount);
+
+    ledgers.forEach(l => {
+      const totals = ledgerTotals[l.id] || { debit: 0, credit: 0 };
+      const nature = l.Group?.nature;
+
+      // Calculate transaction totals for P&L if they fall in FY
+      if (nature === 'Income' || nature === 'Expenses') {
+        const inPeriodTxs = txs.filter(t => t.LedgerId === l.id && t.Voucher && new Date(t.Voucher.date) >= startDate && new Date(t.Voucher.date) <= endDate);
+        let periodDebit = 0, periodCredit = 0;
+        inPeriodTxs.forEach(t => {
+          periodDebit += parseFloat(t.debit || 0);
+          periodCredit += parseFloat(t.credit || 0);
+        });
+
+        if (nature === 'Income') {
+          totalIncome += (periodCredit - periodDebit);
+        } else {
+          totalExpenses += (periodDebit - periodCredit);
+        }
+        return;
+      }
+
+      // Balance Sheet groups
+      const primaryGroup = getPrimaryGroup(l.GroupId);
+      if (!primaryGroup) return;
+
+      const isAssetSide = ['fixed assets', 'current assets', 'investments'].includes(primaryGroup.toLowerCase());
+      const opening = parseFloat(l.openingBalance || 0);
+      const opType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
+      const opSigned = opType === 'CR' ? -opening : opening;
+
+      const closing = opSigned + totals.debit - totals.credit;
+
+      if (isAssetSide) {
+        groupBalances[primaryGroup] += closing;
+      } else {
+        groupBalances[primaryGroup] += (-closing); // natural Cr balance
+      }
     });
 
     const netProfit = totalIncome - totalExpenses;
+
+    const assets = [];
+    const liabilities = [];
+
+    // Push asset side groups
+    assets.push({ ledgerName: 'Fixed Assets', balance: Math.max(0, groupBalances['Fixed Assets']) });
+    assets.push({ ledgerName: 'Current Assets', balance: Math.max(0, groupBalances['Current Assets']) });
+    assets.push({ ledgerName: 'Investments', balance: Math.max(0, groupBalances['Investments']) });
+
+    // Push liabilities side groups
+    liabilities.push({ ledgerName: 'Capital Account', balance: Math.max(0, groupBalances['Capital Account']) });
     
-    // 3. Inject Profit/Loss into Liabilities side
-    if (netProfit !== 0) {
-      if (netProfit > 0) {
-        liabilities.push({
-          ledgerName: 'Profit & Loss A/c (Profit)',
-          group: 'RETAINED EARNINGS',
-          balance: netProfit
-        });
-        totalLiabilities += netProfit;
-      } else {
-        liabilities.push({
-          ledgerName: 'Profit & Loss A/c (Loss)',
-          group: 'RETAINED EARNINGS',
-          balance: Math.abs(netProfit)
-        });
-        totalLiabilities -= Math.abs(netProfit); // Subtract net loss
-      }
+    // Add Net Profit/Loss
+    if (netProfit > 0) {
+      liabilities.push({ ledgerName: 'Profit & Loss A/c (Net Profit)', balance: netProfit });
+    } else if (netProfit < 0) {
+      liabilities.push({ ledgerName: 'Profit & Loss A/c (Net Loss)', balance: -netProfit });
+    } else {
+      liabilities.push({ ledgerName: 'Profit & Loss A/c', balance: 0 });
     }
+
+    liabilities.push({ ledgerName: 'Current Liabilities', balance: Math.max(0, groupBalances['Current Liabilities']) });
+    liabilities.push({ ledgerName: 'Loans (Liability)', balance: Math.max(0, groupBalances['Loans (Liability)']) });
+
+    const totalAssets = assets.reduce((s, a) => s + a.balance, 0);
+    
+    // Liabilities total = Capital + Profit/Loss + Current Liabilities + Loans
+    let totalLiabilities = liabilities.reduce((s, l) => {
+      if (l.ledgerName.includes('Net Loss')) {
+        return s - l.balance; // Subtract Net Loss
+      }
+      return s + l.balance;
+    }, 0);
 
     res.json({
       assets,
@@ -915,7 +1029,7 @@ exports.getCashFlow = async (req, res) => {
       where: {
         CompanyId: companyId,
         date: { [Op.between]: [start, end] },
-        voucherType: { [Op.in]: ['Receipt', 'Payment', 'Sales', 'Purchase', 'Contra', 'Journal'] }
+        voucherType: { [Op.in]: ['Receipt', 'Payment'] }
       },
       include: [{ model: Transaction, attributes: ['debit', 'credit'] }],
       attributes: ['id', 'voucherType', 'date']
@@ -931,14 +1045,10 @@ exports.getCashFlow = async (req, res) => {
       const totalCredit = (v.Transactions || []).reduce((s, t) => s + parseFloat(t.credit || 0), 0);
       const amount      = Math.max(totalDebit, totalCredit);
 
-      if (['Receipt', 'Sales'].includes(v.voucherType))          monthlyMap[key].inflow  += amount;
-      else if (['Payment', 'Purchase'].includes(v.voucherType))  monthlyMap[key].outflow += amount;
-      else if (v.voucherType === 'Contra') {
-        monthlyMap[key].inflow  += totalDebit;
-        monthlyMap[key].outflow += totalCredit;
-      } else if (v.voucherType === 'Journal') {
-        monthlyMap[key].inflow  += totalCredit;
-        monthlyMap[key].outflow += totalDebit;
+      if (v.voucherType === 'Receipt') {
+        monthlyMap[key].inflow  += amount;
+      } else if (v.voucherType === 'Payment') {
+        monthlyMap[key].outflow += amount;
       }
     });
 
@@ -978,50 +1088,106 @@ exports.getReceivablesReport = async (req, res) => {
     const { companyId } = req.params;
     const { status } = req.query; // optional filter
 
-    const where = {
+    // Find all group IDs under "Sundry Debtors"
+    const groups = await Group.findAll({ where: { CompanyId: companyId } });
+    const rootDebtors = groups.find(g => g.name.trim().toLowerCase() === 'sundry debtors');
+    const debtorsGroupIds = rootDebtors ? [rootDebtors.id] : [];
+    if (rootDebtors) {
+      const queue = [rootDebtors.id];
+      while (queue.length > 0) {
+        const parentId = queue.shift();
+        const children = groups.filter(g => g.parent_id === parentId);
+        children.forEach(c => {
+          if (!debtorsGroupIds.includes(c.id)) {
+            debtorsGroupIds.push(c.id);
+            queue.push(c.id);
+          }
+        });
+      }
+    }
+
+    const ledgers = await Ledger.findAll({
+      where: { CompanyId: companyId, GroupId: { [Op.in]: debtorsGroupIds } },
+      include: [{ model: Group, attributes: ['name', 'nature'] }]
+    });
+
+    const txs = await Transaction.findAll({
+      include: [{
+        model: Voucher,
+        where: { CompanyId: companyId }
+      }],
+      where: {
+        LedgerId: { [Op.in]: ledgers.map(l => l.id) }
+      }
+    });
+
+    const ledgerTxMap = {};
+    ledgers.forEach(l => {
+      ledgerTxMap[l.id] = { debit: 0, credit: 0 };
+    });
+    txs.forEach(t => {
+      if (ledgerTxMap[t.LedgerId]) {
+        ledgerTxMap[t.LedgerId].debit += parseFloat(t.debit || 0);
+        ledgerTxMap[t.LedgerId].credit += parseFloat(t.credit || 0);
+      }
+    });
+
+    const closingBalances = {};
+    ledgers.forEach(l => {
+      const opening = parseFloat(l.openingBalance || 0);
+      const opType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
+      const opSigned = opType === 'CR' ? -opening : opening;
+      const txTotal = ledgerTxMap[l.id] || { debit: 0, credit: 0 };
+      const closing = opSigned + txTotal.debit - txTotal.credit;
+      closingBalances[l.id] = closing;
+    });
+
+    const invoiceWhere = {
       CompanyId: companyId,
-      balance:   { [Op.gt]: 0 },
+      customerLedgerId: { [Op.in]: ledgers.map(l => l.id) }
     };
-    if (status) where.status = status;
-    else where.status = { [Op.notIn]: ['Draft', 'Void'] };
+    if (status) {
+      invoiceWhere.status = status;
+    } else {
+      invoiceWhere.status = { [Op.notIn]: ['Draft', 'Void'] };
+    }
 
     const invoices = await SalesInvoice.findAll({
-      where,
-      include: [{ model: Ledger, as: 'CustomerLedger', attributes: ['id', 'name', 'email', 'phone'] }],
+      where: invoiceWhere,
       order: [['dueDate', 'ASC'], ['date', 'DESC']]
     });
 
     const today = new Date();
     const customerMap = {};
 
+    ledgers.forEach(l => {
+      customerMap[l.id] = {
+        customerId:   l.id,
+        customerName: l.name,
+        email:        l.email || '',
+        phone:        l.phone || l.mobile || '',
+        total:        0,
+        invoices:     [],
+        aging:        { 'Current': 0, '1-30 Days': 0, '31-60 Days': 0, '61-90 Days': 0, '90+ Days': 0 }
+      };
+    });
+
     invoices.forEach(inv => {
-      const custName = inv.CustomerLedger?.name || 'Unknown';
-      const custId   = inv.CustomerLedger?.id   || 'unknown';
-      const bal      = parseFloat(inv.balance    || 0);
-      const due      = inv.dueDate ? new Date(inv.dueDate) : null;
+      const custId = inv.customerLedgerId;
+      if (!customerMap[custId]) return;
+
+      const bal = parseFloat(inv.totalAmount || 0) - parseFloat(inv.amountPaid || 0);
+      if (bal <= 0) return;
+
+      const due = inv.dueDate ? new Date(inv.dueDate) : null;
       const daysOverdue = due ? Math.floor((today - due) / 86400000) : 0;
 
-      // Aging bucket
       let agingBucket = 'Current';
       if (daysOverdue > 0)   agingBucket = '1-30 Days';
       if (daysOverdue > 30)  agingBucket = '31-60 Days';
       if (daysOverdue > 60)  agingBucket = '61-90 Days';
       if (daysOverdue > 90)  agingBucket = '90+ Days';
 
-      if (!customerMap[custId]) {
-        customerMap[custId] = {
-          customerId:   custId,
-          customerName: custName,
-          email:        inv.CustomerLedger?.email  || '',
-          phone:        inv.CustomerLedger?.phone  || '',
-          total:        0,
-          invoices:     [],
-          aging:        { 'Current': 0, '1-30 Days': 0, '31-60 Days': 0, '61-90 Days': 0, '90+ Days': 0 }
-        };
-      }
-
-      customerMap[custId].total += bal;
-      customerMap[custId].aging[agingBucket] += bal;
       customerMap[custId].invoices.push({
         id:            inv.id,
         invoiceNumber: inv.invoiceNumber,
@@ -1033,18 +1199,56 @@ exports.getReceivablesReport = async (req, res) => {
         status:        inv.status,
         daysOverdue:   Math.max(0, daysOverdue),
         agingBucket,
+        isPseudo:      false
       });
     });
 
-    const customers = Object.values(customerMap).map(c => ({
-      ...c,
-      total: parseFloat(c.total.toFixed(2)),
-      aging: Object.fromEntries(Object.entries(c.aging).map(([k, v]) => [k, parseFloat(v.toFixed(2))]))
-    })).sort((a, b) => b.total - a.total);
+    ledgers.forEach(l => {
+      const custId = l.id;
+      const ledgerClosing = closingBalances[custId];
+      const realInvoiceSum = customerMap[custId].invoices.reduce((s, inv) => s + inv.balance, 0);
+      const difference = ledgerClosing - realInvoiceSum;
 
-    const grandTotal    = customers.reduce((s, c) => s + c.total, 0);
-    const agingSummary  = { 'Current': 0, '1-30 Days': 0, '31-60 Days': 0, '61-60 Days': 0, '90+ Days': 0 };
-    customers.forEach(c => Object.entries(c.aging).forEach(([k, v]) => { agingSummary[k] = (agingSummary[k] || 0) + v; }));
+      if (Math.abs(difference) >= 0.01) {
+        const agingBucket = difference < 0 ? 'Current' : '90+ Days';
+        customerMap[custId].invoices.push({
+          id:            `pseudo-${custId}`,
+          invoiceNumber: difference < 0 ? 'Advance / Excess Payment' : 'OB / Unallocated Balance',
+          date:          l.createdAt || new Date('2026-04-01'),
+          dueDate:       null,
+          totalAmount:   difference,
+          amountPaid:    0,
+          balance:       difference,
+          status:        difference < 0 ? 'Credit Balance' : 'Unpaid',
+          daysOverdue:   0,
+          agingBucket,
+          isPseudo:      true
+        });
+      }
+
+      let custTotal = 0;
+      customerMap[custId].invoices.forEach(inv => {
+        custTotal += inv.balance;
+        customerMap[custId].aging[inv.agingBucket] = (customerMap[custId].aging[inv.agingBucket] || 0) + inv.balance;
+      });
+
+      customerMap[custId].total = parseFloat(custTotal.toFixed(2));
+      customerMap[custId].aging = Object.fromEntries(
+        Object.entries(customerMap[custId].aging).map(([k, v]) => [k, parseFloat(v.toFixed(2))])
+      );
+    });
+
+    const customers = Object.values(customerMap)
+      .filter(c => Math.abs(c.total) >= 0.01 || c.invoices.length > 0)
+      .sort((a, b) => b.total - a.total);
+
+    const grandTotal = customers.reduce((s, c) => s + c.total, 0);
+    const agingSummary = { 'Current': 0, '1-30 Days': 0, '31-60 Days': 0, '61-90 Days': 0, '90+ Days': 0 };
+    customers.forEach(c => {
+      Object.entries(c.aging).forEach(([k, v]) => {
+        agingSummary[k] = (agingSummary[k] || 0) + v;
+      });
+    });
 
     res.json({
       customers,
@@ -1060,12 +1264,63 @@ exports.getReceivablesReport = async (req, res) => {
   }
 };
 
-// ──────────────────────────────────────────────────────────────────
-// PAYABLES REPORT — All unpaid bills with vendor breakdown
-// ──────────────────────────────────────────────────────────────────
 exports.getPayablesReport = async (req, res) => {
   try {
     const { companyId } = req.params;
+
+    // Find all group IDs under "Sundry Creditors"
+    const groups = await Group.findAll({ where: { CompanyId: companyId } });
+    const rootCreditors = groups.find(g => g.name.trim().toLowerCase() === 'sundry creditors');
+    const creditorsGroupIds = rootCreditors ? [rootCreditors.id] : [];
+    if (rootCreditors) {
+      const queue = [rootCreditors.id];
+      while (queue.length > 0) {
+        const parentId = queue.shift();
+        const children = groups.filter(g => g.parent_id === parentId);
+        children.forEach(c => {
+          if (!creditorsGroupIds.includes(c.id)) {
+            creditorsGroupIds.push(c.id);
+            queue.push(c.id);
+          }
+        });
+      }
+    }
+
+    const ledgers = await Ledger.findAll({
+      where: { CompanyId: companyId, GroupId: { [Op.in]: creditorsGroupIds } },
+      include: [{ model: Group, attributes: ['name', 'nature'] }]
+    });
+
+    const txs = await Transaction.findAll({
+      include: [{
+        model: Voucher,
+        where: { CompanyId: companyId }
+      }],
+      where: {
+        LedgerId: { [Op.in]: ledgers.map(l => l.id) }
+      }
+    });
+
+    const ledgerTxMap = {};
+    ledgers.forEach(l => {
+      ledgerTxMap[l.id] = { debit: 0, credit: 0 };
+    });
+    txs.forEach(t => {
+      if (ledgerTxMap[t.LedgerId]) {
+        ledgerTxMap[t.LedgerId].debit += parseFloat(t.debit || 0);
+        ledgerTxMap[t.LedgerId].credit += parseFloat(t.credit || 0);
+      }
+    });
+
+    const closingBalances = {};
+    ledgers.forEach(l => {
+      const opening = parseFloat(l.openingBalance || 0);
+      const opType = (l.openingBalanceType || 'Dr').trim().toUpperCase();
+      const opSigned = opType === 'DR' ? -opening : opening;
+      const txTotal = ledgerTxMap[l.id] || { debit: 0, credit: 0 };
+      const closing = opSigned + txTotal.credit - txTotal.debit;
+      closingBalances[l.id] = closing;
+    });
 
     const bills = await Voucher.findAll({
       where: { CompanyId: companyId, voucherType: 'Purchase' },
@@ -1079,26 +1334,34 @@ exports.getPayablesReport = async (req, res) => {
     const today = new Date();
     const vendorMap = {};
 
+    ledgers.forEach(l => {
+      vendorMap[l.id] = {
+        vendorId:   l.id,
+        vendorName: l.name,
+        total:      0,
+        bills:      [],
+        aging:      { 'Current': 0, '1-30 Days': 0, '31-60 Days': 0, '61-90 Days': 0, '90+ Days': 0 }
+      };
+    });
+
     for (const bill of bills) {
       const crTx = (bill.Transactions || []).find(t => parseFloat(t.credit || 0) > 0);
       const billAmount = crTx ? parseFloat(crTx.credit || 0) : 0;
       if (billAmount <= 0) continue;
 
-      // Check payments
-      const payments = await Transaction.findAll({
-        where: { description: { [Op.like]: `%BILL_REF:${bill.id}%` } },
-        include: [{ model: Voucher, where: { status: 'Paid' }, attributes: [], required: false }]
-      });
-      const paid    = payments.reduce((s, p) => s + parseFloat(p.debit || 0), 0);
-      const balance = Math.max(0, billAmount - paid);
-      if (balance <= 0) continue; // fully paid
+      const vendorId = crTx?.LedgerId;
+      if (!vendorId || !vendorMap[vendorId]) continue;
 
-      const vendorId   = crTx?.LedgerId  || 'unknown';
-      const vendorName = crTx?.Ledger?.name || 'Unknown Vendor';
+      const payments = await Transaction.findAll({
+        where: { description: { [Op.like]: `%BILL_REF:${bill.id}%` } }
+      });
+      const paid = payments.reduce((s, p) => s + parseFloat(p.debit || 0), 0);
+      const balance = Math.max(0, billAmount - paid);
+      if (balance <= 0) continue;
 
       let narration = {};
       try { narration = JSON.parse(bill.narration || '{}'); } catch {}
-      const dueDate     = narration.dueDate ? new Date(narration.dueDate) : null;
+      const dueDate = narration.dueDate ? new Date(narration.dueDate) : null;
       const daysOverdue = dueDate ? Math.floor((today - dueDate) / 86400000) : 0;
 
       let agingBucket = 'Current';
@@ -1107,18 +1370,6 @@ exports.getPayablesReport = async (req, res) => {
       if (daysOverdue > 60) agingBucket = '61-90 Days';
       if (daysOverdue > 90) agingBucket = '90+ Days';
 
-      if (!vendorMap[vendorId]) {
-        vendorMap[vendorId] = {
-          vendorId,
-          vendorName,
-          total:  0,
-          bills:  [],
-          aging:  { 'Current': 0, '1-30 Days': 0, '31-60 Days': 0, '61-90 Days': 0, '90+ Days': 0 }
-        };
-      }
-
-      vendorMap[vendorId].total += balance;
-      vendorMap[vendorId].aging[agingBucket] = (vendorMap[vendorId].aging[agingBucket] || 0) + balance;
       vendorMap[vendorId].bills.push({
         id:           bill.id,
         billNumber:   bill.voucherNumber,
@@ -1130,20 +1381,63 @@ exports.getPayablesReport = async (req, res) => {
         daysOverdue:  Math.max(0, daysOverdue),
         agingBucket,
         narration:    narration.notes || '',
+        isPseudo:     false
       });
     }
 
+    ledgers.forEach(l => {
+      const vendorId = l.id;
+      const ledgerClosing = closingBalances[vendorId];
+      const realBillSum = vendorMap[vendorId].bills.reduce((s, b) => s + b.balance, 0);
+      const difference = ledgerClosing - realBillSum;
+
+      if (Math.abs(difference) >= 0.01) {
+        const agingBucket = difference < 0 ? 'Current' : '90+ Days';
+        vendorMap[vendorId].bills.push({
+          id:           `pseudo-${vendorId}`,
+          billNumber:   difference < 0 ? 'Advance / Overpayment' : 'OB / Unallocated Balance',
+          date:         l.createdAt || new Date('2026-04-01'),
+          dueDate:      null,
+          billAmount:   difference,
+          amountPaid:   0,
+          balance:      difference,
+          daysOverdue:  0,
+          agingBucket,
+          isPseudo:     true,
+          narration:    'Reconciliation entry'
+        });
+      }
+
+      let vendTotal = 0;
+      vendorMap[vendorId].bills.forEach(b => {
+        vendTotal += b.balance;
+        vendorMap[vendorId].aging[b.agingBucket] = (vendorMap[vendorId].aging[b.agingBucket] || 0) + b.balance;
+      });
+
+      vendorMap[vendorId].total = parseFloat(vendTotal.toFixed(2));
+      vendorMap[vendorId].aging = Object.fromEntries(
+        Object.entries(vendorMap[vendorId].aging).map(([k, v]) => [k, parseFloat(v.toFixed(2))])
+      );
+    });
+
     const vendors = Object.values(vendorMap)
-      .map(v => ({ ...v, total: parseFloat(v.total.toFixed(2)) }))
+      .filter(v => Math.abs(v.total) >= 0.01 || v.bills.length > 0)
       .sort((a, b) => b.total - a.total);
 
     const grandTotal = vendors.reduce((s, v) => s + v.total, 0);
+    const agingSummary = { 'Current': 0, '1-30 Days': 0, '31-60 Days': 0, '61-90 Days': 0, '90+ Days': 0 };
+    vendors.forEach(v => {
+      Object.entries(v.aging).forEach(([k, val]) => {
+        agingSummary[k] = (agingSummary[k] || 0) + val;
+      });
+    });
 
     res.json({
       vendors,
       summary: {
-        grandTotal: parseFloat(grandTotal.toFixed(2)),
-        totalBills: vendors.reduce((s, v) => s + v.bills.length, 0)
+        grandTotal:  parseFloat(grandTotal.toFixed(2)),
+        totalBills:  vendors.reduce((s, v) => s + v.bills.length, 0),
+        agingSummary: Object.fromEntries(Object.entries(agingSummary).map(([k, v]) => [k, parseFloat(v.toFixed(2))]))
       }
     });
   } catch (err) {
@@ -1152,47 +1446,102 @@ exports.getPayablesReport = async (req, res) => {
   }
 };
 
-// ──────────────────────────────────────────────────────────────────
-// INVENTORY REPORT — Stock levels, value, low-stock alerts
-// ──────────────────────────────────────────────────────────────────
 exports.getInventoryReport = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { Item } = require('../../models');
+    const { stockCategoryId, godownId } = req.query;
+
+    const itemWhere = { CompanyId: companyId };
+    if (stockCategoryId) itemWhere.stockCategoryId = stockCategoryId;
+    if (godownId) itemWhere.godownId = godownId;
 
     const items = await Item.findAll({
-      where: { CompanyId: companyId },
+      where: itemWhere,
       order: [['name', 'ASC']]
+    });
+
+    const salesTx = await Transaction.findAll({
+      where: { ItemId: { [Op.ne]: null } },
+      include: [{
+        model: Voucher,
+        where: { CompanyId: companyId }
+      }]
+    });
+
+    const salesQtyMap = {};
+    salesTx.forEach(t => {
+      const itemId = t.ItemId;
+      const qty = parseFloat(t.quantity || 0);
+      salesQtyMap[itemId] = (salesQtyMap[itemId] || 0) + qty;
+    });
+
+    const purchaseVouchers = await Voucher.findAll({
+      where: { CompanyId: companyId, voucherType: 'Purchase' }
+    });
+
+    const purchaseQtyMap = {};
+    purchaseVouchers.forEach(v => {
+      try {
+        const parsed = JSON.parse(v.narration || '{}');
+        const vItems = parsed.items || [];
+        vItems.forEach(it => {
+          const qty = parseFloat(it.quantity || it.qty || 0);
+          if (qty > 0) {
+            if (it.itemId) {
+              purchaseQtyMap[it.itemId] = (purchaseQtyMap[it.itemId] || 0) + qty;
+            } else if (it.itemName) {
+              const nameKey = it.itemName.trim().toLowerCase();
+              purchaseQtyMap[nameKey] = (purchaseQtyMap[nameKey] || 0) + qty;
+            }
+          }
+        });
+      } catch (e) {}
     });
 
     let totalValue = 0, lowStockCount = 0, outOfStockCount = 0;
 
     const report = items.map(item => {
-      const stock       = parseFloat(item.currentStock || 0);
-      const costPrice   = parseFloat(item.purchasePrice || item.costPrice || 0);
-      const sellPrice   = parseFloat(item.sellingPrice  || item.salesPrice || 0);
-      const reorderPt   = parseFloat(item.reorderPoint  || 0);
-      const stockValue  = stock * costPrice;
+      const opening = parseFloat(item.openingStock || 0);
+      const sales = salesQtyMap[item.id] || 0;
+      const purchaseById = purchaseQtyMap[item.id] || 0;
+      const purchaseByName = purchaseQtyMap[item.name.trim().toLowerCase()] || 0;
+      const purchases = purchaseById + (purchaseById > 0 ? 0 : purchaseByName);
+
+      const stock = opening + purchases - sales;
+
+      const costPrice = parseFloat(item.costPrice || item.purchasePrice || 0);
+      const sellPrice = parseFloat(item.sellingPrice || item.salesPrice || 0);
+      const reorderPt = parseFloat(item.reorderLevel || item.reorderPoint || 0);
+      const stockValue = stock * costPrice;
 
       totalValue += stockValue;
-      if (stock === 0)                      outOfStockCount++;
-      else if (reorderPt > 0 && stock <= reorderPt) lowStockCount++;
+      if (stock <= 0) {
+        outOfStockCount++;
+      } else if (reorderPt > 0 && stock <= reorderPt) {
+        lowStockCount++;
+      }
 
       let stockStatus = 'In Stock';
-      if (stock === 0)                               stockStatus = 'Out of Stock';
-      else if (reorderPt > 0 && stock <= reorderPt) stockStatus = 'Low Stock';
+      if (stock <= 0) {
+        stockStatus = 'Out of Stock';
+      } else if (reorderPt > 0 && stock <= reorderPt) {
+        stockStatus = 'Low Stock';
+      }
 
       return {
-        id:            item.id,
-        name:          item.name,
-        sku:           item.sku || item.itemCode || '—',
-        category:      item.category || item.type || '—',
-        unit:          item.unit || 'pcs',
-        currentStock:  stock,
-        reorderPoint:  reorderPt,
-        costPrice:     parseFloat(costPrice.toFixed(2)),
-        sellingPrice:  parseFloat(sellPrice.toFixed(2)),
-        stockValue:    parseFloat(stockValue.toFixed(2)),
+        id: item.id,
+        name: item.name,
+        sku: item.itemCode || item.sku || '—',
+        category: item.type || '—',
+        unit: item.unit || 'pcs',
+        openingStock: opening,
+        purchases,
+        sales,
+        currentStock: stock,
+        reorderPoint: reorderPt,
+        costPrice: parseFloat(costPrice.toFixed(2)),
+        sellingPrice: parseFloat(sellPrice.toFixed(2)),
+        stockValue: parseFloat(stockValue.toFixed(2)),
         stockStatus,
       };
     });
@@ -1200,11 +1549,11 @@ exports.getInventoryReport = async (req, res) => {
     res.json({
       items: report,
       summary: {
-        totalItems:      items.length,
-        totalValue:      parseFloat(totalValue.toFixed(2)),
+        totalItems: items.length,
+        totalValue: parseFloat(totalValue.toFixed(2)),
         lowStockCount,
         outOfStockCount,
-        inStockCount:    items.length - outOfStockCount,
+        inStockCount: items.length - outOfStockCount,
       }
     });
   } catch (err) {

@@ -23,7 +23,7 @@ const AIScannerView = () => {
 
   return (
     <div className="space-y-6 animate-fade-up">
-      <div className="bg-gradient-to-br from-primary-600 to-indigo-700 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden group">
+      <div className="bg-gradient-to-br from-primary-600 to-primary-700 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden group">
         <div className="relative z-10">
           <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">AI Bookkeeper</h3>
           <p className="opacity-80 font-medium">Upload any receipt and let our AI engine handle the debit/credit logic for you.</p>

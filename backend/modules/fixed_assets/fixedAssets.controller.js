@@ -5,7 +5,7 @@ const AccountingService = require('../../services/AccountingService');
 // Create Asset
 exports.createAsset = async (req, res) => {
   try {
-    const { name, purchaseDate, purchaseValue, depreciationMethod, usefulLife, scrapValue, assetLedgerId, depreciationLedgerId, companyId } = req.body;
+    const { name, purchaseDate, purchaseValue, depreciationMethod, usefulLife, scrapValue, assetLedgerId, depreciationLedgerId, companyId, depreciationRate } = req.body;
     
     // Auto-create or resolve ledgers
     let resolvedAssetLedgerId = assetLedgerId;
@@ -38,6 +38,7 @@ exports.createAsset = async (req, res) => {
       depreciationMethod: depreciationMethod || 'WDV',
       usefulLife: parseInt(usefulLife || 10),
       scrapValue: parseFloat(scrapValue || 0),
+      depreciationRate: parseFloat(depreciationRate !== undefined ? depreciationRate : 10.0),
       currentBookValue: val,
       accumulatedDepreciation: 0,
       assetLedgerId: resolvedAssetLedgerId,
@@ -116,10 +117,10 @@ exports.depreciateAsset = async (req, res) => {
 
     let depAmount = 0;
     if (asset.depreciationMethod === 'SLM') {
-      depAmount = (parseFloat(asset.purchaseValue) - scrap) / life;
+      depAmount = parseFloat(asset.purchaseValue) / life;
     } else {
-      // WDV Method: Double Declining Balance (2.0 / usefulLife)
-      depAmount = bookValue * (2.0 / life);
+      // WDV Method
+      depAmount = bookValue * (parseFloat(asset.depreciationRate || 10) / 100);
     }
 
     // Ensure we don't depreciate below scrap value

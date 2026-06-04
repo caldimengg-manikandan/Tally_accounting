@@ -96,11 +96,13 @@ export default function ChartOfAccountsView() {
   // Build the hierarchical tree
   const buildTree = () => {
     // Map groups and ledgers
-    const groupNodes = groups.map(g => ({
-      ...g,
-      type: 'group',
-      children: []
-    }));
+    const groupNodes = groups
+      .filter(g => g.name.toLowerCase() !== 'suspense account')
+      .map(g => ({
+        ...g,
+        type: 'group',
+        children: []
+      }));
 
     const ledgerNodes = ledgers.map(l => ({
       ...l,
@@ -146,21 +148,21 @@ export default function ChartOfAccountsView() {
     let iconColor = 'text-slate-500';
     
     if (nature === 'assets') {
-        borderLeftClass = 'border-l-emerald-500';
-        iconColor = 'text-emerald-500';
-        bgClass = isGroup ? 'bg-emerald-50/10 hover:bg-emerald-50/20' : 'bg-white hover:bg-emerald-50/10';
+        borderLeftClass = 'border-l-blue-600';
+        iconColor = 'text-blue-600';
+        bgClass = isGroup ? 'bg-blue-50/5 hover:bg-blue-50/10' : 'bg-white hover:bg-blue-50/5';
     } else if (nature === 'liabilities') {
-        borderLeftClass = 'border-l-rose-500';
-        iconColor = 'text-rose-500';
-        bgClass = isGroup ? 'bg-rose-50/10 hover:bg-rose-50/20' : 'bg-white hover:bg-rose-50/10';
+        borderLeftClass = 'border-l-indigo-600';
+        iconColor = 'text-indigo-600';
+        bgClass = isGroup ? 'bg-indigo-50/5 hover:bg-indigo-50/10' : 'bg-white hover:bg-indigo-50/5';
     } else if (nature === 'income') {
-        borderLeftClass = 'border-l-indigo-500';
-        iconColor = 'text-indigo-500';
-        bgClass = isGroup ? 'bg-indigo-50/10 hover:bg-indigo-50/20' : 'bg-white hover:bg-indigo-50/10';
+        borderLeftClass = 'border-l-sky-600';
+        iconColor = 'text-sky-600';
+        bgClass = isGroup ? 'bg-sky-50/5 hover:bg-sky-50/10' : 'bg-white hover:bg-sky-50/5';
     } else if (nature === 'expenses') {
-        borderLeftClass = 'border-l-amber-500';
-        iconColor = 'text-amber-500';
-        bgClass = isGroup ? 'bg-amber-50/10 hover:bg-amber-50/20' : 'bg-white hover:bg-amber-50/10';
+        borderLeftClass = 'border-l-slate-500';
+        iconColor = 'text-slate-500';
+        bgClass = isGroup ? 'bg-slate-50 hover:bg-slate-100/50' : 'bg-white hover:bg-slate-50';
     }
 
     return (
@@ -183,8 +185,13 @@ export default function ChartOfAccountsView() {
                     <Folder size={16} className={`${iconColor}`} />
                   )}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
                   <span className="text-[13px] font-bold text-slate-800 truncate block">{node.name}</span>
+                  {node.name === 'Capital Account' && balance === 0 && (
+                    <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-medium shrink-0 animate-pulse">
+                      No opening balance set. Go to Ledgers → Capital Account → add opening balance to fix Trial Balance imbalance.
+                    </span>
+                  )}
                 </div>
               </>
             ) : (
@@ -193,8 +200,13 @@ export default function ChartOfAccountsView() {
                 <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
                   <FileText size={16} className="text-slate-400" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
                   <span className="text-[12.5px] font-semibold text-slate-600 italic truncate block">{node.name}</span>
+                  {node.name === 'Capital Account' && balance === 0 && (
+                    <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md font-medium shrink-0">
+                      No opening balance set. Go to Ledgers → Capital Account → add opening balance to fix Trial Balance imbalance.
+                    </span>
+                  )}
                 </div>
               </>
             )}
@@ -220,7 +232,7 @@ export default function ChartOfAccountsView() {
       <div className="flex justify-between items-end border-b border-slate-100 pb-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/10">
+            <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-blue-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/10">
               <BookOpen size={18} />
             </div>
             <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Masters</span>

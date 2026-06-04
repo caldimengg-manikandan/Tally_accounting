@@ -104,7 +104,7 @@ const JournalEntriesView = ({ companyId: propCompanyId }) => {
 
   const SortIcon = ({ field }) => (
     sortField === field
-      ? (sortDir === 'asc' ? <ChevronUp size={12} className="inline ml-1 text-indigo-600" /> : <ChevronDown size={12} className="inline ml-1 text-indigo-600" />)
+      ? (sortDir === 'asc' ? <ChevronUp size={12} className="inline ml-1 text-blue-600" /> : <ChevronDown size={12} className="inline ml-1 text-blue-600" />)
       : <ChevronDown size={12} className="inline ml-1 text-slate-300" />
   );
 
@@ -115,7 +115,7 @@ const JournalEntriesView = ({ companyId: propCompanyId }) => {
       <div className="flex justify-between items-end border-b border-slate-100 pb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/10">
               <ClipboardList size={18} />
             </div>
             <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Accounting Ledger</span>
@@ -206,7 +206,7 @@ const JournalEntriesView = ({ companyId: propCompanyId }) => {
           <tbody className="divide-y divide-slate-50 text-[13px] font-semibold text-slate-700">
             {loading ? (
               <tr><td colSpan={7} className="py-16 text-center">
-                <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mx-auto" />
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
                 <p className="mt-3 text-sm text-slate-400 font-medium">Loading journal entries...</p>
               </td></tr>
             ) : filtered.length === 0 ? (

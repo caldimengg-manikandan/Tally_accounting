@@ -41,7 +41,7 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
         {/* Header */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-slate-50 bg-white">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+             <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
                 <Info size={20} />
              </div>
              <div>
@@ -73,7 +73,7 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
                                   type="text"
                                   value={term.name}
                                   onChange={(e) => handleNameChange(index, e.target.value)}
-                                  className="w-full bg-transparent text-[14px] font-bold text-slate-700 outline-none focus:text-indigo-600 transition-colors border-b border-transparent focus:border-indigo-100"
+                                  className="w-full bg-transparent text-[14px] font-bold text-slate-700 outline-none focus:text-blue-600 transition-colors border-b border-transparent focus:border-blue-100"
                                 />
                              ) : (
                                 <span className="text-[14px] font-bold text-slate-700">{term.name}</span>
@@ -85,7 +85,7 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
                                   type="text"
                                   value={term.days}
                                   onChange={(e) => handleDayChange(index, e.target.value)}
-                                  className="w-16 bg-transparent text-[14px] font-bold text-slate-900 text-right outline-none focus:text-indigo-600 transition-colors border-b border-transparent focus:border-indigo-100"
+                                  className="w-16 bg-transparent text-[14px] font-bold text-slate-900 text-right outline-none focus:text-blue-600 transition-colors border-b border-transparent focus:border-blue-100"
                                 />
                              ) : (
                                 <span className="text-[14px] font-bold text-slate-400 italic uppercase tracking-widest">{term.days}</span>
@@ -109,7 +109,7 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
            
            <button 
              onClick={addNewTerm}
-             className="mt-4 flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold text-[11px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all hover:bg-indigo-50 active:scale-95"
+             className="mt-4 flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-[11px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all hover:bg-blue-50 active:scale-95"
            >
               <Plus size={14} strokeWidth={3} />
               Add New Term
@@ -126,7 +126,7 @@ const ConfigurePaymentTermsModal = ({ onClose, onSave, currentTerms = [] }) => {
            </button>
            <button 
              onClick={() => onSave(terms)}
-             className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold rounded-xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all uppercase tracking-widest"
+             className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold rounded-xl shadow-xl shadow-blue-600/20 active:scale-95 transition-all uppercase tracking-widest"
            >
              Save
            </button>

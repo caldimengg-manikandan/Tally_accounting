@@ -10,6 +10,73 @@ import { ledgerAPI, voucherAPI, groupAPI, costCenterAPI, accountingAPI } from '.
 
 const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra', 'Sales', 'Purchase', 'Debit Note', 'Credit Note'];
 
+const VOUCHER_GUIDE = {
+  Receipt: {
+    emoji: '💰', color: '#065f46', bg: '#ecfdf5', border: '#a7f3d0',
+    title: 'Money Coming IN',
+    tip: 'Use Receipt when actual cash or bank money flows INTO the business.',
+    debit: 'Cash / Bank Account (where money lands)',
+    credit: 'Income source or Debtor paying you',
+    examples: 'Customer payment · Owner investment · Loan received',
+  },
+  Payment: {
+    emoji: '💸', color: '#881337', bg: '#fff1f2', border: '#fecdd3',
+    title: 'Money Going OUT',
+    tip: 'Use Payment when actual cash or bank money flows OUT of the business.',
+    debit: 'Expense account (what you paid for)',
+    credit: 'Cash / Bank Account (where money came from)',
+    examples: 'Office rent · Electricity bill · Salary · Vendor payment',
+  },
+  Journal: {
+    emoji: '📋', color: '#1e40af', bg: '#eff6ff', border: '#bfdbfe',
+    title: 'No Cash Involved',
+    tip: 'Use Journal for adjustments where cash does NOT physically change hands.',
+    debit: 'Asset / Expense being recognized',
+    credit: 'Liability / Creditor (you owe them)',
+    examples: 'Credit purchases · Depreciation · Provision for taxes',
+  },
+  Contra: {
+    emoji: '🔄', color: '#4c1d95', bg: '#f5f3ff', border: '#ddd6fe',
+    title: 'Internal Fund Transfer',
+    tip: 'Use Contra only when moving money between your own cash/bank accounts.',
+    debit: 'Destination (Cash/Bank receiving the money)',
+    credit: 'Source (Cash/Bank sending the money)',
+    examples: 'ATM withdrawal · Bank-to-cash transfer · Cash deposit into bank',
+  },
+  'Debit Note': {
+    emoji: '📉', color: '#713f12', bg: '#fefce8', border: '#fde68a',
+    title: 'Purchase Return / Vendor Deduction',
+    tip: 'Use Debit Note when you return goods to a vendor or deduct from their payable.',
+    debit: 'Sundry Creditor (reducing what you owe)',
+    credit: 'Purchase Returns account',
+    examples: 'Returning defective goods to supplier · Claiming discount from vendor',
+  },
+  'Credit Note': {
+    emoji: '📈', color: '#14532d', bg: '#f0fdf4', border: '#bbf7d0',
+    title: 'Sales Return / Customer Deduction',
+    tip: 'Use Credit Note when a customer returns goods or you issue a discount.',
+    debit: 'Sales Returns account',
+    credit: 'Sundry Debtor (reducing what they owe)',
+    examples: 'Customer returns damaged item · Issuing a price correction to customer',
+  },
+  Sales: {
+    emoji: '🛒', color: '#164e63', bg: '#ecfeff', border: '#a5f3fc',
+    title: 'Revenue from Sales',
+    tip: 'Record when you sell inventory or provide your main business service.',
+    debit: 'Sundry Debtor (if credit sale) or Cash/Bank',
+    credit: 'Sales Account (Domestic / Export)',
+    examples: 'Invoice raised to customer · Point-of-sale transaction',
+  },
+  Purchase: {
+    emoji: '📦', color: '#7c2d12', bg: '#fff7ed', border: '#fed7aa',
+    title: 'Stock / Inventory Purchase',
+    tip: 'Use for buying goods you will resell. Do NOT use for buying office equipment (that is a Fixed Asset).',
+    debit: 'Purchase Account (Local / Imported)',
+    credit: 'Sundry Creditor or Cash/Bank',
+    examples: 'Buying stock from wholesaler · Importing raw materials',
+  },
+};
+
 let _uid = 100;
 const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', costCenterId: '', type, amount, note: '' });
 
@@ -146,7 +213,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
 
   /* ─────────────────────────────────────────────────────────── */
   return (
-    <div style={{ minHeight:'100vh', background:'#f8fafc', fontFamily:'Inter,system-ui,sans-serif' }}>
+    <div style={{ minHeight:'100vh', background:'#f8fafc' }}>
 
       {/* ══ HEADER ═══════════════════════════════════════════ */}
       <header style={{ background:'#fff', borderBottom:'1px solid #f1f5f9', height:58, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 32px', position:'sticky', top:0, zIndex:100, boxShadow:'0 1px 0 #f1f5f9' }}>
@@ -227,6 +294,46 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
             </Field>
           </div>
         </div>
+
+        {/* ── CONTEXTUAL GUIDE BANNER ───────────────────────────────── */}
+        {VOUCHER_GUIDE[vType] && (() => {
+          const g = VOUCHER_GUIDE[vType];
+          return (
+            <div style={{
+              background: g.bg,
+              border: `1.5px solid ${g.border}`,
+              borderRadius: 14, padding: '16px 20px',
+              display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr',
+              gap: 20, alignItems: 'start',
+              transition: 'all .2s ease',
+            }}>
+              {/* Icon + title */}
+              <div style={{ display:'flex', alignItems:'center', gap:10, paddingRight:20, borderRight:`1px solid ${g.border}` }}>
+                <span style={{ fontSize:22 }}>{g.emoji}</span>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:900, color:g.color, textTransform:'uppercase', letterSpacing:'.08em' }}>{vType}</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:g.color, marginTop:1 }}>{g.title}</div>
+                  <div style={{ fontSize:11, color:g.color, opacity:.75, marginTop:2, fontWeight:500 }}>{g.tip}</div>
+                </div>
+              </div>
+              {/* Dr side */}
+              <div>
+                <div style={{ fontSize:9, fontWeight:900, color:g.color, textTransform:'uppercase', letterSpacing:'.12em', opacity:.65, marginBottom:4 }}>✦ Debit (Dr)</div>
+                <div style={{ fontSize:12, fontWeight:700, color:g.color }}>{g.debit}</div>
+              </div>
+              {/* Cr side */}
+              <div>
+                <div style={{ fontSize:9, fontWeight:900, color:g.color, textTransform:'uppercase', letterSpacing:'.12em', opacity:.65, marginBottom:4 }}>✦ Credit (Cr)</div>
+                <div style={{ fontSize:12, fontWeight:700, color:g.color }}>{g.credit}</div>
+              </div>
+              {/* Examples */}
+              <div>
+                <div style={{ fontSize:9, fontWeight:900, color:g.color, textTransform:'uppercase', letterSpacing:'.12em', opacity:.65, marginBottom:4 }}>✦ Examples</div>
+                <div style={{ fontSize:11, fontWeight:600, color:g.color, opacity:.85, lineHeight:1.5 }}>{g.examples}</div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── ENTRIES ─────────────────────────────────────── */}
         <div style={card}>

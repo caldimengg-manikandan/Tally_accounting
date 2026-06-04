@@ -81,8 +81,8 @@ app.use('/api/manufacturing', require('./modules/manufacturing/manufacturing.rou
 app.use('/api/budgets', require('./modules/budgeting/budgeting.routes'));
 app.use('/api/delivery-challans', require('./modules/sales/deliveryChallan.routes'));
 app.use('/api/credit-notes', require('./modules/sales/creditNote.routes'));
-// app.use('/api/projects', require('./modules/time_tracking/project.routes'));
-// app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
+app.use('/api/projects', require('./modules/time_tracking/project.routes'));
+app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));

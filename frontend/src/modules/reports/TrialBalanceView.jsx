@@ -210,10 +210,10 @@ const TrialBalanceView = () => {
                    </div>
                    <div>
                       <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</p>
-                      <h3 className={`text-[18px] font-bold tracking-tight ${summary?.isBalanced ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      <h3 className={`text-[14px] font-black tracking-tight leading-relaxed ${summary?.isBalanced ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {summary?.isBalanced 
                           ? 'Balanced ✓' 
-                          : `Imbalance Detected — difference: ₹${Number(diff).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}
+                          : `Imbalance of ₹${Number(diff).toLocaleString('en-IN', { minimumFractionDigits: 2 })} detected. Likely cause: Opening balances are incomplete. Please add Credit opening balance to Capital Account.`}
                       </h3>
                    </div>
                 </div>
@@ -297,6 +297,17 @@ const TrialBalanceView = () => {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          )}
+
+          {/* Troubleshooting helper text */}
+          {summary && !summary.isBalanced && (
+            <div className="bg-[#f0f4ff] border border-blue-150 rounded-2xl p-5 flex gap-3 text-blue-900 text-xs font-bold leading-relaxed no-print">
+              <AlertCircle size={18} className="text-[#1e61f0] shrink-0 mt-0.5" />
+              <div>
+                <p className="font-extrabold text-[13px] text-blue-950 mb-1">Troubleshooting Tip</p>
+                <p>Tip: If you see an imbalance, go to Accountant → Ledgers → Capital Account → set opening balance = total of all Debit opening balances entered</p>
+              </div>
             </div>
           )}
         </div>

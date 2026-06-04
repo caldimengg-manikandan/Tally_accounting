@@ -26,6 +26,7 @@ export default function FixedAssetsView() {
     depreciationMethod: 'WDV',
     usefulLife: '10',
     scrapValue: '0',
+    depreciationRate: '10',
     assetLedgerId: '',
     depreciationLedgerId: ''
   });
@@ -71,6 +72,7 @@ export default function FixedAssetsView() {
         purchaseValue: parseFloat(assetForm.purchaseValue),
         usefulLife: parseInt(assetForm.usefulLife),
         scrapValue: parseFloat(assetForm.scrapValue),
+        depreciationRate: parseFloat(assetForm.depreciationRate || 10),
         companyId
       });
       alert('Asset acquired and logged successfully. Standard GL ledgers auto-resolved.');
@@ -84,6 +86,7 @@ export default function FixedAssetsView() {
         depreciationMethod: 'WDV',
         usefulLife: '10',
         scrapValue: '0',
+        depreciationRate: '10',
         assetLedgerId: '',
         depreciationLedgerId: ''
       });
@@ -251,7 +254,7 @@ export default function FixedAssetsView() {
                             <td className="px-8 py-5 text-right font-bold text-slate-900">{fmt(asset.purchaseValue)}</td>
                             <td className="px-8 py-5 text-center">
                               <span className="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase">
-                                {asset.depreciationMethod}
+                                {asset.depreciationMethod === 'WDV' ? `${asset.depreciationMethod} (${parseFloat(asset.depreciationRate || 10)}%)` : asset.depreciationMethod}
                               </span>
                             </td>
                             <td className="px-8 py-5 text-center text-slate-600 font-bold">{asset.usefulLife}</td>
@@ -382,6 +385,20 @@ export default function FixedAssetsView() {
                     </select>
                   </div>
 
+                  {assetForm.depreciationMethod === 'WDV' && (
+                    <div className="flex flex-col gap-1.5 animate-fade-in">
+                      <label className="text-[10px] font-black text-[#1e61f0] uppercase tracking-widest">Depreciation Rate (% per year) *</label>
+                      <input 
+                        type="number" 
+                        required
+                        value={assetForm.depreciationRate}
+                        onChange={e => setAssetForm({ ...assetForm, depreciationRate: e.target.value })}
+                        placeholder="e.g. 15"
+                        className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
+                      />
+                    </div>
+                  )}
+
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset G/L Account</label>
                     <select 
@@ -441,14 +458,43 @@ export default function FixedAssetsView() {
                 <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Run Asset Depreciation</h2>
               </div>
 
-              <div className="p-5 rounded-2xl bg-blue-50/50 border border-blue-100 flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Selected Asset</span>
-                <span className="font-extrabold text-slate-800 text-base">{selectedAsset.name}</span>
-                <div className="flex justify-between items-center text-xs mt-3 text-slate-500 font-bold border-t border-blue-100/50 pt-2">
-                  <span>Current Book Value:</span>
-                  <span className="text-slate-900 font-black">{fmt(selectedAsset.currentBookValue)}</span>
-                </div>
-              </div>
+              {(() => {
+                const bookValue = parseFloat(selectedAsset.currentBookValue || 0);
+                const life = parseInt(selectedAsset.usefulLife || 10);
+                const purchaseValue = parseFloat(selectedAsset.purchaseValue || 0);
+                const rate = parseFloat(selectedAsset.depreciationRate || 10);
+                const method = selectedAsset.depreciationMethod;
+
+                const annualDep = method === 'SLM' ? (purchaseValue / life) : (bookValue * rate / 100);
+                const monthlyDep = annualDep / 12;
+
+                return (
+                  <div className="p-5 rounded-2xl bg-blue-50/50 border border-blue-100 flex flex-col gap-2.5 shadow-sm text-xs font-bold text-slate-600">
+                    <div className="flex justify-between items-center pb-2 border-b border-blue-100/50">
+                      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Asset:</span>
+                      <span className="text-slate-900 font-extrabold">{selectedAsset.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Carrying WDV Value:</span>
+                      <span className="text-slate-900 font-black">{fmt(bookValue)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Filing Method:</span>
+                      <span className="bg-blue-100 text-blue-800 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase">
+                        {method === 'WDV' ? `WDV (${rate}%)` : 'SLM'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Annual Depreciation:</span>
+                      <span className="text-emerald-700 font-black">{fmt(annualDep)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Monthly Depreciation:</span>
+                      <span className="text-emerald-700 font-black">{fmt(monthlyDep)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <form onSubmit={handleRunDepreciation} className="space-y-6 text-slate-700">
                 <div className="flex flex-col gap-1.5">

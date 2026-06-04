@@ -1,70 +1,108 @@
-const { Voucher, Transaction, Ledger, Company, Group } = require('../../models');
+const { Voucher, Transaction, Ledger, Company, Group, SalesInvoice, SalesInvoiceItem, Item } = require('../../models');
 const { Op } = require('sequelize');
 
 // GSTR-1: Sales Report
 exports.getGSTR1 = async (req, res) => {
   try {
     const { companyId } = req.params;
-    
-    // Find all Sales Vouchers (Invoices)
-    const vouchers = await Voucher.findAll({
-      where: { CompanyId: companyId, voucherType: 'Sales' },
-      include: [{
-        model: Transaction,
-        include: [{ model: Ledger, attributes: ['id', 'name', 'gstNumber', 'state'] }]
-      }]
+
+    // Find all Sales Invoices
+    const invoices = await SalesInvoice.findAll({
+      where: { CompanyId: companyId, status: { [Op.notIn]: ['Draft', 'Void'] } },
+      include: [
+        { model: Ledger, as: 'CustomerLedger', attributes: ['id', 'name', 'gstNumber', 'state'] },
+        { model: SalesInvoiceItem, as: 'items', include: [Item] }
+      ]
     });
 
     const b2bInvoices = [];
-    vouchers.forEach(v => {
-      // 1. Find Customer row (Sundry Debtor)
-      const customerTx = v.Transactions?.find(t => parseFloat(t.debit || 0) > 0 && t.Ledger?.gstNumber);
-      if (!customerTx) return;
+    const rates = [0, 5, 12, 18, 28];
+    const rateSummary = {};
+    rates.forEach(r => {
+      rateSummary[r] = { rate: r, taxableValue: 0, cgst: 0, sgst: 0, igst: 0, totalTax: 0 };
+    });
 
-      const customer = customerTx.Ledger;
-      const totalAmount = parseFloat(customerTx.debit || 0);
+    const company = await Company.findByPk(companyId);
+    const companyState = (company?.state || 'Maharashtra').trim().toLowerCase();
 
-      // 2. Find Sales/Income row (Credit) and Tax rows
-      const salesTx = v.Transactions?.find(t => parseFloat(t.credit || 0) > 0 && !t.Ledger?.gstNumber);
-      const taxableValue = salesTx ? parseFloat(salesTx.credit || 0) : totalAmount;
+    invoices.forEach(inv => {
+      const customer = inv.CustomerLedger;
+      const customerState = (customer?.state || 'Maharashtra').trim().toLowerCase();
+      const isLocal = companyState === customerState;
 
+      let taxableValue = 0;
       let cgst = 0, sgst = 0, igst = 0;
-      v.Transactions?.forEach(t => {
-        if (parseFloat(t.credit || 0) > 0) {
-          const name = (t.Ledger?.name || '').toLowerCase();
-          const amt = parseFloat(t.credit || 0);
-          if (name.includes('cgst')) cgst += amt;
-          else if (name.includes('sgst')) sgst += amt;
-          else if (name.includes('igst')) igst += amt;
+
+      (inv.items || []).forEach(itemLine => {
+        const qty = parseFloat(itemLine.quantity || 0);
+        const rate = parseFloat(itemLine.rate || 0);
+        const taxable = qty * rate;
+        taxableValue += taxable;
+
+        const gstRate = parseFloat(itemLine.Item?.gstRate || 18);
+        const totalTax = taxable * (gstRate / 100);
+
+        let itemCgst = 0, itemSgst = 0, itemIgst = 0;
+        if (isLocal) {
+          itemCgst = totalTax / 2;
+          itemSgst = totalTax / 2;
+          cgst += itemCgst;
+          sgst += itemSgst;
+        } else {
+          itemIgst = totalTax;
+          igst += itemIgst;
         }
+
+        let matchedRate = rates.find(r => Math.abs(r - gstRate) < 0.1);
+        if (matchedRate === undefined) matchedRate = 18;
+
+        rateSummary[matchedRate].taxableValue += taxable;
+        if (isLocal) {
+          rateSummary[matchedRate].cgst += itemCgst;
+          rateSummary[matchedRate].sgst += itemSgst;
+        } else {
+          rateSummary[matchedRate].igst += itemIgst;
+        }
+        rateSummary[matchedRate].totalTax += totalTax;
       });
 
       b2bInvoices.push({
-        invoiceNumber: v.voucherNumber,
-        date: v.date,
-        customerName: customer.name,
-        customerGSTIN: customer.gstNumber,
-        state: customer.state || 'Unknown',
-        taxableValue,
-        cgst,
-        sgst,
-        igst,
-        totalAmount
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.date,
+        customerName: customer?.name || 'Walk-in Customer',
+        customerGSTIN: customer?.gstNumber || 'Unregistered',
+        state: customer?.state || 'Maharashtra',
+        taxableValue: parseFloat(taxableValue.toFixed(2)),
+        cgst: parseFloat(cgst.toFixed(2)),
+        sgst: parseFloat(sgst.toFixed(2)),
+        igst: parseFloat(igst.toFixed(2)),
+        totalAmount: parseFloat((taxableValue + cgst + sgst + igst).toFixed(2))
       });
     });
+
+    const rateSummaryList = Object.values(rateSummary).map(s => ({
+      rate: s.rate,
+      taxableValue: parseFloat(s.taxableValue.toFixed(2)),
+      cgst: parseFloat(s.cgst.toFixed(2)),
+      sgst: parseFloat(s.sgst.toFixed(2)),
+      igst: parseFloat(s.igst.toFixed(2)),
+      totalTax: parseFloat(s.totalTax.toFixed(2))
+    }));
 
     res.json({
       companyId,
       b2bInvoices,
+      rateSummary: rateSummaryList,
       totals: {
-        taxableValue: b2bInvoices.reduce((s, i) => s + i.taxableValue, 0),
-        cgst: b2bInvoices.reduce((s, i) => s + i.cgst, 0),
-        sgst: b2bInvoices.reduce((s, i) => s + i.sgst, 0),
-        igst: b2bInvoices.reduce((s, i) => s + i.igst, 0),
-        totalAmount: b2bInvoices.reduce((s, i) => s + i.totalAmount, 0)
+        taxableValue: parseFloat(b2bInvoices.reduce((s, i) => s + i.taxableValue, 0).toFixed(2)),
+        cgst: parseFloat(b2bInvoices.reduce((s, i) => s + i.cgst, 0).toFixed(2)),
+        sgst: parseFloat(b2bInvoices.reduce((s, i) => s + i.sgst, 0).toFixed(2)),
+        igst: parseFloat(b2bInvoices.reduce((s, i) => s + i.igst, 0).toFixed(2)),
+        totalAmount: parseFloat(b2bInvoices.reduce((s, i) => s + i.totalAmount, 0).toFixed(2))
       }
     });
   } catch (err) {
+    console.error('getGSTR1 error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -163,33 +201,34 @@ exports.getGSTR3B = async (req, res) => {
 
     taxLedgers.forEach(l => {
       const name = (l.name || '').toLowerCase();
-      const isOutput = name.includes('output') || name.includes('payable') || name.includes('sale');
-      const isInput = name.includes('input') || name.includes('receivable') || name.includes('purchase') || name.includes('itc');
+      const isCGST = name.includes('cgst');
+      const isSGST = name.includes('sgst');
+      const isIGST = name.includes('igst');
+
+      const isOutput = name.includes('output') || name.includes('payable') || name.includes('sale') || name.includes('gst output') || name.includes('gst payable') || name.includes('output tax');
+      const isInput = name.includes('input') || name.includes('receivable') || name.includes('purchase') || name.includes('itc') || name.includes('gst input') || name.includes('input tax');
 
       const debitTotal = l.Transactions?.reduce((s, t) => s + parseFloat(t.debit || 0), 0) || 0;
       const creditTotal = l.Transactions?.reduce((s, t) => s + parseFloat(t.credit || 0), 0) || 0;
 
-      if (name.includes('cgst')) {
+      if (isCGST) {
         if (isInput) inputCGST += debitTotal - creditTotal;
         else outputCGST += creditTotal - debitTotal;
-      } else if (name.includes('sgst')) {
+      } else if (isSGST) {
         if (isInput) inputSGST += debitTotal - creditTotal;
         else outputSGST += creditTotal - debitTotal;
-      } else if (name.includes('igst')) {
+      } else if (isIGST) {
         if (isInput) inputIGST += debitTotal - creditTotal;
         else outputIGST += creditTotal - debitTotal;
       } else if (isOutput) {
-        // Generic output GST -> split 50/50
         const amount = creditTotal - debitTotal;
         outputCGST += amount / 2;
         outputSGST += amount / 2;
       } else if (isInput) {
-        // Generic input GST -> split 50/50
         const amount = debitTotal - creditTotal;
         inputCGST += amount / 2;
         inputSGST += amount / 2;
       } else {
-        // Unspecified fallback
         if (creditTotal > debitTotal) {
           outputCGST += (creditTotal - debitTotal) / 2;
           outputSGST += (creditTotal - debitTotal) / 2;
@@ -200,7 +239,6 @@ exports.getGSTR3B = async (req, res) => {
       }
     });
 
-    // Make sure we don't return negative values
     outputCGST = Math.max(0, outputCGST);
     outputSGST = Math.max(0, outputSGST);
     outputIGST = Math.max(0, outputIGST);

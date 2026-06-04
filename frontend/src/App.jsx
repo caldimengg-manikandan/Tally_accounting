@@ -127,7 +127,6 @@ const NAV = [
       { icon: Repeat,          label: 'Recurring Invoices',  path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
       { icon: Wallet,          label: 'Customer Payments',   path: '/payments', showPlus: true, plusPath: '/payments/new' },
       { icon: Undo2,           label: 'Credit Notes',        path: '/credit-notes', showPlus: true, plusPath: '/credit-notes/new' },
-      { icon: FileBarChart2,   label: 'Customer Outstanding',path: '/reports/customer-outstanding', icon: FileBarChart2 },
     ]
   },
   {
@@ -140,7 +139,6 @@ const NAV = [
       { label: 'Recurring Bills',    path: '/recurring-bills', icon: Repeat, showPlus: true, plusPath: '/recurring-bills/new' },
       { label: 'Vendor Payments',    path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
       { label: 'Debit Notes',        path: '/vendor-credits', icon: Undo2, showPlus: true, plusPath: '/vendor-credits/new' },
-      { label: 'Vendor Outstanding', path: '/reports/vendor-outstanding', icon: FileBarChart2 },
     ]
   },
   {
@@ -157,14 +155,7 @@ const NAV = [
     items: [
       { label: 'Chart of Accounts', path: '/ledgers/chart-of-accounts', icon: BookOpen },
       { label: 'Ledgers',           path: '/ledgers', icon: Folder },
-      { label: 'Payment Voucher',   path: '/vouchers/payment', icon: Wallet, showPlus: true, plusPath: '/vouchers/new?type=Payment' },
-      { label: 'Receipt Voucher',   path: '/vouchers/receipt', icon: Receipt, showPlus: true, plusPath: '/vouchers/new?type=Receipt' },
-      { label: 'Journal Voucher',   path: '/vouchers/journal', icon: FileText, showPlus: true, plusPath: '/vouchers/new?type=Journal' },
-      { label: 'Contra Voucher',    path: '/vouchers/contra', icon: ArrowLeftRight, showPlus: true, plusPath: '/vouchers/new?type=Contra' },
-      { label: 'Debit Note',        path: '/vouchers/debit-note', icon: Undo2, showPlus: true, plusPath: '/vouchers/new?type=Debit Note' },
-      { label: 'Credit Note (Acct)',path: '/vouchers/credit-note', icon: Undo2, showPlus: true, plusPath: '/vouchers/new?type=Credit Note' },
-      { label: 'All Vouchers',      path: '/vouchers', icon: FileStack },
-      { label: 'Journal Entries',   path: '/journal-entries', icon: ClipboardList },
+      { label: 'Vouchers',          path: '/vouchers', icon: FileText, showPlus: true, plusPath: '/vouchers/new' },
     ]
   },
   {
@@ -202,18 +193,38 @@ const NAV = [
 ];
 
 // Helper to compute active paths, accounting for nested routing and context highlights
+// Collect all nav item paths so we can detect conflicts
+const ALL_NAV_PATHS = NAV.flatMap(s => s.items.map(i => i.path));
+
 const isPathActive = (itemPath, pathname, location) => {
   const queryParams = new URLSearchParams(location?.search || '');
   const backTo = location?.state?.backTo || queryParams.get('backTo') || '';
-  
+
   if (itemPath === '/vendors' && (pathname.startsWith('/vendors') || (pathname.startsWith('/bill-payments') && backTo === 'vendors'))) {
     return true;
   }
   if (itemPath === '/payments-made' && (pathname.startsWith('/payments-made') || (pathname.startsWith('/bill-payments') && backTo !== 'vendors'))) {
     return true;
   }
-  
-  return pathname === itemPath || (itemPath !== '/dashboard' && pathname.startsWith(itemPath));
+
+  // Exact match always wins
+  if (pathname === itemPath) return true;
+
+  // Skip dashboard — it should never be a prefix match
+  if (itemPath === '/dashboard') return false;
+
+  // Check if pathname starts with itemPath + '/'
+  if (!pathname.startsWith(itemPath + '/')) return false;
+
+  // Prevent false positives: if a MORE specific nav item also starts with itemPath,
+  // only highlight the most specific one that actually matches the current pathname.
+  const moreSpecificMatch = ALL_NAV_PATHS.some(
+    otherPath => otherPath !== itemPath &&
+                 otherPath.startsWith(itemPath + '/') &&
+                 (pathname === otherPath || pathname.startsWith(otherPath + '/'))
+  );
+
+  return !moreSpecificMatch;
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -251,7 +262,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
             className="absolute left-[84px] top-0 w-[240px] bg-white rounded-r-2xl shadow-[10px_0_30px_rgba(0,0,0,0.12)] border-y border-r border-slate-100 py-6 px-4 z-[100] animate-fade-in-right"
             style={{ minHeight: '100%' }}
           >
-            <div className="text-[11px] font-bold text-indigo-600 uppercase tracking-[0.2em] mb-4 pl-2">
+            <div className="text-[11px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-4 pl-2">
               {group}
             </div>
             <div className="space-y-1">
@@ -262,19 +273,19 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
                   <div 
                     key={item.path} 
                     className={`group/sub flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer
-                      ${active ? 'bg-indigo-50/70 text-indigo-600' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
+                      ${active ? 'bg-blue-50/70 text-blue-600' : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'}`}
                     onClick={() => { navigate(item.path); setIsHovered(false); }}
                   >
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                      {SubIcon && <SubIcon size={14} className={`shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400 group-hover/sub:text-slate-700'}`} />}
-                      <span className={`text-[13px] font-bold tracking-tight truncate ${active ? 'text-indigo-600' : ''}`}>
+                      {SubIcon && <SubIcon size={14} className={`shrink-0 ${active ? 'text-blue-600' : 'text-slate-400 group-hover/sub:text-slate-700'}`} />}
+                      <span className={`text-[13px] font-bold tracking-tight truncate ${active ? 'text-blue-600' : ''}`}>
                         {item.label}
                       </span>
                     </div>
                     {item.showPlus && (
                        <button 
                          onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); setIsHovered(false); }}
-                         className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-indigo-600 hover:text-white"
+                         className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 shrink-0 shadow-sm transition-all hover:bg-blue-600 hover:text-white"
                        >
                          <Plus size={14} strokeWidth={3} />
                        </button>
@@ -330,14 +341,14 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
               <div 
                 key={item.path} 
                 className={`group/item flex items-center justify-between px-4 py-1.5 rounded-l-full transition-all duration-200 
-                  ${active ? 'bg-indigo-50/70 text-indigo-600 border-r-4 border-indigo-600 font-bold' : 'hover:bg-slate-50/60 text-slate-800 hover:text-slate-900'}`}
+                  ${active ? 'bg-blue-50/70 text-blue-600 border-r-4 border-blue-600 font-bold' : 'hover:bg-slate-50/60 text-slate-800 hover:text-slate-900'}`}
               >
                 <div className="flex items-center gap-2.5 flex-1 min-w-0" onClick={() => navigate(item.path)}>
-                  {SubIcon && <SubIcon size={14} className={`shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400 group-hover/item:text-slate-700'}`} />}
+                  {SubIcon && <SubIcon size={14} className={`shrink-0 ${active ? 'text-blue-600' : 'text-slate-400 group-hover/item:text-slate-700'}`} />}
                   <button
                     title={item.label}
                     className={`text-left text-[12px] font-medium tracking-tight truncate
-                      ${active ? 'text-indigo-600 font-bold' : 'text-slate-800 group-hover/item:text-slate-900'}`}
+                      ${active ? 'text-blue-600 font-bold' : 'text-slate-800 group-hover/item:text-slate-900'}`}
                   >
                     {item.label}
                   </button>
@@ -346,7 +357,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
                    <button 
                      onClick={(e) => { e.stopPropagation(); navigate(item.plusPath); }}
                      title={`Add New ${item.label}`}
-                     className={`items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white shrink-0 shadow-sm transition-all hover:bg-indigo-700 ${active ? 'flex' : 'hidden group-hover/item:flex'}`}
+                     className={`items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white shrink-0 shadow-sm transition-all hover:bg-blue-700 ${active ? 'flex' : 'hidden group-hover/item:flex'}`}
                    >
                      <Plus size={14} strokeWidth={3} />
                    </button>
@@ -371,11 +382,11 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
     className={`flex transition-all duration-200 group relative
       ${collapsed 
         ? `flex-col items-center justify-center h-[72px] w-full gap-1.5 border-b border-slate-50/50
-           ${active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/10' : 'text-slate-500 hover:bg-slate-50/60 hover:text-slate-900'}`
+           ${active ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10' : 'text-slate-500 hover:bg-slate-50/60 hover:text-slate-900'}`
         : `items-center gap-3 w-full px-6 py-2.5
-           ${active ? 'bg-indigo-50/70 text-indigo-600 border-l-4 border-indigo-600 font-bold shadow-sm shadow-indigo-500/5' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/60'}`}`}
+           ${active ? 'bg-blue-50/70 text-blue-600 border-l-4 border-blue-600 font-bold shadow-sm shadow-blue-500/5' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/60'}`}`}
   >
-    {Icon && <Icon size={collapsed ? 22 : 18} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? (collapsed ? 'text-white' : 'text-indigo-600') : 'text-slate-400 group-hover:text-slate-900'}`} />}
+    {Icon && <Icon size={collapsed ? 22 : 18} strokeWidth={active ? 2.5 : 2} className={`transition-transform duration-300 ${active ? (collapsed ? 'text-white' : 'text-blue-600') : 'text-slate-400 group-hover:text-slate-900'}`} />}
     
     {collapsed ? (
       <>
@@ -387,14 +398,14 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
         )}
       </>
     ) : (
-      <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-indigo-600' : 'text-slate-900 group-hover:text-slate-900'}`}>{label}</span>
+      <span className={`text-[13px] font-bold tracking-tight ${active ? 'text-blue-600' : 'text-slate-900 group-hover:text-slate-900'}`}>{label}</span>
     )}
 
     {showPlus && !collapsed && (
       <button 
         onClick={(e) => { e.stopPropagation(); onPlusClick && onPlusClick(); }}
         title={`Add New ${label}`}
-        className="ml-auto opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white shadow-sm hover:bg-indigo-700"
+        className="ml-auto opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700"
       >
         <Plus size={14} strokeWidth={3} />
       </button>
@@ -407,7 +418,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
 // ═══════════════════════════════════════════════════════════════════
 // APP SHELL
 // ═══════════════════════════════════════════════════════════════════
-const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onCompanyChange }) => {
+const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onCompanyChange, stats }) => {
   const navigate   = useNavigate();
   const location   = useLocation();
   const { pathname } = location;
@@ -569,7 +580,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         </header>
 
         {/* Page content */}
-        <main className="bg-[#f8fafc]" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <main className="bg-[#f8fafc]" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
           <div className="animate-fade-up" style={{ animationDuration: '.35s' }}>
             {children}
           </div>
@@ -656,7 +667,7 @@ function AuthenticatedApp() {
   }, [companyId]);
 
   const shell = (Component, props = {}) => (
-    <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
+    <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
       <Component companyId={companyId} {...props} />
     </AppShell>
   );
@@ -676,23 +687,17 @@ function AuthenticatedApp() {
       } />
 
       <Route path="/dashboard" element={
-        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
+        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
           <DashboardView companyId={companyId} stats={stats} vouchers={vouchers} />
         </AppShell>
       } />
 
       {/* Accounting */}
       <Route path="/vouchers" element={
-        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
+        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
           <VoucherListView 
             onCreateNew={() => navigate('/vouchers/new')} 
             onEdit={(v) => navigate(`/vouchers/edit/${v.id}`)}
-            onDelete={async (id) => {
-              try {
-                await voucherAPI.delete(id);
-                window.location.reload();
-              } catch (err) { alert('Delete failed'); }
-            }}
           />
         </AppShell>
       } />
@@ -705,15 +710,15 @@ function AuthenticatedApp() {
         onCancel: () => navigate('/vouchers')
       })} />
       {/* Typed voucher list pages */}
-      <Route path="/vouchers/payment"    element={shell(VoucherListView, { defaultType: 'Payment',   title: 'Payment Vouchers',   subtitle: 'Money Out', buttonText: 'New Payment', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Payment'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
-      <Route path="/vouchers/receipt"    element={shell(VoucherListView, { defaultType: 'Receipt',   title: 'Receipt Vouchers',   subtitle: 'Money In',  buttonText: 'New Receipt', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Receipt'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
-      <Route path="/vouchers/journal"    element={shell(VoucherListView, { defaultType: 'Journal',   title: 'Journal Vouchers',   subtitle: 'Adjustments', buttonText: 'New Journal', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Journal'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
-      <Route path="/vouchers/contra"     element={shell(VoucherListView, { defaultType: 'Contra',    title: 'Contra Vouchers',    subtitle: 'Fund Transfers', buttonText: 'New Contra', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Contra'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
-      <Route path="/vouchers/debit-note"  element={shell(VoucherListView, { defaultType: 'Debit Note', title: 'Debit Notes',       subtitle: 'Vendor Returns', buttonText: 'New Debit Note', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Debit Note'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
-      <Route path="/vouchers/credit-note" element={shell(VoucherListView, { defaultType: 'Credit Note', title: 'Credit Notes (Acct)', subtitle: 'Customer Returns', buttonText: 'New Credit Note', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Credit Note'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
+      <Route path="/vouchers/payment"    element={shell(VoucherListView, { defaultType: 'Payment',   title: 'Payment Vouchers',   subtitle: 'Money Out', buttonText: 'New Payment', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Payment'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`) })} />
+      <Route path="/vouchers/receipt"    element={shell(VoucherListView, { defaultType: 'Receipt',   title: 'Receipt Vouchers',   subtitle: 'Money In',  buttonText: 'New Receipt', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Receipt'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`) })} />
+      <Route path="/vouchers/journal"    element={shell(VoucherListView, { defaultType: 'Journal',   title: 'Journal Vouchers',   subtitle: 'Adjustments', buttonText: 'New Journal', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Journal'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`) })} />
+      <Route path="/vouchers/contra"     element={shell(VoucherListView, { defaultType: 'Contra',    title: 'Contra Vouchers',    subtitle: 'Fund Transfers', buttonText: 'New Contra', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Contra'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`) })} />
+      <Route path="/vouchers/debit-note"  element={shell(VoucherListView, { defaultType: 'Debit Note', title: 'Debit Notes',       subtitle: 'Vendor Returns', buttonText: 'New Debit Note', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Debit Note'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`) })} />
+      <Route path="/vouchers/credit-note" element={shell(VoucherListView, { defaultType: 'Credit Note', title: 'Credit Notes (Acct)', subtitle: 'Customer Returns', buttonText: 'New Credit Note', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Credit Note'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`) })} />
       <Route path="/journal-entries"     element={shell(JournalEntriesView)} />
       <Route path="/accountant/journals" element={
-        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
+        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
           <ManualJournalsListView companyId={companyId} />
         </AppShell>
       } />
@@ -727,7 +732,7 @@ function AuthenticatedApp() {
         onCancel: () => navigate('/accountant/journals')
       })} />
       <Route path="/accountant/journals/:id" element={
-        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
+        <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
           <ManualJournalsListView companyId={companyId} />
         </AppShell>
       } />
