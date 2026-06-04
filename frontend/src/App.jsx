@@ -31,6 +31,7 @@ import CostCenterView from './modules/accounting/CostCenterView';
 import CustomersView from './modules/sales/CustomersView';
 import CustomersListView from './modules/sales/CustomersListView';
 import CustomerDetailView from './modules/sales/CustomerDetailView';
+import CustomerOutstandingView from './modules/sales/CustomerOutstandingView';
 import SalesOrdersView from './modules/sales/SalesOrdersView';
 import PaymentsReceivedView from './modules/sales/PaymentsReceivedView';
 import ProfessionalInvoiceView from './modules/sales/ProfessionalInvoiceView';
@@ -48,6 +49,7 @@ import AIAssistantView from './modules/dashboard/AIAssistantView';
 import VendorsListView from './modules/purchases/VendorsListView';
 import VendorsView from './modules/purchases/VendorsView';
 import VendorDetailView from './modules/purchases/VendorDetailView';
+import VendorOutstandingView from './modules/purchases/VendorOutstandingView';
 import BillsView from './modules/purchases/BillsView';
 import ExpensesView from './modules/purchases/ExpensesView';
 import RecurringExpensesView from './modules/purchases/RecurringExpensesView';
@@ -64,6 +66,7 @@ import VendorCreditsView from './modules/purchases/VendorCreditsView';
 import BudgetsView from './modules/accountant/BudgetsView';
 import { TransactionLockingView } from './modules/accountant/AccountantSubModules';
 import ChartOfAccountsView from './modules/accounting/ChartOfAccountsView';
+import JournalEntriesView from './modules/accounting/JournalEntriesView';
 import FixedAssetsView from './modules/fixed_assets/FixedAssetsView';
 import ManufacturingView from './modules/manufacturing/ManufacturingView';
 
@@ -117,13 +120,14 @@ const NAV = [
     group: 'Sales',
     icon: ShoppingCart,
     items: [
-      { icon: Users,           label: 'Customers',        path: '/customers', showPlus: true, plusPath: '/customers/new' },
-      { icon: FileText,        label: 'Quotations',       path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
-      { icon: ShoppingBag,     label: 'Sales Orders',     path: '/sales-orders', showPlus: true, plusPath: '/sales-orders/new' },
-      { icon: Receipt,         label: 'Invoices',         path: '/sales-invoices', showPlus: true, plusPath: '/sales-invoices/new' },
-      { icon: Repeat,          label: 'Recurring Invoices', path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
-      { icon: Wallet,          label: 'Customer Payments', path: '/payments', showPlus: true, plusPath: '/payments/new' },
-      { icon: Undo2,           label: 'Credit Notes',      path: '/credit-notes', showPlus: true, plusPath: '/credit-notes/new' },
+      { icon: Users,           label: 'Customers',           path: '/customers', showPlus: true, plusPath: '/customers/new' },
+      { icon: FileText,        label: 'Quotations',          path: '/quotes', showPlus: true, plusPath: '/quotes/new' },
+      { icon: ShoppingBag,     label: 'Sales Orders',        path: '/sales-orders', showPlus: true, plusPath: '/sales-orders/new' },
+      { icon: Receipt,         label: 'Invoices',            path: '/sales-invoices', showPlus: true, plusPath: '/sales-invoices/new' },
+      { icon: Repeat,          label: 'Recurring Invoices',  path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
+      { icon: Wallet,          label: 'Customer Payments',   path: '/payments', showPlus: true, plusPath: '/payments/new' },
+      { icon: Undo2,           label: 'Credit Notes',        path: '/credit-notes', showPlus: true, plusPath: '/credit-notes/new' },
+      { icon: FileBarChart2,   label: 'Customer Outstanding',path: '/reports/customer-outstanding', icon: FileBarChart2 },
     ]
   },
   {
@@ -136,6 +140,7 @@ const NAV = [
       { label: 'Recurring Bills',    path: '/recurring-bills', icon: Repeat, showPlus: true, plusPath: '/recurring-bills/new' },
       { label: 'Vendor Payments',    path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
       { label: 'Debit Notes',        path: '/vendor-credits', icon: Undo2, showPlus: true, plusPath: '/vendor-credits/new' },
+      { label: 'Vendor Outstanding', path: '/reports/vendor-outstanding', icon: FileBarChart2 },
     ]
   },
   {
@@ -147,11 +152,25 @@ const NAV = [
     ]
   },
   {
-    group: 'Accountant',
-    icon: Settings,
+    group: 'Accounting',
+    icon: BookOpen,
     items: [
       { label: 'Chart of Accounts', path: '/ledgers/chart-of-accounts', icon: BookOpen },
       { label: 'Ledgers',           path: '/ledgers', icon: Folder },
+      { label: 'Payment Voucher',   path: '/vouchers/payment', icon: Wallet, showPlus: true, plusPath: '/vouchers/new?type=Payment' },
+      { label: 'Receipt Voucher',   path: '/vouchers/receipt', icon: Receipt, showPlus: true, plusPath: '/vouchers/new?type=Receipt' },
+      { label: 'Journal Voucher',   path: '/vouchers/journal', icon: FileText, showPlus: true, plusPath: '/vouchers/new?type=Journal' },
+      { label: 'Contra Voucher',    path: '/vouchers/contra', icon: ArrowLeftRight, showPlus: true, plusPath: '/vouchers/new?type=Contra' },
+      { label: 'Debit Note',        path: '/vouchers/debit-note', icon: Undo2, showPlus: true, plusPath: '/vouchers/new?type=Debit Note' },
+      { label: 'Credit Note (Acct)',path: '/vouchers/credit-note', icon: Undo2, showPlus: true, plusPath: '/vouchers/new?type=Credit Note' },
+      { label: 'All Vouchers',      path: '/vouchers', icon: FileStack },
+      { label: 'Journal Entries',   path: '/journal-entries', icon: ClipboardList },
+    ]
+  },
+  {
+    group: 'Accountant Tools',
+    icon: Settings,
+    items: [
       { label: 'Cost Centers',      path: '/cost-centers', icon: Folder },
       { label: 'Budgets',           path: '/accountant/budgets', icon: Target },
       { label: 'Fixed Assets',      path: '/fixed-assets', icon: Building2 },
@@ -685,6 +704,14 @@ function AuthenticatedApp() {
         onSaveSuccess: () => navigate('/vouchers'),
         onCancel: () => navigate('/vouchers')
       })} />
+      {/* Typed voucher list pages */}
+      <Route path="/vouchers/payment"    element={shell(VoucherListView, { defaultType: 'Payment',   title: 'Payment Vouchers',   subtitle: 'Money Out', buttonText: 'New Payment', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Payment'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
+      <Route path="/vouchers/receipt"    element={shell(VoucherListView, { defaultType: 'Receipt',   title: 'Receipt Vouchers',   subtitle: 'Money In',  buttonText: 'New Receipt', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Receipt'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
+      <Route path="/vouchers/journal"    element={shell(VoucherListView, { defaultType: 'Journal',   title: 'Journal Vouchers',   subtitle: 'Adjustments', buttonText: 'New Journal', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Journal'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
+      <Route path="/vouchers/contra"     element={shell(VoucherListView, { defaultType: 'Contra',    title: 'Contra Vouchers',    subtitle: 'Fund Transfers', buttonText: 'New Contra', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Contra'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
+      <Route path="/vouchers/debit-note"  element={shell(VoucherListView, { defaultType: 'Debit Note', title: 'Debit Notes',       subtitle: 'Vendor Returns', buttonText: 'New Debit Note', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Debit Note'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
+      <Route path="/vouchers/credit-note" element={shell(VoucherListView, { defaultType: 'Credit Note', title: 'Credit Notes (Acct)', subtitle: 'Customer Returns', buttonText: 'New Credit Note', hideTabs: true, onCreateNew: () => navigate('/vouchers/new?type=Credit Note'), onEdit: (v) => navigate(`/vouchers/edit/${v.id}`), onDelete: async (id) => { try { await voucherAPI.delete(id); window.location.reload(); } catch(e) { alert('Delete failed'); } } })} />
+      <Route path="/journal-entries"     element={shell(JournalEntriesView)} />
       <Route path="/accountant/journals" element={
         <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange}>
           <ManualJournalsListView companyId={companyId} />
@@ -802,16 +829,17 @@ function AuthenticatedApp() {
       {/* Tax */}
       <Route path="/reports/gst"           element={shell(GSTReturnsView)} />
 
-      {/* Reports */}
       <Route path="/reports/trial-balance" element={shell(TrialBalanceView)} />
       <Route path="/reports/pl"            element={shell(ProfitLossView)} />
       <Route path="/reports/bs"            element={shell(BalanceSheetView)} />
       <Route path="/reports/daybook"       element={shell(DaybookView)} />
       <Route path="/reports/audit"         element={shell(AuditReportView)} />
       <Route path="/reports/cash-flow"     element={shell(CashFlowView)} />
-      <Route path="/reports/receivables-report" element={shell(ReceivablesReportView)} />
-      <Route path="/reports/payables-report"    element={shell(PayablesReportView)} />
-      <Route path="/reports/inventory-report"   element={shell(InventoryReportView)} />
+      <Route path="/reports/receivables-report"    element={shell(ReceivablesReportView)} />
+      <Route path="/reports/payables-report"       element={shell(PayablesReportView)} />
+      <Route path="/reports/inventory-report"      element={shell(InventoryReportView)} />
+      <Route path="/reports/customer-outstanding"  element={shell(CustomerOutstandingView)} />
+      <Route path="/reports/vendor-outstanding"    element={shell(VendorOutstandingView)} />
 
       {/* AI Assistant */}
       <Route path="/ai-assistant"          element={shell(AIAssistantView)} />
