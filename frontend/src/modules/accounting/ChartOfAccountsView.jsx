@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Folder, FolderOpen, FileText, ChevronDown, ChevronRight, BarChart2, BookOpen, RefreshCw } from 'lucide-react';
-import { groupAPI, ledgerAPI } from '../../services/api';
+import { groupAPI, ledgerAPI, companyAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
@@ -52,6 +53,21 @@ export default function ChartOfAccountsView() {
   const [ledgers, setLedgers] = useState([]);
   const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(true);
+  const { addNotification } = useNotificationStore();
+
+  const handleSync = async () => {
+    if (!companyId || companyId === 'null' || companyId === 'undefined') return;
+    try {
+      setLoading(true);
+      await companyAPI.syncDefaultLedgers(companyId);
+      addNotification('Chart of Accounts synced successfully!', 'success');
+      fetchContext();
+    } catch (err) {
+      console.error(err);
+      addNotification('Failed to sync Chart of Accounts.', 'error');
+      setLoading(false);
+    }
+  };
 
   const fetchContext = () => {
     if (!companyId || companyId === 'null' || companyId === 'undefined') {
@@ -242,7 +258,7 @@ export default function ChartOfAccountsView() {
         </div>
         <div>
           <button 
-              onClick={fetchContext} 
+              onClick={handleSync} 
               className="px-4 py-2.5 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-slate-600 text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center gap-2 group/sync"
           >
               <RefreshCw size={13} className="group-hover/sync:rotate-180 transition-transform duration-500" /> Sync

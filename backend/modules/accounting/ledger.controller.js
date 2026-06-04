@@ -150,8 +150,9 @@ exports.createLedger = async (req, res) => {
   } catch (err) {
     console.error('CREATE_LEDGER_ERROR:', err);
     let errorMessage = err.message;
-    if (err.errors && err.errors.length > 0) {
+    if (err.name === 'SequelizeValidationError' && err.errors && err.errors.length > 0) {
       errorMessage = err.errors.map(e => e.message).join(', ');
+      return res.status(400).json({ error: errorMessage });
     }
     res.status(500).json({ error: errorMessage });
   }
@@ -268,6 +269,10 @@ exports.updateLedger = async (req, res) => {
     res.json(ledger);
   } catch (err) {
     console.error(`[UPDATE_LEDGER] Error:`, err);
+    if (err.name === 'SequelizeValidationError' && err.errors && err.errors.length > 0) {
+      const errorMessage = err.errors.map(e => e.message).join(', ');
+      return res.status(400).json({ error: errorMessage });
+    }
     res.status(500).json({ error: err.message });
   }
 };

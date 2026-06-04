@@ -45,6 +45,7 @@ export const companyAPI = {
   getById: (id) => api.get(`/companies/${id}`),
   update: (id, data) => api.put(`/companies/${id}`, data),
   getCompanyUsers: () => api.get('/users'),
+  syncDefaultLedgers: (id) => api.post(`/companies/${id}/sync-default-ledgers`),
 };
 
 // ─── Groups ────────────────────────────────────────

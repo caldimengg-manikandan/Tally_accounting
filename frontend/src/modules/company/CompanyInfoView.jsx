@@ -285,6 +285,8 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('success');
       if (targetId === activeCompanyId) {
         localStorage.setItem('companyName', formData.name);
+        window.location.reload(); // Force reload to update breadcrumbs and global state
+        return;
       }
       await fetchCompanies();
       setTimeout(() => {
