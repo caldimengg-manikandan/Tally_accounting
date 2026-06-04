@@ -234,3 +234,20 @@ exports.bulkUpdateTransactions = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.getTransactions = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+    const transactions = await Transaction.findAll({
+      where: { CompanyId: companyId },
+      include: [
+        { model: Ledger, attributes: ['id', 'name', 'code'] },
+        { model: Voucher, attributes: ['id', 'voucherNumber', 'voucherType', 'date', 'narration', 'reference'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(transactions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

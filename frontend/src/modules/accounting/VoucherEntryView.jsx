@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Save, Plus, Trash2, AlertCircle,
   CheckCircle2, FileText, Calendar, Hash, AlignLeft,
@@ -8,15 +8,18 @@ import {
 } from 'lucide-react';
 import { ledgerAPI, voucherAPI, groupAPI, costCenterAPI, accountingAPI } from '../../services/api';
 
-const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra', 'Sales', 'Purchase'];
+const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra', 'Sales', 'Purchase', 'Debit Note', 'Credit Note'];
 
 let _uid = 100;
 const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', costCenterId: '', type, amount, note: '' });
 
 export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const navigate = useNavigate();
+  const { id }   = useParams();
+  const [searchParams] = useSearchParams();
+  const initialType = searchParams.get('type') || 'Journal';
 
-  const [vType,     setVType]     = useState('Journal');
+  const [vType,     setVType]     = useState(initialType);
   const [date,      setDate]      = useState(new Date().toISOString().split('T')[0]);
   const [refNo,     setRefNo]     = useState('');
   const [narration, setNarration] = useState('');
