@@ -51,7 +51,7 @@ const ItemSearchSelector = ({ value, onChange, items: propItems, placeholder, on
     const [search, setSearch] = useState('');
     const [localItems, setLocalItems] = useState([]);
     const [fetching, setFetching] = useState(false);
-    const companyId = localStorage.getItem('companyId');
+    const companyId = sessionStorage.getItem('companyId');
     const dropdownRef = useRef(null);
 
     // Combine and Sort items: prioritize prop items, then local items
@@ -325,7 +325,7 @@ export default function ProfessionalInvoiceView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   // ─── State ────────────────────────────────────────────────────────
   const [customers, setCustomers] = useState([]);

@@ -10,7 +10,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
   const isEditMode = !!id;
   
   // State-based companyId to ensure reactivity across refreshes and company switches
-  const [activeCompanyId, setActiveCompanyId] = useState(propCompanyId || localStorage.getItem('companyId'));
+  const [activeCompanyId, setActiveCompanyId] = useState(propCompanyId || sessionStorage.getItem('companyId'));
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -93,7 +93,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
   // Periodically check for company ID if it was missing initially
   useEffect(() => {
     if (!activeCompanyId) {
-      const storedId = localStorage.getItem('companyId');
+      const storedId = sessionStorage.getItem('companyId');
       if (storedId) setActiveCompanyId(storedId);
     }
   }, [activeCompanyId]);
@@ -133,7 +133,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
     if (items.length === 0) setLoadingItems(true);
     
     try {
-      const targetCompanyId = activeCompanyId || localStorage.getItem('companyId');
+      const targetCompanyId = activeCompanyId || sessionStorage.getItem('companyId');
       if (targetCompanyId) {
         const res = await inventoryAPI.getByCompany(targetCompanyId);
         setItems(res.data || []);

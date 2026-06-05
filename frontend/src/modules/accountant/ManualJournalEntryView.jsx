@@ -92,7 +92,7 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
     return Object.entries(groups).map(([group, accounts]) => ({ group, accounts }));
   }, [ledgers]);
   
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   // Load ledgers and initial journal number
   useEffect(() => {

@@ -592,7 +592,7 @@ const ManualJournalsListView = ({ companyId: propCompanyId }) => {
   const { id } = useParams();
   const navigate  = useNavigate();
   const { addNotification } = useNotificationStore();
-  const companyId = propCompanyId || localStorage.getItem('companyId');
+  const companyId = propCompanyId || sessionStorage.getItem('companyId');
 
   const [journals,    setJournals]    = useState([]);
   const [ledgers,     setLedgers]     = useState([]);
@@ -603,7 +603,7 @@ const ManualJournalsListView = ({ companyId: propCompanyId }) => {
   const [detailView,  setDetailView]  = useState('Details');
   const user = React.useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
+      return JSON.parse(sessionStorage.getItem('user') || '{}');
     } catch {
       return {};
     }

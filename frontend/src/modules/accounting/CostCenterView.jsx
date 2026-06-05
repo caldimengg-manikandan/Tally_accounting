@@ -21,7 +21,7 @@ const CostCenterView = ({ showNew }) => {
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('General');
     const [parentCostCenterId, setParentCostCenterId] = useState('');
-    const companyId = localStorage.getItem('companyId');
+    const companyId = sessionStorage.getItem('companyId');
 
     const fetchCenters = useCallback(async () => {
         if (!companyId) return;

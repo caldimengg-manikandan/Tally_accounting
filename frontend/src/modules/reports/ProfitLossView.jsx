@@ -19,7 +19,7 @@ const ProfitLossView = () => {
   const [showMailModal, setShowMailModal] = useState(false);
   const [email, setEmail] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   const getDates = (range) => {
     const now = new Date();
@@ -73,7 +73,7 @@ const ProfitLossView = () => {
     e.preventDefault();
     if (!email) return;
     setSendingMail(true);
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
     try {
       await mailAPI.send({
         from: user.email,

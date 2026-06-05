@@ -14,7 +14,7 @@ const CreateAccountModal = ({ isOpen, onClose, onSuccess, initialType = 'Cost Of
     accountCode: ''
   });
 
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   useEffect(() => {
     if (isOpen) {

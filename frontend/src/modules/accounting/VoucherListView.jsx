@@ -43,10 +43,11 @@ const VoucherListView = ({
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, voucherNumber, voucherType }
   const [deleting, setDeleting] = useState(false);
 
-  const companyId = localStorage.getItem('companyId');
-  const user = useMemo(() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
+  const companyId = sessionStorage.getItem('companyId');
+  const user = useMemo(() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
   const role = user.role || 'ADMIN';
   const canEdit = !['VIEWER', 'AUDITOR'].includes(role);
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(role);
 
   const fetchVouchers = useCallback(async () => {
     if (!companyId) return;
@@ -134,10 +135,10 @@ const VoucherListView = ({
 
   const exportCSV = () => {
     const rows = [
-      ['Voucher No', 'Date', 'Type', 'Narration', 'Amount (₹)'],
+      ['Voucher No', 'Date', 'Type', 'Status', 'Narration', 'Amount (₹)'],
       ...filtered.map(v => {
         const amt = (v.Transactions || []).reduce((a, t) => a + (parseFloat(t.debit) || 0), 0);
-        return [v.voucherNumber, fmtDate(v.date), v.voucherType, (v.narration || '').replace(/,/g, ';'), amt.toFixed(2)];
+        return [v.voucherNumber, fmtDate(v.date), v.voucherType, v.status || 'Draft', (v.narration || '').replace(/,/g, ';'), amt.toFixed(2)];
       })
     ];
     const csv = rows.map(r => r.join(',')).join('\n');
@@ -454,6 +455,7 @@ const VoucherListView = ({
                   { label: 'Voucher No.', field: 'voucherNumber', align: 'left'  },
                   { label: 'Date',        field: 'date',          align: 'left'  },
                   { label: 'Type',        field: 'voucherType',   align: 'left'  },
+                  { label: 'Status',      field: 'status',        align: 'center'},
                   { label: 'Narration',   field: 'narration',     align: 'left'  },
                   { label: 'Amount (₹)',  field: 'amount',        align: 'right' },
                   ...(canEdit ? [{ label: 'Actions', field: null, align: 'center' }] : []),
@@ -481,14 +483,14 @@ const VoucherListView = ({
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={canEdit ? 6 : 5} style={{ padding: '64px 20px', textAlign: 'center' }}>
+                  <td colSpan={canEdit ? 7 : 6} style={{ padding: '64px 20px', textAlign: 'center' }}>
                     <div style={{ width: 36, height: 36, border: '3px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
                     <div style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600 }}>Loading vouchers…</div>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 6 : 5} style={{ padding: '64px 20px', textAlign: 'center' }}>
+                  <td colSpan={canEdit ? 7 : 6} style={{ padding: '64px 20px', textAlign: 'center' }}>
                     <div style={{ width: 52, height: 52, background: '#f1f5f9', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
                       <BookOpen size={22} color="#c0c9d8" />
                     </div>
@@ -497,9 +499,11 @@ const VoucherListView = ({
                       {search || typeFilter ? 'Try adjusting your filters' : 'Record your first accounting entry to get started'}
                     </div>
                     {canEdit && !search && !typeFilter && (
-                      <button onClick={onCreateNew} style={primaryBtn}>
-                        <Plus size={15} strokeWidth={2.5} /> Create First Voucher
-                      </button>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <button onClick={onCreateNew} style={primaryBtn}>
+                          <Plus size={15} strokeWidth={2.5} /> Create First Voucher
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -548,6 +552,19 @@ const VoucherListView = ({
                         </span>
                       </td>
 
+                      {/* Status */}
+                      <td style={{ padding: '14px 20px', textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '4px 10px', borderRadius: 12,
+                          background: v.status === 'Approved' ? '#ecfdf5' : v.status === 'Cancelled' ? '#fef2f2' : '#f1f5f9',
+                          color: v.status === 'Approved' ? '#059669' : v.status === 'Cancelled' ? '#ef4444' : '#64748b',
+                          fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em'
+                        }}>
+                          {v.status || 'Draft'}
+                        </span>
+                      </td>
+
                       {/* Narration */}
                       <td style={{ padding: '14px 20px', maxWidth: 360 }}>
                         <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -570,24 +587,45 @@ const VoucherListView = ({
                       {canEdit && (
                         <td style={{ padding: '14px 20px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                            <button
-                              onClick={() => onEdit && onEdit(v)}
-                              title="Edit"
-                              style={editBtn}
-                              onMouseEnter={e => { e.currentTarget.style.background = '#fef9c3'; e.currentTarget.style.borderColor = '#fde047'; e.currentTarget.style.color = '#854d0e'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#94a3b8'; }}
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget({ id: v.id, voucherNumber: v.voucherNumber, voucherType: v.voucherType })}
-                              title="Delete"
-                              style={deleteBtn}
-                              onMouseEnter={e => { e.currentTarget.style.background = '#fff1f2'; e.currentTarget.style.borderColor = '#fecdd3'; e.currentTarget.style.color = '#e11d48'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#94a3b8'; }}
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            {isAdmin && (!v.status || v.status === 'Draft' || v.status === 'DRAFT') && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await voucherAPI.approve(v.id);
+                                      fetchVouchers();
+                                      useNotificationStore.getState().addNotification('Voucher Approved', 'success');
+                                    } catch(e) {
+                                      useNotificationStore.getState().addNotification('Failed to approve', 'error');
+                                    }
+                                  }}
+                                  title="Approve"
+                                  style={{...editBtn, background: '#ecfdf5', borderColor: '#a7f3d0', color: '#059669'}}
+                                >
+                                  <span style={{fontSize: 14, fontWeight: 'bold'}}>✓</span>
+                                </button>
+                            )}
+                            {(!['Approved', 'locked'].includes(v.status) || isAdmin) && (
+                              <button
+                                onClick={() => onEdit && onEdit(v)}
+                                title="Edit"
+                                style={editBtn}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#fef9c3'; e.currentTarget.style.borderColor = '#fde047'; e.currentTarget.style.color = '#854d0e'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#94a3b8'; }}
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <button
+                                onClick={() => setDeleteTarget({ id: v.id, voucherNumber: v.voucherNumber, voucherType: v.voucherType })}
+                                title="Delete"
+                                style={deleteBtn}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#fff1f2'; e.currentTarget.style.borderColor = '#fecdd3'; e.currentTarget.style.color = '#e11d48'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#94a3b8'; }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}

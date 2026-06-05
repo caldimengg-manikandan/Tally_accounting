@@ -280,7 +280,7 @@ const RetainerInvoiceDetail = ({ id, navigate, companyId }) => {
                 <div className="bg-white shadow-2xl rounded-2xl min-h-[600px] w-full max-w-[800px] mx-auto p-20 border border-slate-100">
                     <div className="flex justify-between items-start mb-24">
                         <div className="space-y-4">
-                            <h2 className="text-[22px] font-bold text-slate-900 tracking-tighter uppercase">{localStorage.getItem('companyName')}</h2>
+                            <h2 className="text-[22px] font-bold text-slate-900 tracking-tighter uppercase">{sessionStorage.getItem('companyName')}</h2>
                             <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest">Retainer Invoice</p>
                         </div>
                         <div className="text-right">
@@ -325,7 +325,7 @@ const RetainerInvoicesView = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const location = useLocation();
-    const companyId = localStorage.getItem('companyId');
+    const companyId = sessionStorage.getItem('companyId');
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
 

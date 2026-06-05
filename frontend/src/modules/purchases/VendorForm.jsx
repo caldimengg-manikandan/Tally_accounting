@@ -88,7 +88,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
     }
   };
   const [groupId, setGroupId] = useState(null);
-  const companyId = propCompanyId || localStorage.getItem('companyId');
+  const companyId = propCompanyId || sessionStorage.getItem('companyId');
   const addNotification = useNotificationStore(state => state.addNotification);
 
   // Generate Display Name Options

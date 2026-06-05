@@ -23,7 +23,7 @@ const STATUS_STYLE = {
 };
 
 const VendorOutstandingView = ({ companyId: propCompanyId }) => {
-  const companyId = propCompanyId || localStorage.getItem('companyId');
+  const companyId = propCompanyId || sessionStorage.getItem('companyId');
 
   const [data, setData]       = useState([]);
   const [loading, setLoading] = useState(true);

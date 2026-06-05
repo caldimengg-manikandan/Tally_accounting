@@ -75,7 +75,7 @@ const ChatBubble = ({ msg, onActionClick }) => {
 
 const AIAssistantView = () => {
   const navigate = useNavigate();
-  const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } })();
   const role = (user.role || 'ADMIN').toLowerCase();
 
   const [messages, setMessages] = useState([

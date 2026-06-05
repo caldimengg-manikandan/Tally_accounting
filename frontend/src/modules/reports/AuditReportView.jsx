@@ -11,7 +11,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://localhost:5000/api');
 
 export default function AuditReportView() {
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,7 +22,7 @@ export default function AuditReportView() {
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE}/reports/audit/${companyId}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
       });
       const data = await response.json();
       setLogs(Array.isArray(data) ? data : []);

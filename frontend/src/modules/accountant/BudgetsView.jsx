@@ -9,7 +9,7 @@ import { budgetAPI, ledgerAPI, groupAPI } from '../../services/api';
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function BudgetsView({ showNew }) {
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   const [budgets, setBudgets] = useState([]);
   const [ledgers, setLedgers] = useState([]);
   const [groups, setGroups] = useState([]);

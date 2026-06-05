@@ -36,7 +36,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
   const [error, setError]                = useState('');
   const [saved, setSaved]                = useState(false);
 
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -48,8 +48,8 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
       .then(res => {
         const { companyId: resolvedId, groups: data } = res.data;
         // Fix localStorage if stale
-        if (resolvedId && resolvedId !== localStorage.getItem('companyId')) {
-          localStorage.setItem('companyId', resolvedId);
+        if (resolvedId && resolvedId !== sessionStorage.getItem('companyId')) {
+          sessionStorage.setItem('companyId', resolvedId);
         }
 
         const arr = Array.isArray(data) ? data : [];
@@ -132,7 +132,7 @@ export default function CreateLedgerModal({ isOpen, onClose, onSuccess, ledgerTo
     setSaving(true);
     setError('');
     try {
-      const currentCompanyId = localStorage.getItem('companyId');
+      const currentCompanyId = sessionStorage.getItem('companyId');
       const payload = {
         companyId: currentCompanyId,
         groupId,

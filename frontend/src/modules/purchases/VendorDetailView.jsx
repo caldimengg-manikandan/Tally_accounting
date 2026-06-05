@@ -39,7 +39,7 @@ const VendorDetailView = ({ companyId }) => {
   const { addNotification } = useNotificationStore();
 
   const user = useMemo(() => { 
-    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } 
+    try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } 
   }, []);
   
   // Data for tabs
@@ -171,7 +171,7 @@ const VendorDetailView = ({ companyId }) => {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  const activeCompanyId = companyId || localStorage.getItem('companyId');
+  const activeCompanyId = companyId || sessionStorage.getItem('companyId');
 
   const handleBankFormReset = () => {
     setBankForm({

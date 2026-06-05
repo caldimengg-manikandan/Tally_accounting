@@ -8,7 +8,7 @@ import { fixedAssetsAPI, ledgerAPI } from '../../services/api';
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function FixedAssetsView() {
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   const [assets, setAssets] = useState([]);
   const [ledgers, setLedgers] = useState([]);
   const [loading, setLoading] = useState(true);

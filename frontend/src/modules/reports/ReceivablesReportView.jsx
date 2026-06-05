@@ -11,7 +11,7 @@ const ReceivablesReportView = () => {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expandedCustomer, setExpandedCustomer] = useState(null);
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   const fetchReport = async () => {
     if (!companyId) return;

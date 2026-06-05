@@ -10,7 +10,7 @@ const CreateGroupModal = ({ isOpen, onClose, groupToEdit }) => {
   const [category, setCategory] = useState('Sub-Group');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   useEffect(() => {
     if (isOpen && companyId) {

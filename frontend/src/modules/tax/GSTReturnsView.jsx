@@ -5,7 +5,7 @@ import { gstAPI } from '../../services/api';
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function GSTReturnsView() {
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   const [activeTab, setActiveTab] = useState('gstr3b'); // 'gstr3b', 'gstr1', 'gstr2a'
   const [gstr3bData, setGstr3bData] = useState(null);
   const [gstr1Data, setGstr1Data] = useState(null);

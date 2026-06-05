@@ -122,10 +122,10 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                     <div className="flex justify-between items-start mb-24">
                         <div className="space-y-4">
                             <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-2xl">
-                                {localStorage.getItem('companyName')?.charAt(0) || 'M'}
+                                {sessionStorage.getItem('companyName')?.charAt(0) || 'M'}
                             </div>
                             <div className="space-y-1">
-                                <h2 className="text-[22px] font-bold text-slate-900 tracking-tighter uppercase leading-none">{localStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
+                                <h2 className="text-[22px] font-bold text-slate-900 tracking-tighter uppercase leading-none">{sessionStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
                                 <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest">Global Trading Solutions</p>
                             </div>
                         </div>
@@ -198,7 +198,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                                  <ShieldCheck size={16} />
                                  <span className="text-[10px] font-bold uppercase tracking-widest">Digital Audit Logged</span>
                              </div>
-                             <p className="text-[10px] text-slate-400 font-bold max-w-[240px] leading-relaxed">This is an electronically generated receipt issued under the authority of {localStorage.getItem('companyName')}.</p>
+                             <p className="text-[10px] text-slate-400 font-bold max-w-[240px] leading-relaxed">This is an electronically generated receipt issued under the authority of {sessionStorage.getItem('companyName')}.</p>
                          </div>
                          <div className="text-center space-y-6">
                              <div className="w-64">
@@ -559,7 +559,7 @@ const PaymentsReceivedView = () => {
     const { id: routeId } = useParams();
     const [selectedRecordId, setSelectedRecordId] = useState(null);
     const location = useLocation();
-    const companyId = localStorage.getItem('companyId');
+    const companyId = sessionStorage.getItem('companyId');
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');

@@ -26,8 +26,8 @@ const LedgersView = ({ showNew }) => {
     const [formData, setFormData] = useState({ 
         name: '', nature: 'Assets', type: 'Ledger', parent_id: '', description: '', openingBalance: '', openingBalanceType: 'Dr'
     });
-    const companyId = localStorage.getItem('companyId');
-    const user = React.useMemo(() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
+    const companyId = sessionStorage.getItem('companyId');
+    const user = React.useMemo(() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
     const role = user.role || 'ADMIN';
     const canCreate = !['VIEWER', 'AUDITOR', 'DATA_ENTRY'].includes(role);
     const canDelete = !['VIEWER', 'AUDITOR', 'DATA_ENTRY'].includes(role); 
@@ -47,7 +47,7 @@ const LedgersView = ({ showNew }) => {
     };
 
     const fetchData = async () => {
-        const currentCompanyId = localStorage.getItem('companyId');
+        const currentCompanyId = sessionStorage.getItem('companyId');
         if (!currentCompanyId) return;
         setLoading(true);
         try {
@@ -67,7 +67,7 @@ const LedgersView = ({ showNew }) => {
     };
 
     const handleSeedGroups = async () => {
-        const currentId = localStorage.getItem('companyId');
+        const currentId = sessionStorage.getItem('companyId');
         if (!currentId || seeding) {
             setSeedStatus('error');
             setTimeout(() => setSeedStatus(null), 5000);
@@ -94,10 +94,10 @@ const LedgersView = ({ showNew }) => {
     const resolveAndFetch = async () => {
         try {
             // First, ensure we have a valid companyId
-            if (!localStorage.getItem('companyId')) {
+            if (!sessionStorage.getItem('companyId')) {
                 const res = await groupAPI.resolveGroups();
                 if (res.data?.companyId) {
-                    localStorage.setItem('companyId', res.data.companyId);
+                    sessionStorage.setItem('companyId', res.data.companyId);
                 }
             }
             await fetchData();
@@ -195,7 +195,7 @@ const LedgersView = ({ showNew }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const currentCompanyId = localStorage.getItem('companyId');
+        const currentCompanyId = sessionStorage.getItem('companyId');
         if (!currentCompanyId) return;
         
         try {
@@ -223,7 +223,10 @@ const LedgersView = ({ showNew }) => {
             setEditingId(null);
             setFormData({ name: '', nature: 'Assets', type: 'Ledger', parent_id: '', description: '', openingBalance: '', openingBalanceType: 'Dr' });
             fetchData();
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error(err); 
+            alert(err.response?.data?.error || err.message || "An error occurred while saving.");
+        }
     };
 
     const formatCurrency = (amount) => {
@@ -595,7 +598,7 @@ const LedgersView = ({ showNew }) => {
                         {/* Header */}
                         <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
                             <div>
-                                <h3 className="text-2xl font-bold text-slate-900 tracking-tight uppercase italic">{editingId ? 'Edit Account Node' : 'Create Account Node'}</h3>
+                                <h3 className="text-2xl font-bold text-slate-900 tracking-tight uppercase">{editingId ? 'Edit Account Node' : 'Create Account Node'}</h3>
                                 <p className="text-[13px] text-slate-400 font-bold uppercase tracking-widest mt-1">{editingId ? 'MODIFY SELECTION' : 'ADD NEW NODE'}</p>
                             </div>
                             <button 
@@ -610,7 +613,7 @@ const LedgersView = ({ showNew }) => {
                         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-6">
 
                             {/* Warning if no company selected */}
-                            {!localStorage.getItem('companyId') && (
+                            {!sessionStorage.getItem('companyId') && (
                                 <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 font-sans">
                                     <Info className="text-rose-500 shrink-0 mt-0.5" size={16} />
                                     <div className="flex-1">
@@ -621,7 +624,7 @@ const LedgersView = ({ showNew }) => {
                             )}
 
                             {/* Seed Warning if empty */}
-                            {localStorage.getItem('companyId') && flatGroupList.length === 0 && !seeding && !seedStatus && (
+                            {sessionStorage.getItem('companyId') && flatGroupList.length === 0 && !seeding && !seedStatus && (
                                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col gap-4 font-sans">
                                     <div className="flex items-start gap-3">
                                         <Info className="text-amber-500 shrink-0 mt-0.5" size={16} />

@@ -8,7 +8,7 @@ const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractio
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function PayrollView() {
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   
   const [activeTab, setActiveTab] = useState('employees'); // 'employees' | 'attendance' | 'structures' | 'process' | 'payslips'
   

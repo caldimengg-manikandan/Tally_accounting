@@ -17,7 +17,7 @@ const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractio
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 export default function PurchaseOrderView() {
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   const [orders, setOrders] = useState([]);
   const [ledgers, setLedgers] = useState([]);
   const [loading, setLoading] = useState(true);

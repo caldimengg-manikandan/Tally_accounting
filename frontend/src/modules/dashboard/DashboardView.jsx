@@ -188,9 +188,9 @@ const TopRankedList = ({ title, items, valueKey, navigate, path, loading }) => (
 // ══════════════════════════════════════════════════════════════════
 const DashboardView = ({ companyId: propCompanyId }) => {
   const navigate = useNavigate();
-  const companyId = propCompanyId || localStorage.getItem('companyId');
-  const companyName = localStorage.getItem('companyName') || 'Dashboard';
-  const user = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const companyId = propCompanyId || sessionStorage.getItem('companyId');
+  const companyName = sessionStorage.getItem('companyName') || 'Dashboard';
+  const user = (() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } })();
   const role = (user.role || 'ADMIN').toLowerCase();
   const canCreate = !['viewer'].includes(role);
   const canFileGST = !['viewer', 'data_entry'].includes(role);

@@ -7,7 +7,7 @@ const { verifyToken, tenantAccess, authorizeRoles } = require('../../middleware/
 router.post('/', verifyToken, tenantAccess, authorizeRoles('ADMIN', 'ACCOUNTANT', 'MANAGER'), costCenterController.createCostCenter);
 router.get('/:companyId', verifyToken, tenantAccess, costCenterController.getCostCenters);
 router.put('/:id', verifyToken, tenantAccess, authorizeRoles('ADMIN', 'ACCOUNTANT'), costCenterController.updateCostCenter);
-router.delete('/:id', verifyToken, tenantAccess, authorizeRoles('ADMIN', 'ACCOUNTANT'), costCenterController.deleteCostCenter);
+router.delete('/:id', verifyToken, tenantAccess, authorizeRoles('ADMIN', 'SUPER_ADMIN'), costCenterController.deleteCostCenter);
 
 
 module.exports = router;

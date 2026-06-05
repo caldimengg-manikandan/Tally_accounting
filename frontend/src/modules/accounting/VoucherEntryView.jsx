@@ -106,14 +106,14 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   useEffect(() => {
     groupAPI.resolveGroups().then(res => {
       const cid = res.data?.companyId;
-      if (cid && cid !== localStorage.getItem('companyId')) {
-        localStorage.setItem('companyId', cid);
+      if (cid && cid !== sessionStorage.getItem('companyId')) {
+        sessionStorage.setItem('companyId', cid);
       }
     }).catch(() => {});
   }, []);
 
   useEffect(() => {
-    const cid = localStorage.getItem('companyId');
+    const cid = sessionStorage.getItem('companyId');
     if (!cid) return;
     ledgerAPI.getByCompany(cid)
       .then(r => setLedgers(Array.isArray(r.data) ? r.data : []))
@@ -149,7 +149,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const handlePost = async () => {
     setPostErr('');
     if (!isBalanced) return;
-    const cid = localStorage.getItem('companyId');
+    const cid = sessionStorage.getItem('companyId');
     if (!cid) { setPostErr('Company session expired. Please log out and log in again.'); return; }
 
     setSaving(true);
@@ -178,7 +178,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   /* ── SMART GST AUTOMATION ────────────────────────────────── */
   const handleSmartGST = async () => {
     const firstRow = rows.find(r => r.ledgerId && parseFloat(r.amount) > 0);
-    const cid = localStorage.getItem('companyId');
+    const cid = sessionStorage.getItem('companyId');
     if (!firstRow || !cid) { alert('Select a ledger and amount first.'); return; }
 
     try {
