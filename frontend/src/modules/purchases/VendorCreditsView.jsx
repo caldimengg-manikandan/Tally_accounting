@@ -537,7 +537,7 @@ const VendorCreditDetail = ({ id, navigate, companyId }) => {
                     <div className="flex justify-between items-start mb-20">
                         <div>
                             <div className="w-16 h-16 bg-gradient-to-br from-slate-800 to-blue-950 rounded-2xl mb-6 flex items-center justify-center text-white font-bold text-[32px] shadow-xl">V</div>
-                            <h2 className="text-[24px] font-bold text-slate-900 tracking-tighter uppercase mb-2">{localStorage.getItem('companyName')?.toUpperCase() || 'COMPANY'}</h2>
+                            <h2 className="text-[24px] font-bold text-slate-900 tracking-tighter uppercase mb-2">{sessionStorage.getItem('companyName')?.toUpperCase() || 'COMPANY'}</h2>
                             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">Voucher: {note.vendorCreditNumber}</p>
                         </div>
                         <div className="text-right">

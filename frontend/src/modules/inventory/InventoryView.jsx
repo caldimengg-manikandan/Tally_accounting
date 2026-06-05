@@ -22,7 +22,7 @@ const InventoryView = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { addNotification } = useNotificationStore();
   
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   useEffect(() => { 
     fetchData(); 

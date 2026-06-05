@@ -143,7 +143,7 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
 // ─────────────────────────────────────────────────────────────────────────────
 
 const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
     const senderName = user.email ? user.email.split('@')[0] : 'Indus CAI Administrator';
     const companyName = company?.name || 'Indus CAI private Ltd';
 

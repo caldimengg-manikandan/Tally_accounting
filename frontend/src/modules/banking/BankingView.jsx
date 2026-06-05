@@ -42,7 +42,7 @@ const BankingView = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   useEffect(() => {
     fetchData();

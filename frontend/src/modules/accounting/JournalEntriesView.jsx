@@ -22,7 +22,7 @@ const TYPE_BADGE = {
 };
 
 const JournalEntriesView = ({ companyId: propCompanyId }) => {
-  const companyId = propCompanyId || localStorage.getItem('companyId');
+  const companyId = propCompanyId || sessionStorage.getItem('companyId');
   const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');

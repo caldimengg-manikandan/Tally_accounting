@@ -30,10 +30,10 @@ const BulkUpdateView = ({ showNew }) => {
   const [searchPerformed, setSearchPerformed] = useState(false);
   
   const { addNotification } = useNotificationStore();
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   const user = React.useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem('user') || '{}');
+      return JSON.parse(sessionStorage.getItem('user') || '{}');
     } catch {
       return {};
     }

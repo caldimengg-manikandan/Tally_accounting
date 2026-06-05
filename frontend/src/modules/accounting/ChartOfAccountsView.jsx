@@ -46,7 +46,7 @@ const getNodeBalance = (node) => {
 
 export default function ChartOfAccountsView() {
   const navigate = useNavigate();
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   
   const [groups, setGroups] = useState([]);
   const [ledgers, setLedgers] = useState([]);

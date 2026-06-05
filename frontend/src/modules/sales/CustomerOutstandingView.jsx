@@ -24,7 +24,7 @@ const STATUS_STYLE = {
 };
 
 const CustomerOutstandingView = ({ companyId: propCompanyId }) => {
-  const companyId = propCompanyId || localStorage.getItem('companyId');
+  const companyId = propCompanyId || sessionStorage.getItem('companyId');
   const navigate  = useNavigate();
 
   const [data, setData]       = useState([]);

@@ -16,7 +16,7 @@ router.get('/vendors/:companyId', purchasesController.getVendors);
 router.get('/orders/:companyId', purchasesController.getOrders);
 router.post('/orders', purchasesController.createOrder);
 router.put('/orders/:id', purchasesController.updateOrder);
-router.delete('/orders/:id', purchasesController.deleteOrder);
+router.delete('/orders/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), purchasesController.deleteOrder);
 
 // Bills
 router.get('/bills/:companyId', purchasesController.getBills);
@@ -30,7 +30,7 @@ router.get('/payments-made/:companyId', paymentMadeController.getPayments);
 router.post('/payments-made', paymentMadeController.createPayment);
 router.patch('/payments-made/:id/mark-paid', paymentMadeController.markAsPaid);
 router.put('/payments-made/:id', paymentMadeController.updatePayment);
-router.delete('/payments-made/:id', paymentMadeController.deletePayment);
+router.delete('/payments-made/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), paymentMadeController.deletePayment);
 router.get('/unpaid-bills/:vendorId', paymentMadeController.getUnpaidBills);
 
 // Expenses
@@ -40,14 +40,14 @@ router.get('/expenses/:companyId', purchasesController.getExpenses);
 router.get('/recurring/:companyId', recurringExpenseController.getByCompany);
 router.post('/recurring', recurringExpenseController.create);
 router.put('/recurring/:id', recurringExpenseController.update);
-router.delete('/recurring/:id', recurringExpenseController.delete);
+router.delete('/recurring/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), recurringExpenseController.delete);
 router.post('/recurring/process-due', recurringExpenseController.processDue);
 
 // Recurring Bills
 router.get('/recurring-bills/:companyId', recurringBillController.getByCompany);
 router.post('/recurring-bills', recurringBillController.create);
 router.put('/recurring-bills/:id', recurringBillController.update);
-router.delete('/recurring-bills/:id', recurringBillController.delete);
+router.delete('/recurring-bills/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), recurringBillController.delete);
 router.post('/recurring-bills/process-due', recurringBillController.processDue);
 
 // Vendor Credits
@@ -55,6 +55,6 @@ router.get('/vendor-credits/:companyId', vendorCreditController.getByCompany);
 router.get('/vendor-credit/:id', vendorCreditController.getById);
 router.post('/vendor-credits', vendorCreditController.create);
 router.put('/vendor-credits/:id', vendorCreditController.update);
-router.delete('/vendor-credits/:id', vendorCreditController.delete);
+router.delete('/vendor-credits/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), vendorCreditController.delete);
 
 module.exports = router;

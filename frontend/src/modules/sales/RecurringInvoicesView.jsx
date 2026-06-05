@@ -1182,7 +1182,7 @@ const RecurringInvoicesView = () => {
     const navigate = useNavigate();
     const params = useParams();
     const location = useLocation();
-    const companyId = localStorage.getItem('companyId');
+    const companyId = sessionStorage.getItem('companyId');
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
 

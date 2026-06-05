@@ -24,7 +24,7 @@ exports.inviteUser = async (req, res) => {
   try {
     const { email, name, password, role } = req.body;
 
-    const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER'];
+    const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
     if (role && !VALID_ROLES.includes(role)) {
       return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
     }
@@ -87,7 +87,7 @@ exports.inviteUser = async (req, res) => {
 exports.updateUserRole = async (req, res) => {
   try {
     const { role } = req.body;
-    const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER'];
+    const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
     if (!VALID_ROLES.includes(role)) {
       return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
     }

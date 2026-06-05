@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { authorizeRoles } = require('../../middleware/auth.middleware');
 const controller = require('./retainerInvoice.controller');
 const { verifyToken, tenantAccess } = require('../../middleware/auth.middleware');
 
@@ -12,6 +13,6 @@ router.get('/company/:companyId', controller.getByCompany); // Added /company/ p
 router.put('/:id', controller.update);
 router.post('/record-payment/:id', controller.recordPayment);
 router.post('/apply-to-invoice/:id', controller.applyToInvoice);
-router.delete('/:id', controller.delete);
+router.delete('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), controller.delete);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { authorizeRoles } = require('../../middleware/auth.middleware');
 const pricelistController = require('./pricelist.controller');
 const { verifyToken, tenantAccess } = require('../../middleware/auth.middleware');
 
@@ -11,6 +12,6 @@ router.post('/', pricelistController.createPriceList);
 router.get('/:companyId', pricelistController.getPriceLists);
 router.get('/detail/:id', pricelistController.getPriceListById);
 router.put('/:id', pricelistController.updatePriceList);
-router.delete('/:id', pricelistController.deletePriceList);
+router.delete('/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), pricelistController.deletePriceList);
 
 module.exports = router;

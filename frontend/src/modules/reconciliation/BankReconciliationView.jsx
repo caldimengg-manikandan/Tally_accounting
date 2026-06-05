@@ -7,7 +7,7 @@ const BankReconciliationView = () => {
     const [loading, setLoading] = useState(true);
     const [matchingVouchers, setMatchingVouchers] = useState([]);
     const [selectedEntry, setSelectedEntry] = useState(null);
-    const companyId = localStorage.getItem('companyId');
+    const companyId = sessionStorage.getItem('companyId');
 
     const fetchUnmatched = async () => {
         try {

@@ -6,6 +6,14 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
+    CreatedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    ModifiedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     quantity: {
       type: DataTypes.DECIMAL(15, 4),
       allowNull: false

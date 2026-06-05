@@ -40,7 +40,7 @@ const BankDetailView = () => {
     date: new Date().toISOString().split('T')[0],
     linkedInvoice: ''
   });
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   useEffect(() => {
     fetchData();

@@ -8,7 +8,7 @@ import { manufacturingAPI, inventoryAPI } from '../../services/api';
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function ManufacturingView() {
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   const [boms, setBoms] = useState([]);
   const [orders, setOrders] = useState([]);
   const [items, setItems] = useState([]);

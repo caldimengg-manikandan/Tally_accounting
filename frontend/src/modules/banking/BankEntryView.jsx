@@ -12,8 +12,8 @@ const BankEntryView = () => {
 
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
-  const rawCompanyId = localStorage.getItem('companyId');
-  const userStr = localStorage.getItem('user');
+  const rawCompanyId = sessionStorage.getItem('companyId');
+  const userStr = sessionStorage.getItem('user');
   const userData = userStr ? JSON.parse(userStr) : {};
   const companyId = rawCompanyId || userData.activeCompanyId;
   

@@ -33,7 +33,7 @@ const CustomerDetailView = ({ companyId }) => {
   const { addNotification } = useNotificationStore();
 
   const user = useMemo(() => { 
-    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; } 
+    try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } 
   }, []);
   
   // Data for tabs
@@ -90,7 +90,7 @@ const CustomerDetailView = ({ companyId }) => {
   const settingsRef = useRef(null);
   const commentEditorRef = useRef(null);
 
-  const activeCompanyId = companyId || localStorage.getItem('companyId');
+  const activeCompanyId = companyId || sessionStorage.getItem('companyId');
 
   // Click outside to close settings
   useEffect(() => {

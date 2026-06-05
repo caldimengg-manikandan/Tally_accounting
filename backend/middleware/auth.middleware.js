@@ -82,3 +82,42 @@ exports.tenantAccess = async (req, res, next) => {
   req.companyId = companyIdToCheck;
   next();
 };
+
+// 4. trackModifiers -> automatically inject CreatedBy/ModifiedBy
+exports.trackModifiers = (req, res, next) => {
+  if (req.user && req.user.id) {
+    if (req.method === 'POST') {
+      req.body.CreatedBy = req.user.id;
+      req.body.ModifiedBy = req.user.id;
+    } else if (['PUT', 'PATCH'].includes(req.method)) {
+      req.body.ModifiedBy = req.user.id;
+    }
+  }
+  next();
+};
+
+// 5. guardLockedVoucher -> block EMPLOYEE from editing/deleting approved vouchers or other peoples vouchers
+exports.guardLockedVoucher = async (req, res, next) => {
+  if (!req.user || req.user.role !== 'EMPLOYEE') return next();
+
+  const voucherId = req.params.id;
+  if (!voucherId) return next();
+
+  try {
+    const { Voucher } = require('../models');
+    const voucher = await Voucher.findByPk(voucherId);
+    if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
+
+    if (voucher.status === 'Approved' || voucher.status === 'locked' || voucher.status === 'approved') {
+      return res.status(403).json({ error: 'Cannot modify or delete an approved/locked voucher.' });
+    }
+
+    if (voucher.CreatedBy && voucher.CreatedBy !== req.user.id && voucher.UserId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only edit your own unapproved vouchers.' });
+    }
+
+    next();
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+};

@@ -90,7 +90,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
 
   const [uploading, setUploading] = useState(false);
   const [formError, setFormError] = useState('');
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   // Dropdown States
   const [isUnitOpen, setIsUnitOpen] = useState(false);

@@ -943,7 +943,7 @@ const DeliveryChallanDetail = ({ id, navigate, companyId }) => {
                     <div className="flex justify-between items-start mb-16">
                         <div>
                             <div className="w-12 h-12 bg-slate-900 rounded-xl mb-4 flex items-center justify-center text-white font-bold text-xl shadow-lg">M</div>
-                            <h2 className="text-[20px] font-bold text-slate-900 tracking-tighter uppercase mb-1">{localStorage.getItem('companyName')?.toUpperCase() || 'THE MOON ENTERPRISES'}</h2>
+                            <h2 className="text-[20px] font-bold text-slate-900 tracking-tighter uppercase mb-1">{sessionStorage.getItem('companyName')?.toUpperCase() || 'THE MOON ENTERPRISES'}</h2>
                             <p className="text-[11px] text-slate-500 font-bold leading-relaxed max-w-[240px]">Tamil Nadu, India.</p>
                         </div>
                         <div className="text-right">

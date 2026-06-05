@@ -28,7 +28,7 @@ export default function LedgerStatementView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSideListCollapsed, setIsSideListCollapsed] = useState(false);
 
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   // Fetch all ledgers to show in the sidebar
   const fetchAllLedgers = async () => {

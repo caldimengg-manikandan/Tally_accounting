@@ -29,7 +29,7 @@ const InventoryMastersView = () => {
   const [unitForm, setUnitForm] = useState({ symbol: '', formalName: '', decimalPlaces: 0 });
   const [godownForm, setGodownForm] = useState({ name: '', address: '' });
 
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   const fetchData = async () => {
     if (!companyId) return;

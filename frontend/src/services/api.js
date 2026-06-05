@@ -8,10 +8,10 @@ const api = axios.create({
 
 // Attach JWT token and active company ID to every request
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
   if (companyId) config.headers['x-company-id'] = companyId;
   
   return config;
@@ -23,7 +23,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Clear local storage and force login if token is invalid/expired
-      ['token', 'user', 'companyId', 'companyName'].forEach(k => localStorage.removeItem(k));
+      ['token', 'user', 'companyId', 'companyName'].forEach(k => sessionStorage.removeItem(k));
       if (!window.location.pathname.includes('/auth')) {
         window.location.href = '/';
       }
@@ -37,6 +37,14 @@ export const register = (name, email, password, role) => api.post('/auth/registe
 export const login = (email, password) => api.post('/auth/login', { email, password });
 
 export const authAPI = { register, login };
+
+// ─── Users ─────────────────────────────────────────
+export const usersAPI = {
+  getCompanyUsers: () => api.get('/users'),
+  inviteUser: (data) => api.post('/users/invite', data),
+  updateUserRole: (userId, data) => api.put(`/users/${userId}/role`, data),
+  removeUser: (userId) => api.delete(`/users/${userId}`)
+};
 
 // ─── Companies ─────────────────────────────────────
 export const companyAPI = {
@@ -75,6 +83,8 @@ export const voucherAPI = {
   getTransactions: (companyId) => api.get(`/vouchers/transactions/${companyId}`),
   update: (id, data) => api.put(`/vouchers/${id}`, data),
   updateNarration: (id, narration) => api.put(`/vouchers/${id}/narration`, { narration }),
+  approve: (id) => api.put(`/vouchers/${id}/approve`),
+  cancel: (id) => api.put(`/vouchers/${id}/cancel`),
   delete: (id) => api.delete(`/vouchers/${id}`),
   bulkUpdate: (data) => api.post('/vouchers/bulk-update', data),
 };

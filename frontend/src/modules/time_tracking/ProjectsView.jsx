@@ -1254,12 +1254,12 @@ const NewProjectForm = ({ companyId, onCancel, onSave, editId }) => {
       if (companyUsers.length > 0) {
         setAllSystemUsers(companyUsers);
       } else {
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
         setAllSystemUsers([currentUser]);
       }
     }).catch(err => {
       console.error(err);
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
       setAllSystemUsers([currentUser]);
     });
 

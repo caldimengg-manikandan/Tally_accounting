@@ -181,8 +181,8 @@ RetainerAdjustment.belongsTo(RetainerInvoice, { foreignKey: { name: 'RetainerInv
 User.hasMany(AuditLog, { foreignKey: { name: 'UserId', type: DataTypes.UUID } });
 AuditLog.belongsTo(User, { foreignKey: { name: 'UserId', type: DataTypes.UUID } });
 
-User.hasMany(Transaction, { foreignKey: { name: 'createdBy', type: DataTypes.UUID } });
-Transaction.belongsTo(User, { as: 'Creator', foreignKey: { name: 'createdBy', type: DataTypes.UUID } });
+User.hasMany(Transaction, { foreignKey: { name: 'CreatedBy', type: DataTypes.UUID } });
+Transaction.belongsTo(User, { as: 'Creator', foreignKey: { name: 'CreatedBy', type: DataTypes.UUID } });
 
 Transaction.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 Company.hasMany(Transaction, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });

@@ -6,6 +6,14 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
+    CreatedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    ModifiedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     voucherType: {
       type: DataTypes.STRING(20),
       allowNull: false,

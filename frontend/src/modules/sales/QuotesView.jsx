@@ -1068,7 +1068,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
         if (!quickAddForm.name) return;
         setIsSavingCustomer(true);
         try {
-            const activeCoId = companyId || localStorage.getItem('companyId');
+            const activeCoId = companyId || sessionStorage.getItem('companyId');
             const res = await ledgerAPI.create({
                 companyId: activeCoId,
                 name: quickAddForm.name,
@@ -1104,7 +1104,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
     const total = subTotal - discountAmt + taxAmt + parseFloat(adjustment || 0);
 
     useEffect(() => {
-        const activeCoId = companyId || localStorage.getItem('companyId');
+        const activeCoId = companyId || sessionStorage.getItem('companyId');
         if (!activeCoId) return;
         
         const fetchData = async () => {
@@ -1249,7 +1249,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
 
         setLoading(true);
         try {
-            const activeCoId = companyId || localStorage.getItem('companyId');
+            const activeCoId = companyId || sessionStorage.getItem('companyId');
             
             const payload = {
                 companyId: activeCoId,

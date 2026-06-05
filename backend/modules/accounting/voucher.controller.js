@@ -251,3 +251,34 @@ exports.getTransactions = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.approveVoucher = async (req, res) => {
+  try {
+    const voucher = await Voucher.findByPk(req.params.id);
+    if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
+    
+    voucher.status = 'Approved';
+    if (req.user && req.user.id) voucher.ModifiedBy = req.user.id;
+    await voucher.save();
+    
+    res.json({ message: 'Voucher approved successfully.', voucher });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.cancelVoucher = async (req, res) => {
+  try {
+    const voucher = await Voucher.findByPk(req.params.id);
+    if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
+    
+    voucher.status = 'Cancelled';
+    if (req.user && req.user.id) voucher.ModifiedBy = req.user.id;
+    await voucher.save();
+    
+    res.json({ message: 'Voucher cancelled successfully.', voucher });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+

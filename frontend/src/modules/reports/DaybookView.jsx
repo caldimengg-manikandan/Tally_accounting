@@ -15,7 +15,7 @@ const DaybookView = () => {
   const [showMailModal, setShowMailModal] = useState(false);
   const [email, setEmail] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   const fetchDaybook = useCallback(async () => {
     if (!companyId) {
@@ -44,7 +44,7 @@ const DaybookView = () => {
   const handleSendMail = async (e) => {
     e.preventDefault();
     setSendingMail(true);
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
     try {
       await mailAPI.send({
         from: user.email,

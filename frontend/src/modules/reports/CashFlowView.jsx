@@ -15,7 +15,7 @@ const CashFlowView = () => {
   const [loading, setLoading] = useState(true);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   const fetchReport = async () => {
     if (!companyId) return;

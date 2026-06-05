@@ -11,7 +11,7 @@ const PayablesReportView = () => {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [expandedVendor, setExpandedVendor] = useState(null);
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   const fetchReport = async () => {
     if (!companyId) return;

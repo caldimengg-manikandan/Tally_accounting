@@ -15,7 +15,7 @@ const InventoryReportView = () => {
   const [godowns, setGodowns] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedGodown, setSelectedGodown] = useState('');
-  const companyId = localStorage.getItem('companyId');
+  const companyId = sessionStorage.getItem('companyId');
 
   const fetchReport = async (catId = selectedCategory, gdId = selectedGodown) => {
     if (!companyId) return;

@@ -16,6 +16,6 @@ router.post('/invite', usersController.inviteUser);
 router.put('/:userId/role', usersController.updateUserRole);
 
 // Remove a user from the current company
-router.delete('/:userId', usersController.removeUser);
+router.delete('/:userId', authorizeRoles('ADMIN', 'SUPER_ADMIN'), usersController.removeUser);
 
 module.exports = router;

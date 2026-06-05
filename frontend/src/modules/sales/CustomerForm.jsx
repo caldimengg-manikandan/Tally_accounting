@@ -13,7 +13,7 @@ import { CURRENCIES } from '../../utils/currencies';
 
 const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalone = true, companyId: propCompanyId }) => {
   const [loading, setLoading] = useState(false);
-  const companyId = propCompanyId || localStorage.getItem('companyId');
+  const companyId = propCompanyId || sessionStorage.getItem('companyId');
   const addNotification = useNotificationStore(state => state.addNotification);
 
   // Basic Info

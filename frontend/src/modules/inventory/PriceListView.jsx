@@ -18,7 +18,7 @@ const PriceListView = () => {
   React.useEffect(() => {
     const fetchPriceLists = async () => {
       try {
-        const companyId = localStorage.getItem('companyId');
+        const companyId = sessionStorage.getItem('companyId');
         if (companyId) {
           const res = await priceListAPI.getByCompany(companyId);
           setPricelists(res.data || []);

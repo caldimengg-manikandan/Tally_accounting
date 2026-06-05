@@ -721,9 +721,9 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
 
                     <div className="flex justify-between items-start mb-16 border-b border-slate-900 pb-12">
                         <div className="flex gap-4 items-start max-w-[65%]">
-                            <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-bold text-xl shrink-0 rounded-none">{localStorage.getItem('companyName')?.charAt(0) || 'M'}</div>
+                            <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-bold text-xl shrink-0 rounded-none">{sessionStorage.getItem('companyName')?.charAt(0) || 'M'}</div>
                             <div className="space-y-1 min-w-0">
-                                <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase leading-tight">{localStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
+                                <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase leading-tight">{sessionStorage.getItem('companyName') || 'THE MOON ENTERPRISES'}</h2>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Returns & Adjustments Department</p>
                             </div>
                         </div>
@@ -1065,7 +1065,7 @@ const CreditNotesView = () => {
     const navigate = useNavigate();
     const params = useParams();
     const location = useLocation();
-    const companyId = localStorage.getItem('companyId');
+    const companyId = sessionStorage.getItem('companyId');
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
 

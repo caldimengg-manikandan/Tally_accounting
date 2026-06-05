@@ -22,13 +22,13 @@ const AuthPage = ({ onLogin }) => {
     try {
       if (isLogin) {
         const res = await login(email, password);
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
+        sessionStorage.setItem('token', res.data.token);
+        sessionStorage.setItem('user', JSON.stringify(res.data.user));
         if (res.data.companies && res.data.companies.length > 0) {
-          localStorage.setItem('companyId', res.data.companies[0].id);
+          sessionStorage.setItem('companyId', res.data.companies[0].id);
         } else {
-          localStorage.removeItem('companyId');
-          localStorage.removeItem('companyName');
+          sessionStorage.removeItem('companyId');
+          sessionStorage.removeItem('companyName');
         }
         onLogin();
       } else {

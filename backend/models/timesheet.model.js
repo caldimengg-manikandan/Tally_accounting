@@ -5,6 +5,14 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
     },
+    CreatedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
+    ModifiedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     date: {
       type: DataTypes.DATEONLY,
       allowNull: false
