@@ -176,7 +176,10 @@ exports.createPayment = async (req, res) => {
             amount, 
             billAllocations, // Array of { billId, amount }
             companyId,
-            status // 'Draft' or 'Paid'
+            status, // 'Draft' or 'Paid'
+            tds,
+            depositToId,
+            activeTab
         } = req.body;
 
         if (!vendorId || !paidThroughId || !amount) {
@@ -189,6 +192,7 @@ exports.createPayment = async (req, res) => {
         ];
 
         if (billAllocations && billAllocations.length > 0) {
+            let totalAllocated = 0;
             for (const alloc of billAllocations) {
                 if (alloc.amount > 0) {
                     entries.push({
@@ -197,7 +201,17 @@ exports.createPayment = async (req, res) => {
                         credit: 0,
                         description: `Payment for Bill ${alloc.billNumber || ''}. BILL_REF:${alloc.billId}`
                     });
+                    totalAllocated += parseFloat(alloc.amount);
                 }
+            }
+            const excess = amount - totalAllocated;
+            if (excess > 0.01) {
+                entries.push({
+                    ledgerId: vendorId,
+                    debit: excess,
+                    credit: 0,
+                    description: `Excess payment / Advance`
+                });
             }
         } else {
             entries.push({
@@ -208,6 +222,12 @@ exports.createPayment = async (req, res) => {
             });
         }
 
+        let narrationText = `Payment Made via ${paymentMode}. Ref: ${reference}`;
+        if (activeTab === 'Vendor Advance' || tds || depositToId) {
+            const meta = { tds, depositToId, activeTab };
+            narrationText += ` ||metadata:${JSON.stringify(meta)}`;
+        }
+
         // 2. Post accounting entries via AccountingService
         const voucher = await AccountingService.recordJournalEntry({
             companyId,
@@ -215,7 +235,7 @@ exports.createPayment = async (req, res) => {
             voucherType: 'Payment',
             voucherNumber: paymentNumber,
             reference: reference || '',
-            narration: `Payment Made via ${paymentMode}. Ref: ${reference}`,
+            narration: narrationText,
             entries,
             userId: req.user?.id
         }, t);
@@ -240,7 +260,7 @@ exports.updatePayment = async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
-        const { vendorId, paymentDate, paymentMode, paidThroughId, reference, amount, billAllocations, status } = req.body;
+        const { vendorId, paymentDate, paymentMode, paidThroughId, reference, amount, billAllocations, status, tds, depositToId, activeTab } = req.body;
         
         const oldVoucher = await Voucher.findByPk(id);
         if (!oldVoucher) return res.status(404).json({ error: "Payment not found" });
@@ -250,6 +270,7 @@ exports.updatePayment = async (req, res) => {
         ];
 
         if (billAllocations && billAllocations.length > 0) {
+            let totalAllocated = 0;
             for (const alloc of billAllocations) {
                 if (alloc.amount > 0) {
                     entries.push({
@@ -258,7 +279,17 @@ exports.updatePayment = async (req, res) => {
                         credit: 0,
                         description: `Payment for Bill ${alloc.billNumber || ''}. BILL_REF:${alloc.billId}`
                     });
+                    totalAllocated += parseFloat(alloc.amount);
                 }
+            }
+            const excess = amount - totalAllocated;
+            if (excess > 0.01) {
+                entries.push({
+                    ledgerId: vendorId,
+                    debit: excess,
+                    credit: 0,
+                    description: `Excess payment / Advance`
+                });
             }
         } else {
             entries.push({
@@ -269,12 +300,18 @@ exports.updatePayment = async (req, res) => {
             });
         }
 
+        let narrationText = `Payment Made via ${paymentMode}. Ref: ${reference}`;
+        if (activeTab === 'Vendor Advance' || tds || depositToId) {
+            const meta = { tds, depositToId, activeTab };
+            narrationText += ` ||metadata:${JSON.stringify(meta)}`;
+        }
+
         // Re-post accounting entries (AccountingService reverses old + writes new)
         const voucher = await AccountingService.updateJournalEntry(id, {
             companyId: oldVoucher.CompanyId,
             date: paymentDate,
             reference: reference || '',
-            narration: `Payment Made via ${paymentMode}. Ref: ${reference}`,
+            narration: narrationText,
             entries,
             userId: req.user?.id
         }, t);
@@ -385,6 +422,24 @@ exports.getPayment = async (req, res) => {
         const modeMatch = (payment.narration || '').match(/Payment Made via (.+?)\./);
         if (modeMatch) paymentMode = modeMatch[1].trim();
 
+        let tds = '';
+        let depositToId = '';
+        let activeTab = 'Bill Payment';
+        let notes = payment.narration || '';
+
+        if (payment.narration && payment.narration.includes('||metadata:')) {
+            try {
+                const parts = payment.narration.split('||metadata:');
+                notes = parts[0].trim();
+                const meta = JSON.parse(parts[1]);
+                tds = meta.tds || '';
+                depositToId = meta.depositToId || '';
+                activeTab = meta.activeTab || 'Bill Payment';
+            } catch (e) {
+                console.error("Failed to parse narration metadata:", e);
+            }
+        }
+
         const totalAmount = payment.Transactions.reduce((s, t) => s + parseFloat(t.debit || 0), 0);
 
         res.json({
@@ -396,7 +451,10 @@ exports.getPayment = async (req, res) => {
             paymentDate: payment.date?.toISOString?.().split('T')[0] || '',
             paymentMode,
             reference: payment.reference || '',
-            notes: payment.narration || '',
+            notes: notes,
+            tds,
+            depositToId,
+            activeTab,
             billAllocations,
             billRows // full row data to pre-populate the bills table
         });
@@ -494,6 +552,20 @@ exports.getPayments = async (req, res) => {
         // Group by Voucher to show one line per payment
         const result = payments.map(p => {
             const totalAmount = p.Transactions.reduce((sum, t) => sum + parseFloat(t.debit), 0);
+            
+            // Extract bill numbers from descriptions
+            const billNumbers = p.Transactions
+                .map(t => {
+                    const match = (t.description || '').match(/Payment for Bill (.*?)\./);
+                    return match ? match[1] : null;
+                })
+                .filter(Boolean);
+            
+            // Calculate unused amount (advance / excess payment)
+            const unusedAmount = p.Transactions
+                .filter(t => !(t.description || '').includes('BILL_REF'))
+                .reduce((sum, t) => sum + parseFloat(t.debit), 0);
+
             return {
                 id: p.id,
                 date: p.date,
@@ -501,6 +573,8 @@ exports.getPayments = async (req, res) => {
                 vendorName: p.Transactions[0]?.Ledger?.name || 'N/A',
                 reference: p.reference,
                 amount: totalAmount,
+                unusedAmount: parseFloat(unusedAmount.toFixed(2)),
+                billNo: billNumbers.length > 0 ? [...new Set(billNumbers)].join(', ') : '---',
                 narration: p.narration,
                 status: p.status || 'Draft' // Return persisted status, default to Draft for legacy records
             };

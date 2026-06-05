@@ -39,7 +39,6 @@ import SalesInvoicesView from './modules/sales/SalesInvoicesView';
 import QuotesView from './modules/sales/QuotesView';
 import RecurringInvoicesView from './modules/sales/RecurringInvoicesView';
 import DeliveryChallansView from './modules/sales/DeliveryChallansView';
-import CreditNotesView from './modules/sales/CreditNotesView';
 import PayrollView from './modules/payroll/PayrollView';
 import CashFlowView from './modules/reports/CashFlowView';
 import ReceivablesReportView from './modules/reports/ReceivablesReportView';
@@ -62,7 +61,6 @@ import RecurringBillEntryView from './modules/purchases/RecurringBillEntryView';
 import RecurringBillsView from './modules/purchases/RecurringBillsView';
 import PaymentsMadeListView from './modules/purchases/PaymentsMadeListView';
 import PaymentsMadeEntryView from './modules/purchases/PaymentsMadeEntryView';
-import VendorCreditsView from './modules/purchases/VendorCreditsView';
 import BudgetsView from './modules/accountant/BudgetsView';
 import { TransactionLockingView } from './modules/accountant/AccountantSubModules';
 import ChartOfAccountsView from './modules/accounting/ChartOfAccountsView';
@@ -124,7 +122,6 @@ const NAV = [
       { icon: Receipt,         label: 'Invoices',            path: '/sales-invoices', showPlus: true, plusPath: '/sales-invoices/new' },
       { icon: Repeat,          label: 'Recurring Invoices',  path: '/recurring-invoices', showPlus: true, plusPath: '/recurring-invoices/new' },
       { icon: Wallet,          label: 'Customer Payments',   path: '/payments', showPlus: true, plusPath: '/payments/new' },
-      { icon: Undo2,           label: 'Credit Notes',        path: '/credit-notes', showPlus: true, plusPath: '/credit-notes/new' },
     ]
   },
   {
@@ -136,7 +133,6 @@ const NAV = [
       { label: 'Bills',              path: '/bills', icon: FileStack, showPlus: true, plusPath: '/bills/new' },
       { label: 'Recurring Bills',    path: '/recurring-bills', icon: Repeat, showPlus: true, plusPath: '/recurring-bills/new' },
       { label: 'Vendor Payments',    path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
-      { label: 'Debit Notes',        path: '/vendor-credits', icon: Undo2, showPlus: true, plusPath: '/vendor-credits/new' },
     ]
   },
   {
@@ -773,10 +769,6 @@ function AuthenticatedApp() {
       <Route path="/payments-made/new"   element={shell(PaymentsMadeEntryView)} />
       <Route path="/bill-payments/new"   element={shell(PaymentsMadeEntryView)} />
       <Route path="/payments-made/edit/:id" element={shell(PaymentsMadeEntryView)} />
-      <Route path="/vendor-credits"      element={shell(VendorCreditsView)} />
-      <Route path="/vendor-credits/new"  element={shell(VendorCreditsView)} />
-      <Route path="/vendor-credits/edit/:id" element={shell(VendorCreditsView)} />
-      <Route path="/vendor-credits/view/:id" element={shell(VendorCreditsView)} />
 
       {/* Sales */}
       <Route path="/customers"          element={shell(CustomersListView)} />
@@ -803,10 +795,6 @@ function AuthenticatedApp() {
       <Route path="/delivery-challans/view/:id" element={shell(DeliveryChallansView)} />
       <Route path="/payments"           element={shell(PaymentsReceivedView)} />
       <Route path="/payments/new"       element={shell(PaymentsReceivedView)} />
-      <Route path="/credit-notes"       element={shell(CreditNotesView)} />
-      <Route path="/credit-notes/new"   element={shell(CreditNotesView)} />
-      <Route path="/credit-notes/edit/:id" element={shell(CreditNotesView)} />
-      <Route path="/credit-notes/view/:id" element={shell(CreditNotesView)} />
       <Route path="/tax-invoices"       element={shell(GSTInvoiceView)} />
 
       {/* Time Tracking (Removed from main menu/routing shell, keeping definitions but routing to dashboard or disabled) */}

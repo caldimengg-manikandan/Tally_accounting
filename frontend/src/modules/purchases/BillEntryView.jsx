@@ -149,7 +149,10 @@ const BillEntryView = ({ companyId }) => {
   // ── Context Data ────────────────────────────────────────────────
   useEffect(() => {
     if (companyId) {
-      purchaseAPI.getVendors(companyId).then(res => setVendors(res.data || []));
+      purchaseAPI.getVendors(companyId).then(res => {
+        console.log("Vendors loaded:", res.data?.length);
+        setVendors(res.data || []);
+      }).catch(err => console.error("Failed to fetch vendors:", err?.response?.status, err?.response?.data?.error || err.message));
       projectAPI.getByCompany(companyId).then(res => setProjects(res.data || []));
       inventoryAPI.getByCompany(companyId, 'purchase').then(res => {
         setInventoryItems(res.data || []);

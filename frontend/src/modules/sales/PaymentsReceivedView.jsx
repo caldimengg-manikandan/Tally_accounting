@@ -274,7 +274,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
         }
         setSaving(true);
         try {
-            await salesAPI.recordPayment({
+            const res = await salesAPI.recordPayment({
                 companyId,
                 customerId: selectedCustomer.id,
                 paymentDate,
@@ -286,7 +286,8 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
             });
             addNotification('Payment recorded successfully', 'success');
             if (onRefresh) onRefresh();
-            navigate('/payments');
+            const newId = res?.data?.id || res?.data?.voucherId || null;
+            navigate('/payments', { state: { selectedId: newId } });
         } catch (err) {
             addNotification('Failed to record payment', 'error');
         } finally {
@@ -565,18 +566,27 @@ const PaymentsReceivedView = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const { addNotification } = useNotificationStore();
 
-    const fetchPayments = async () => {
+    const fetchPayments = async (autoSelectId = null) => {
         try {
             setLoading(true);
             const res = await voucherAPI.getByCompany(companyId);
             const receipts = res.data.filter(v => v.voucherType === 'Receipt');
             setPayments(receipts);
+            // Auto-select: prefer a specific id passed in, otherwise select the first record
+            if (autoSelectId) {
+                setSelectedRecordId(autoSelectId);
+            } else if (receipts.length > 0 && !selectedRecordId) {
+                setSelectedRecordId(receipts[0].id);
+            }
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
     };
 
     useEffect(() => {
-        if (companyId) fetchPayments();
+        if (companyId) {
+            const autoId = location.state?.selectedId || null;
+            fetchPayments(autoId);
+        }
     }, [companyId]);
 
     const filtered = useMemo(() => {
