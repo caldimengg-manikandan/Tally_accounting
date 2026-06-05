@@ -31,6 +31,54 @@ const seedDefaultGroups = async (companyId, transaction = null) => {
   }
 };
 
+const seedDefaultLedgers = async (companyId, transaction = null) => {
+  const { Group: GroupModel, Ledger: LedgerModel } = require('../../models');
+  const options = transaction ? { transaction } : {};
+
+  const defaultLedgers = [
+    { name: 'Cash', group: 'Cash-in-Hand' },
+    { name: 'Capital Account', group: 'Capital Account' },
+    { name: 'Purchase Account', group: 'Purchase Accounts' },
+    { name: 'Sales Account', group: 'Sales Accounts' },
+    { name: 'CGST Input', group: 'Duties & Taxes' },
+    { name: 'CGST Output', group: 'Duties & Taxes' },
+    { name: 'SGST Input', group: 'Duties & Taxes' },
+    { name: 'SGST Output', group: 'Duties & Taxes' },
+    { name: 'IGST Input', group: 'Duties & Taxes' },
+    { name: 'IGST Output', group: 'Duties & Taxes' }
+  ];
+
+  // Fetch all groups for this company to map by name
+  const groups = await GroupModel.findAll({ where: { CompanyId: companyId }, ...options });
+  const groupMap = {};
+  groups.forEach(g => { groupMap[g.name] = g.id; });
+
+  for (const ledger of defaultLedgers) {
+    const groupId = groupMap[ledger.group];
+    if (!groupId) {
+      console.warn(`[WARNING] Cannot create ledger ${ledger.name}: Group ${ledger.group} not found for company ${companyId}`);
+      continue;
+    }
+
+    // Ensure it doesn't already exist to prevent duplicates
+    const existing = await LedgerModel.findOne({
+      where: { name: ledger.name, CompanyId: companyId, GroupId: groupId },
+      ...options
+    });
+
+    if (!existing) {
+      await LedgerModel.create({
+        name: ledger.name,
+        groupName: ledger.group,
+        GroupId: groupId,
+        CompanyId: companyId,
+        openingBalance: 0,
+        currentBalance: 0
+      }, options);
+    }
+  }
+};
+
 exports.createCompany = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
@@ -99,6 +147,9 @@ exports.createCompany = async (req, res) => {
 
     // Auto-seed Tally standard groups for the newly created company
     await seedDefaultGroups(company.id, transaction);
+    
+    // Auto-seed default ledgers within those groups
+    await seedDefaultLedgers(company.id, transaction);
     
     await transaction.commit();
 
@@ -385,3 +436,21 @@ exports.seedGroupsForCompany = async (req, res) => {
   }
 };
 
+exports.syncDefaultLedgers = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const company = await Company.findByPk(id);
+    if (!company) return res.status(404).json({ error: 'Company not found' });
+
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const user = await User.findByPk(req.user.id, { include: [Company] });
+      const hasAccess = user.Companies && user.Companies.some(c => c.id === company.id);
+      if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await seedDefaultLedgers(id);
+    res.json({ message: 'Default ledgers synced successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

@@ -82,12 +82,17 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         isValidGstin(value) {
           if (value && value.trim() !== '') {
-            if (value.length !== 15) {
-              throw new Error('GSTIN must be exactly 15 characters');
+            const trimmedValue = value.trim().toUpperCase();
+            if (trimmedValue.length !== 15) {
+              throw new Error('GSTIN must be exactly 15 characters.');
             }
-            const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
-            if (!gstRegex.test(value.toUpperCase())) {
-              throw new Error('Invalid GSTIN format');
+            const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
+            if (!gstRegex.test(trimmedValue)) {
+              throw new Error('Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5');
+            }
+            const stateCode = parseInt(trimmedValue.substring(0, 2), 10);
+            if (stateCode < 1 || stateCode > 38) {
+              throw new Error('Invalid GSTIN: State code (first 2 digits) must be between 01 and 38.');
             }
           }
         }

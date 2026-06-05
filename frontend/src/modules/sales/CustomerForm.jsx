@@ -30,6 +30,8 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
   // Tax & Terms
   const [pan, setPan] = useState('');
+  const [gstNumber, setGstNumber] = useState('');
+  const [gstError, setGstError] = useState('');
   const [currency, setCurrency] = useState('INR- Indian Rupee');
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
   const [receivableAccount, setReceivableAccount] = useState('Accounts Receivable');
@@ -76,6 +78,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
        setMobile(customerToEdit.mobile || '');
        setWebsite(customerToEdit.website || '');
        setPan(customerToEdit.pan || '');
+       setGstNumber(customerToEdit.gstNumber || '');
        setCurrency(customerToEdit.currency || 'INR- Indian Rupee');
        setPaymentTerms(customerToEdit.paymentTerms || 'Due on Receipt');
        setCompanyName(customerToEdit.companyName || '');
@@ -154,6 +157,11 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
       return;
     }
 
+    if (gstError) {
+      addNotification('Please fix the GSTIN error before saving.', 'error');
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -168,6 +176,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         mobile,
         website,
         pan,
+        gstNumber: gstNumber.trim(),
         companyId,
         groupName: 'Sundry Debtors',
         billingAddress: JSON.stringify(billingAddress),
@@ -491,6 +500,49 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                     </div>
 
                     <div className="space-y-6 max-w-2xl">
+                        {/* GSTIN */}
+                        <div className="flex items-start mt-4">
+                            <div className="w-48 flex items-center gap-1.5 mt-2.5">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">GSTIN</label>
+                            </div>
+                            <div className="flex-1">
+                                <input 
+                                    value={gstNumber} 
+                                    onChange={e => {
+                                      const val = e.target.value.toUpperCase();
+                                      setGstNumber(val);
+                                      if (val.trim() === '') {
+                                        setGstError('');
+                                        return;
+                                      }
+                                      if (val.length !== 15) {
+                                        setGstError('GSTIN must be exactly 15 characters.');
+                                        return;
+                                      }
+                                      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
+                                      if (!gstRegex.test(val)) {
+                                        setGstError('Invalid GSTIN format. Expected format: 22AAAAA0000A1Z5');
+                                        return;
+                                      }
+                                      const stateCode = parseInt(val.substring(0, 2), 10);
+                                      if (stateCode < 1 || stateCode > 38) {
+                                        setGstError('Invalid State Code (first 2 digits must be 01-38).');
+                                        return;
+                                      }
+                                      setGstError('');
+                                    }}
+                                    className={`w-full h-9 px-3 border ${gstError ? 'border-red-400 focus:border-red-500 bg-red-50/30' : 'border-slate-200 focus:border-blue-400'} rounded text-[13px] outline-none capitalize font-medium text-slate-700`} 
+                                    placeholder="22AAAAA0000A1Z5"
+                                    maxLength={15}
+                                />
+                                {gstError && (
+                                  <p className="text-red-500 text-[11px] font-medium mt-1.5 flex items-center gap-1">
+                                    <AlertCircle size={12} /> {gstError}
+                                  </p>
+                                )}
+                            </div>
+                        </div>
+
                         {/* PAN */}
                         <div className="flex items-center">
                             <div className="w-48 flex items-center gap-1.5">
