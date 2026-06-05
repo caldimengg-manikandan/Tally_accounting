@@ -1033,6 +1033,8 @@ const CustomerDetailView = ({ companyId }) => {
                        <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] border-b border-slate-50 pb-3 flex justify-between items-center"><span>OTHER DETAILS</span> <ChevronDown size={14}/></h4>
                        <div className="space-y-6 pt-2">
                           <DetailRow label="Customer Type" value={customer.customerType || 'Business'} />
+                          <DetailRow label="GSTIN" value={customer.gstNumber || '-'} />
+                          <DetailRow label="PAN" value={customer.pan || '-'} />
                           <DetailRow label="Default Currency" value={customer.currency || 'INR'} />
                           <DetailRow label="Portal Status" value={<div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> <span className="text-red-500 font-bold text-[13px]">Disabled</span></div>} />
                           <DetailRow label="Customer Language" value={customer.language || 'English'} />

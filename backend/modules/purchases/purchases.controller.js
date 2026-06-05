@@ -412,7 +412,13 @@ exports.createBill = async (req, res) => {
                 });
             }
             
-            journalEntries.push({ ledgerId: purchaseLedger.id, debit: total, credit: 0 });
+            let subtotal = 0;
+            if (items && Array.isArray(items) && items.length > 0) {
+                subtotal = items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+            } else {
+                subtotal = total - (parseFloat(taxAmount) || 0) + (parseFloat(discountAmount) || 0) - (parseFloat(adjustment) || 0);
+            }
+            journalEntries.push({ ledgerId: purchaseLedger.id, debit: subtotal, credit: 0 });
         }
 
         const AccountingService = require('../../services/AccountingService');
@@ -529,7 +535,13 @@ exports.updateBill = async (req, res) => {
                 });
             }
             
-            journalEntries.push({ ledgerId: purchaseLedger.id, debit: total, credit: 0 });
+            let subtotal = 0;
+            if (items && Array.isArray(items) && items.length > 0) {
+                subtotal = items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+            } else {
+                subtotal = total - (parseFloat(taxAmount) || 0) + (parseFloat(discountAmount) || 0) - (parseFloat(adjustment) || 0);
+            }
+            journalEntries.push({ ledgerId: purchaseLedger.id, debit: subtotal, credit: 0 });
         }
 
         const AccountingService = require('../../services/AccountingService');
