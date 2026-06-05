@@ -3,7 +3,7 @@ import {
   Plus, Search, Filter, MoreHorizontal, 
   ChevronRight, Wallet, ArrowDownUp,
   Download, Printer, Edit, Trash2, X, AlertCircle, RefreshCw,
-  ChevronDown, CheckCircle2
+  Sliders, ChevronDown, CheckCircle2
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { paymentMadeAPI, voucherAPI, companyAPI } from '../../services/api';
@@ -37,7 +37,7 @@ const PaymentsMadeListView = ({ companyId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   // UI Layout State
-  const [layoutMode, setLayoutMode] = useState('split'); 
+  const [layoutMode, setLayoutMode] = useState('table'); // 'table' or 'split'
   
   // Master-Detail State
   const [selectedPaymentId, setSelectedPaymentId] = useState(null);
@@ -67,8 +67,10 @@ const PaymentsMadeListView = ({ companyId }) => {
       // Auto-select based on location state
       if (location.state?.selectedPaymentId) {
           setSelectedPaymentId(location.state.selectedPaymentId);
-      } else if (res.data?.length > 0 && !selectedPaymentId) {
-          setSelectedPaymentId(res.data[0].id);
+          setLayoutMode('split');
+      } else {
+          setSelectedPaymentId(null);
+          setLayoutMode('table');
       }
     } catch (err) {
       console.error("Failed to fetch payments:", err);
@@ -215,80 +217,179 @@ const PaymentsMadeListView = ({ companyId }) => {
         {/* --- GLOBAL HEADER --- */}
         <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100 bg-white">
             <div className="flex items-center gap-2">
-                <h1 className="text-[20px] font-bold text-slate-900">All Payments</h1>
+                <h1 className="text-[20px] font-bold text-slate-900 flex items-center gap-1 cursor-pointer">
+                    All Payments <ChevronDown className="text-blue-600 w-4 h-4 stroke-[3px] mt-0.5" />
+                </h1>
             </div>
 
             <div className="flex items-center gap-2">
                 <button 
                   onClick={() => navigate('/payments-made/new')}
-                  className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm text-[13px]"
+                  className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-1.5 rounded-lg font-semibold flex items-center gap-1 transition-all shadow-sm text-[13px]"
                 >
-                  <Plus size={18} strokeWidth={2.5} /> New Payment
+                  <Plus size={16} strokeWidth={2.5} /> New
                 </button>
-                <button className="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors shadow-sm ml-1">
-                    <MoreHorizontal size={18} />
+                <button className="p-2 text-slate-500 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors shadow-sm ml-1">
+                    <MoreHorizontal size={16} />
                 </button>
             </div>
         </div>
 
         {/* --- MAIN CONTENT AREA --- */}
         <div className="flex-1 overflow-hidden">
-            <div className="flex h-full overflow-hidden animate-in zoom-in-95 duration-500">
-                {/* LEFT MASTER LIST */}
-                <div className="w-[320px] xl:w-[380px] bg-slate-50/30 border-r border-slate-200 flex flex-col z-20 shadow-[4px_0_15px_rgba(0,0,0,0.02)] no-print">
-                    <div className="p-4 border-b border-slate-100 bg-white space-y-3">
-                        <div className="relative group">
-                            <Search size={14} className="absolute left-3 top-2.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                            <input 
-                                type="text" 
-                                placeholder="Find in Payments..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[12px] focus:border-blue-500 outline-none transition-all"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
-                        {loading ? (
-                            <div className="p-8 text-center text-slate-400 text-[12px]">Loading payments...</div>
-                        ) : filteredPayments.length === 0 ? (
-                            <div className="p-8 text-center text-slate-400 text-[12px]">No payments found.</div>
-                        ) : (
-                            filteredPayments.map(payment => (
-                                <div 
-                                    key={payment.id}
-                                    onClick={() => setSelectedPaymentId(payment.id)}
-                                    className={`p-4 border-b border-slate-50 cursor-pointer transition-all relative group overflow-hidden ${selectedPaymentId === payment.id ? 'bg-blue-50/50 border-l-[3px] border-l-blue-600' : 'hover:bg-slate-50/80 border-l-[3px] border-l-transparent'}`}
-                                >
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className={`text-[13px] font-bold ${selectedPaymentId === payment.id ? 'text-blue-700' : 'text-slate-800'}`}>
-                                            {payment.vendorName}
-                                        </span>
-                                        <span className="text-[13px] font-bold text-slate-900 group-hover:scale-110 transition-transform tabular-nums">
-                                            ₹{parseFloat(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-[11px] text-slate-400 font-medium">
-                                        <span>{new Date(payment.date).toLocaleDateString('en-GB')} • {payment.narration?.includes('via ') ? payment.narration.match(/via (.*?)\./)?.[1] || 'Cash' : 'Cash'}</span>
-                                        <span className="font-bold">#{payment.paymentNumber}</span>
-                                    </div>
-                                    <div className="mt-2">
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] ${
-                                            payment.status === 'Paid'
-                                              ? 'text-emerald-600 bg-emerald-50'
-                                              : 'text-slate-500 bg-slate-100'
-                                        }`}>
-                                            {payment.status || 'Draft'}
-                                        </span>
-                                    </div>
-                                    
-                                    {selectedPaymentId === payment.id && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full mr-2 shadow-[0_0_8px_rgba(37,99,235,0.4)] animate-pulse" />}
-                                </div>
-                            ))
-                        )}
+            {layoutMode === 'table' ? (
+                /* --- TABLE VIEW --- */
+                <div className="flex flex-col h-full bg-white overflow-hidden">
+                    <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-4 py-3.5 w-10 text-center"><Sliders size={14} className="text-[#1e61f0] mx-auto" /></th>
+                                    <th className="px-2 py-3.5 w-8 text-center"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5" /></th>
+                                    <th className="px-4 py-3.5 cursor-pointer select-none">
+                                        <div className="flex items-center gap-1 font-semibold">
+                                            DATE <ArrowDownUp size={12} className="text-slate-400" />
+                                        </div>
+                                    </th>
+                                    <th className="px-4 py-3.5 font-semibold">PAYMENT #</th>
+                                    <th className="px-4 py-3.5 font-semibold">REFERENCE#</th>
+                                    <th className="px-4 py-3.5 font-semibold">VENDOR NAME</th>
+                                    <th className="px-4 py-3.5 font-semibold">BILL#</th>
+                                    <th className="px-4 py-3.5 font-semibold">MODE</th>
+                                    <th className="px-4 py-3.5 font-semibold">STATUS</th>
+                                    <th className="px-4 py-3.5 font-semibold text-right">AMOUNT</th>
+                                    <th className="px-4 py-3.5 font-semibold text-right">UNUSED AMOUNT</th>
+                                    <th className="px-4 py-3.5 w-10 text-center"><Search size={14} className="text-slate-400 mx-auto" /></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filteredPayments.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="12" className="py-20 text-center">
+                                           <div className="flex flex-col items-center justify-center gap-3">
+                                              <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                                                 <Wallet size={24} />
+                                              </div>
+                                              <p className="text-slate-500 text-[14px]">No payments found.</p>
+                                              <button onClick={() => navigate('/payments-made/new')} className="text-blue-600 text-[13px] font-medium hover:underline">Record a payment</button>
+                                           </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredPayments.map(payment => {
+                                        const mode = payment.narration?.includes('via ') ? payment.narration.match(/via (.*?)\./)?.[1] || 'Cash' : 'Cash';
+                                        return (
+                                            <tr 
+                                                key={payment.id} 
+                                                onClick={() => {
+                                                    setSelectedPaymentId(payment.id);
+                                                    setLayoutMode('split');
+                                                }}
+                                                className="hover:bg-slate-50 cursor-pointer group transition-colors border-b border-slate-100"
+                                            >
+                                                <td className="px-4 py-3 w-10 text-center"></td>
+                                                <td className="px-2 py-3 w-8 text-center" onClick={(e) => e.stopPropagation()}>
+                                                    <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5" />
+                                                </td>
+                                                <td className="px-4 py-3 text-[13px] text-slate-500 font-medium whitespace-nowrap">
+                                                    {new Date(payment.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="text-[14px] font-medium text-blue-600 group-hover:underline">
+                                                        {payment.paymentNumber}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-[13px] text-slate-500 font-medium">
+                                                    {payment.reference || '---'}
+                                                </td>
+                                                <td className="px-4 py-3 text-[14px] font-medium text-slate-800 uppercase tracking-tight">
+                                                    {payment.vendorName || '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-[13px] text-blue-600 font-bold whitespace-nowrap">
+                                                    {payment.billNo || '---'}
+                                                </td>
+                                                <td className="px-4 py-3 text-[13px] text-slate-500 font-medium">
+                                                    {mode}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-bold tracking-widest border
+                                                        ${payment.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                                        {payment.status || 'Draft'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-[14px] font-bold text-slate-900 tabular-nums">
+                                                    ₹{parseFloat(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-[14px] font-bold text-slate-500 tabular-nums">
+                                                    ₹{parseFloat(payment.unusedAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-4 py-3 w-10 text-center"></td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
+            ) : (
+                /* --- SPLIT PANE VIEW --- */
+                <div className="flex h-full overflow-hidden animate-in zoom-in-95 duration-500">
+                    {/* LEFT MASTER LIST */}
+                    <div className="w-[320px] xl:w-[380px] bg-slate-50/30 border-r border-slate-200 flex flex-col z-20 shadow-[4px_0_15px_rgba(0,0,0,0.02)] no-print">
+                        <div className="p-4 border-b border-slate-100 bg-white space-y-3">
+                            <div className="relative group">
+                                <Search size={14} className="absolute left-3 top-2.5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Find in Payments..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[12px] focus:border-blue-500 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
+                            {loading ? (
+                                <div className="p-8 text-center text-slate-400 text-[12px]">Loading payments...</div>
+                            ) : filteredPayments.length === 0 ? (
+                                <div className="p-8 text-center text-slate-400 text-[12px]">No payments found.</div>
+                            ) : (
+                                filteredPayments.map(payment => (
+                                    <div 
+                                        key={payment.id}
+                                        onClick={() => setSelectedPaymentId(payment.id)}
+                                        className={`p-4 border-b border-slate-50 cursor-pointer transition-all relative group overflow-hidden ${selectedPaymentId === payment.id ? 'bg-blue-50/50 border-l-[3px] border-l-blue-600' : 'hover:bg-slate-50/80 border-l-[3px] border-l-transparent'}`}
+                                    >
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className={`text-[13px] font-bold ${selectedPaymentId === payment.id ? 'text-blue-700' : 'text-slate-800'}`}>
+                                                {payment.vendorName}
+                                            </span>
+                                            <span className="text-[13px] font-bold text-slate-900 group-hover:scale-110 transition-transform tabular-nums">
+                                                ₹{parseFloat(payment.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[11px] text-slate-400 font-medium">
+                                            <span>{new Date(payment.date).toLocaleDateString('en-GB')} • {payment.narration?.includes('via ') ? payment.narration.match(/via (.*?)\./)?.[1] || 'Cash' : 'Cash'}</span>
+                                            <span className="font-bold">#{payment.paymentNumber}</span>
+                                        </div>
+                                        <div className="mt-2">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] ${
+                                                payment.status === 'Paid'
+                                                  ? 'text-emerald-600 bg-emerald-50'
+                                                  : 'text-slate-500 bg-slate-100'
+                                            }`}>
+                                                {payment.status || 'Draft'}
+                                            </span>
+                                        </div>
+                                        
+                                        {selectedPaymentId === payment.id && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full mr-2 shadow-[0_0_8px_rgba(37,99,235,0.4)] animate-pulse" />}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
 
                 {/* RIGHT DETAIL PANE */}
                 <div className="flex-1 bg-[#fcfdfe] overflow-y-auto custom-scrollbar flex flex-col relative">
@@ -317,6 +418,16 @@ const PaymentsMadeListView = ({ companyId }) => {
                                           <CheckCircle2 size={14} /> Mark as Paid
                                       </button>
                                     )}
+                                    <div className="flex-1"></div>
+                                    <button 
+                                      onClick={() => {
+                                          setSelectedPaymentId(null);
+                                          setLayoutMode('table');
+                                      }}
+                                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                    >
+                                        <X size={20} />
+                                    </button>
                                 </div>
 
                                 {/* Banner — only shown when status is Draft */}
@@ -453,6 +564,7 @@ const PaymentsMadeListView = ({ companyId }) => {
                     )}
                 </div>
             </div>
+            )}
         </div>
     </div>
   );

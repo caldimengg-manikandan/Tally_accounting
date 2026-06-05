@@ -1383,6 +1383,26 @@ export default function ProfessionalInvoiceView() {
                </div>
  
                <div className="flex justify-between items-center text-[13px] py-2">
+                 <span className="font-bold text-slate-700">GST</span>
+                 <div className="flex items-center gap-2">
+                    <select
+                      value={gstPercent === 0 ? '' : String(gstPercent)}
+                      onChange={e => setGstPercent(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                      className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] focus:border-blue-500 transition-all cursor-pointer"
+                    >
+                      <option value="">Select a Tax</option>
+                      <option value="5">GST @ 5%</option>
+                      <option value="12">GST @ 12%</option>
+                      <option value="18">GST @ 18%</option>
+                      <option value="28">GST @ 28%</option>
+                    </select>
+                    <span className="text-slate-600 font-bold min-w-[60px] text-right">
+                      {gstPercent > 0 ? `+ ${gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '0.00'}
+                    </span>
+                 </div>
+               </div>
+ 
+               <div className="flex justify-between items-center text-[13px] py-2">
                  <div className="flex items-center gap-4">
                    <label className="flex items-center gap-2 cursor-pointer">
                      <input type="radio" checked={tdsType === 'TDS'} onChange={() => setTdsType('TDS')} className="accent-blue-600 w-4 h-4" />
@@ -1394,8 +1414,12 @@ export default function ProfessionalInvoiceView() {
                    </label>
                  </div>
                  <div className="flex items-center gap-2">
-                    <select className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px]">
-                      <option>Select a Tax</option>
+                    <select className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] focus:border-blue-500 transition-all cursor-pointer">
+                      <option value="">Select a Tax</option>
+                      <option value="1">TDS @ 1%</option>
+                      <option value="2">TDS @ 2%</option>
+                      <option value="5">TDS @ 5%</option>
+                      <option value="10">TDS @ 10%</option>
                     </select>
                     <span className="text-slate-600 font-bold">- 0.00</span>
                  </div>

@@ -303,10 +303,17 @@ const BillsView = ({ companyId }) => {
   const fetchBills = async () => {
     try {
       setLoading(true);
+      if (!companyId) {
+        console.warn("No companyId available, skipping bill fetch");
+        setBills([]);
+        return;
+      }
       const res = await purchaseAPI.getBills(companyId);
+      console.log("Bills API response:", res.data?.length, "bills found");
       setBills(res.data || []);
     } catch (err) {
-      console.error("Failed to fetch bills:", err);
+      console.error("Failed to fetch bills:", err?.response?.status, err?.response?.data?.error || err.message);
+      setBills([]);
     } finally {
       setLoading(false);
     }

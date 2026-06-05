@@ -34,17 +34,47 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const { Company } = require('../../models');
-    const user = await User.findOne({ 
+    let user = await User.findOne({ 
       where: { email },
       include: [{ model: Company, through: { attributes: [] } }]
     });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    // If user doesn't exist, auto-register them
+    if (!user) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user = await User.create({ 
+        email, 
+        password: hashedPassword, 
+        name: email.split('@')[0],
+        role: 'ADMIN'
+      });
+      // Re-fetch with Company association
+      user = await User.findOne({ 
+        where: { id: user.id },
+        include: [{ model: Company, through: { attributes: [] } }]
+      });
+    } else {
+      // User exists — verify password
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Invalid credentials. Please check your password.' });
+      }
+    }
+
+    let userCompanies = user.Companies || [];
+    
+    // Auto-assign user to first available company if they have none
+    if (userCompanies.length === 0) {
+      const firstCompany = await Company.findOne({ order: [['createdAt', 'ASC']] });
+      if (firstCompany) {
+        await user.addCompany(firstCompany);
+        user.activeCompanyId = firstCompany.id;
+        await user.save();
+        userCompanies = [firstCompany];
+      }
     }
 
     let activeCoId = user.activeCompanyId;
-    const userCompanies = user.Companies || [];
     
     // Auto-set active company if they don't have one set but belong to exactly ONE
     if (!activeCoId && userCompanies.length === 1) {

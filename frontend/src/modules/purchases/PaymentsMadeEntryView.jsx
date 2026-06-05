@@ -27,7 +27,6 @@ const PaymentsMadeEntryView = ({ companyId }) => {
   const [ledgers, setLedgers] = useState([]);
   const [outstandingBills, setOutstandingBills] = useState([]);
 
-  // Form State
   const [formData, setFormData] = useState({
     vendorId: initialVendorId || '',
     paymentNumber: '',
@@ -36,7 +35,9 @@ const PaymentsMadeEntryView = ({ companyId }) => {
     paymentMode: 'Cash',
     paidThroughId: '',
     reference: initialBillDetail?.referenceNumber || '',
-    notes: ''
+    notes: '',
+    tds: '',
+    depositToId: ''
   });
 
   // Table State
@@ -81,8 +82,13 @@ const PaymentsMadeEntryView = ({ companyId }) => {
             paidThroughId: p.paidThroughId || '',
             paidThroughName: '', // will be resolved via ledger list
             reference: p.reference || '',
-            notes: p.notes || ''
+            notes: p.notes || '',
+            tds: p.tds || '',
+            depositToId: p.depositToId || ''
           }));
+          if (p.activeTab) {
+            setActiveTab(p.activeTab);
+          }
           // Store allocations in ref — they'll be applied after bills are fetched
           const allocs = {};
           (p.billAllocations || []).forEach(a => {
@@ -137,6 +143,28 @@ const PaymentsMadeEntryView = ({ companyId }) => {
            { id: 'oca_tds_receivable', name: 'TDS Receivable' },
         ]},
      ];
+  }, [ledgers]);
+
+  const depositToOptions = useMemo(() => {
+     return ledgers.filter(l => {
+        const gName = l.Group?.name || l.groupName || '';
+        return [
+          'Prepaid Expenses', 
+          'Current Assets', 
+          'Loans & Advances (Asset)', 
+          'Cash-in-Hand',
+          'Suspense Account'
+        ].includes(gName);
+     });
+  }, [ledgers]);
+
+  useEffect(() => {
+    if (ledgers.length > 0 && !formData.depositToId && !isEditMode) {
+      const prepaidLedger = ledgers.find(l => l.name?.toLowerCase().includes('prepaid expense') || l.name?.toLowerCase().includes('advance to supplier'));
+      if (prepaidLedger) {
+        setFormData(prev => ({ ...prev, depositToId: prepaidLedger.id }));
+      }
+    }
   }, [ledgers]);
 
   // Resolve the selected display name
@@ -321,6 +349,11 @@ const PaymentsMadeEntryView = ({ companyId }) => {
       return;
     }
 
+    if (activeTab === 'Vendor Advance' && !formData.depositToId) {
+      alert("Please ensure the Deposit To field is filled.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const realPaidThroughId = await ensureRealLedger(formData.paidThroughId, selectedPaidThroughName, companyId);
@@ -329,13 +362,16 @@ const PaymentsMadeEntryView = ({ companyId }) => {
         ...formData,
         paidThroughId: realPaidThroughId,
         amount: parseFloat(formData.paymentMade),
-        billAllocations: Object.entries(allocations).filter(([_, amt]) => parseFloat(amt) > 0).map(([id, amt]) => ({
-          billId: id,
-          amount: parseFloat(amt),
-          billNumber: outstandingBills.find(b => b.id === id)?.billNumber
-        })),
+        billAllocations: activeTab === 'Vendor Advance'
+          ? []
+          : Object.entries(allocations).filter(([_, amt]) => parseFloat(amt) > 0).map(([id, amt]) => ({
+              billId: id,
+              amount: parseFloat(amt),
+              billNumber: outstandingBills.find(b => b.id === id)?.billNumber
+            })),
         status,
-        companyId
+        companyId,
+        activeTab
       };
 
       let newPaymentId = id;
@@ -500,6 +536,27 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                      </div>
                   </div>
 
+                  {/* TDS (only for Vendor Advance) */}
+                  {activeTab === 'Vendor Advance' && (
+                     <div className="grid grid-cols-[180px_1fr] items-center gap-4 animate-fade-down">
+                        <label className="text-slate-600 font-semibold text-[13px]">TDS</label>
+                        <div className="max-w-lg relative">
+                           <select 
+                             value={formData.tds || ''}
+                             onChange={(e) => setFormData({...formData, tds: e.target.value})}
+                             className="w-full h-8.5 pl-3 pr-8 border border-slate-300 rounded outline-none text-[13px] text-slate-800 bg-white appearance-none hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer font-medium"
+                           >
+                              <option value="">No TDS Tax</option>
+                              <option value="TDS - 1%">TDS - 1%</option>
+                              <option value="TDS - 2%">TDS - 2%</option>
+                              <option value="TDS - 5%">TDS - 5%</option>
+                              <option value="TDS - 10%">TDS - 10%</option>
+                           </select>
+                           <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none stroke-[2.5]" />
+                        </div>
+                     </div>
+                  )}
+
                   {/* Payment Date */}
                   <div className="grid grid-cols-[180px_1fr] items-center gap-4">
                      <label className="text-red-500 font-semibold text-[13px]">
@@ -589,6 +646,28 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                      </div>
                   </div>
 
+                  {/* Deposit To (only for Vendor Advance) */}
+                  {activeTab === 'Vendor Advance' && (
+                     <div className="grid grid-cols-[180px_1fr] items-center gap-4 animate-fade-down">
+                        <label className="text-red-500 font-semibold text-[13px] flex items-center">
+                           Deposit To<span className="ml-0.5">*</span>
+                        </label>
+                        <div className="max-w-lg relative">
+                           <select 
+                             value={formData.depositToId ? String(formData.depositToId) : ''}
+                             onChange={(e) => setFormData({...formData, depositToId: e.target.value})}
+                             className="w-full h-8.5 pl-3 pr-8 border border-slate-300 rounded outline-none text-[13px] text-slate-800 bg-white appearance-none hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer font-medium"
+                           >
+                              <option value="">Select Account</option>
+                              {depositToOptions.map(l => (
+                                 <option key={l.id} value={String(l.id)}>{l.name}</option>
+                              ))}
+                           </select>
+                           <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none stroke-[2.5]" />
+                        </div>
+                     </div>
+                  )}
+
                   {/* Reference# */}
                   <div className="grid grid-cols-[180px_1fr] items-center gap-4">
                      <label className="text-slate-600 font-semibold text-[13px]">Reference#</label>
@@ -604,96 +683,98 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                </div>
 
                {/* UNPAID BILLS TABLE & TOTALS */}
-               <div className="pt-8 border-t border-slate-200/60 w-full">
-                  <div className="flex justify-end mb-2 mr-2">
-                     <button onClick={() => setAllocations({})} className="text-[12px] font-bold text-blue-600 hover:text-blue-700 transition-colors uppercase tracking-tight">
-                        Clear Applied Amount
-                     </button>
-                  </div>
+               {activeTab !== 'Vendor Advance' && (
+                  <div className="pt-8 border-t border-slate-200/60 w-full">
+                     <div className="flex justify-end mb-2 mr-2">
+                        <button onClick={() => setAllocations({})} className="text-[12px] font-bold text-blue-600 hover:text-blue-700 transition-colors uppercase tracking-tight">
+                           Clear Applied Amount
+                        </button>
+                     </div>
 
-                  <div className="w-full overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm">
-                     <table className="w-full text-left border-collapse">
-                        <thead>
-                           <tr className="border-b border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider bg-slate-50">
-                              <th className="py-3 px-5 font-bold w-[120px]">Date</th>
-                              <th className="py-3 px-5 font-bold">Bill</th>
-                              <th className="py-3 px-5 font-bold">PO#</th>
-                              <th className="py-3 px-5 font-bold text-right">Bill Amount</th>
-                              <th className="py-3 px-5 font-bold text-right">Amount Due</th>
-                              <th className="py-3 px-5 font-bold text-center w-[160px]">Payment Made on</th>
-                              <th className="py-3 px-5 font-bold text-right w-[150px]">Payment</th>
-                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                           {!formData.vendorId ? (
-                              <tr>
-                                 <td colSpan={7} className="py-20 text-center text-slate-400 text-[13.5px] font-medium bg-white">
-                                    Select a vendor to see their outstanding bills.
-                                 </td>
+                     <div className="w-full overflow-hidden border border-slate-200 rounded-xl bg-white shadow-sm">
+                        <table className="w-full text-left border-collapse">
+                           <thead>
+                              <tr className="border-b border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider bg-slate-50">
+                                 <th className="py-3 px-5 font-bold w-[120px]">Date</th>
+                                 <th className="py-3 px-5 font-bold">Bill</th>
+                                 <th className="py-3 px-5 font-bold">PO#</th>
+                                 <th className="py-3 px-5 font-bold text-right">Bill Amount</th>
+                                 <th className="py-3 px-5 font-bold text-right">Amount Due</th>
+                                 <th className="py-3 px-5 font-bold text-center w-[160px]">Payment Made on</th>
+                                 <th className="py-3 px-5 font-bold text-right w-[150px]">Payment</th>
                               </tr>
-                           ) : fetchingBills ? (
-                              <tr>
-                                 <td colSpan={7} className="py-20 text-center text-slate-400 text-[13.5px] font-medium bg-white">
-                                    <span className="animate-pulse">Loading outstanding bills...</span>
-                                 </td>
-                              </tr>
-                           ) : outstandingBills.length === 0 ? (
-                              <tr>
-                                 <td colSpan={7} className="py-20 text-center text-slate-500 text-[13.5px] font-semibold bg-white uppercase tracking-wider opacity-60">
-                                    There are no bills for this vendor.
-                                 </td>
-                              </tr>
-                           ) : (
-                              outstandingBills.map(bill => (
-                                 <tr key={bill.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="py-3 px-5 text-[12.5px] text-slate-600 font-medium">
-                                       <div>{new Date(bill.date).toLocaleDateString('en-GB')}</div>
-                                       {bill.dueDate && (
-                                          <div className="text-[10px] text-slate-400 mt-0.5 font-bold">
-                                             DUE: {new Date(bill.dueDate).toLocaleDateString('en-GB')}
-                                          </div>
-                                       )}
-                                    </td>
-                                    <td className="py-3 px-5 text-[13px] font-bold text-blue-600 hover:underline cursor-pointer">{bill.billNumber}</td>
-                                    <td className="py-3 px-5 text-[12.5px] text-slate-500 font-medium">{bill.reference || '---'}</td>
-                                    <td className="py-3 px-5 text-[13px] text-right font-medium">₹ {parseFloat(bill.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                    <td className="py-3 px-5 text-[13px] text-right font-bold text-slate-700">₹ {parseFloat(bill.balanceDue || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                    <td className="py-2.5 px-5 text-center">
-                                       <input 
-                                          type="date"
-                                          defaultValue={formData.paymentDate}
-                                          className="w-full h-8 px-2 border border-slate-200 rounded outline-none text-[12px] text-slate-600 bg-white hover:border-slate-300 focus:border-blue-500 transition-all font-medium"
-                                       />
-                                    </td>
-                                    <td className="py-2.5 px-5 text-right flex flex-col items-end justify-center min-h-[56px]">
-                                       <input 
-                                          type="number"
-                                          value={allocations[bill.id] !== undefined ? allocations[bill.id] : ''}
-                                          onChange={(e) => handleAllocationChange(bill.id, e.target.value)}
-                                          className="w-full h-8 px-2 text-right border border-slate-300 rounded outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-[13px] bg-white font-bold text-slate-800 transition-all"
-                                       />
-                                       <button
-                                          onClick={() => handleAllocationChange(bill.id, bill.balanceDue)}
-                                          className="text-[10.5px] font-bold text-blue-600 hover:text-blue-800 mt-1 uppercase tracking-tight"
-                                       >
-                                          Pay in Full
-                                       </button>
+                           </thead>
+                           <tbody className="divide-y divide-slate-100">
+                              {!formData.vendorId ? (
+                                 <tr>
+                                    <td colSpan={7} className="py-20 text-center text-slate-400 text-[13.5px] font-medium bg-white">
+                                       Select a vendor to see their outstanding bills.
                                     </td>
                                  </tr>
-                              ))
-                           )}
-                        </tbody>
-                     </table>
-                  </div>
+                              ) : fetchingBills ? (
+                                 <tr>
+                                    <td colSpan={7} className="py-20 text-center text-slate-400 text-[13.5px] font-medium bg-white">
+                                       <span className="animate-pulse">Loading outstanding bills...</span>
+                                    </td>
+                                 </tr>
+                              ) : outstandingBills.length === 0 ? (
+                                 <tr>
+                                    <td colSpan={7} className="py-20 text-center text-slate-500 text-[13.5px] font-semibold bg-white uppercase tracking-wider opacity-60">
+                                       There are no bills for this vendor.
+                                    </td>
+                                 </tr>
+                              ) : (
+                                 outstandingBills.map(bill => (
+                                    <tr key={bill.id} className="hover:bg-slate-50/50 transition-colors">
+                                       <td className="py-3 px-5 text-[12.5px] text-slate-600 font-medium">
+                                          <div>{new Date(bill.date).toLocaleDateString('en-GB')}</div>
+                                          {bill.dueDate && (
+                                             <div className="text-[10px] text-slate-400 mt-0.5 font-bold">
+                                                DUE: {new Date(bill.dueDate).toLocaleDateString('en-GB')}
+                                             </div>
+                                          )}
+                                       </td>
+                                       <td className="py-3 px-5 text-[13px] font-bold text-blue-600 hover:underline cursor-pointer">{bill.billNumber}</td>
+                                       <td className="py-3 px-5 text-[12.5px] text-slate-500 font-medium">{bill.reference || '---'}</td>
+                                       <td className="py-3 px-5 text-[13px] text-right font-medium">₹ {parseFloat(bill.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                       <td className="py-3 px-5 text-[13px] text-right font-bold text-slate-700">₹ {parseFloat(bill.balanceDue || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                       <td className="py-2.5 px-5 text-center">
+                                          <input 
+                                             type="date"
+                                             defaultValue={formData.paymentDate}
+                                             className="w-full h-8 px-2 border border-slate-200 rounded outline-none text-[12px] text-slate-600 bg-white hover:border-slate-300 focus:border-blue-500 transition-all font-medium"
+                                          />
+                                       </td>
+                                       <td className="py-2.5 px-5 text-right flex flex-col items-end justify-center min-h-[56px]">
+                                          <input 
+                                             type="number"
+                                             value={allocations[bill.id] !== undefined ? allocations[bill.id] : ''}
+                                             onChange={(e) => handleAllocationChange(bill.id, e.target.value)}
+                                             className="w-full h-8 px-2 text-right border border-slate-300 rounded outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-[13px] bg-white font-bold text-slate-800 transition-all"
+                                          />
+                                          <button
+                                             onClick={() => handleAllocationChange(bill.id, bill.balanceDue)}
+                                             className="text-[10.5px] font-bold text-blue-600 hover:text-blue-800 mt-1 uppercase tracking-tight"
+                                          >
+                                             Pay in Full
+                                          </button>
+                                       </td>
+                                    </tr>
+                                 ))
+                              )}
+                           </tbody>
+                        </table>
+                     </div>
 
-                  {/* Total below table */}
-                  <div className="flex justify-end items-center pr-5 mt-3.5 gap-4">
-                     <span className="text-[13px] font-bold text-slate-500 uppercase tracking-wider">Total :</span>
-                     <span className="text-[14px] font-extrabold text-slate-900 w-[130px] text-right">
-                       ₹ {parseFloat(totalUsed || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                     </span>
+                     {/* Total below table */}
+                     <div className="flex justify-end items-center pr-5 mt-3.5 gap-4">
+                        <span className="text-[13px] font-bold text-slate-500 uppercase tracking-wider">Total :</span>
+                        <span className="text-[14px] font-extrabold text-slate-900 w-[130px] text-right">
+                          ₹ {parseFloat(totalUsed || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                        </span>
+                     </div>
                   </div>
-               </div>
+               )}
 
                {/* Calculations summary Box & Notes */}
                <div className="grid grid-cols-[1fr_400px] gap-8 pt-8 items-start">
@@ -730,7 +811,7 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                      <div className="flex justify-between items-center text-[13px] font-semibold text-slate-600">
                         <span>Amount used for Payments:</span>
                         <span className="font-extrabold text-slate-800">
-                          {parseFloat(totalUsed || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                          {parseFloat(activeTab === 'Vendor Advance' ? 0 : totalUsed || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
                         </span>
                      </div>
                      <div className="flex justify-between items-center text-[13px] font-semibold text-slate-600">
@@ -745,7 +826,7 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                            Amount in Excess:
                         </div>
                         <span className="text-[14px]">
-                           ₹ {Math.max(0, parseFloat(formData.paymentMade || 0) - totalUsed).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                           ₹ {parseFloat(activeTab === 'Vendor Advance' ? (formData.paymentMade || 0) : Math.max(0, parseFloat(formData.paymentMade || 0) - totalUsed)).toLocaleString('en-IN', {minimumFractionDigits: 2})}
                         </span>
                      </div>
                   </div>
