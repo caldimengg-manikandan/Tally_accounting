@@ -66,8 +66,8 @@ exports.login = async (req, res) => {
 
     let userCompanies = user.Companies || [];
     
-    // Auto-assign user to first available company removed to prevent multi-tenant data leaks.
-    // The frontend will redirect users with no companies to the setup wizard.
+    // Removed: We no longer auto-create a default company.
+    // The frontend will detect companies.length === 0 and redirect to /setup-company
 
     let activeCoId = user.activeCompanyId;
     

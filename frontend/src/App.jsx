@@ -530,31 +530,6 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         {/* Top Header */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 relative z-40 shrink-0 no-print">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
-               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Workspace</span>
-               <ChevronRight size={12} className="text-slate-300" />
-               <select 
-                 className="bg-transparent text-[11px] font-bold text-slate-900 uppercase tracking-widest outline-none cursor-pointer"
-                 value={currentCompanyId}
-                 onChange={(e) => {
-                   const selected = companies.find(c => c.id === e.target.value);
-                   if (selected) onCompanyChange(selected.id, selected.name);
-                 }}
-               >
-                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-               </select>
-                {breadcrumbs.map((crumb, i) => (
-                  <React.Fragment key={crumb.path}>
-                    {i > 0 && <ChevronRight size={12} className="text-slate-300" />}
-                    <span 
-                      onClick={() => navigate(crumb.path)}
-                      className={`text-[11px] font-bold uppercase tracking-widest cursor-pointer transition-colors ${crumb.isLast ? 'text-[#1e61f0]' : 'text-slate-400 hover:text-slate-900'}`}
-                    >
-                      {crumb.label}
-                    </span>
-                  </React.Fragment>
-                ))}
-            </div>
           </div>
 
           {/* Right side */}

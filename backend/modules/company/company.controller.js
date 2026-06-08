@@ -1,6 +1,6 @@
 const { Company, User, Group, Ledger, sequelize } = require('../../models');
 
-const seedDefaultGroups = async (companyId, transaction = null) => {
+exports.seedDefaultGroups = async (companyId, transaction = null) => {
   const { Group: GroupModel } = require('../../models');
   const { standardGroups } = require('../../helpers/tallyGroups');
   
@@ -31,7 +31,7 @@ const seedDefaultGroups = async (companyId, transaction = null) => {
   }
 };
 
-const seedDefaultLedgers = async (companyId, transaction = null) => {
+exports.seedDefaultLedgers = async (companyId, transaction = null) => {
   const { Group: GroupModel, Ledger: LedgerModel } = require('../../models');
   const options = transaction ? { transaction } : {};
 
@@ -146,10 +146,10 @@ exports.createCompany = async (req, res) => {
     }
 
     // Auto-seed Tally standard groups for the newly created company
-    await seedDefaultGroups(company.id, transaction);
+    await exports.seedDefaultGroups(company.id, transaction);
     
     // Auto-seed default ledgers within those groups
-    await seedDefaultLedgers(company.id, transaction);
+    await exports.seedDefaultLedgers(company.id, transaction);
     
     await transaction.commit();
 
@@ -424,7 +424,7 @@ exports.seedGroupsForCompany = async (req, res) => {
       return res.status(400).json({ error: `Company already has ${count} groups. Seeding aborted.` });
     }
 
-    await seedDefaultGroups(companyId);
+    await exports.seedDefaultGroups(companyId);
 
     const finalCount = await Group.count({ where: { CompanyId: companyId } });
     res.json({ 
@@ -448,7 +448,7 @@ exports.syncDefaultLedgers = async (req, res) => {
       if (!hasAccess) return res.status(403).json({ error: 'Access denied' });
     }
 
-    await seedDefaultLedgers(id);
+    await exports.seedDefaultLedgers(id);
     res.json({ message: 'Default ledgers synced successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
