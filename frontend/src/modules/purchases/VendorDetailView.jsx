@@ -98,6 +98,17 @@ const VendorDetailView = ({ companyId }) => {
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    salutation: 'Salutation',
+    firstName: '',
+    lastName: '',
+    email: '',
+    workPhoneCode: '+91',
+    workPhone: '',
+    mobileCode: '+91',
+    mobile: ''
+  });
   const [showAccountNum, setShowAccountNum] = useState(false);
   const [bankErrors, setBankErrors] = useState([]);
   const [bankForm, setBankForm] = useState({ 
@@ -223,6 +234,60 @@ const VendorDetailView = ({ companyId }) => {
       setIsBankDeleteConfirmOpen(false);
     } catch (err) {
       addNotification('Failed to remove bank details.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddContactSubmit = async () => {
+    if (!contactForm.firstName) {
+      addNotification('First Name is required', 'error');
+      return;
+    }
+    try {
+      setLoading(true);
+      const newContact = {
+        name: `${contactForm.salutation !== 'Salutation' ? contactForm.salutation : ''} ${contactForm.firstName} ${contactForm.lastName}`.trim(),
+        email: contactForm.email,
+        phone: contactForm.workPhone,
+        mobile: contactForm.mobile
+      };
+      
+      let existingContacts = [];
+      if (vendor.contacts) {
+        existingContacts = vendor.contacts;
+      } else if (vendor.contactPersonsJson) {
+        try {
+          existingContacts = JSON.parse(vendor.contactPersonsJson);
+        } catch(e) {}
+      }
+      
+      const updatedContacts = [...existingContacts, newContact];
+      
+      await ledgerAPI.update(vendor.id, {
+        ...vendor,
+        contactPersonsJson: JSON.stringify(updatedContacts)
+      });
+      
+      addNotification('Contact person added successfully!', 'success');
+      
+      setAllLedgers(prev => prev.map(v => 
+        v.id === vendor.id ? { ...v, contacts: updatedContacts, contactPersonsJson: JSON.stringify(updatedContacts) } : v
+      ));
+      
+      setIsAddContactModalOpen(false);
+      setContactForm({
+        salutation: 'Salutation',
+        firstName: '',
+        lastName: '',
+        email: '',
+        workPhoneCode: '+91',
+        workPhone: '',
+        mobileCode: '+91',
+        mobile: ''
+      });
+    } catch (err) {
+      addNotification('Failed to add contact', 'error');
     } finally {
       setLoading(false);
     }
@@ -1141,7 +1206,7 @@ const VendorDetailView = ({ companyId }) => {
                          addNotification({ message: 'Portal invitation sent successfully!', type: 'success' });
                        }}
                        onAddContact={() => {
-                         navigate(`/vendors/${vendor.id}`);
+                         setIsAddContactModalOpen(true);
                        }}
                        onSettingsClick={() => {
                          setIsSettingsOpen(!isSettingsOpen);
@@ -1572,6 +1637,124 @@ const VendorDetailView = ({ companyId }) => {
               <button onClick={() => { setIsBankModalOpen(false); setBankErrors([]); }} className="px-5 py-2 border border-slate-200 rounded-[4px] text-[14px] font-medium text-slate-900 bg-[#fcfdff] hover:bg-slate-50 transition-colors">
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Contact Person Modal */}
+      {isAddContactModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden font-sans border border-slate-100 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h2 className="text-[16px] font-bold text-slate-800">Add Contact Person</h2>
+              <button onClick={() => setIsAddContactModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+               <div className="flex items-start gap-4">
+                  <label className="w-32 text-[13px] font-medium text-slate-600 mt-2">Name</label>
+                  <div className="flex-1 grid grid-cols-12 gap-3">
+                     <div className="col-span-3">
+                        <select 
+                           value={contactForm.salutation} 
+                           onChange={e => setContactForm({...contactForm, salutation: e.target.value})}
+                           className="w-full h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                        >
+                           <option>Salutation</option>
+                           <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
+                        </select>
+                     </div>
+                     <div className="col-span-4">
+                        <input 
+                           placeholder="First Name" 
+                           value={contactForm.firstName} 
+                           onChange={e => setContactForm({...contactForm, firstName: e.target.value})}
+                           className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                        />
+                     </div>
+                     <div className="col-span-5">
+                        <input 
+                           placeholder="Last Name" 
+                           value={contactForm.lastName} 
+                           onChange={e => setContactForm({...contactForm, lastName: e.target.value})}
+                           className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                        />
+                     </div>
+                  </div>
+               </div>
+
+               <div className="flex items-center gap-4">
+                  <label className="w-32 text-[13px] font-medium text-slate-600">Email Address</label>
+                  <div className="flex-1">
+                     <input 
+                        type="email"
+                        value={contactForm.email} 
+                        onChange={e => setContactForm({...contactForm, email: e.target.value})}
+                        className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                     />
+                  </div>
+               </div>
+
+               <div className="flex items-start gap-4">
+                  <label className="w-32 text-[13px] font-medium text-slate-600 mt-2">Phone</label>
+                  <div className="flex-1 space-y-3">
+                     <div className="flex gap-3">
+                        <select 
+                           value={contactForm.workPhoneCode} 
+                           onChange={e => setContactForm({...contactForm, workPhoneCode: e.target.value})}
+                           className="w-24 h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                        >
+                           <option>+91</option>
+                           <option>+1</option>
+                           <option>+44</option>
+                           <option>+61</option>
+                        </select>
+                        <input 
+                           placeholder="Work Phone" 
+                           value={contactForm.workPhone} 
+                           onChange={e => setContactForm({...contactForm, workPhone: e.target.value})}
+                           className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                        />
+                     </div>
+                     <div className="flex gap-3">
+                        <select 
+                           value={contactForm.mobileCode} 
+                           onChange={e => setContactForm({...contactForm, mobileCode: e.target.value})}
+                           className="w-24 h-9 px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                        >
+                           <option>+91</option>
+                           <option>+1</option>
+                           <option>+44</option>
+                           <option>+61</option>
+                        </select>
+                        <input 
+                           placeholder="Mobile" 
+                           value={contactForm.mobile} 
+                           onChange={e => setContactForm({...contactForm, mobile: e.target.value})}
+                           className="flex-1 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500" 
+                        />
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50 mt-auto">
+               <button 
+                  onClick={() => setIsAddContactModalOpen(false)} 
+                  className="px-5 py-2 border border-slate-200 rounded text-[13px] font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+               >
+                  Cancel
+               </button>
+               <button 
+                  onClick={handleAddContactSubmit} 
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-[13px] font-medium shadow-sm transition-colors disabled:opacity-50"
+               >
+                  Save
+               </button>
             </div>
           </div>
         </div>
