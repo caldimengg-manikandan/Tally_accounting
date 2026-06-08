@@ -9,9 +9,17 @@ let sequelize;
 // 1. Check for Production Connection String (Standard for Render/Vercel Postgres)
 if (process.env.DATABASE_URL) {
   let dbUrl = process.env.DATABASE_URL;
-  // Fix Render internal URLs that cause ENOTFOUND by appending the external region suffix
+
+  // Fix Render internal URLs — convert to external hostname to bypass internal DNS issues.
+  // Render internal hostnames look like: dpg-XXXXXXXX-a (no .region.render.com suffix)
   if (dbUrl.includes('dpg-') && !dbUrl.includes('.render.com')) {
-    dbUrl = dbUrl.replace(/(dpg-[a-z0-9-]+)(\/)/, '$1.singapore-postgres.render.com$2');
+    // Extract the internal hostname and append the correct external region suffix
+    // Render external postgres hostnames follow: <id>.oregon-postgres.render.com OR <id>.singapore-postgres.render.com etc.
+    // We try a generic approach — replace the short hostname with the long external form
+    dbUrl = dbUrl.replace(
+      /(@)(dpg-[a-z0-9]+(-[a-z])?)(\/)/,
+      '$1$2.oregon-postgres.render.com$4'
+    );
     console.log('🔄 Converted internal Render DB URL to external to bypass DNS issues.');
   }
 
@@ -24,14 +32,19 @@ if (process.env.DATABASE_URL) {
         rejectUnauthorized: false // Essential for Render/Supabase free tiers
       },
       keepAlive: true,
+      connectTimeout: 30000,
     },
     pool: {
       max: 5,
       min: 0,
-      acquire: 60000,
-      idle: 10000
+      acquire: 120000,   // 2 minutes — Render cold-start DBs can be slow
+      idle: 10000,
+      evict: 30000,
     },
     logging: false,
+    retry: {
+      max: 3,
+    },
   });
 } 
 // 2. Fallback to manual config or local SQLite

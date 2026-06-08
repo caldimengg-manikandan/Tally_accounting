@@ -63,16 +63,8 @@ exports.login = async (req, res) => {
 
     let userCompanies = user.Companies || [];
     
-    // Auto-assign user to first available company if they have none
-    if (userCompanies.length === 0) {
-      const firstCompany = await Company.findOne({ order: [['createdAt', 'ASC']] });
-      if (firstCompany) {
-        await user.addCompany(firstCompany);
-        user.activeCompanyId = firstCompany.id;
-        await user.save();
-        userCompanies = [firstCompany];
-      }
-    }
+    // Removed: We no longer auto-create a default company.
+    // The frontend will detect companies.length === 0 and redirect to /setup-company
 
     let activeCoId = user.activeCompanyId;
     
