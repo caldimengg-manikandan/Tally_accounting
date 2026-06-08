@@ -102,7 +102,7 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 const startServer = async () => {
-  let retries = 5;
+  let retries = 8;
   while (retries > 0) {
     try {
       await sequelize.authenticate();
@@ -117,7 +117,7 @@ const startServer = async () => {
     } catch (err) {
       console.error('❌ Database connection/sync failed:', err.message);
       retries -= 1;
-      console.log(`Retries left: ${retries}. Waiting 5 seconds before retrying...`);
+      console.log(`Retries left: ${retries}. Waiting 10 seconds before retrying...`);
       if (retries === 0) {
         console.error('❌ Critical Hub Entry Failure: Could not connect to database after multiple attempts.');
         if (err.errors) {
@@ -127,8 +127,8 @@ const startServer = async () => {
         }
         process.exit(1);
       }
-      // Wait for 5 seconds before retrying
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      // Wait 10 seconds before retrying (handles Render DB cold-start delays)
+      await new Promise(resolve => setTimeout(resolve, 10000));
     }
   }
 };

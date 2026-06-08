@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Info, Mail, Phone, MapPin, Building, ShieldCheck, 
   AlertCircle, Loader2, Plus, Save, X, Activity, CheckCircle2,
@@ -48,6 +48,41 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
   const initialAddress = { attention: '', country: '', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
   const [billingAddress, setBillingAddress] = useState({ ...initialAddress });
   const [shippingAddress, setShippingAddress] = useState({ ...initialAddress });
+
+  const [isBillingCountryOpen, setIsBillingCountryOpen] = useState(false);
+  const [billingCountrySearch, setBillingCountrySearch] = useState('');
+  const billingCountryRef = useRef(null);
+
+  const [isShippingCountryOpen, setIsShippingCountryOpen] = useState(false);
+  const [shippingCountrySearch, setShippingCountrySearch] = useState('');
+  const shippingCountryRef = useRef(null);
+
+  const [isBillingStateOpen, setIsBillingStateOpen] = useState(false);
+  const [billingStateSearch, setBillingStateSearch] = useState('');
+  const billingStateRef = useRef(null);
+
+  const [isShippingStateOpen, setIsShippingStateOpen] = useState(false);
+  const [shippingStateSearch, setShippingStateSearch] = useState('');
+  const shippingStateRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (billingCountryRef.current && !billingCountryRef.current.contains(event.target)) {
+        setIsBillingCountryOpen(false);
+      }
+      if (shippingCountryRef.current && !shippingCountryRef.current.contains(event.target)) {
+        setIsShippingCountryOpen(false);
+      }
+      if (billingStateRef.current && !billingStateRef.current.contains(event.target)) {
+        setIsBillingStateOpen(false);
+      }
+      if (shippingStateRef.current && !shippingStateRef.current.contains(event.target)) {
+        setIsShippingStateOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const [loading, setLoading] = useState(false);
 
@@ -292,7 +327,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                     <label className="w-48 text-[13px] font-medium text-red-500 mt-2">Primary Contact*</label>
                     <div className="flex-1 max-w-2xl space-y-4">
                         <div className="grid grid-cols-12 gap-3 pb-4">
-                            <div className="col-span-2">
+                            <div className="col-span-3">
                                 <select 
                                     value={salutation} 
                                     onChange={e => setSalutation(e.target.value)}
@@ -302,7 +337,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                                     <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
                                 </select>
                             </div>
-                            <div className="col-span-5">
+                            <div className="col-span-4">
                                 <input 
                                     placeholder="First Name" 
                                     value={firstName} onChange={e => setFirstName(e.target.value)}
@@ -387,7 +422,6 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
         <section className="space-y-6 pt-10 border-t border-slate-50">
             <div className="flex items-center gap-4 mb-8">
                 <h3 className="text-[14px] font-bold text-slate-800">Address Details</h3>
-                <span className="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Optional</span>
                 <div className="h-px bg-slate-100 flex-1"></div>
             </div>
 
@@ -396,16 +430,69 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                 <div className="space-y-6">
                     <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Billing Address</h4>
                     <div className="space-y-4">
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-slate-400">Attention</label>
-                            <input value={billingAddress.attention} onChange={e => setBillingAddress({...billingAddress, attention: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none focus:border-blue-300" />
-                        </div>
-                        <div className="space-y-1">
+
+                        <div className="space-y-1" ref={billingCountryRef}>
                             <label className="text-[11px] font-medium text-slate-400">Country/Region</label>
-                            <select value={billingAddress.country} onChange={e => setBillingAddress({...billingAddress, country: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none bg-white">
-                                <option value="">Select Country</option>
-                                {COUNTRY_CODES.map(c => <option key={c.country} value={c.country}>{c.flag} {c.country}</option>)}
-                            </select>
+                            <div className="relative">
+                                <button 
+                                   type="button"
+                                   onClick={() => {
+                                      setIsBillingCountryOpen(!isBillingCountryOpen);
+                                      setBillingCountrySearch('');
+                                   }}
+                                   className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white ${isBillingCountryOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-100 text-slate-800'}`}
+                                >
+                                   <span className="text-[13px] text-slate-700">{billingAddress.country || 'Select Country'}</span>
+                                   <div className="flex items-center gap-1.5">
+                                      {billingAddress.country && (
+                                         <X 
+                                           size={14} 
+                                           className="text-red-400 hover:text-red-600 transition-colors" 
+                                           onClick={(e) => {
+                                              e.stopPropagation();
+                                              setBillingAddress({...billingAddress, country: ''});
+                                           }}
+                                         />
+                                      )}
+                                      <ChevronDown size={14} className={`text-blue-500 transition-transform ${isBillingCountryOpen ? 'rotate-180' : ''}`} />
+                                   </div>
+                                </button>
+                                {isBillingCountryOpen && (
+                                   <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                      <div className="p-2 border-b border-slate-100">
+                                         <div className="relative">
+                                            <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                            <input 
+                                               type="text"
+                                               value={billingCountrySearch}
+                                               onChange={(e) => setBillingCountrySearch(e.target.value)}
+                                               placeholder="Search"
+                                               className="w-full pl-8 pr-3 py-1.5 border border-slate-300 text-slate-800 rounded focus:outline-none focus:border-blue-500 text-[13px]"
+                                               autoFocus
+                                            />
+                                         </div>
+                                      </div>
+                                      <div className="max-h-48 overflow-y-auto py-1 custom-scrollbar">
+                                         {COUNTRY_CODES.filter(c => c.country.toLowerCase().includes(billingCountrySearch.toLowerCase())).map((c) => (
+                                            <button
+                                               key={c.country}
+                                               type="button"
+                                               onClick={() => {
+                                                  setBillingAddress({...billingAddress, country: c.country});
+                                                  setIsBillingCountryOpen(false);
+                                               }}
+                                               className={`w-full text-left px-3 py-2 text-[13px] hover:bg-slate-50 transition-colors ${billingAddress.country === c.country ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'}`}
+                                            >
+                                               {c.country}
+                                            </button>
+                                         ))}
+                                         {COUNTRY_CODES.filter(c => c.country.toLowerCase().includes(billingCountrySearch.toLowerCase())).length === 0 && (
+                                            <div className="text-[13px] text-slate-500 p-3 text-center">No countries found</div>
+                                         )}
+                                      </div>
+                                   </div>
+                                )}
+                            </div>
                         </div>
                         <div className="space-y-1">
                             <label className="text-[11px] font-medium text-slate-400">Street Address</label>
@@ -425,10 +512,64 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="text-[11px] font-medium text-slate-400">State</label>
-                                <select value={billingAddress.state} onChange={e => setBillingAddress({...billingAddress, state: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] bg-white">
-                                    <option value="">Select State</option>
-                                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
+                                <div className="space-y-1" ref={billingStateRef}>
+                                    <div className="relative">
+                                        <button 
+                                           type="button"
+                                           onClick={() => {
+                                              setIsBillingStateOpen(!isBillingStateOpen);
+                                              setBillingStateSearch('');
+                                           }}
+                                           className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white ${isBillingStateOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-100 text-slate-800'}`}
+                                        >
+                                           <span className="text-[13px] text-slate-700">{billingAddress.state || 'Select State'}</span>
+                                           <div className="flex items-center gap-1.5">
+                                              {billingAddress.state && (
+                                                 <X 
+                                                   size={14} 
+                                                   className="text-red-400 hover:text-red-600 transition-colors" 
+                                                   onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setBillingAddress({...billingAddress, state: ''});
+                                                   }}
+                                                 />
+                                              )}
+                                              <ChevronDown size={14} className={`text-blue-500 transition-transform ${isBillingStateOpen ? 'rotate-180' : ''}`} />
+                                           </div>
+                                        </button>
+                                        {isBillingStateOpen && (
+                                           <div className="absolute bottom-full left-0 mb-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                              <div className="p-2 border-b border-slate-100">
+                                                 <div className="relative">
+                                                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                                    <input 
+                                                       type="text"
+                                                       placeholder="Search state..."
+                                                       value={billingStateSearch}
+                                                       onChange={e => setBillingStateSearch(e.target.value)}
+                                                       className="w-full h-9 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400"
+                                                       onClick={e => e.stopPropagation()}
+                                                    />
+                                                 </div>
+                                              </div>
+                                              <div className="max-h-48 overflow-y-auto py-1">
+                                                 {INDIAN_STATES.filter(s => s.toLowerCase().includes(billingStateSearch.toLowerCase())).map(s => (
+                                                    <div 
+                                                       key={s} 
+                                                       onClick={() => {
+                                                          setBillingAddress({...billingAddress, state: s});
+                                                          setIsBillingStateOpen(false);
+                                                       }}
+                                                       className={`px-3 py-2 text-[13px] cursor-pointer hover:bg-blue-50 ${billingAddress.state === s ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
+                                                    >
+                                                       {s}
+                                                    </div>
+                                                 ))}
+                                              </div>
+                                           </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[11px] font-medium text-slate-400">Phone</label>
@@ -447,16 +588,69 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                         </button>
                     </div>
                     <div className="space-y-4 opacity-90">
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-medium text-slate-400">Attention</label>
-                            <input value={shippingAddress.attention} onChange={e => setShippingAddress({...shippingAddress, attention: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none focus:border-blue-300" />
-                        </div>
-                        <div className="space-y-1">
+
+                        <div className="space-y-1" ref={shippingCountryRef}>
                             <label className="text-[11px] font-medium text-slate-400">Country/Region</label>
-                            <select value={shippingAddress.country} onChange={e => setShippingAddress({...shippingAddress, country: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none bg-white">
-                                <option value="">Select Country</option>
-                                {COUNTRY_CODES.map(c => <option key={c.country} value={c.country}>{c.flag} {c.country}</option>)}
-                            </select>
+                            <div className="relative">
+                                <button 
+                                   type="button"
+                                   onClick={() => {
+                                      setIsShippingCountryOpen(!isShippingCountryOpen);
+                                      setShippingCountrySearch('');
+                                   }}
+                                   className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white ${isShippingCountryOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-100 text-slate-800'}`}
+                                >
+                                   <span className="text-[13px] text-slate-700">{shippingAddress.country || 'Select Country'}</span>
+                                   <div className="flex items-center gap-1.5">
+                                      {shippingAddress.country && (
+                                         <X 
+                                           size={14} 
+                                           className="text-red-400 hover:text-red-600 transition-colors" 
+                                           onClick={(e) => {
+                                              e.stopPropagation();
+                                              setShippingAddress({...shippingAddress, country: ''});
+                                           }}
+                                         />
+                                      )}
+                                      <ChevronDown size={14} className={`text-blue-500 transition-transform ${isShippingCountryOpen ? 'rotate-180' : ''}`} />
+                                   </div>
+                                </button>
+                                {isShippingCountryOpen && (
+                                   <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                      <div className="p-2 border-b border-slate-100">
+                                         <div className="relative">
+                                            <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                            <input 
+                                               type="text"
+                                               value={shippingCountrySearch}
+                                               onChange={(e) => setShippingCountrySearch(e.target.value)}
+                                               placeholder="Search"
+                                               className="w-full pl-8 pr-3 py-1.5 border border-slate-300 text-slate-800 rounded focus:outline-none focus:border-blue-500 text-[13px]"
+                                               autoFocus
+                                            />
+                                         </div>
+                                      </div>
+                                      <div className="max-h-48 overflow-y-auto py-1 custom-scrollbar">
+                                         {COUNTRY_CODES.filter(c => c.country.toLowerCase().includes(shippingCountrySearch.toLowerCase())).map((c) => (
+                                            <button
+                                               key={c.country}
+                                               type="button"
+                                               onClick={() => {
+                                                  setShippingAddress({...shippingAddress, country: c.country});
+                                                  setIsShippingCountryOpen(false);
+                                               }}
+                                               className={`w-full text-left px-3 py-2 text-[13px] hover:bg-slate-50 transition-colors ${shippingAddress.country === c.country ? 'bg-blue-50 text-blue-600 font-medium' : 'text-slate-700'}`}
+                                            >
+                                               {c.country}
+                                            </button>
+                                         ))}
+                                         {COUNTRY_CODES.filter(c => c.country.toLowerCase().includes(shippingCountrySearch.toLowerCase())).length === 0 && (
+                                            <div className="text-[13px] text-slate-500 p-3 text-center">No countries found</div>
+                                         )}
+                                      </div>
+                                   </div>
+                                )}
+                            </div>
                         </div>
                         <div className="space-y-1">
                             <label className="text-[11px] font-medium text-slate-400">Street Address</label>
@@ -476,10 +670,64 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <label className="text-[11px] font-medium text-slate-400">State</label>
-                                <select value={shippingAddress.state} onChange={e => setShippingAddress({...shippingAddress, state: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] bg-white">
-                                    <option value="">Select State</option>
-                                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
+                                <div className="space-y-1" ref={shippingStateRef}>
+                                    <div className="relative">
+                                        <button 
+                                           type="button"
+                                           onClick={() => {
+                                              setIsShippingStateOpen(!isShippingStateOpen);
+                                              setShippingStateSearch('');
+                                           }}
+                                           className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white ${isShippingStateOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-100 text-slate-800'}`}
+                                        >
+                                           <span className="text-[13px] text-slate-700">{shippingAddress.state || 'Select State'}</span>
+                                           <div className="flex items-center gap-1.5">
+                                              {shippingAddress.state && (
+                                                 <X 
+                                                   size={14} 
+                                                   className="text-red-400 hover:text-red-600 transition-colors" 
+                                                   onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setShippingAddress({...shippingAddress, state: ''});
+                                                   }}
+                                                 />
+                                              )}
+                                              <ChevronDown size={14} className={`text-blue-500 transition-transform ${isShippingStateOpen ? 'rotate-180' : ''}`} />
+                                           </div>
+                                        </button>
+                                        {isShippingStateOpen && (
+                                           <div className="absolute bottom-full left-0 mb-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                              <div className="p-2 border-b border-slate-100">
+                                                 <div className="relative">
+                                                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                                    <input 
+                                                       type="text"
+                                                       placeholder="Search state..."
+                                                       value={shippingStateSearch}
+                                                       onChange={e => setShippingStateSearch(e.target.value)}
+                                                       className="w-full h-9 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400"
+                                                       onClick={e => e.stopPropagation()}
+                                                    />
+                                                 </div>
+                                              </div>
+                                              <div className="max-h-48 overflow-y-auto py-1">
+                                                 {INDIAN_STATES.filter(s => s.toLowerCase().includes(shippingStateSearch.toLowerCase())).map(s => (
+                                                    <div 
+                                                       key={s} 
+                                                       onClick={() => {
+                                                          setShippingAddress({...shippingAddress, state: s});
+                                                          setIsShippingStateOpen(false);
+                                                       }}
+                                                       className={`px-3 py-2 text-[13px] cursor-pointer hover:bg-blue-50 ${shippingAddress.state === s ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
+                                                    >
+                                                       {s}
+                                                    </div>
+                                                 ))}
+                                              </div>
+                                           </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[11px] font-medium text-slate-400">Phone</label>
@@ -617,9 +865,7 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
         {/* Action Bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-[60]">
             <div className="max-w-6xl mx-auto px-12 py-4 flex justify-between items-center">
-                 <div className="flex items-center gap-2 text-slate-400 text-[11px] font-medium uppercase tracking-wider">
-                    <ShieldCheck size={14} className="text-blue-500" /> Encrypted & Secure Record Storage
-                 </div>
+                 <div></div>
                  <div className="flex items-center gap-3">
                     <button type="button" onClick={handleCancelOrBack} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded cursor-pointer">Discard</button>
                     <button 
