@@ -77,6 +77,16 @@ const VendorOverviewSidebar = ({
     return !addr.address1 && !addr.city && !addr.state && !addr.street1;
   };
 
+  const contactsList = (() => {
+    let list = vendor.contacts || [];
+    if (list.length === 0 && vendor.contactPersonsJson) {
+      try {
+        list = JSON.parse(vendor.contactPersonsJson);
+      } catch(e) {}
+    }
+    return list;
+  })();
+
   return (
     <div className="w-full max-w-[420px] bg-white border border-slate-100 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] text-[14px] text-slate-800 overflow-hidden font-sans select-none">
       
@@ -346,7 +356,7 @@ const VendorOverviewSidebar = ({
           onClick={() => toggleSection('contactPersons')}
           className="w-full px-5 py-4 flex items-center justify-between text-[12px] font-bold text-slate-800 tracking-[0.05em] hover:bg-slate-50/40 transition-colors cursor-pointer select-none"
         >
-          <span className="uppercase">CONTACT PERSONS</span>
+          <span className="uppercase">CONTACT PERSONS {contactsList.length > 0 ? `(${contactsList.length})` : ''}</span>
           <div className="flex items-center gap-3.5" onClick={e => e.stopPropagation()}>
             <button 
               onClick={onAddContact}
@@ -368,15 +378,39 @@ const VendorOverviewSidebar = ({
         {/* Section Content */}
         {sections.contactPersons && (
           <div className="px-5 pb-6 animate-fade-in">
-            {vendor.contacts && vendor.contacts.length > 0 ? (
-              <div className="space-y-3">
-                {vendor.contacts.map((contact, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 p-2 bg-slate-50/50 border border-slate-100 rounded-lg">
-                    <User size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                    <div className="text-[13px]">
-                      <p className="font-semibold text-slate-800">{contact.name}</p>
-                      {contact.email && <p className="text-slate-500">{contact.email}</p>}
+            {contactsList.length > 0 ? (
+              <div className="space-y-1">
+                {contactsList.map((contact, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2.5 bg-transparent border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors group rounded-md">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded bg-slate-300 flex items-center justify-center shrink-0 shadow-sm">
+                        <User size={22} className="text-white" strokeWidth={3} />
+                      </div>
+                      <div className="text-[13px]">
+                        <p className="font-bold text-slate-900 tracking-tight">{contact.name}</p>
+                        {contact.phone && (
+                          <div className="flex items-center gap-1.5 text-slate-700 mt-0.5 text-[12px] font-medium">
+                            <Phone size={11} className="stroke-[2.5]" />
+                            {contact.phone}
+                          </div>
+                        )}
+                        {!contact.phone && contact.mobile && (
+                          <div className="flex items-center gap-1.5 text-slate-700 mt-0.5 text-[12px] font-medium">
+                            <Smartphone size={11} className="stroke-[2.5]" />
+                            {contact.mobile}
+                          </div>
+                        )}
+                        {!contact.phone && !contact.mobile && contact.email && (
+                          <div className="flex items-center gap-1.5 text-slate-700 mt-0.5 text-[12px] font-medium">
+                            <Mail size={11} className="stroke-[2.5]" />
+                            {contact.email}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    <button className="p-1 text-slate-300 hover:text-slate-500 hover:bg-slate-100 rounded transition-all opacity-0 group-hover:opacity-100">
+                      <Settings size={14} className="stroke-[2.5]" />
+                    </button>
                   </div>
                 ))}
               </div>

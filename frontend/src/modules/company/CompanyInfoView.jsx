@@ -128,7 +128,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     timezone: '(GMT 5:30) India Standard Time (Asia/Calcutta)',
     dateFormat: 'dd/MM/yyyy',
     organizationId: '',
-    financialYearStart: new Date().getFullYear() + '-04-01',
+    financialYearStart: '',
     booksBeginningFrom: new Date().getFullYear() + '-04-01',
     logoUrl: '',
     gstNumber: '',
@@ -150,7 +150,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     baseCurrency: 'INR',
     fiscalYear: 'April - March',
     reportBasis: 'Accrual',
-    financialYearStart: new Date().getFullYear() + '-04-01',
+    financialYearStart: '',
     booksBeginningFrom: new Date().getFullYear() + '-04-01',
     gstNumber: '',
     panNumber: '',
@@ -253,7 +253,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
         const d = res.data;
         setFormData({
           ...d,
-          financialYearStart: d.financialYearStart ? d.financialYearStart.split('T')[0] : new Date().getFullYear() + '-04-01',
+          financialYearStart: d.financialYearStart ? d.financialYearStart.split('T')[0] : '',
           booksBeginningFrom: d.booksBeginningFrom ? d.booksBeginningFrom.split('T')[0] : new Date().getFullYear() + '-04-01',
           additionalFields: Array.isArray(d.additionalFields) ? d.additionalFields : [],
         });
@@ -329,6 +329,11 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error'); 
       return; 
     }
+    if (!formData.financialYearStart) {
+      setErrorMsg('Financial Year Start Date is required.');
+      setStatus('error');
+      return;
+    }
     if (formData.gstNumber && !validateGSTIN(formData.gstNumber)) {
       setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
       setStatus('error');
@@ -370,6 +375,11 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       setStatus('error');
       return;
     }
+    if (!createData.financialYearStart) {
+      setErrorMsg('Financial Year Start Date is required.');
+      setStatus('error');
+      return;
+    }
     if (createData.gstNumber && !validateGSTIN(createData.gstNumber)) {
       setErrorMsg('Invalid GSTIN format. Expected format: 33AAAAA1111A1Z1');
       setStatus('error');
@@ -405,7 +415,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
           baseCurrency: 'INR',
           fiscalYear: 'April - March',
           reportBasis: 'Accrual',
-          financialYearStart: new Date().getFullYear() + '-04-01',
+          financialYearStart: '',
           booksBeginningFrom: new Date().getFullYear() + '-04-01',
           gstNumber: '',
           panNumber: '',
@@ -615,7 +625,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-8 max-w-4xl mx-auto">
             <div className="border-b border-slate-100 pb-5 mb-6">
               <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <Plus size={20} className="text-blue-600" /> Create New Company
+                Create New Company
               </h2>
               <p className="text-xs text-slate-500 mt-1">Once created, standard ledger groups will be auto-seeded for double-entry transactions.</p>
             </div>
@@ -645,7 +655,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
                   <Calendar size={15} className="text-blue-500" /> Financial Settings
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Financial Year Starts From</label>
                     <input 
@@ -655,19 +665,9 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                       className="w-full h-10 border border-slate-200 bg-white rounded-lg px-3 text-[13px] outline-none focus:border-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Books Beginning From</label>
-                    <input 
-                      type="date" 
-                      value={createData.booksBeginningFrom} 
-                      onChange={e => handleCreateField('booksBeginningFrom', e.target.value)}
-                      className="w-full h-10 border border-slate-200 bg-white rounded-lg px-3 text-[13px] outline-none focus:border-blue-500"
-                    />
-                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                <div className="grid grid-cols-1 gap-6 pt-2">
                   <SelectRow label="Base Currency" keyName="baseCurrency" value={createData.baseCurrency} onChange={handleCreateField} options={CURRENCIES.map(c => c.code)} />
-                  <SelectRow label="Report Basis" keyName="reportBasis" value={createData.reportBasis} onChange={handleCreateField} options={["Accrual", "Cash"]} />
                 </div>
               </div>
             </div>
@@ -813,7 +813,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                 <h4 className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
                   <Calendar size={14} className="text-blue-500" /> Accounting Period & Currency
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Financial Year Starts From</label>
                     <input 
@@ -823,21 +823,11 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
                       className="w-full h-10 border border-slate-200 bg-white rounded-lg px-3 text-[13px] outline-none focus:border-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Books Beginning From</label>
-                    <input 
-                      type="date" 
-                      value={formData.booksBeginningFrom} 
-                      onChange={e => handleUpdateField('booksBeginningFrom', e.target.value)}
-                      className="w-full h-10 border border-slate-200 bg-white rounded-lg px-3 text-[13px] outline-none focus:border-blue-500"
-                    />
-                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                   <SelectRow label="Fiscal Year Range" keyName="fiscalYear" value={formData.fiscalYear} onChange={handleUpdateField} options={["April - March", "January - December", "July - June", "October - September"]} />
                   <SelectRow label="Base Currency" keyName="baseCurrency" value={formData.baseCurrency} onChange={handleUpdateField} options={CURRENCIES.map(c => c.code)} />
                 </div>
-                <SelectRow label="Reporting Basis" keyName="reportBasis" value={formData.reportBasis} onChange={handleUpdateField} options={["Accrual", "Cash"]} />
               </div>
             </div>
 

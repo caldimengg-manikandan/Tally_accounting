@@ -38,7 +38,7 @@ const AuthPage = ({ onLogin }) => {
         setIsLogin(true);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Authentication failed.');
+      setError(err.response?.data?.error || err.message || 'Authentication failed.');
     } finally {
       setLoading(false);
     }

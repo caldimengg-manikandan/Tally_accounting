@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Info, Mail, Phone, MapPin, Building, ShieldCheck, 
   AlertCircle, Loader2, Plus, Save, X, Activity, CheckCircle2,
@@ -65,6 +65,27 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
   }, [salutation, firstName, lastName, companyName]);
 
   // Display name options are shown in dropdown only — no auto-fill
+
+  const [isBillingStateOpen, setIsBillingStateOpen] = useState(false);
+  const [billingStateSearch, setBillingStateSearch] = useState('');
+  const billingStateRef = useRef(null);
+
+  const [isShippingStateOpen, setIsShippingStateOpen] = useState(false);
+  const [shippingStateSearch, setShippingStateSearch] = useState('');
+  const shippingStateRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (billingStateRef.current && !billingStateRef.current.contains(event.target)) {
+        setIsBillingStateOpen(false);
+      }
+      if (shippingStateRef.current && !shippingStateRef.current.contains(event.target)) {
+        setIsShippingStateOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (customerToEdit) {
@@ -275,7 +296,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             <label className="w-48 text-[11px] font-bold text-rose-500 uppercase tracking-widest mt-2">Primary Contact*</label>
                             <div className="flex-1 max-w-2xl space-y-4">
                                 <div className="grid grid-cols-12 gap-3 pb-4">
-                                    <div className="col-span-2">
+                                    <div className="col-span-3">
                                         <select 
                                             value={salutation} 
                                             onChange={e => setSalutation(e.target.value)}
@@ -285,7 +306,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                             <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
                                         </select>
                                     </div>
-                                    <div className="col-span-5">
+                                    <div className="col-span-4">
                                         <input 
                                             placeholder="First Name" 
                                             value={firstName} onChange={e => setFirstName(e.target.value)}
@@ -417,7 +438,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                     <label className="text-[11px] font-medium text-slate-400">Country/Region</label>
                                     <select value={billingAddress.country} onChange={e => setBillingAddress({...billingAddress, country: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none bg-white font-medium">
                                         <option value="">Select Country</option>
-                                        {COUNTRY_CODES.map(c => <option key={c.country} value={c.country}>{c.flag} {c.country}</option>)}
+                                        {COUNTRY_CODES.map(c => <option key={c.country} value={c.country}>{c.country}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1">
@@ -437,10 +458,64 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">State</label>
-                                    <select value={billingAddress.state} onChange={e => setBillingAddress({...billingAddress, state: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] bg-white font-medium">
-                                        <option value="">Select State</option>
-                                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
+                                <div className="space-y-1" ref={billingStateRef}>
+                                    <div className="relative">
+                                        <button 
+                                           type="button"
+                                           onClick={() => {
+                                              setIsBillingStateOpen(!isBillingStateOpen);
+                                              setBillingStateSearch('');
+                                           }}
+                                           className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white font-medium ${isBillingStateOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-100 text-slate-800'}`}
+                                        >
+                                           <span className="text-[13px] text-slate-700">{billingAddress.state || 'Select State'}</span>
+                                           <div className="flex items-center gap-1.5">
+                                              {billingAddress.state && (
+                                                 <X 
+                                                   size={14} 
+                                                   className="text-red-400 hover:text-red-600 transition-colors" 
+                                                   onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setBillingAddress({...billingAddress, state: ''});
+                                                   }}
+                                                 />
+                                              )}
+                                              <ChevronDown size={14} className={`text-blue-500 transition-transform ${isBillingStateOpen ? 'rotate-180' : ''}`} />
+                                           </div>
+                                        </button>
+                                        {isBillingStateOpen && (
+                                           <div className="absolute bottom-full left-0 mb-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                              <div className="p-2 border-b border-slate-100">
+                                                 <div className="relative">
+                                                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                                    <input 
+                                                       type="text"
+                                                       placeholder="Search state..."
+                                                       value={billingStateSearch}
+                                                       onChange={e => setBillingStateSearch(e.target.value)}
+                                                       className="w-full h-9 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400"
+                                                       onClick={e => e.stopPropagation()}
+                                                    />
+                                                 </div>
+                                              </div>
+                                              <div className="max-h-48 overflow-y-auto py-1">
+                                                 {INDIAN_STATES.filter(s => s.toLowerCase().includes(billingStateSearch.toLowerCase())).map(s => (
+                                                    <div 
+                                                       key={s} 
+                                                       onClick={() => {
+                                                          setBillingAddress({...billingAddress, state: s});
+                                                          setIsBillingStateOpen(false);
+                                                       }}
+                                                       className={`px-3 py-2 text-[13px] cursor-pointer hover:bg-blue-50 ${billingAddress.state === s ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700 font-medium'}`}
+                                                    >
+                                                       {s}
+                                                    </div>
+                                                 ))}
+                                              </div>
+                                           </div>
+                                        )}
+                                    </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
@@ -462,7 +537,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                     <label className="text-[11px] font-medium text-slate-400">Country/Region</label>
                                     <select value={shippingAddress.country} onChange={e => setShippingAddress({...shippingAddress, country: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none bg-white font-medium">
                                         <option value="">Select Country</option>
-                                        {COUNTRY_CODES.map(c => <option key={c.country} value={c.country}>{c.flag} {c.country}</option>)}
+                                        {COUNTRY_CODES.map(c => <option key={c.country} value={c.country}>{c.country}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1">
@@ -482,10 +557,64 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">State</label>
-                                    <select value={shippingAddress.state} onChange={e => setShippingAddress({...shippingAddress, state: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] bg-white font-medium">
-                                        <option value="">Select State</option>
-                                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
+                                <div className="space-y-1" ref={shippingStateRef}>
+                                    <div className="relative">
+                                        <button 
+                                           type="button"
+                                           onClick={() => {
+                                              setIsShippingStateOpen(!isShippingStateOpen);
+                                              setShippingStateSearch('');
+                                           }}
+                                           className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white font-medium ${isShippingStateOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-100 text-slate-800'}`}
+                                        >
+                                           <span className="text-[13px] text-slate-700">{shippingAddress.state || 'Select State'}</span>
+                                           <div className="flex items-center gap-1.5">
+                                              {shippingAddress.state && (
+                                                 <X 
+                                                   size={14} 
+                                                   className="text-red-400 hover:text-red-600 transition-colors" 
+                                                   onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setShippingAddress({...shippingAddress, state: ''});
+                                                   }}
+                                                 />
+                                              )}
+                                              <ChevronDown size={14} className={`text-blue-500 transition-transform ${isShippingStateOpen ? 'rotate-180' : ''}`} />
+                                           </div>
+                                        </button>
+                                        {isShippingStateOpen && (
+                                           <div className="absolute bottom-full left-0 mb-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                              <div className="p-2 border-b border-slate-100">
+                                                 <div className="relative">
+                                                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                                    <input 
+                                                       type="text"
+                                                       placeholder="Search state..."
+                                                       value={shippingStateSearch}
+                                                       onChange={e => setShippingStateSearch(e.target.value)}
+                                                       className="w-full h-9 pl-8 pr-3 bg-slate-50 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400"
+                                                       onClick={e => e.stopPropagation()}
+                                                    />
+                                                 </div>
+                                              </div>
+                                              <div className="max-h-48 overflow-y-auto py-1">
+                                                 {INDIAN_STATES.filter(s => s.toLowerCase().includes(shippingStateSearch.toLowerCase())).map(s => (
+                                                    <div 
+                                                       key={s} 
+                                                       onClick={() => {
+                                                          setShippingAddress({...shippingAddress, state: s});
+                                                          setIsShippingStateOpen(false);
+                                                       }}
+                                                       className={`px-3 py-2 text-[13px] cursor-pointer hover:bg-blue-50 ${shippingAddress.state === s ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700 font-medium'}`}
+                                                    >
+                                                       {s}
+                                                    </div>
+                                                 ))}
+                                              </div>
+                                           </div>
+                                        )}
+                                    </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
