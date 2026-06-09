@@ -102,6 +102,17 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 const startServer = async () => {
+  // Bind port immediately and wait for it to be ready
+  await new Promise((resolve, reject) => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Tally Enterprise Hub online at PORT: ${PORT}`);
+      resolve(server);
+    }).on('error', (err) => {
+      console.error(`❌ Failed to bind to PORT: ${PORT}`, err);
+      reject(err);
+    });
+  });
+
   let retries = 8;
   while (retries > 0) {
     try {
@@ -110,9 +121,6 @@ const startServer = async () => {
       await sequelize.sync(syncOptions);
       const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
       console.log(`✅ Ledger Database Synced [${connectedTo}]`);
-      app.listen(PORT, () => {
-        console.log(`🚀 Tally Enterprise Hub online at PORT: ${PORT}`);
-      });
       break; // Success, exit retry loop
     } catch (err) {
       console.error('❌ Database connection/sync failed:', err.message);
