@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Plus, Trash2, ShoppingBag, PlusCircle, 
   ChevronDown, Search, Filter, MoreHorizontal,
@@ -18,13 +19,15 @@ import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
 
 const PurchaseOrderEntryView = ({ companyId }) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   // ── Form State ──────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     vendorName: '',
     vendorId: '',
     deliveryAddress: 'Organization',
-    deliveryAddressText: 'No. 42, Innovation Hub,\nBangalore, Karnataka, 560001\nIndia',
-    poNumber: 'PO-' + Math.floor(10000 + Math.random() * 90000),
+    deliveryAddressText: '',
+    poNumber: '',
     reference: '',
     date: new Date().toISOString().split('T')[0],
     deliveryDate: '',
@@ -32,12 +35,12 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     shipmentPreference: '',
     deliveryAddressData: {
       attention: '',
-      street1: 'No. 42, Innovation Hub,',
+      street1: '',
       street2: '',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      zip: '560001',
-      country: 'India',
+      city: '',
+      state: '',
+      zip: '',
+      country: '',
       phone: ''
     },
     notes: '',
@@ -64,6 +67,8 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [isEditingDeliveryAddress, setIsEditingDeliveryAddress] = useState(false);
+  const [selectedEmailContacts, setSelectedEmailContacts] = useState([]);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [activeRowForItemModal, setActiveRowForItemModal] = useState(null);
   
@@ -108,6 +113,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [tdsSearchTerm, setTdsSearchTerm] = useState('');
   const tdsDropdownRef = useRef(null);
   const [projects, setProjects] = useState([]);
+  const [currentCompany, setCurrentCompany] = useState(null);
 
   const tdsOptions = [
     { name: 'Commission or Brokerage', rate: 2 },
@@ -131,8 +137,105 @@ const PurchaseOrderEntryView = ({ companyId }) => {
         setInventoryItems(res.data || []);
       });
       projectAPI.getByCompany(companyId).then(res => setProjects(res.data || []));
+      
+      companyAPI.getById(companyId).then(res => {
+        const co = res.data;
+        setCurrentCompany(co);
+        if (co && !id) {
+          setFormData(prev => ({
+            ...prev,
+            deliveryAddressData: {
+              attention: co.name || '',
+              street1: co.street1 || '',
+              street2: co.street2 || '',
+              city: co.city || '',
+              state: co.state || '',
+              zip: co.pincode || '',
+              country: co.location || 'India',
+              phone: co.phone || ''
+            }
+          }));
+        }
+      }).catch(err => console.error('Failed to fetch company details:', err));
+
+      if (!id) {
+        purchaseAPI.getNextOrderNumber(companyId).then(res => {
+          if (res.data?.nextNumber) {
+            setFormData(prev => ({ ...prev, poNumber: res.data.nextNumber }));
+          }
+        }).catch(err => console.error('Failed to get next PO number:', err));
+      }
     }
-  }, [companyId]);
+  }, [companyId, id]);
+
+  // Load existing purchase order for editing
+  useEffect(() => {
+    if (companyId && id) {
+      Promise.all([
+        purchaseAPI.getOrders(companyId),
+        companyAPI.getById(companyId)
+      ]).then(([ordersRes, companyRes]) => {
+        const order = (ordersRes.data || []).find(o => String(o.id) === String(id));
+        if (order) {
+          const co = companyRes.data;
+          let deliveryAddressData = {
+            attention: '', street1: '', street2: '', city: '', state: '', zip: '', country: '', phone: ''
+          };
+          try {
+            if (order.deliveryAddressDataJson) {
+              deliveryAddressData = JSON.parse(order.deliveryAddressDataJson);
+            }
+          } catch (e) {}
+
+          const isEmptyAddress = !deliveryAddressData.street1 && !deliveryAddressData.city && !deliveryAddressData.attention;
+          if (order.deliveryAddress === 'Organization' && isEmptyAddress && co) {
+            deliveryAddressData = {
+              attention: co.name || '',
+              street1: co.street1 || '',
+              street2: co.street2 || '',
+              city: co.city || '',
+              state: co.state || '',
+              zip: co.pincode || '',
+              country: co.location || 'India',
+              phone: co.phone || ''
+            };
+          }
+
+          let orderItems = [{ id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0 }];
+          try {
+            if (order.itemsJson) {
+              orderItems = JSON.parse(order.itemsJson);
+            }
+          } catch (e) {}
+
+          setFormData({
+            vendorName: order.Ledger?.name || '',
+            vendorId: order.LedgerId || '',
+            deliveryAddress: order.deliveryAddress || 'Organization',
+            deliveryAddressText: order.deliveryAddressText || '',
+            poNumber: order.orderNumber || '',
+            reference: order.reference || '',
+            date: order.date || '',
+            deliveryDate: order.deliveryDate || '',
+            paymentTerms: order.paymentTerms || 'Due on Receipt',
+            shipmentPreference: order.shipmentPreference || '',
+            deliveryAddressData,
+            notes: order.notes || '',
+            terms: order.terms || '',
+            discount: parseFloat(order.discount || 0),
+            adjustment: parseFloat(order.adjustment || 0),
+            taxRate: parseFloat(order.taxRate || 0),
+            tdsRate: parseFloat(order.tdsRate || 0),
+            tdsName: order.tdsName || '',
+            tags: [],
+            projectId: order.ProjectId || ''
+          });
+
+          setItems(orderItems);
+        }
+      }).catch(err => console.error('Failed to fetch order for edit:', err));
+    }
+  }, [companyId, id]);
 
   const handleItemSelect = (rowId, invItem) => {
     setItems(items.map(it => {
@@ -266,6 +369,63 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     v.name?.toLowerCase().includes(vendorSearch.toLowerCase())
   );
 
+  const selectedVendor = formData.vendorId ? vendors.find(v => v.id === formData.vendorId) : null;
+  
+  let vendorBillingObj = {};
+  let vendorShippingObj = {};
+  if (selectedVendor) {
+     try { 
+        if (selectedVendor.billingAddressJson) vendorBillingObj = JSON.parse(selectedVendor.billingAddressJson); 
+        else if (selectedVendor.billingAddress && selectedVendor.billingAddress.startsWith('{')) vendorBillingObj = JSON.parse(selectedVendor.billingAddress);
+     } catch (e) {}
+     try { 
+        if (selectedVendor.shippingAddressJson) vendorShippingObj = JSON.parse(selectedVendor.shippingAddressJson); 
+        else if (selectedVendor.shippingAddress && selectedVendor.shippingAddress.startsWith('{')) vendorShippingObj = JSON.parse(selectedVendor.shippingAddress);
+     } catch (e) {}
+  }
+
+  const emailContacts = useMemo(() => {
+    if (!selectedVendor) return [];
+    const contacts = [];
+    
+    const cleanNameStr = (str) => {
+      if (!str) return '';
+      return str.replace(/^(Mr\.|Ms\.|Mrs\.|Dr\.|Prof\.|Mr|Ms|Mrs)\s+/i, '').trim();
+    };
+
+    if (selectedVendor.email) {
+      const name = cleanNameStr([selectedVendor.firstName, selectedVendor.lastName].filter(Boolean).join(' ') || selectedVendor.name || 'Primary');
+      contacts.push({ id: 'primary', name, email: selectedVendor.email });
+    }
+    
+    try {
+       const others = selectedVendor.contactPersonsJson ? JSON.parse(selectedVendor.contactPersonsJson) : [];
+       if (Array.isArray(others)) {
+          others.forEach((c, idx) => {
+             if (c.email) {
+                let name = c.name || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.salutation || `Contact ${idx+1}`;
+                name = cleanNameStr(name);
+                contacts.push({ id: `contact-${idx}`, name, email: c.email });
+             }
+          });
+       }
+    } catch(e) {}
+    
+    return contacts;
+  }, [selectedVendor]);
+
+  const handleSelectAllEmails = () => {
+     if (selectedEmailContacts.length === emailContacts.length) {
+        setSelectedEmailContacts([]);
+     } else {
+        setSelectedEmailContacts(emailContacts.map(c => c.id));
+     }
+  };
+
+  const toggleEmailContact = (id) => {
+     setSelectedEmailContacts(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     const newAttachments = files.map(file => ({
@@ -306,10 +466,33 @@ const PurchaseOrderEntryView = ({ companyId }) => {
         notes: formData.notes,
         supplierLedgerId: formData.vendorId,
         companyId,
-        projectId: formData.projectId || null
+        projectId: formData.projectId || null,
+        reference: formData.reference,
+        deliveryDate: formData.deliveryDate || null,
+        paymentTerms: formData.paymentTerms,
+        shipmentPreference: formData.shipmentPreference,
+        deliveryAddress: formData.deliveryAddress,
+        deliveryAddressText: formData.deliveryAddressText,
+        deliveryAddressDataJson: JSON.stringify(formData.deliveryAddressData),
+        itemsJson: JSON.stringify(items),
+        discount: parseFloat(formData.discount || 0),
+        adjustment: parseFloat(formData.adjustment || 0),
+        taxRate: parseFloat(formData.taxRate || 0),
+        subtotal: parseFloat(totals.subtotal || 0),
+        discountAmount: parseFloat(totals.discountAmount || 0),
+        taxAmount: parseFloat(totals.taxAmount || 0),
+        terms: formData.terms,
+        tdsRate: parseFloat(formData.tdsRate || 0),
+        tdsAmount: parseFloat(totals.tdsAmount || 0),
+        tdsName: formData.tdsName
       };
 
-      const res = await purchaseAPI.createOrder(payload);
+      let res;
+      if (id) {
+        res = await purchaseAPI.updateOrder(id, payload);
+      } else {
+        res = await purchaseAPI.createOrder(payload);
+      }
       const savedData = res.data;
       
       setSavedPO(savedData);
@@ -318,7 +501,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
         setIsEmailModalOpen(true);
       } else {
         alert('Purchase Order saved successfully');
-        window.history.back();
+        navigate(`/purchase-orders/view/${savedData.id || id}`);
       }
     } catch (err) {
       console.error('Error saving PO:', err);
@@ -334,7 +517,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <div className="flex items-center gap-2">
              <ShoppingBag size={20} className="text-slate-800" />
-             <h1 className="text-[18px] text-slate-800">New Purchase Order</h1>
+             <h1 className="text-[18px] text-slate-800">{id ? 'Edit Purchase Order' : 'New Purchase Order'}</h1>
           </div>
           <button 
             onClick={() => window.history.back()}
@@ -353,34 +536,42 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                 
                 {/* Vendor Name */}
                 <label className="text-red-500 pt-2"><span className="text-slate-700">Vendor Name</span>*</label>
-                <div className="relative" ref={vendorDropdownRef}>
-                   <div className="flex max-w-[400px]">
-                      <div className="relative flex-1">
-                         <input 
-                           type="text"
-                           placeholder="Select a Vendor"
-                           value={formData.vendorName || vendorSearch}
-                           onChange={(e) => {
-                              setVendorSearch(e.target.value);
-                              setIsVendorDropdownOpen(true);
-                           }}
-                           onFocus={() => setIsVendorDropdownOpen(true)}
-                           className="w-full h-9 px-3 border border-slate-300 rounded-l text-slate-800 focus:border-blue-500 outline-none"
-                         />
-                         <ChevronDown 
-                           size={14} 
-                           onClick={(e) => {
-                              e.stopPropagation();
-                              setIsVendorDropdownOpen(!isVendorDropdownOpen);
-                           }}
-                           className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" 
-                         />
-                      </div>
-                      <button className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600">
-                         <Search size={14} />
-                      </button>
-                   </div>
-                   {isVendorDropdownOpen && (
+                 <div className="relative flex items-center" ref={vendorDropdownRef}>
+                    <div className="flex w-full max-w-[400px]">
+                       <div className="relative flex-1">
+                          <input 
+                            type="text"
+                            placeholder="Select a Vendor"
+                            value={formData.vendorName || vendorSearch}
+                            onChange={(e) => {
+                               setVendorSearch(e.target.value);
+                               setIsVendorDropdownOpen(true);
+                            }}
+                            onFocus={() => setIsVendorDropdownOpen(true)}
+                            className="w-full h-9 px-3 border border-slate-300 rounded-l text-slate-800 focus:border-blue-500 outline-none"
+                          />
+                          <ChevronDown 
+                            size={14} 
+                            onClick={(e) => {
+                               e.stopPropagation();
+                               setIsVendorDropdownOpen(!isVendorDropdownOpen);
+                            }}
+                            className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" 
+                          />
+                       </div>
+                       <button className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600">
+                          <Search size={14} />
+                       </button>
+                    </div>
+                    {selectedVendor && (
+                       <div className="flex items-center gap-1.5 px-3 h-9 border border-slate-200 rounded text-[13px] text-slate-700 bg-white ml-3 shrink-0 shadow-sm">
+                          <div className="flex items-center justify-center w-3.5 h-3.5 rounded-full border border-emerald-500">
+                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                          </div>
+                          <span className="font-medium">{selectedVendor.currency || 'INR'}</span>
+                       </div>
+                    )}
+                    {isVendorDropdownOpen && (
                       <div className="absolute top-[calc(100%+4px)] left-0 w-[360px] bg-white border border-slate-200 rounded-md shadow-lg z-50 flex flex-col">
                          <div className="max-h-[200px] overflow-y-auto py-1 custom-scrollbar">
                             {filteredVendors.length > 0 ? (
@@ -418,6 +609,60 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                    )}
                 </div>
 
+                {/* Vendor Address Details */}
+                {selectedVendor && (
+                   <>
+                      <div className="col-start-1"></div>
+                      <div className="flex gap-12 text-[13px] text-slate-800 -mt-2 mb-2">
+                         {/* Billing Address */}
+                         <div className="flex-1 max-w-[250px]">
+                            <div className="text-[11px] font-semibold text-slate-500 mb-1 flex items-center gap-1 uppercase tracking-wider">
+                               BILLING ADDRESS <Link size={10} className="text-slate-400" />
+                            </div>
+                            <div className="text-slate-700 leading-relaxed">
+                               {vendorBillingObj.address1 || vendorBillingObj.street1 ? (
+                                  <>
+                                     {vendorBillingObj.attention && <div>{vendorBillingObj.attention}</div>}
+                                     <div>{vendorBillingObj.address1 || vendorBillingObj.street1}{(vendorBillingObj.address2 || vendorBillingObj.street2) && `, ${vendorBillingObj.address2 || vendorBillingObj.street2}`}</div>
+                                     <div>{vendorBillingObj.city}</div>
+                                     <div>{vendorBillingObj.state} {vendorBillingObj.pinCode || vendorBillingObj.zipCode}</div>
+                                     <div>{vendorBillingObj.country}</div>
+                                     {(vendorBillingObj.phone || selectedVendor.mobile || selectedVendor.workPhone || selectedVendor.phone) && <div>Phone: {vendorBillingObj.phone || selectedVendor.mobile || selectedVendor.workPhone || selectedVendor.phone}</div>}
+                                  </>
+                               ) : (
+                                  (!selectedVendor.billingAddress || String(selectedVendor.billingAddress).startsWith('{')) 
+                                     ? (selectedVendor.address && !String(selectedVendor.address).startsWith('{') ? selectedVendor.address : <span className="text-slate-400 italic">No billing address provided</span>)
+                                     : selectedVendor.billingAddress
+                               )}
+                            </div>
+                         </div>
+
+                         {/* Shipping Address */}
+                         <div className="flex-1 max-w-[250px]">
+                            <div className="text-[11px] font-semibold text-slate-500 mb-1 flex items-center gap-1 uppercase tracking-wider">
+                               SHIPPING ADDRESS <Link size={10} className="text-slate-400" />
+                            </div>
+                            <div className="text-slate-700 leading-relaxed">
+                               {vendorShippingObj.address1 || vendorShippingObj.street1 ? (
+                                  <>
+                                     {vendorShippingObj.attention && <div>{vendorShippingObj.attention}</div>}
+                                     <div>{vendorShippingObj.address1 || vendorShippingObj.street1}{(vendorShippingObj.address2 || vendorShippingObj.street2) && `, ${vendorShippingObj.address2 || vendorShippingObj.street2}`}</div>
+                                     <div>{vendorShippingObj.city}</div>
+                                     <div>{vendorShippingObj.state} {vendorShippingObj.pinCode || vendorShippingObj.zipCode}</div>
+                                     <div>{vendorShippingObj.country}</div>
+                                     {(vendorShippingObj.phone || selectedVendor.mobile || selectedVendor.workPhone || selectedVendor.phone) && <div>Phone: {vendorShippingObj.phone || selectedVendor.mobile || selectedVendor.workPhone || selectedVendor.phone}</div>}
+                                  </>
+                               ) : (
+                                  (!selectedVendor.shippingAddress || String(selectedVendor.shippingAddress).startsWith('{')) 
+                                     ? <span className="text-slate-400 italic">No shipping address provided</span>
+                                     : selectedVendor.shippingAddress
+                               )}
+                            </div>
+                         </div>
+                      </div>
+                   </>
+                )}
+
                 {/* Delivery Address */}
                 <label className="text-red-500 pt-1"><span className="text-slate-700">Delivery Address</span>*</label>
                 <div>
@@ -428,94 +673,160 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                               type="radio" 
                               name="deliveryAddressType"
                               checked={formData.deliveryAddress === type}
-                              onChange={() => setFormData({ ...formData, deliveryAddress: type })}
+                              onChange={() => {
+                                 const nextType = type;
+                                 setFormData(prev => {
+                                   let nextAddr = prev.deliveryAddressData;
+                                   if (nextType === 'Organization' && currentCompany) {
+                                     nextAddr = {
+                                       attention: currentCompany.name || '',
+                                       street1: currentCompany.street1 || '',
+                                       street2: currentCompany.street2 || '',
+                                       city: currentCompany.city || '',
+                                       state: currentCompany.state || '',
+                                       zip: currentCompany.pincode || '',
+                                       country: currentCompany.location || 'India',
+                                       phone: currentCompany.phone || ''
+                                     };
+                                   } else if (nextType === 'Customer') {
+                                     nextAddr = {
+                                       attention: '',
+                                       street1: '',
+                                       street2: '',
+                                       city: '',
+                                       state: '',
+                                       zip: '',
+                                       country: '',
+                                       phone: ''
+                                     };
+                                   }
+                                   return {
+                                     ...prev,
+                                     deliveryAddress: nextType,
+                                     deliveryAddressData: nextAddr
+                                   };
+                                 });
+                               }}
                               className="w-3.5 h-3.5 text-blue-600 border-slate-300 focus:ring-blue-500 disabled:opacity-50"
                             />
                             <span className="text-[13px] text-slate-800">{type}</span>
                          </label>
                       ))}
                    </div>
-                   <div className="bg-white border border-slate-200 rounded p-4 max-w-[500px]">
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                         <div className="col-span-2">
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Attention</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.attention}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, attention: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div className="col-span-2">
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Street 1</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.street1}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, street1: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div className="col-span-2">
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Street 2</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.street2}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, street2: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div>
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">City</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.city}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, city: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div>
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">State/Province</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.state}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, state: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div>
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">ZIP</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.zip}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, zip: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                         <div>
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Country</label>
-                            <select 
-                              value={formData.deliveryAddressData.country}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, country: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            >
-                               <option value="" className="text-slate-400">Select country</option>
-                               {COUNTRY_CODES.map((c, i) => (
-                                  <option key={i} value={c.country}>{c.country}</option>
-                               ))}
-                            </select>
-                         </div>
-                         <div className="col-span-2">
-                            <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Phone</label>
-                            <input 
-                              type="text" 
-                              value={formData.deliveryAddressData.phone}
-                              onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, phone: e.target.value } })}
-                              className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
-                            />
-                         </div>
-                      </div>
-                   </div>
-                </div>
+                   {isEditingDeliveryAddress ? (
+                       <div className="bg-white border border-slate-200 rounded p-4 max-w-[500px]">
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                             <div className="col-span-2">
+                                <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Attention</label>
+                                <input 
+                                  type="text" 
+                                  value={formData.deliveryAddressData.attention}
+                                  onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, attention: e.target.value } })}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                                />
+                             </div>
+                             <div className="col-span-2">
+                                <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Street 1</label>
+                                <input 
+                                  type="text" 
+                                  value={formData.deliveryAddressData.street1}
+                                  onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, street1: e.target.value } })}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                                />
+                             </div>
+                             <div className="col-span-2">
+                                <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Street 2</label>
+                                <input 
+                                  type="text" 
+                                  value={formData.deliveryAddressData.street2}
+                                  onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, street2: e.target.value } })}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                                />
+                             </div>
+                             <div>
+                                <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">City</label>
+                                <input 
+                                  type="text" 
+                                  value={formData.deliveryAddressData.city}
+                                  onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, city: e.target.value } })}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                                />
+                             </div>
+                             <div>
+                                <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">State/Province</label>
+                                <input 
+                                  type="text" 
+                                  value={formData.deliveryAddressData.state}
+                                  onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, state: e.target.value } })}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                                />
+                             </div>
+                             <div>
+                                <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">ZIP</label>
+                                <input 
+                                  type="text" 
+                                  value={formData.deliveryAddressData.zip}
+                                  onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, zip: e.target.value } })}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                                />
+                             </div>
+                             <div>
+                                <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Country</label>
+                                <select 
+                                  value={formData.deliveryAddressData.country}
+                                  onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, country: e.target.value } })}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                                >
+                                   <option value="" className="text-slate-400">Select country</option>
+                                   {COUNTRY_CODES.map((c, i) => (
+                                      <option key={i} value={c.country}>{c.country}</option>
+                                   ))}
+                                </select>
+                             </div>
+                             <div className="col-span-2">
+                                <label className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1 block">Phone</label>
+                                <input 
+                                  type="text" 
+                                  value={formData.deliveryAddressData.phone}
+                                  onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, phone: e.target.value } })}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded text-[13px] text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white"
+                                />
+                             </div>
+                             <div className="col-span-2 flex justify-end mt-2">
+                                <button type="button" onClick={() => setIsEditingDeliveryAddress(false)} className="px-4 py-1.5 bg-blue-600 text-white rounded text-[12px] font-bold hover:bg-blue-700">Save Address</button>
+                             </div>
+                          </div>
+                       </div>
+                    ) : (
+                       <div className="max-w-[400px]">
+                          <input 
+                             type="text" 
+                             value={formData.deliveryAddressData.attention}
+                             onChange={(e) => setFormData({ ...formData, deliveryAddressData: { ...formData.deliveryAddressData, attention: e.target.value } })}
+                             className="w-full max-w-[280px] h-8 px-3 border border-blue-400 rounded-[4px] text-[13px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 mb-3 shadow-sm"
+                          />
+                          <div className="text-[13px] text-slate-600 leading-relaxed mb-4">
+                             {formData.deliveryAddressData.street1 && <div>{formData.deliveryAddressData.street1}</div>}
+                             {formData.deliveryAddressData.street2 && <div>{formData.deliveryAddressData.street2}</div>}
+                             {(formData.deliveryAddressData.city || formData.deliveryAddressData.state || formData.deliveryAddressData.zip) && (
+                                <div>
+                                   {formData.deliveryAddressData.city}{formData.deliveryAddressData.city && (formData.deliveryAddressData.state || formData.deliveryAddressData.zip) ? ', ' : ''}
+                                   {formData.deliveryAddressData.state} {formData.deliveryAddressData.zip}
+                                </div>
+                             )}
+                             {formData.deliveryAddressData.country && <div>{formData.deliveryAddressData.country}{formData.deliveryAddressData.country && formData.deliveryAddressData.phone ? ' ,' : ''}</div>}
+                             {formData.deliveryAddressData.phone && <div>{formData.deliveryAddressData.phone}</div>}
+                          </div>
+                          <button 
+                             type="button" 
+                             onClick={() => setIsEditingDeliveryAddress(true)} 
+                             className="text-[13px] text-blue-500 hover:text-blue-700 cursor-pointer"
+                          >
+                             Change destination to deliver
+                          </button>
+                       </div>
+                    )}
+                 </div>
 
                 {/* Purchase Order# */}
                 <label className="text-red-500 pt-2"><span className="text-slate-700">Purchase Order#</span>*</label>
@@ -1024,6 +1335,61 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                    )}
                 </div>
              </div>
+
+             {/* ─── Email Communications ───────────────────────────────── */}
+             <div className="mt-8 pb-4 border-t border-slate-100 pt-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center gap-3 mb-4">
+                   <h3 className="text-[14px] font-semibold text-slate-700">Email Communications</h3>
+                   {emailContacts.length > 0 && (
+                      selectedEmailContacts.length === emailContacts.length ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEmailContacts([])}
+                          className="flex items-center gap-1 text-[12px] text-red-500 hover:text-red-700 font-semibold border border-red-200 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded transition-colors"
+                        >
+                          <X size={12} strokeWidth={2.5} />
+                          Clear Selection
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSelectAllEmails}
+                          className="text-[12px] text-blue-500 hover:text-blue-700 hover:underline"
+                        >
+                          Select All
+                        </button>
+                      )
+                    )}
+                </div>
+                
+                <div className="flex flex-wrap gap-4 items-center">
+                   <button type="button" className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 rounded text-[13px] font-medium text-slate-700 hover:bg-slate-50">
+                      <PlusCircle size={14} className="text-blue-500" />
+                      Add New
+                   </button>
+                   
+                   {emailContacts.map(contact => (
+                      <label key={contact.id} className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded cursor-pointer hover:bg-slate-50 transition-colors shadow-sm">
+                         <input 
+                           type="checkbox" 
+                           checked={selectedEmailContacts.includes(contact.id)}
+                           onChange={() => toggleEmailContact(contact.id)}
+                           className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                         />
+                         <span className="text-[12px] text-slate-700 flex items-center gap-1.5 font-medium">
+                            <User size={12} className="text-slate-400" />
+                            {contact.name} &lt;{contact.email}&gt;
+                         </span>
+                      </label>
+                   ))}
+                   {emailContacts.length === 0 && (
+                      <span className="text-[12px] text-slate-400 italic">No contacts available for this vendor</span>
+                   )}
+                </div>
+                <div className="mt-6 pt-4 text-[12px] text-slate-500 border-t border-slate-50">
+                   Additional Fields: Start adding custom fields for your purchase orders by going to Settings ➔ Purchases ➔ Purchase Orders.
+                </div>
+             </div>
           </div>
        </div>
 
@@ -1033,18 +1399,21 @@ const PurchaseOrderEntryView = ({ companyId }) => {
              <button 
                onClick={() => handleSaveOrder(false)}
                disabled={isSaving}
-               className="px-4 h-8 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium rounded border border-slate-300 transition-colors disabled:opacity-50"
+               className="px-4 h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-[13px] shadow-sm"
              >
-                {isSaving ? 'Saving...' : 'Save as Draft'}
+                {isSaving ? 'Saving...' : 'Save'}
              </button>
              <button 
                onClick={() => handleSaveOrder(true)}
                disabled={isSaving}
-               className="px-4 h-8 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors shadow-sm disabled:opacity-50"
+               className="px-4 h-9 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-lg border border-slate-200 transition-colors disabled:opacity-50 text-[13px] shadow-sm"
              >
-                {isSaving ? 'Saving...' : 'Save and Send'}
+                Save and Send
              </button>
-             <button onClick={() => window.history.back()} className="px-4 h-8 bg-white hover:bg-slate-50 text-slate-600 font-medium rounded border border-slate-200 transition-colors">
+             <button 
+               onClick={() => window.history.back()} 
+               className="px-4 h-9 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded-lg border border-slate-200 transition-colors text-[13px]"
+             >
                 Cancel
              </button>
           </div>
@@ -1139,12 +1508,14 @@ const PurchaseOrderEntryView = ({ companyId }) => {
             isOpen={isEmailModalOpen}
             onClose={() => {
               setIsEmailModalOpen(false);
-              window.history.back(); // Navigate back after closing the email modal if it was a save flow
+              window.history.back();
             }}
             vendor={vendors.find(v => v.id === formData.vendorId)}
-            poData={{...formData, id: savedPO?.id, companyId}}
+            poData={{...formData, id: savedPO?.id, poNumber: formData.poNumber, companyId}}
             totals={totals}
             attachments={attachments}
+            selectedContacts={emailContacts.filter(c => selectedEmailContacts.includes(c.id))}
+            companyName={currentCompany?.name || ''}
             onSent={() => {
               alert('Email sent successfully');
               window.history.back();

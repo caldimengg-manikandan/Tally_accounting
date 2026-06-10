@@ -121,8 +121,8 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-// Disabled alter:true to prevent database sync locks on cloud Postgres
-const syncOptions = {};
+// Use alter:true only for local SQLite; disabled for cloud Postgres to prevent sync locks
+const syncOptions = process.env.DATABASE_URL ? {} : { alter: true };
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');

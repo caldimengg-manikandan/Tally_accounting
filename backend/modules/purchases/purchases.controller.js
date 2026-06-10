@@ -91,7 +91,7 @@ exports.getOrders = async (req, res) => {
     const { companyId } = req.params;
     const orders = await PurchaseOrder.findAll({
       where: { CompanyId: companyId },
-      include: [{ model: Ledger, attributes: ['name'] }],
+      include: [{ model: Ledger }],
       order: [['date', 'DESC']]
     });
     res.json(orders);
@@ -100,9 +100,45 @@ exports.getOrders = async (req, res) => {
   }
 };
 
+exports.getNextOrderNumber = async (req, res) => {
+    try {
+        const { companyId } = req.params;
+
+        const orders = await PurchaseOrder.findAll({
+            where: { CompanyId: companyId },
+            attributes: ['orderNumber']
+        });
+
+        let maxNum = 0;
+        orders.forEach(o => {
+            if (!o.orderNumber) return;
+            const match = o.orderNumber.match(/(\d+)(?!.*\d)/);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (!isNaN(num) && num > maxNum) {
+                    maxNum = num;
+                }
+            }
+        });
+
+        const nextNum = maxNum + 1;
+        const formattedNextNum = `PO-${String(nextNum).padStart(5, '0')}`;
+        
+        res.json({ nextNumber: formattedNextNum });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
 exports.createOrder = async (req, res) => {
   try {
-    const { orderNumber, date, totalAmount, status, notes, supplierLedgerId, companyId, projectId } = req.body;
+    const { 
+      orderNumber, date, totalAmount, status, notes, supplierLedgerId, companyId, projectId,
+      reference, deliveryDate, paymentTerms, shipmentPreference, deliveryAddress, deliveryAddressText,
+      deliveryAddressDataJson, itemsJson, discount, adjustment, taxRate, subtotal, discountAmount,
+      taxAmount, terms, tdsAmount, tdsRate, tdsName
+    } = req.body;
     const order = await PurchaseOrder.create({
       orderNumber,
       date,
@@ -111,7 +147,25 @@ exports.createOrder = async (req, res) => {
       notes,
       LedgerId: supplierLedgerId,
       CompanyId: companyId,
-      ProjectId: projectId
+      ProjectId: projectId,
+      reference,
+      deliveryDate,
+      paymentTerms,
+      shipmentPreference,
+      deliveryAddress,
+      deliveryAddressText,
+      deliveryAddressDataJson,
+      itemsJson,
+      discount,
+      adjustment,
+      taxRate,
+      subtotal,
+      discountAmount,
+      taxAmount,
+      terms,
+      tdsAmount,
+      tdsRate,
+      tdsName
     });
     res.status(201).json(order);
   } catch (err) {
@@ -124,7 +178,13 @@ exports.updateOrder = async (req, res) => {
     const { id } = req.params;
     const order = await PurchaseOrder.findByPk(id);
     if (!order) return res.status(404).json({ error: 'Order not found' });
-    await order.update(req.body);
+    
+    const updateData = { ...req.body };
+    if (updateData.supplierLedgerId) {
+      updateData.LedgerId = updateData.supplierLedgerId;
+    }
+    
+    await order.update(updateData);
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });

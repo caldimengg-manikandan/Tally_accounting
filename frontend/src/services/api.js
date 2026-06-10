@@ -102,6 +102,7 @@ export const purchaseAPI = {
   createBill: (data) => api.post('/purchases/bills', data),
   updateBill: (id, data) => api.put(`/purchases/bills/${id}`, data),
   getExpenses: (companyId) => api.get(`/purchases/expenses/${companyId}`),
+  getNextOrderNumber: (companyId) => api.get(`/purchases/orders/next-number/${companyId}`),
   // Legacy support
   getByCompany: (companyId) => api.get(`/purchases/orders/${companyId}`),
   delete: (id) => api.delete(`/purchases/orders/${id}`),

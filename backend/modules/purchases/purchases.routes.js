@@ -13,6 +13,7 @@ router.use(verifyToken, tenantAccess);
 router.get('/vendors/:companyId', purchasesController.getVendors);
 
 // Purchase Orders
+router.get('/orders/next-number/:companyId', purchasesController.getNextOrderNumber);
 router.get('/orders/:companyId', purchasesController.getOrders);
 router.post('/orders', purchasesController.createOrder);
 router.put('/orders/:id', purchasesController.updateOrder);

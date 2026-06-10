@@ -48,6 +48,72 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    reference: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    deliveryDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    paymentTerms: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    shipmentPreference: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    deliveryAddress: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    deliveryAddressText: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    deliveryAddressDataJson: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    itemsJson: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    discount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      defaultValue: 0.00
+    },
+    adjustment: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      defaultValue: 0.00
+    },
+    taxRate: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      defaultValue: 0.00
+    },
+    discountAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      defaultValue: 0.00
+    },
+    taxAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      defaultValue: 0.00
+    },
+    subtotal: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+      defaultValue: 0.00
+    },
+    terms: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     CompanyId: {
       type: DataTypes.UUID,
       allowNull: false

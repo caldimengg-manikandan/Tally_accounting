@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { inventoryAPI } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+import { inventoryAPI, purchaseAPI } from '../../services/api';
 import {
   X, Edit2, ChevronRight, ChevronLeft, Calendar, Package, Coins, ShoppingCart, 
   Trash2, ArrowUpRight, Box, User, Info, Tag, Layers, ArrowDownLeft,
@@ -238,6 +239,24 @@ const TransactionsTab = () => {
 // ─── Main Component ────────────────────────────────────────────────
 const ItemDetailView = ({ item, onClose, onEdit }) => {
   const [activeTab, setActiveTab] = useState('Overview');
+  const navigate = useNavigate();
+
+  const handleVendorClick = async (vendorName) => {
+     if (!vendorName) return;
+     try {
+        const companyId = sessionStorage.getItem('companyId');
+        const res = await purchaseAPI.getVendors(companyId);
+        const vendors = res.data || [];
+        const vendor = vendors.find(v => v.name.toLowerCase() === vendorName.toLowerCase());
+        if (vendor) {
+           navigate(`/vendors/view/${vendor.id}`);
+        } else {
+           navigate(`/vendors`);
+        }
+     } catch (err) {
+        console.error("Failed to find vendor", err);
+     }
+  };
 
   if (!item) return (
      <div className="h-full flex items-center justify-center bg-slate-50/30">
@@ -253,10 +272,13 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
 
   const tabs = ['Overview', 'Transactions', 'History'];
 
-  const SimpleDetailRow = ({ label, value, isLink = false }) => (
+  const SimpleDetailRow = ({ label, value, isLink = false, onClick = null }) => (
      <div className="grid grid-cols-[180px_1fr] py-2 text-[13px]">
         <span className="text-slate-400 font-medium">{label}</span>
-        <span className={`font-medium ${isLink ? 'text-[#1e61f0] cursor-pointer hover:underline' : 'text-slate-700'}`}>
+        <span 
+          onClick={onClick}
+          className={`font-medium ${isLink ? 'text-[#1e61f0] cursor-pointer hover:underline' : 'text-slate-700'}`}
+        >
            {value || '—'}
         </span>
      </div>
@@ -350,7 +372,12 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
                     <SimpleDetailRow label="Cost Price" value={formatCurrency(item.costPrice)} />
                     <SimpleDetailRow label="Purchase Account" value={item.purchaseAccount || 'Cost of Goods Sold'} />
                     {item.preferredVendor && (
-                      <SimpleDetailRow label="Preferred Vendor" value={item.preferredVendor} isLink={true} />
+                      <SimpleDetailRow 
+                         label="Preferred Vendor" 
+                         value={item.preferredVendor} 
+                         isLink={true} 
+                         onClick={() => handleVendorClick(item.preferredVendor)}
+                      />
                     )}
                     {item.purchaseDescription && (
                       <SimpleDetailRow label="Purchase Description" value={item.purchaseDescription} />

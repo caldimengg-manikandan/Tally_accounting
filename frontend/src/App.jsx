@@ -245,6 +245,12 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
 
   const isActive = items.some(item => isPathActive(item.path, pathname, location));
 
+  useEffect(() => {
+    if (isActive) {
+      setExpanded(true);
+    }
+  }, [isActive]);
+
   const [isHovered, setIsHovered] = useState(false);
 
   if (collapsed) {
@@ -751,7 +757,9 @@ function AuthenticatedApp() {
       <Route path="/recurring-bills"     element={shell(RecurringBillsView)} />
       <Route path="/recurring-bills/new" element={shell(RecurringBillEntryView)} />
       <Route path="/purchase-orders"     element={shell(PurchaseOrdersView)} />
+      <Route path="/purchase-orders/view/:id" element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/new" element={shell(PurchaseOrderEntryView)} />
+      <Route path="/purchase-orders/edit/:id" element={shell(PurchaseOrderEntryView)} />
       <Route path="/payments-made"       element={shell(PaymentsMadeListView)} />
       <Route path="/payments-made/new"   element={shell(PaymentsMadeEntryView)} />
       <Route path="/bill-payments/new"   element={shell(PaymentsMadeEntryView)} />
