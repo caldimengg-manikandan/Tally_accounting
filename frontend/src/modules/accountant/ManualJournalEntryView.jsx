@@ -6,8 +6,9 @@ import {
   MoreHorizontal, Trash2, CheckCircle2, AlertCircle,
   Clock, Link as LinkIcon, Search, Check
 } from 'lucide-react';
-import { ledgerAPI, voucherAPI, accountingAPI, companyAPI } from '../../services/api';
+import { ledgerAPI, voucherAPI, accountingAPI, companyAPI, costCenterAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
+import CostCenterAllocationModal from '../accounting/CostCenterAllocationModal';
 
 const REPORTING_METHODS = ['Accrual and Cash', 'Accrual Only', 'Cash Only'];
 const CURRENCIES = [
@@ -46,7 +47,8 @@ const newJournalRow = () => ({
   debit: 0,
   credit: 0,
   projectId: '',
-  tags: []
+  tags: [],
+  allocations: []
 });
 
 const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
@@ -81,6 +83,8 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
   const [contacts, setContacts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const [costCenters, setCostCenters] = useState([]);
+  const [activeRowId, setActiveRowId] = useState(null);
   
   const groupedLedgers = useMemo(() => {
     const groups = {};
@@ -127,6 +131,13 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
         });
       }
 
+      costCenterAPI.getByCompany(companyId).then(res => {
+        setCostCenters(Array.isArray(res.data) ? res.data : []);
+      }).catch(err => {
+        console.error("Failed to fetch cost centers:", err);
+        setCostCenters([]);
+      });
+
       companyAPI.getCompanyUsers().then(res => {
         const users = res.data?.users || [];
         const salespersons = users.map(u => ({ id: u.id, name: u.name, type: 'Salesperson' }));
@@ -165,7 +176,12 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
               debit: tx.debit || 0,
               credit: tx.credit || 0,
               projectId: tx.projectId || '',
-              tags: tx.tags || []
+              tags: tx.tags || [],
+              allocations: (tx.CostCenterAllocations || tx.costCenterAllocations || []).map(cca => ({
+                costCenterId: cca.CostCenterId || cca.costCenterId,
+                amount: cca.amount,
+                percentage: cca.percentage
+              }))
             }));
             
             // Pad to at least 2 rows
@@ -189,7 +205,20 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
   const isBalanced = useMemo(() => difference < 0.01 && totalDebit > 0, [difference, totalDebit]);
 
   const updateRow = useCallback((rowId, field, val) => {
-    setRows(prev => prev.map(r => r._id === rowId ? { ...r, [field]: val } : r));
+    setRows(prev => prev.map(r => {
+      if (r._id !== rowId) return r;
+      const updated = { ...r, [field]: val };
+      if (field === 'debit' || field === 'credit') {
+        const newAmt = parseFloat(val) || 0;
+        if (updated.allocations && updated.allocations.length > 0) {
+          updated.allocations = updated.allocations.map(alloc => ({
+            ...alloc,
+            amount: parseFloat(((parseFloat(alloc.percentage) / 100) * newAmt).toFixed(2))
+          }));
+        }
+      }
+      return updated;
+    }));
   }, []);
 
   const removeRow = (rowId) => {
@@ -285,7 +314,8 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
             ledgerId: ledger ? ledger.id : r.ledgerId,
             debit: parseFloat(r.debit) || 0,
             credit: parseFloat(r.credit) || 0,
-            description: r.description
+            description: r.description,
+            allocations: r.allocations || []
           };
         })
       };
@@ -555,6 +585,26 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
                                   </select>
                                   <ChevronDown size={10} className="absolute right-0 pointer-events-none" />
                                </div>
+                               
+                               <button
+                                 type="button"
+                                 onClick={() => {
+                                   if (!row.ledgerId) {
+                                     addNotification('Please select an Account/Ledger first.', 'warning');
+                                     return;
+                                   }
+                                   const amt = parseFloat(row.debit) || parseFloat(row.credit) || 0;
+                                   if (amt <= 0) {
+                                     addNotification('Please enter a positive Debit or Credit amount first.', 'warning');
+                                     return;
+                                   }
+                                   setActiveRowId(row._id);
+                                 }}
+                                 className={`flex items-center gap-1.5 text-[11px] font-bold transition-all hover:scale-105 duration-150
+                                   ${(row.allocations && row.allocations.length > 0) ? 'text-blue-600 hover:text-blue-800' : 'text-slate-400 hover:text-blue-600'}`}
+                               >
+                                 🏷️ {(row.allocations && row.allocations.length > 0) ? `CC Tagged (${row.allocations.length})` : 'Tag Cost Centers'}
+                               </button>
                             </div>
                           )}
                        </div>
@@ -958,6 +1008,26 @@ const ManualJournalEntryView = ({ onSaveSuccess, onCancel }) => {
           </div>
         </div>
       )}
+
+      {activeRowId && (() => {
+        const activeRow = rows.find(r => r._id === activeRowId);
+        if (!activeRow) return null;
+        const lineAmt = parseFloat(activeRow.debit) || parseFloat(activeRow.credit) || 0;
+        
+        return (
+          <CostCenterAllocationModal
+            isOpen={true}
+            onClose={() => setActiveRowId(null)}
+            ledgerName={activeRow.ledgerId}
+            lineAmount={lineAmt}
+            costCenters={costCenters}
+            initialAllocations={activeRow.allocations || []}
+            onSave={(allocationsList) => {
+              setRows(p => p.map(r => r._id === activeRowId ? { ...r, allocations: allocationsList } : r));
+            }}
+          />
+        );
+      })()}
     </>
   );
 };

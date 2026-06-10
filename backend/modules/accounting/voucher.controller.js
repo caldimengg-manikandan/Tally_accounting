@@ -1,4 +1,4 @@
-const { Voucher, Transaction, Ledger, sequelize } = require('../../models');
+const { Voucher, Transaction, Ledger, CostCenterAllocation, CostCenter, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 const AuditService = require('../../services/AuditService');
@@ -21,6 +21,8 @@ exports.createVoucher = async (req, res) => {
       voucherType: voucherType || 'Journal',
       entries: entries.map(e => ({
         ledgerId: e.ledgerId,
+        costCenterId: e.costCenterId || null,
+        allocations: e.allocations || [],
         debit: parseFloat(e.debit || 0),
         credit: parseFloat(e.credit || 0),
         description: e.description,
@@ -70,6 +72,8 @@ exports.updateVoucher = async (req, res) => {
       reference: referenceNumber,
       entries: entries.map(e => ({
         ledgerId: e.ledgerId,
+        costCenterId: e.costCenterId || null,
+        allocations: e.allocations || [],
         debit: parseFloat(e.debit || 0),
         credit: parseFloat(e.credit || 0),
         description: e.description,
@@ -107,13 +111,22 @@ exports.getVouchers = async (req, res) => {
       where: { CompanyId: req.params.companyId },
       include: [{
         model: Transaction,
-        include: [{ 
-          model: Ledger, 
-          attributes: [
-            'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
-            'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
-          ] 
-        }]
+        include: [
+          { 
+            model: Ledger, 
+            attributes: [
+              'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
+              'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
+            ] 
+          },
+          {
+            model: CostCenterAllocation,
+            include: [{
+              model: CostCenter,
+              attributes: ['id', 'name']
+            }]
+          }
+        ]
       }],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
@@ -128,13 +141,22 @@ exports.getVoucherById = async (req, res) => {
     const voucher = await Voucher.findByPk(req.params.id, {
       include: [{
         model: Transaction,
-        include: [{ 
-          model: Ledger, 
-          attributes: [
-            'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
-            'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
-          ] 
-        }]
+        include: [
+          { 
+            model: Ledger, 
+            attributes: [
+              'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
+              'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
+            ] 
+          },
+          {
+            model: CostCenterAllocation,
+            include: [{
+              model: CostCenter,
+              attributes: ['id', 'name']
+            }]
+          }
+        ]
       }]
     });
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });

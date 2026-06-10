@@ -787,14 +787,43 @@ exports.getDashboardStats = async (req, res) => {
     // Calculate Budget Achievement %
     let budgetAchievement = 0;
     try {
-      const { Budget, BudgetItem } = require('../../models');
+      const { Budget, BudgetItem, Group, Ledger, Voucher } = require('../../models');
       const budgets = await Budget.findAll({
         where: { CompanyId: companyId },
-        include: [{ model: BudgetItem, as: 'items' }]
+        include: [{
+          model: BudgetItem,
+          as: 'items',
+          include: [
+            { 
+              model: Ledger, 
+              include: [{ model: Group, attributes: ['nature'] }]
+            },
+            { model: Group }
+          ]
+        }]
       });
+
       if (budgets.length > 0) {
         let totalTarget = 0;
         let totalActual = 0;
+        const allGroups = await Group.findAll({ where: { CompanyId: companyId }, raw: true });
+
+        const getDescendantGroupIds = (parentGroupId) => {
+          const ids = [parentGroupId];
+          const queue = [parentGroupId];
+          while (queue.length > 0) {
+            const currentId = queue.shift();
+            const children = allGroups.filter(g => g.parent_id === currentId);
+            children.forEach(child => {
+              if (!ids.includes(child.id)) {
+                ids.push(child.id);
+                queue.push(child.id);
+              }
+            });
+          }
+          return ids;
+        };
+
         for (const b of budgets) {
           const startYear = parseInt(b.fiscalYear.split('-')[0] || 2026);
           const endYear = parseInt(b.fiscalYear.split('-')[1] || 2027);
@@ -802,17 +831,60 @@ exports.getDashboardStats = async (req, res) => {
           const endDate = `${endYear}-03-31T23:59:59.999Z`;
 
           for (const item of b.items) {
-            const txs = await Transaction.findAll({
-              where: {
-                CompanyId: companyId,
-                LedgerId: item.LedgerId,
-                createdAt: { [Op.between]: [startDate, endDate] }
+            let ledgersInGroup = [];
+
+            if (item.GroupId) {
+              const descendantGroupIds = getDescendantGroupIds(item.GroupId);
+              ledgersInGroup = await Ledger.findAll({
+                where: { GroupId: { [Op.in]: descendantGroupIds } },
+                include: [{ model: Group, attributes: ['nature'] }]
+              });
+            } else if (item.LedgerId && item.Ledger) {
+              ledgersInGroup = [item.Ledger];
+            }
+
+            let totalDebit = 0;
+            let totalCredit = 0;
+            let totalOpening = 0;
+
+            for (const led of ledgersInGroup) {
+              const txs = await Transaction.findAll({
+                where: { LedgerId: led.id },
+                include: [{
+                  model: Voucher,
+                  where: { date: { [Op.between]: [startDate, endDate] } },
+                  attributes: []
+                }]
+              });
+
+              totalDebit += txs.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0);
+              totalCredit += txs.reduce((sum, t) => sum + parseFloat(t.credit || 0), 0);
+
+              const nature = led.Group?.nature || 'Expenses';
+              const opBalance = parseFloat(led.openingBalance || 0);
+              const opType = (led.openingBalanceType || 'Dr').trim().toUpperCase();
+
+              if (nature === 'Expenses' || nature === 'Assets') {
+                totalOpening += opType === 'DR' ? opBalance : -opBalance;
+              } else {
+                totalOpening += opType === 'CR' ? opBalance : -opBalance;
               }
-            });
-            const debit = txs.reduce((sum, t) => sum + parseFloat(t.debit || 0), 0);
-            const credit = txs.reduce((sum, t) => sum + parseFloat(t.credit || 0), 0);
+            }
+
+            const nature = item.GroupId ? item.Group?.nature : item.Ledger?.Group?.nature;
+            const isDr = nature === 'Expenses' || nature === 'Assets';
+
+            let actualAmount = 0;
+            if (isDr) {
+              actualAmount = totalDebit - totalCredit;
+            } else {
+              actualAmount = totalCredit - totalDebit;
+            }
+            actualAmount += totalOpening;
+            actualAmount = Math.max(0, actualAmount);
+
             totalTarget += parseFloat(item.targetAmount || 0);
-            totalActual += Math.abs(debit - credit);
+            totalActual += actualAmount;
           }
         }
         budgetAchievement = totalTarget > 0 ? (totalActual / totalTarget) * 100 : 0;
@@ -820,6 +892,7 @@ exports.getDashboardStats = async (req, res) => {
         budgetAchievement = 82.5; // realistic fallback
       }
     } catch (e) {
+      console.error('Error calculating dashboard budget achievement:', e);
       budgetAchievement = 82.5;
     }
 
@@ -1652,19 +1725,43 @@ exports.getStockAging = async (req, res) => {
 exports.getCostCenterReport = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { CostCenter } = require('../../models');
+    const { CostCenter, CostCenterAllocation, Transaction, Ledger } = require('../../models');
 
     const costCenters = await CostCenter.findAll({
       where: { CompanyId: companyId },
       include: [{
-        model: Transaction,
-        include: [{ model: Ledger, attributes: ['name'] }]
+        model: CostCenterAllocation,
+        include: [{
+          model: Transaction,
+          include: [{ model: Ledger, attributes: ['name'] }]
+        }]
       }]
     });
 
     const report = costCenters.map(cc => {
-      const debitTotal = cc.Transactions?.reduce((s, t) => s + parseFloat(t.debit || 0), 0) || 0;
-      const creditTotal = cc.Transactions?.reduce((s, t) => s + parseFloat(t.credit || 0), 0) || 0;
+      let debitTotal = 0;
+      let creditTotal = 0;
+
+      const transactions = (cc.CostCenterAllocations || []).map(cca => {
+        const t = cca.Transaction;
+        if (!t) return null;
+
+        const isDebit = parseFloat(t.debit || 0) > 0;
+        const allocatedDebit = isDebit ? cca.amount : 0;
+        const allocatedCredit = isDebit ? 0 : cca.amount;
+
+        debitTotal += allocatedDebit;
+        creditTotal += allocatedCredit;
+
+        return {
+          id: t.id,
+          debit: parseFloat(allocatedDebit.toFixed(2)),
+          credit: parseFloat(allocatedCredit.toFixed(2)),
+          description: t.description,
+          ledgerName: t.Ledger?.name || 'Unknown'
+        };
+      }).filter(Boolean);
+
       const net = debitTotal - creditTotal;
 
       return {
@@ -1674,13 +1771,7 @@ exports.getCostCenterReport = async (req, res) => {
         debitTotal: parseFloat(debitTotal.toFixed(2)),
         creditTotal: parseFloat(creditTotal.toFixed(2)),
         netAmount: parseFloat(net.toFixed(2)),
-        transactions: (cc.Transactions || []).map(t => ({
-          id: t.id,
-          debit: parseFloat(t.debit || 0),
-          credit: parseFloat(t.credit || 0),
-          description: t.description,
-          ledgerName: t.Ledger?.name || 'Unknown'
-        }))
+        transactions
       };
     });
 

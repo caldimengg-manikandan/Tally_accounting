@@ -163,8 +163,7 @@ exports.getBudgetVariance = async (req, res) => {
       for (const led of ledgersInGroup) {
         const txs = await Transaction.findAll({
           where: {
-            LedgerId: led.id,
-            createdAt: { [Op.between]: [startDate, endDate] }
+            LedgerId: led.id
           },
           include: [{
             model: Voucher,

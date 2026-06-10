@@ -7,6 +7,7 @@ import {
 import { companyAPI, usersAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
 import { CURRENCIES } from '../../utils/currencies';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const validateGSTIN = (gstin) => {
   if (!gstin) return true;
@@ -101,6 +102,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   
   const [companyUsers, setCompanyUsers] = useState([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, userId: null });
   const [inviteData, setInviteData] = useState({ name: '', email: '', password: '', role: 'EMPLOYEE' });
   const userObj = JSON.parse(sessionStorage.getItem('user') || '{}');
   const isAdmin = userObj.role === 'ADMIN' || userObj.role === 'SUPER_ADMIN';
@@ -202,14 +204,25 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
     }
   };
 
-  const handleRemoveUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to remove this user from the company?')) return;
+  const handleRemoveUser = (userId) => {
+    setConfirmModal({ isOpen: true, userId });
+  };
+
+  const confirmRemoveUser = async () => {
+    if (!confirmModal.userId) return;
+    setLoading(true);
+    setStatus(null);
     try {
-      await usersAPI.removeUser(userId);
+      await usersAPI.removeUser(confirmModal.userId);
       fetchCompanyUsers();
+      setStatus('success');
+      setTimeout(() => setStatus(null), 2000);
     } catch (err) {
-      alert('Failed to remove user');
+      setErrorMsg('Failed to remove user');
+      setStatus('error');
     }
+    setConfirmModal({ isOpen: false, userId: null });
+    setLoading(false);
   };
 
   const fetchCompanies = async () => {
@@ -969,6 +982,15 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
             </div>
           </div>
         )}
+
+        {/* CONFIRM MODAL */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title="Remove User"
+          message="Are you sure you want to remove this user from the company?"
+          onConfirm={confirmRemoveUser}
+          onClose={() => setConfirmModal({ isOpen: false, userId: null })}
+        />
 
       </div>
     </div>
