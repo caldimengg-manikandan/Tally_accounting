@@ -52,6 +52,7 @@ const BOMItem = require('./bomItem.model')(sequelize, DataTypes);
 const ProductionOrder = require('./productionOrder.model')(sequelize, DataTypes);
 const Budget = require('./budget.model')(sequelize, DataTypes);
 const BudgetItem = require('./budgetItem.model')(sequelize, DataTypes);
+const CostCenterAllocation = require('./costCenterAllocation.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -316,6 +317,16 @@ CostCenter.belongsTo(CostCategory, { foreignKey: 'costCategoryId' });
 CostCenter.hasMany(CostCenter, { as: 'SubCostCenters', foreignKey: 'parentCostCenterId', onDelete: 'SET NULL' });
 CostCenter.belongsTo(CostCenter, { as: 'ParentCostCenter', foreignKey: 'parentCostCenterId', onDelete: 'SET NULL' });
 
+Company.hasMany(CostCenterAllocation, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID }, onDelete: 'CASCADE' });
+CostCenterAllocation.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+
+Transaction.hasMany(CostCenterAllocation, { foreignKey: { name: 'TransactionId', type: DataTypes.UUID }, onDelete: 'CASCADE' });
+CostCenterAllocation.belongsTo(Transaction, { foreignKey: { name: 'TransactionId', type: DataTypes.UUID } });
+
+CostCenter.hasMany(CostCenterAllocation, { foreignKey: { name: 'CostCenterId', type: DataTypes.UUID }, onDelete: 'CASCADE' });
+CostCenterAllocation.belongsTo(CostCenter, { foreignKey: { name: 'CostCenterId', type: DataTypes.UUID } });
+
+
 
 // 20. Payroll Models
 Company.hasMany(Employee, { foreignKey: 'CompanyId' });
@@ -431,6 +442,7 @@ module.exports = {
   BOMItem,
   ProductionOrder,
   Budget,
-  BudgetItem
+  BudgetItem,
+  CostCenterAllocation
 };
 

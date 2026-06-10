@@ -7,6 +7,7 @@ import {
   Zap
 } from 'lucide-react';
 import { ledgerAPI, voucherAPI, groupAPI, costCenterAPI, accountingAPI } from '../../services/api';
+import CostCenterAllocationModal from './CostCenterAllocationModal';
 
 const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra', 'Sales', 'Purchase', 'Debit Note', 'Credit Note'];
 
@@ -78,7 +79,7 @@ const VOUCHER_GUIDE = {
 };
 
 let _uid = 100;
-const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', costCenterId: '', type, amount, note: '' });
+const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', costCenterId: '', allocations: [], type, amount, note: '' });
 
 export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const navigate = useNavigate();
@@ -96,6 +97,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const [saving,    setSaving]    = useState(false);
   const [saved,     setSaved]     = useState(false);
   const [postErr,   setPostErr]   = useState('');
+  const [activeRowId, setActiveRowId] = useState(null);
 
   const vNo = useMemo(
     () => `${vType.slice(0,3).toUpperCase()}-${new Date().getFullYear()}-${String(Math.floor(Math.random()*9000)+1000)}`,
@@ -136,7 +138,20 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
 
   /* ── Row helpers ──────────────────────────────────────────── */
   const updateRow = useCallback((id, field, val) =>
-    setRows(p => p.map(r => r._id === id ? { ...r, [field]: val } : r)), []);
+    setRows(p => p.map(r => {
+      if (r._id !== id) return r;
+      const updated = { ...r, [field]: val };
+      if (field === 'amount') {
+        const newAmt = parseFloat(val) || 0;
+        if (updated.allocations && updated.allocations.length > 0) {
+          updated.allocations = updated.allocations.map(alloc => ({
+            ...alloc,
+            amount: parseFloat(((parseFloat(alloc.percentage) / 100) * newAmt).toFixed(2))
+          }));
+        }
+      }
+      return updated;
+    })), []);
 
   const removeRow = id => {
     if (rows.length <= 2) return;
@@ -162,6 +177,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
         entries: filledRows.map(r => ({
           ledgerId: r.ledgerId,
           costCenterId: r.costCenterId || null,
+          allocations: r.allocations || [],
           debit:  r.type === 'Dr' ? parseFloat(r.amount) : 0,
           credit: r.type === 'Cr' ? parseFloat(r.amount) : 0,
         })),
@@ -381,14 +397,41 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
                   <ChevronDown size={11} style={{ ...chevron }}/>
                 </div>
 
-                {/* Cost Center select */}
-                <div style={{ position:'relative' }}>
-                  <select value={row.costCenterId} onChange={e=>updateRow(row._id,'costCenterId',e.target.value)}
-                    style={{ ...rowInp, fontSize:11, color:'#64748b' }}>
-                    <option value="">— None —</option>
-                    {costCenters.map(cc=><option key={cc.id} value={cc.id}>{cc.name}</option>)}
-                  </select>
-                  <ChevronDown size={10} style={{ ...chevron }}/>
+                {/* Cost Center Allocation Tagging */}
+                <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!row.ledgerId) {
+                        alert('Please select an Account/Ledger first.');
+                        return;
+                      }
+                      if (!row.amount || parseFloat(row.amount) <= 0) {
+                        alert('Please enter a positive amount first.');
+                        return;
+                      }
+                      setActiveRowId(row._id);
+                    }}
+                    style={{
+                      ...rowInp,
+                      fontSize: 11,
+                      color: (row.allocations && row.allocations.length > 0) ? '#2563eb' : '#64748b',
+                      background: (row.allocations && row.allocations.length > 0) ? '#eff6ff' : '#fff',
+                      border: (row.allocations && row.allocations.length > 0) ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      fontWeight: 700
+                    }}
+                  >
+                    {(row.allocations && row.allocations.length > 0) ? (
+                      `Tag: ${row.allocations.length} CC`
+                    ) : (
+                      '🏷️ Tag Centers'
+                    )}
+                  </button>
                 </div>
 
                 {/* Dr / Cr toggle */}
@@ -554,6 +597,28 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
         </div>
 
       </div>
+
+      {activeRowId && (() => {
+        const activeRow = rows.find(r => r._id === activeRowId);
+        if (!activeRow) return null;
+        const activeLedger = ledgers.find(l => l.id === activeRow.ledgerId);
+        const ledgerName = activeLedger ? activeLedger.name : 'Unknown Account';
+        const lineAmt = parseFloat(activeRow.amount) || 0;
+        
+        return (
+          <CostCenterAllocationModal
+            isOpen={true}
+            onClose={() => setActiveRowId(null)}
+            ledgerName={ledgerName}
+            lineAmount={lineAmt}
+            costCenters={costCenters}
+            initialAllocations={activeRow.allocations || []}
+            onSave={(allocationsList) => {
+              setRows(p => p.map(r => r._id === activeRowId ? { ...r, allocations: allocationsList } : r));
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, Plus, ArrowUpRight, DollarSign, Calendar, TrendingDown, 
-  Trash2, RefreshCw, AlertCircle, FileText, ChevronRight, CheckCircle2, Landmark 
+  Trash2, RefreshCw, AlertCircle, FileText, ChevronRight, CheckCircle2, Landmark, ChevronDown,
+  X, ArrowLeft, Calculator, Search
 } from 'lucide-react';
 import { fixedAssetsAPI, ledgerAPI } from '../../services/api';
 
@@ -18,6 +19,10 @@ export default function FixedAssetsView() {
   const [activeView, setActiveView] = useState('list');
   const [selectedAsset, setSelectedAsset] = useState(null);
   
+  // Search & Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [methodFilter, setMethodFilter] = useState('ALL');
+
   // Create Asset Form State
   const [assetForm, setAssetForm] = useState({
     name: '',
@@ -139,14 +144,67 @@ export default function FixedAssetsView() {
     }
   };
 
-  const handleDeleteAsset = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this asset?')) return;
+  const handleLoadDemoData = async () => {
+    setLoading(true);
     try {
-      await fixedAssetsAPI.delete(id);
+      const demoAssets = [
+        {
+          name: 'Office Headquarters Building',
+          purchaseDate: '2024-04-01',
+          purchaseValue: 4500000,
+          depreciationMethod: 'SLM',
+          usefulLife: 30,
+          scrapValue: 500000,
+          depreciationRate: 3,
+          companyId
+        },
+        {
+          name: 'MacBook Pro Fleet (Development Team)',
+          purchaseDate: '2025-06-15',
+          purchaseValue: 680000,
+          depreciationMethod: 'WDV',
+          usefulLife: 5,
+          scrapValue: 50000,
+          depreciationRate: 40,
+          companyId
+        },
+        {
+          name: 'Delivery Logistics Truck',
+          purchaseDate: '2025-01-10',
+          purchaseValue: 1200000,
+          depreciationMethod: 'WDV',
+          usefulLife: 8,
+          scrapValue: 150000,
+          depreciationRate: 15,
+          companyId
+        }
+      ];
+
+      for (const payload of demoAssets) {
+        await fixedAssetsAPI.create(payload);
+      }
+
+      alert('Demo Fixed Assets acquired and registered successfully!');
       fetchData();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete asset');
+      alert('Failed to load demo fixed assets.');
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteAsset = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this asset record?')) return;
+    try {
+      setLoading(true);
+      await fixedAssetsAPI.delete(id);
+      alert('Asset deleted successfully.');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.error || 'Failed to delete asset.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -154,25 +212,32 @@ export default function FixedAssetsView() {
   const totalBookValue = assets.reduce((s, a) => s + parseFloat(a.currentBookValue || 0), 0);
   const totalDepreciation = assets.reduce((s, a) => s + parseFloat(a.accumulatedDepreciation || 0), 0);
 
+  const filteredAssets = assets.filter(a => {
+    const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (a.AssetLedger?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = methodFilter === 'ALL' || a.depreciationMethod === methodFilter;
+    return matchesSearch && matchesFilter;
+  });
+
   return (
-    <div className="p-8 max-w-[1400px] mx-auto space-y-8 animate-fade-in">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-8 animate-fade-in font-sans text-slate-800">
       {/* HEADER */}
-      <div className="flex justify-between items-end border-b border-slate-100 pb-8">
+      <div className="flex justify-between items-end border-b border-blue-100/60 pb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/25">
               <Building2 size={20} />
             </div>
-            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Asset Registers</span>
+            <span className="text-[10px] font-black uppercase text-blue-500 tracking-[0.2em]">Asset Registers</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Fixed Assets Register</h1>
-          <p className="text-slate-400 text-xs mt-1 font-medium">Track capital acquisitions, depreciation schedules, and asset disposals</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Fixed Assets Register</h1>
+          <p className="text-slate-500 text-xs mt-1 font-medium">Track capital acquisitions, depreciation schedules, and asset disposals</p>
         </div>
         
         {activeView === 'list' && (
           <button 
             onClick={() => setActiveView('create')}
-            className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-slate-900/10 flex items-center gap-1.5 transition-all"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-y-0"
           >
             <Plus size={16} /> Acquire Fixed Asset
           </button>
@@ -180,11 +245,12 @@ export default function FixedAssetsView() {
       </div>
 
       {loading ? (
-        <div className="py-20 flex justify-center">
-          <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <div className="py-20 flex flex-col items-center justify-center gap-4">
+          <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+          <p className="text-slate-400 text-xs font-semibold">Recalibrating asset calculations...</p>
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex gap-3 text-red-600 font-semibold">
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 flex gap-3 text-rose-600 font-bold text-sm">
           <AlertCircle size={18} className="shrink-0" />
           <span>{error}</span>
         </div>
@@ -194,97 +260,171 @@ export default function FixedAssetsView() {
             <div className="space-y-8">
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-7 rounded-[2rem] bg-white border border-slate-100 shadow-lg relative overflow-hidden flex flex-col justify-between h-40">
-                  <div className="absolute right-4 top-4 text-slate-100"><DollarSign size={48} /></div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Asset Acquisitions</p>
-                  <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{fmt(totalAcquisition)}</h3>
-                  <span className="text-[10px] font-bold text-slate-400">Recorded at cost price value</span>
+                <div className="p-6 rounded-[2rem] bg-white border border-blue-100/60 shadow-md relative overflow-hidden flex flex-col justify-between h-40 bg-gradient-to-br from-blue-50/30 to-indigo-50/20">
+                  <div className="absolute right-4 top-4 text-blue-200 select-none">
+                    <Building2 size={44} className="opacity-40" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Total Asset Acquisitions</p>
+                    <h3 className="text-3xl font-black text-blue-700 tracking-tighter">{fmt(totalAcquisition)}</h3>
+                  </div>
+                  <div className="space-y-1 mt-2">
+                    <div className="w-full h-1.5 rounded-full bg-blue-100 overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-600 rounded-full" style={{ width: '100%' }} />
+                    </div>
+                    <span className="text-[9px] font-bold text-blue-400 block">Recorded cost basis values</span>
+                  </div>
                 </div>
 
-                <div className="p-7 rounded-[2rem] bg-blue-50 border border-blue-100 shadow-sm relative overflow-hidden flex flex-col justify-between h-40">
-                  <div className="absolute right-4 top-4 text-blue-200"><TrendingDown size={48} /></div>
-                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">Accumulated Depreciation</p>
-                  <h3 className="text-3xl font-black text-blue-700 tracking-tighter">{fmt(totalDepreciation)}</h3>
-                  <span className="text-[10px] font-bold text-blue-400">Total lifetime value reductions</span>
+                <div className="p-6 rounded-[2rem] bg-white border border-rose-100 shadow-md relative overflow-hidden flex flex-col justify-between h-40 bg-gradient-to-br from-white to-rose-50/10">
+                  <div className="absolute right-4 top-4 text-rose-200 select-none">
+                    <TrendingDown size={44} className="opacity-40" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Accumulated Depreciation</p>
+                    <h3 className="text-3xl font-black text-rose-600 tracking-tighter">{fmt(totalDepreciation)}</h3>
+                  </div>
+                  <div className="space-y-1 mt-2">
+                    <div className="w-full h-1.5 rounded-full bg-rose-50 overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-rose-400 to-red-550 rounded-full" 
+                        style={{ width: `${totalAcquisition > 0 ? Math.min(100, (totalDepreciation / totalAcquisition) * 100) : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] font-bold text-rose-400 block">
+                      {totalAcquisition > 0 ? ((totalDepreciation / totalAcquisition) * 100).toFixed(1) : 0}% of acquisitions depreciated
+                    </span>
+                  </div>
                 </div>
 
-                <div className="p-7 rounded-[2rem] bg-emerald-50 border border-emerald-100 shadow-sm relative overflow-hidden flex flex-col justify-between h-40">
-                  <div className="absolute right-4 top-4 text-emerald-200"><CheckCircle2 size={48} /></div>
-                  <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Net Book Value (WDV)</p>
-                  <h3 className="text-3xl font-black text-emerald-700 tracking-tighter">{fmt(totalBookValue)}</h3>
-                  <span className="text-[10px] font-bold text-emerald-400">Remaining capital assets worth</span>
+                <div className="p-6 rounded-[2rem] bg-white border border-emerald-100 shadow-md relative overflow-hidden flex flex-col justify-between h-40 bg-gradient-to-br from-white to-emerald-50/10">
+                  <div className="absolute right-4 top-4 text-emerald-200 select-none">
+                    <DollarSign size={44} className="opacity-40" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Net Book Value (WDV)</p>
+                    <h3 className="text-3xl font-black text-emerald-600 tracking-tighter">{fmt(totalBookValue)}</h3>
+                  </div>
+                  <div className="space-y-1 mt-2">
+                    <div className="w-full h-1.5 rounded-full bg-emerald-50 overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-emerald-400 to-teal-550 rounded-full" 
+                        style={{ width: `${totalAcquisition > 0 ? Math.min(100, (totalBookValue / totalAcquisition) * 100) : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] font-bold text-emerald-500 block">
+                      {totalAcquisition > 0 ? ((totalBookValue / totalAcquisition) * 100).toFixed(1) : 0}% remaining carrying value
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Asset list */}
-              <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
-                <div className="h-16 px-8 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Acquisition Registry</span>
-                  <span className="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
-                    {assets.length} Active Assets
-                  </span>
+              <div className="bg-white rounded-[2rem] border border-blue-100/50 shadow-xl overflow-hidden">
+                <div className="p-6 border-b border-blue-100/40 bg-gradient-to-r from-blue-50/40 to-indigo-50/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900">Asset Registry Ledger</h3>
+                    <p className="text-blue-400/80 text-xs mt-0.5 font-medium">Manage and run operations on registered assets</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {/* Search Bar */}
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        placeholder="Search assets..." 
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-755 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white w-48 sm:w-64"
+                      />
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Search size={14} />
+                      </div>
+                    </div>
+
+                    {/* Filter Dropdown */}
+                    <div className="relative">
+                      <select 
+                        value={methodFilter}
+                        onChange={e => setMethodFilter(e.target.value)}
+                        className="pl-3 pr-8 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 transition-all bg-white appearance-none cursor-pointer"
+                      >
+                        <option value="ALL">All Methods</option>
+                        <option value="WDV">WDV</option>
+                        <option value="SLM">SLM</option>
+                      </select>
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
+
+                    <span className="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1.5 rounded-lg border border-blue-100/30 uppercase tracking-wider shrink-0">
+                      {filteredAssets.length} of {assets.length} Active
+                    </span>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left min-w-[1000px]">
-                    <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-50 bg-[#fcfdfe]">
+                  <table className="w-full text-left min-w-[1000px] border-collapse">
+                    <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-blue-500 border-b border-blue-100/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/30">
                       <tr>
-                        <th className="px-8 py-5">Asset Name</th>
-                        <th className="px-8 py-5">Acquisition Date</th>
-                        <th className="px-8 py-5 text-right">Cost Price (₹)</th>
-                        <th className="px-8 py-5 text-center">Dep. Method</th>
-                        <th className="px-8 py-5 text-center">Life (Years)</th>
-                        <th className="px-8 py-5 text-right">Accumulated Dep. (₹)</th>
-                        <th className="px-8 py-5 text-right">Book Value (₹)</th>
-                        <th className="px-8 py-5 text-center">Actions</th>
+                        <th className="px-6 py-4">Asset Name</th>
+                        <th className="px-6 py-4">Acquisition Date</th>
+                        <th className="px-6 py-4 text-right">Cost Price (₹)</th>
+                        <th className="px-6 py-4 text-center">Dep. Method</th>
+                        <th className="px-6 py-4 text-center">Useful Life</th>
+                        <th className="px-6 py-4 text-right">Accumulated Dep. (₹)</th>
+                        <th className="px-6 py-4 text-right">Book Value (₹)</th>
+                        <th className="px-6 py-4 text-center">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50 text-[13px] font-semibold text-slate-700">
-                      {assets.length > 0 ? (
-                        assets.map((asset) => (
-                          <tr key={asset.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-8 py-5">
-                              <span className="font-extrabold text-slate-900 block">{asset.name}</span>
+                    <tbody className="divide-y divide-slate-50 text-[12.5px] font-semibold text-slate-700">
+                      {filteredAssets.length > 0 ? (
+                        filteredAssets.map((asset) => (
+                          <tr key={asset.id} className="hover:bg-slate-50/40 hover:scale-[1.001] transition-all border-b border-slate-50">
+                            <td className="px-6 py-3.5">
+                              <span className="font-bold text-slate-900 block text-[13px]">{asset.name}</span>
                               <span className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 block tracking-wider">
                                 GL: {asset.AssetLedger?.name || 'Standard Account'}
                               </span>
                             </td>
-                            <td className="px-8 py-5 text-slate-500">
+                            <td className="px-6 py-3.5 text-slate-500 text-xs font-semibold">
                               {new Date(asset.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </td>
-                            <td className="px-8 py-5 text-right font-bold text-slate-900">{fmt(asset.purchaseValue)}</td>
-                            <td className="px-8 py-5 text-center">
-                              <span className="bg-blue-50 text-blue-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-md uppercase">
+                            <td className="px-6 py-3.5 text-right font-mono text-xs font-bold text-slate-900">{fmt(asset.purchaseValue)}</td>
+                            <td className="px-6 py-3.5 text-center">
+                              <span className="bg-blue-50 text-blue-700 text-[9px] font-black px-2.5 py-1 rounded-md border border-blue-100/40 uppercase">
                                 {asset.depreciationMethod === 'WDV' ? `${asset.depreciationMethod} (${parseFloat(asset.depreciationRate || 10)}%)` : asset.depreciationMethod}
                               </span>
                             </td>
-                            <td className="px-8 py-5 text-center text-slate-600 font-bold">{asset.usefulLife}</td>
-                            <td className="px-8 py-5 text-right text-rose-600 font-bold">{fmt(asset.accumulatedDepreciation)}</td>
-                            <td className="px-8 py-5 text-right text-emerald-600 font-black">{fmt(asset.currentBookValue)}</td>
-                            <td className="px-8 py-5 text-center">
+                            <td className="px-6 py-3.5 text-center text-slate-600 font-bold text-xs">{asset.usefulLife} Years</td>
+                            <td className="px-6 py-3.5 text-right text-rose-505 font-mono text-xs font-bold">{fmt(asset.accumulatedDepreciation)}</td>
+                            <td className="px-6 py-3.5 text-right text-emerald-600 font-mono text-xs font-black">{fmt(asset.currentBookValue)}</td>
+                            <td className="px-6 py-3.5 text-center">
                               {parseFloat(asset.currentBookValue) > 0 ? (
-                                <div className="flex gap-2.5 justify-center">
+                                <div className="flex gap-2 justify-center">
                                   <button 
                                     onClick={() => { setSelectedAsset(asset); setActiveView('depreciate'); }}
-                                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-xl font-bold text-[11px] uppercase tracking-wide transition-all"
+                                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100/30 px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wide transition-all hover:scale-[1.02]"
                                   >
                                     Depreciate
                                   </button>
                                   <button 
                                     onClick={() => { setSelectedAsset(asset); setActiveView('dispose'); }}
-                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 px-3 py-1.5 rounded-xl font-bold text-[11px] uppercase tracking-wide transition-all"
+                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-100/30 px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wide transition-all hover:scale-[1.02]"
                                   >
                                     Dispose
                                   </button>
                                   <button 
                                     onClick={() => handleDeleteAsset(asset.id)}
-                                    className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all"
+                                    className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all hover:scale-[1.02]"
+                                    title="Delete Asset"
                                   >
-                                    <Trash2 size={15} />
+                                    <Trash2 size={14} />
                                   </button>
                                 </div>
                               ) : (
-                                <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                                  Disposed/Fully Depreciated
+                                <span className="text-[9px] text-slate-400 uppercase font-black tracking-widest bg-slate-50 px-2.5 py-1 rounded border border-slate-100">
+                                  Disposed / Fully Dep.
                                 </span>
                               )}
                             </td>
@@ -292,8 +432,22 @@ export default function FixedAssetsView() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={8} className="text-center py-12 text-slate-400 text-xs font-bold">
-                            No fixed assets logged in company database. Click "Acquire Fixed Asset" above.
+                          <td colSpan={8} className="text-center py-20">
+                            <div className="max-w-2xl mx-auto flex flex-col items-center py-12 px-6 border border-slate-100 rounded-[2.5rem] bg-gradient-to-b from-white to-slate-50/50 shadow-inner text-center">
+                              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 text-slate-500 shadow-xl border border-slate-100">
+                                <Building2 size={36} className="text-slate-650 animate-pulse"/>
+                              </div>
+                              <h3 className="text-2xl font-black text-slate-805 mb-3 tracking-tight">No Matching Fixed Assets</h3>
+                              <p className="text-slate-550 font-semibold text-xs mb-8 leading-relaxed max-w-md mx-auto">
+                                We couldn't find any registered assets matching your search query or filter settings. Create one or try adjusting your query.
+                              </p>
+                              <button 
+                                onClick={() => { setSearchTerm(''); setMethodFilter('ALL'); }}
+                                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/25 transition-all hover:-translate-y-0.5 flex items-center gap-2"
+                              >
+                                Clear Search Filters
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -306,303 +460,366 @@ export default function FixedAssetsView() {
 
           {/* VIEW: ACQUIRE FIXED ASSET FORM */}
           {activeView === 'create' && (
-            <div className="max-w-3xl mx-auto bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl animate-fade-in space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-50 pb-5">
-                <button onClick={() => setActiveView('list')} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
-                  <ArrowUpRight size={20} className="rotate-270 text-slate-600" />
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+                <button 
+                  onClick={() => setActiveView('list')}
+                  className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-all hover:scale-105 active:scale-95"
+                >
+                  <ArrowLeft size={18} />
                 </button>
-                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Log Fixed Asset Acquisition</h2>
+                <div>
+                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Acquire Corporate Fixed Asset</h1>
+                  <p className="text-slate-500 text-xs mt-0.5 font-medium">Log acquisitions, resolve G/L accounts, and determine depreciation methods</p>
+                </div>
               </div>
 
-              <form onSubmit={handleCreateAsset} className="space-y-6 text-slate-700">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Name *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={assetForm.name}
-                      onChange={e => setAssetForm({ ...assetForm, name: e.target.value })}
-                      placeholder="e.g. Dell Enterprise Server"
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purchase Date *</label>
-                    <input 
-                      type="date" 
-                      required 
-                      value={assetForm.purchaseDate}
-                      onChange={e => setAssetForm({ ...assetForm, purchaseDate: e.target.value })}
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purchase Value (₹) *</label>
-                    <input 
-                      type="number" 
-                      required 
-                      value={assetForm.purchaseValue}
-                      onChange={e => setAssetForm({ ...assetForm, purchaseValue: e.target.value })}
-                      placeholder="e.g. 150000"
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Useful Life (Years)</label>
-                    <input 
-                      type="number" 
-                      value={assetForm.usefulLife}
-                      onChange={e => setAssetForm({ ...assetForm, usefulLife: e.target.value })}
-                      placeholder="e.g. 10"
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scrap Value (₹)</label>
-                    <input 
-                      type="number" 
-                      value={assetForm.scrapValue}
-                      onChange={e => setAssetForm({ ...assetForm, scrapValue: e.target.value })}
-                      placeholder="e.g. 10000"
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Depreciation Method</label>
-                    <select 
-                      value={assetForm.depreciationMethod}
-                      onChange={e => setAssetForm({ ...assetForm, depreciationMethod: e.target.value })}
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                    >
-                      <option value="WDV">Written Down Value (WDV - Declining Balance)</option>
-                      <option value="SLM">Straight Line Method (SLM)</option>
-                    </select>
-                  </div>
-
-                  {assetForm.depreciationMethod === 'WDV' && (
-                    <div className="flex flex-col gap-1.5 animate-fade-in">
-                      <label className="text-[10px] font-black text-[#1e61f0] uppercase tracking-widest">Depreciation Rate (% per year) *</label>
+              <div className="max-w-4xl mx-auto bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl shadow-slate-100/40">
+                <form onSubmit={handleCreateAsset} className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Name *</label>
                       <input 
-                        type="number" 
-                        required
-                        value={assetForm.depreciationRate}
-                        onChange={e => setAssetForm({ ...assetForm, depreciationRate: e.target.value })}
-                        placeholder="e.g. 15"
-                        className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
+                        type="text" 
+                        required 
+                        value={assetForm.name}
+                        onChange={e => setAssetForm({ ...assetForm, name: e.target.value })}
+                        placeholder="e.g. Dell Enterprise Server"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
                       />
                     </div>
-                  )}
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset G/L Account</label>
-                    <select 
-                      value={assetForm.assetLedgerId}
-                      onChange={e => setAssetForm({ ...assetForm, assetLedgerId: e.target.value })}
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                    >
-                      <option value="">-- Auto-create Dedicated Asset Ledger --</option>
-                      {ledgers.filter(l => l.category === 'Asset').map(l => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                    </select>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purchase Date *</label>
+                      <input 
+                        type="date" 
+                        required 
+                        value={assetForm.purchaseDate}
+                        onChange={e => setAssetForm({ ...assetForm, purchaseDate: e.target.value })}
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purchase Value (₹) *</label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={assetForm.purchaseValue}
+                        onChange={e => setAssetForm({ ...assetForm, purchaseValue: e.target.value })}
+                        placeholder="e.g. 150000"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Useful Life (Years)</label>
+                      <input 
+                        type="number" 
+                        value={assetForm.usefulLife}
+                        onChange={e => setAssetForm({ ...assetForm, usefulLife: e.target.value })}
+                        placeholder="e.g. 10"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scrap Value (₹)</label>
+                      <input 
+                        type="number" 
+                        value={assetForm.scrapValue}
+                        onChange={e => setAssetForm({ ...assetForm, scrapValue: e.target.value })}
+                        placeholder="e.g. 10000"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Depreciation Method</label>
+                      <div className="relative">
+                        <select 
+                          value={assetForm.depreciationMethod}
+                          onChange={e => setAssetForm({ ...assetForm, depreciationMethod: e.target.value })}
+                          className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
+                        >
+                          <option value="WDV">Written Down Value (WDV - Declining Balance)</option>
+                          <option value="SLM">Straight Line Method (SLM)</option>
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                          <ChevronDown size={16} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {assetForm.depreciationMethod === 'WDV' && (
+                      <div className="flex flex-col gap-2 animate-fade-in">
+                        <label className="text-[10px] font-black text-[#1e61f0] uppercase tracking-widest">Depreciation Rate (% per year) *</label>
+                        <input 
+                          type="number" 
+                          required
+                          value={assetForm.depreciationRate}
+                          onChange={e => setAssetForm({ ...assetForm, depreciationRate: e.target.value })}
+                          placeholder="e.g. 15"
+                          className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-[#1e61f0] outline-none hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-blue-50/10 focus:bg-white"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset G/L Account</label>
+                      <div className="relative">
+                        <select 
+                          value={assetForm.assetLedgerId}
+                          onChange={e => setAssetForm({ ...assetForm, assetLedgerId: e.target.value })}
+                          className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
+                        >
+                          <option value="">-- Auto-create Dedicated Asset Ledger --</option>
+                          {ledgers.filter(l => l.category === 'Asset').map(l => (
+                            <option key={l.id} value={l.id}>{l.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                          <ChevronDown size={16} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Depreciation Expense G/L</label>
+                      <div className="relative">
+                        <select 
+                          value={assetForm.depreciationLedgerId}
+                          onChange={e => setAssetForm({ ...assetForm, depreciationLedgerId: e.target.value })}
+                          className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
+                        >
+                          <option value="">-- Resolve "Depreciation Expense" Ledger --</option>
+                          {ledgers.filter(l => l.category === 'Expense').map(l => (
+                            <option key={l.id} value={l.id}>{l.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                          <ChevronDown size={16} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Depreciation Expense G/L</label>
-                    <select 
-                      value={assetForm.depreciationLedgerId}
-                      onChange={e => setAssetForm({ ...assetForm, depreciationLedgerId: e.target.value })}
-                      className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
+                  <div className="flex justify-end gap-3 pt-5 border-t border-slate-100">
+                    <button 
+                      type="button" 
+                      onClick={() => setActiveView('list')}
+                      className="px-6 py-3.5 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-600 hover:bg-slate-50"
                     >
-                      <option value="">-- Resolve "Depreciation Expense" Ledger --</option>
-                      {ledgers.filter(l => l.category === 'Expense').map(l => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                    </select>
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all disabled:opacity-50 hover:scale-[1.01]"
+                    >
+                      {loading ? 'Posting...' : 'Acknowledge Acquisition'}
+                    </button>
                   </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-50">
-                  <button 
-                    type="button" 
-                    onClick={() => setActiveView('list')}
-                    className="px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-600 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={loading}
-                    className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-slate-900/10 transition-all disabled:opacity-50"
-                  >
-                    {loading ? 'Posting...' : 'Acknowledge Acquisition'}
-                  </button>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
           )}
 
           {/* VIEW: RUN DEPRECIATION */}
           {activeView === 'depreciate' && selectedAsset && (
-            <div className="max-w-md mx-auto bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl animate-fade-in space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-50 pb-5">
-                <button onClick={() => setActiveView('list')} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
-                  <ArrowUpRight size={20} className="rotate-270 text-slate-600" />
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+                <button 
+                  onClick={() => setActiveView('list')}
+                  className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-all hover:scale-105 active:scale-95"
+                >
+                  <ArrowLeft size={18} />
                 </button>
-                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Run Asset Depreciation</h2>
+                <div>
+                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Run Asset Depreciation</h1>
+                  <p className="text-slate-500 text-xs mt-0.5 font-medium">Verify calculations and post double-entry depreciation journals</p>
+                </div>
               </div>
 
-              {(() => {
-                const bookValue = parseFloat(selectedAsset.currentBookValue || 0);
-                const life = parseInt(selectedAsset.usefulLife || 10);
-                const purchaseValue = parseFloat(selectedAsset.purchaseValue || 0);
-                const rate = parseFloat(selectedAsset.depreciationRate || 10);
-                const method = selectedAsset.depreciationMethod;
+              <div className="max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl shadow-slate-100/40 space-y-8">
+                {(() => {
+                  const bookValue = parseFloat(selectedAsset.currentBookValue || 0);
+                  const life = parseInt(selectedAsset.usefulLife || 10);
+                  const purchaseValue = parseFloat(selectedAsset.purchaseValue || 0);
+                  const rate = parseFloat(selectedAsset.depreciationRate || 10);
+                  const method = selectedAsset.depreciationMethod;
 
-                const annualDep = method === 'SLM' ? (purchaseValue / life) : (bookValue * rate / 100);
-                const monthlyDep = annualDep / 12;
+                  const annualDep = method === 'SLM' ? (purchaseValue / life) : (bookValue * rate / 100);
+                  const monthlyDep = annualDep / 12;
 
-                return (
-                  <div className="p-5 rounded-2xl bg-blue-50/50 border border-blue-100 flex flex-col gap-2.5 shadow-sm text-xs font-bold text-slate-600">
-                    <div className="flex justify-between items-center pb-2 border-b border-blue-100/50">
-                      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Asset:</span>
-                      <span className="text-slate-900 font-extrabold">{selectedAsset.name}</span>
+                  return (
+                    <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/30 border border-blue-100 rounded-3xl p-6 flex flex-col gap-4 shadow-sm">
+                      <div className="flex items-center gap-3 border-b border-blue-100 pb-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25">
+                          <Calculator size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Selected Asset Register</p>
+                          <span className="text-slate-900 font-extrabold text-lg">{selectedAsset.name}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold text-slate-600 mt-2">
+                        <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
+                          <span>Carrying WDV Value</span>
+                          <span className="text-slate-900 font-black text-sm">{fmt(bookValue)}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
+                          <span>Calculation Method</span>
+                          <span className="bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-md uppercase">
+                            {method === 'WDV' ? `WDV (${rate}%)` : 'SLM'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
+                          <span>Annual Depreciation</span>
+                          <span className="text-emerald-700 font-black text-sm">{fmt(annualDep)}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
+                          <span>Monthly Depreciation</span>
+                          <span className="text-emerald-700 font-black text-sm">{fmt(monthlyDep)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>Carrying WDV Value:</span>
-                      <span className="text-slate-900 font-black">{fmt(bookValue)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Filing Method:</span>
-                      <span className="bg-blue-100 text-blue-800 text-[9px] font-extrabold px-2 py-0.5 rounded uppercase">
-                        {method === 'WDV' ? `WDV (${rate}%)` : 'SLM'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Annual Depreciation:</span>
-                      <span className="text-emerald-700 font-black">{fmt(annualDep)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Monthly Depreciation:</span>
-                      <span className="text-emerald-700 font-black">{fmt(monthlyDep)}</span>
-                    </div>
+                  );
+                })()}
+
+                <form onSubmit={handleRunDepreciation} className="space-y-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Depreciation Filing Date</label>
+                    <input 
+                      type="date" 
+                      required 
+                      value={depDate}
+                      onChange={e => setDepDate(e.target.value)}
+                      className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                    />
                   </div>
-                );
-              })()}
 
-              <form onSubmit={handleRunDepreciation} className="space-y-6 text-slate-700">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Depreciation Filing Date</label>
-                  <input 
-                    type="date" 
-                    required 
-                    value={depDate}
-                    onChange={e => setDepDate(e.target.value)}
-                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-50">
-                  <button 
-                    type="button" 
-                    onClick={() => setActiveView('list')}
-                    className="px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={loading}
-                    className="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-slate-900/10 transition-all disabled:opacity-50"
-                  >
-                    {loading ? 'Filing...' : 'File Depreciation'}
-                  </button>
-                </div>
-              </form>
+                  <div className="flex justify-end gap-3 pt-5 border-t border-slate-100">
+                    <button 
+                      type="button" 
+                      onClick={() => setActiveView('list')}
+                      className="px-6 py-3.5 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all disabled:opacity-50 hover:scale-[1.01]"
+                    >
+                      {loading ? 'Filing...' : 'File Depreciation'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 
           {/* VIEW: DISPOSE ASSET */}
           {activeView === 'dispose' && selectedAsset && (
-            <div className="max-w-md mx-auto bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl animate-fade-in space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-50 pb-5">
-                <button onClick={() => setActiveView('list')} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
-                  <ArrowUpRight size={20} className="rotate-270 text-slate-600" />
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+                <button 
+                  onClick={() => setActiveView('list')}
+                  className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-all hover:scale-105 active:scale-95"
+                >
+                  <ArrowLeft size={18} />
                 </button>
-                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Retire & Dispose Asset</h2>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-amber-50/50 border border-amber-100 flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Asset Marked for Disposal</span>
-                <span className="font-extrabold text-slate-800 text-base">{selectedAsset.name}</span>
-                <div className="flex justify-between items-center text-xs mt-3 text-slate-500 font-bold border-t border-amber-100/50 pt-2">
-                  <span>Carrying WDV Value:</span>
-                  <span className="text-slate-900 font-black">{fmt(selectedAsset.currentBookValue)}</span>
+                <div>
+                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Retire & Dispose Asset</h1>
+                  <p className="text-slate-500 text-xs mt-0.5 font-medium">Record sale value, choose deposit bank ledger, and recognize capital gain/loss</p>
                 </div>
               </div>
 
-              <form onSubmit={handleDisposeAsset} className="space-y-6 text-slate-700">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disposal Date</label>
-                  <input 
-                    type="date" 
-                    required 
-                    value={disposeForm.disposalDate}
-                    onChange={e => setDisposeForm({ ...disposeForm, disposalDate: e.target.value })}
-                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                  />
+              <div className="max-w-2xl mx-auto bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl shadow-slate-100/40 space-y-8">
+                <div className="bg-gradient-to-br from-blue-50/60 to-indigo-50/40 border border-blue-100 rounded-3xl p-6 flex flex-col gap-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25">
+                      <Landmark size={18} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Asset Marked for Disposal</span>
+                      <h3 className="font-extrabold text-slate-900 text-lg leading-tight">{selectedAsset.name}</h3>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-xs mt-2 text-slate-600 font-bold border-t border-blue-100/50 pt-3">
+                    <span>Current Carrying WDV Value</span>
+                    <span className="text-slate-900 font-black text-sm bg-white border border-blue-100 rounded-lg px-3 py-1.5 shadow-sm">
+                      {fmt(selectedAsset.currentBookValue)}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Realized Sale Value (₹) *</label>
-                  <input 
-                    type="number" 
-                    required 
-                    value={disposeForm.disposalValue}
-                    onChange={e => setDisposeForm({ ...disposeForm, disposalValue: e.target.value })}
-                    placeholder="e.g. 80000"
-                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                  />
-                </div>
+                <form onSubmit={handleDisposeAsset} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disposal Date</label>
+                      <input 
+                        type="date" 
+                        required 
+                        value={disposeForm.disposalDate}
+                        onChange={e => setDisposeForm({ ...disposeForm, disposalDate: e.target.value })}
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cash / Bank Ledger Account *</label>
-                  <select 
-                    required
-                    value={disposeForm.bankLedgerId}
-                    onChange={e => setDisposeForm({ ...disposeForm, bankLedgerId: e.target.value })}
-                    className="border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-blue-500 transition-all bg-white"
-                  >
-                    <option value="">-- Choose Account to Deposit Proceeds --</option>
-                    {ledgers.filter(l => l.category === 'Asset' && (l.groupName.toLowerCase().includes('bank') || l.groupName.toLowerCase().includes('cash'))).map(l => (
-                      <option key={l.id} value={l.id}>{l.name}</option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Realized Sale Value (₹) *</label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={disposeForm.disposalValue}
+                        onChange={e => setDisposeForm({ ...disposeForm, disposalValue: e.target.value })}
+                        placeholder="e.g. 80000"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+                  </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-50">
-                  <button 
-                    type="button" 
-                    onClick={() => setActiveView('list')}
-                    className="px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={loading}
-                    className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-amber-500/10 transition-all disabled:opacity-50"
-                  >
-                    {loading ? 'Filing Disposal...' : 'Acknowledge Disposal'}
-                  </button>
-                </div>
-              </form>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cash / Bank Ledger Account *</label>
+                    <div className="relative">
+                      <select 
+                        required
+                        value={disposeForm.bankLedgerId}
+                        onChange={e => setDisposeForm({ ...disposeForm, bankLedgerId: e.target.value })}
+                        className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
+                      >
+                        <option value="">-- Choose Account to Deposit Proceeds --</option>
+                        {ledgers.filter(l => l.category === 'Asset' && (l.groupName.toLowerCase().includes('bank') || l.groupName.toLowerCase().includes('cash'))).map(l => (
+                          <option key={l.id} value={l.id}>{l.name}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-5 border-t border-slate-100">
+                    <button 
+                      type="button" 
+                      onClick={() => setActiveView('list')}
+                      className="px-6 py-3.5 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all disabled:opacity-50 hover:scale-[1.01]"
+                    >
+                      {loading ? 'Filing Disposal...' : 'Acknowledge Disposal'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
         </>

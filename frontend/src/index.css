@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @import "tailwindcss/base";
 @import "tailwindcss/components";
@@ -7,6 +7,9 @@
 html {
   font-size: 13px; /* Optimized high-density layout (approximates 75% feel) */
   scroll-behavior: smooth;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif; /* Single source of truth for font */
+  font-weight: 400; /* Base weight — light and clean */
+  letter-spacing: -0.01em; /* Subtle tightening for professionalism */
 }
 
 :root {
@@ -25,11 +28,38 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: inherit; /* Inherits from html — always Inter */
   color: var(--text-main);
   background-color: var(--bg-main);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force ALL elements (including inputs, buttons, selects) to use Inter uniformly */
+*, *::before, *::after {
+  font-family: inherit;
+}
+
+/* ── Typography Weight Refinement ──────────────────────────────────────────
+   Tailwind's default font-black (900) and font-extrabold (800) are too heavy
+   for a professional accounting UI. We remap them here globally so every
+   module looks clean without touching individual JSX files.
+─────────────────────────────────────────────────────────────────────────── */
+.font-black     { font-weight: 700 !important; } /* 900 → 700: still strong, not heavy */
+.font-extrabold { font-weight: 600 !important; } /* 800 → 600: confident, not loud    */
+.font-bold      { font-weight: 600 !important; } /* 700 → 600: readable, professional   */
+.font-semibold  { font-weight: 500 !important; } /* 600 → 500: the sweet spot for UI    */
+.font-medium    { font-weight: 400 !important; } /* 500 → 400: light and clean          */
+
+/* ── Monospace Override ─────────────────────────────────────────────────────
+   Replace Tailwind's default monospace (Consolas/Courier) with Inter using
+   tabular-nums — keeps digit columns aligned like monospace but stays in
+   the same Inter typeface as the rest of the app. Used in all amount columns.
+─────────────────────────────────────────────────────────────────────────── */
+.font-mono {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 
 /* Standardized Button Layouts */

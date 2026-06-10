@@ -58,7 +58,7 @@ class AccountingService {
     for (const entry of entries) {
       if (!entry.ledgerId) throw new Error('INTEGRITY ERROR: Missing Ledger ID in transaction line.');
 
-      await Transaction.create({
+      const createdTx = await Transaction.create({
         VoucherId: voucher.id,
         LedgerId: entry.ledgerId,
         debit: parseFloat(entry.debit || 0),
@@ -69,6 +69,35 @@ class AccountingService {
         contactId: entry.contactId,
         ProjectId: projectId || null
       }, options);
+
+      // Save multiple cost center allocations
+      const lineAmount = parseFloat(entry.debit || 0) + parseFloat(entry.credit || 0);
+      if (entry.allocations && entry.allocations.length > 0) {
+        const allocSum = entry.allocations.reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+        if (Math.abs(allocSum - lineAmount) > 0.01) {
+          throw new Error(`INTEGRITY ERROR: Cost Center allocations sum (₹${allocSum}) must equal the line amount (₹${lineAmount}).`);
+        }
+        
+        const { CostCenterAllocation } = require('../models');
+        for (const alloc of entry.allocations) {
+          await CostCenterAllocation.create({
+            CompanyId: companyId,
+            TransactionId: createdTx.id,
+            CostCenterId: alloc.costCenterId,
+            amount: parseFloat(alloc.amount),
+            percentage: parseFloat(alloc.percentage || ((alloc.amount / lineAmount) * 100))
+          }, options);
+        }
+      } else if (entry.costCenterId) {
+        const { CostCenterAllocation } = require('../models');
+        await CostCenterAllocation.create({
+          CompanyId: companyId,
+          TransactionId: createdTx.id,
+          CostCenterId: entry.costCenterId,
+          amount: lineAmount,
+          percentage: 100.00
+        }, options);
+      }
 
       // Real-time Balance Update (Tally Standard)
       const ledger = await Ledger.findByPk(entry.ledgerId, options);
@@ -172,7 +201,7 @@ class AccountingService {
     for (const entry of entries) {
       if (!entry.ledgerId) throw new Error('INTEGRITY ERROR: Missing Ledger ID in transaction line.');
 
-      await Transaction.create({
+      const createdTx = await Transaction.create({
         VoucherId: voucher.id,
         LedgerId: entry.ledgerId,
         debit: parseFloat(entry.debit || 0),
@@ -182,6 +211,35 @@ class AccountingService {
         description: entry.description,
         contactId: entry.contactId
       }, options);
+
+      // Save multiple cost center allocations
+      const lineAmount = parseFloat(entry.debit || 0) + parseFloat(entry.credit || 0);
+      if (entry.allocations && entry.allocations.length > 0) {
+        const allocSum = entry.allocations.reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+        if (Math.abs(allocSum - lineAmount) > 0.01) {
+          throw new Error(`INTEGRITY ERROR: Cost Center allocations sum (₹${allocSum}) must equal the line amount (₹${lineAmount}).`);
+        }
+        
+        const { CostCenterAllocation } = require('../models');
+        for (const alloc of entry.allocations) {
+          await CostCenterAllocation.create({
+            CompanyId: companyId,
+            TransactionId: createdTx.id,
+            CostCenterId: alloc.costCenterId,
+            amount: parseFloat(alloc.amount),
+            percentage: parseFloat(alloc.percentage || ((alloc.amount / lineAmount) * 100))
+          }, options);
+        }
+      } else if (entry.costCenterId) {
+        const { CostCenterAllocation } = require('../models');
+        await CostCenterAllocation.create({
+          CompanyId: companyId,
+          TransactionId: createdTx.id,
+          CostCenterId: entry.costCenterId,
+          amount: lineAmount,
+          percentage: 100.00
+        }, options);
+      }
 
       // Real-time Balance Update
       const ledger = await Ledger.findByPk(entry.ledgerId, options);

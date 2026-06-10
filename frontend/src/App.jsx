@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 // ── Components ───────────────────────────────────────────────────
 import Notification from './components/Notification';
 import AuthPage from './modules/auth/AuthPage';
+import LandingPage from './modules/landing/LandingPage';
 import DashboardView from './modules/dashboard/DashboardView';
 import LedgersView from './modules/accounting/LedgersView';
 import LedgerStatementView from './modules/accounting/LedgerStatementView';
@@ -84,7 +85,7 @@ import {
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
   PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
-  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare
+  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -158,8 +159,20 @@ const NAV = [
     items: [
       { label: 'Cost Centers',      path: '/cost-centers', icon: Folder },
       { label: 'Budgets',           path: '/accountant/budgets', icon: Target },
-      { label: 'Fixed Assets',      path: '/fixed-assets', icon: Building2 },
-      { label: 'Manufacturing',     path: '/manufacturing', icon: Package },
+      { label: 'Fixed Assets',      path: '/fixed-assets', icon: Building2 }
+    ]
+  },
+  {
+    group: 'Operations',
+    icon: Sliders,
+    items: [
+      { label: 'Manufacturing',     path: '/manufacturing', icon: Package }
+    ]
+  },
+  {
+    group: 'HR & Payroll',
+    icon: Users,
+    items: [
       { label: 'Payroll',           path: '/payroll', icon: UserCheck }
     ]
   },
@@ -484,7 +497,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             const role = user.role || 'VIEWER';
             if (role === 'VIEWER') return ['Home', 'Reports'].includes(section.group);
             if (role === 'AUDITOR') return ['Home', 'Reports', 'Setup'].includes(section.group);
-            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Payroll'].includes(section.group);
+            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Operations', 'HR & Payroll'].includes(section.group);
             if (role === 'EMPLOYEE') return ['Home', 'Items', 'Sales', 'Purchases', 'Banking', 'Accounting', 'Reports'].includes(section.group);
             return true; // ADMIN, SUPER_ADMIN, ACCOUNTANT, MANAGER see all
           }).map(section => (
@@ -834,10 +847,16 @@ export default function App() {
 
   if (!authed) {
     return (
-      <AuthPage
-        onLogin={() => setAuthed(true)}
-        onAuthSuccess={() => setAuthed(true)}
-      />
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={
+          <AuthPage
+            onLogin={() => setAuthed(true)}
+            onAuthSuccess={() => setAuthed(true)}
+          />
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     );
   }
   return (
