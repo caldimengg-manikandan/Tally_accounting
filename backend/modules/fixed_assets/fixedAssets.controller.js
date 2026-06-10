@@ -65,6 +65,7 @@ exports.getAssets = async (req, res) => {
     });
     res.json(assets);
   } catch (err) {
+    console.error("GET_ASSETS_ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 };
