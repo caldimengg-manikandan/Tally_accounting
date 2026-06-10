@@ -84,13 +84,45 @@ app.use('/api/credit-notes', require('./modules/sales/creditNote.routes'));
 app.use('/api/projects', require('./modules/time_tracking/project.routes'));
 app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
 
+// Temporary Debug Endpoint for Fixed Assets Database
+app.get('/api/fixed-assets-debug', async (req, res) => {
+  try {
+    const { FixedAsset, DepreciationLog, Ledger } = require('./models');
+    const assets = await FixedAsset.findAll({
+      include: [
+        { model: DepreciationLog },
+        { model: Ledger, as: 'AssetLedger', attributes: ['name'] }
+      ]
+    });
+    res.json({ status: 'ok', count: assets.length, assets });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
+// Temporary Debug Endpoint for tenantAccess logic
+app.get('/api/test-tenant-access', async (req, res) => {
+  try {
+    const { User, Company } = require('./models');
+    const user = await User.findOne({
+      where: { email: 'lokeshwari@gmail.com' },
+      include: [Company]
+    });
+    const companyIdToCheck = '9e2261ae-dd0a-47f9-b14d-5c6fb9dfb505';
+    const hasAccess = user.Companies && user.Companies.some(c => c.id === companyIdToCheck);
+    res.json({ user: user.email, hasAccess, companies: user.Companies });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-// Use alter:true only for local SQLite; disabled for cloud Postgres to prevent sync locks
-const syncOptions = process.env.DATABASE_URL ? {} : { alter: true };
+// Disabled alter:true to prevent database sync locks on cloud Postgres
+const syncOptions = {};
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');
