@@ -5,6 +5,7 @@ import {
   ChevronDown, Search, LayoutList
 } from 'lucide-react';
 import { inventoryAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const INITIAL_UNITS = [
   "CMS - cm", "DOZ - dz", "FTS - ft", "GMS - g", "INC - in",
@@ -33,6 +34,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [formError, setFormError] = useState('');
+  const { addNotification } = useNotificationStore();
   
   const [newItem, setNewItem] = useState({
     name: '', type: 'Goods', unit: '',
@@ -98,7 +100,7 @@ const CreateItemModal = ({ isOpen, onClose, onSuccess, companyId }) => {
       const res = await inventoryAPI.uploadImage(formData);
       setNewItem({ ...newItem, imageUrl: res.data.imageUrl });
     } catch (err) {
-      alert("Failed to upload image.");
+      addNotification("Failed to upload image.", "error");
     } finally {
       setUploading(false);
     }

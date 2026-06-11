@@ -84,6 +84,11 @@ const CustomerDetailView = ({ companyId }) => {
   });
   
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteRowModal, setDeleteRowModal] = useState({
+    isOpen: false,
+    type: '',
+    id: null
+  });
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   const fileInputRef = useRef(null);
@@ -226,8 +231,17 @@ const CustomerDetailView = ({ companyId }) => {
     if (path) navigate(path);
   };
 
-  const handleDeleteRow = async (type, id) => {
-    if (!window.confirm(`Are you sure you want to delete this ${type.slice(0, -1).toLowerCase()}?`)) return;
+  const handleDeleteRow = (type, id) => {
+    setDeleteRowModal({
+      isOpen: true,
+      type,
+      id
+    });
+  };
+
+  const confirmDeleteRow = async () => {
+    const { type, id } = deleteRowModal;
+    if (!type || !id) return;
     try {
       if (type === 'Invoices') await salesAPI.delete(id);
       else if (type === 'Quotes') await quoteAPI.delete(id);
@@ -241,6 +255,8 @@ const CustomerDetailView = ({ companyId }) => {
       setTimeout(() => setActiveTab('Transactions'), 100);
     } catch (err) {
       addNotification(`Failed to delete ${type.slice(0, -1)}`, 'error');
+    } finally {
+      setDeleteRowModal({ isOpen: false, type: '', id: null });
     }
   };
 
@@ -1311,6 +1327,14 @@ const CustomerDetailView = ({ companyId }) => {
         onConfirm={confirmDelete}
         title="Delete Customer"
         message="Are you sure you want to permanently delete this customer? This action will remove all transaction history and profile details."
+      />
+
+      <ConfirmModal 
+        isOpen={deleteRowModal.isOpen}
+        onClose={() => setDeleteRowModal({ isOpen: false, type: '', id: null })}
+        onConfirm={confirmDeleteRow}
+        title={`Delete ${deleteRowModal.type ? deleteRowModal.type.slice(0, -1) : 'Item'}`}
+        message={`Are you sure you want to delete this ${deleteRowModal.type ? deleteRowModal.type.slice(0, -1).toLowerCase() : 'item'}? This action cannot be undone.`}
       />
 
       {isPreviewOpen && (

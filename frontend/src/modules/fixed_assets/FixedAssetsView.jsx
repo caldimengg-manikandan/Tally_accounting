@@ -5,10 +5,12 @@ import {
   X, ArrowLeft, Calculator, Search
 } from 'lucide-react';
 import { fixedAssetsAPI, ledgerAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function FixedAssetsView() {
+  const { addNotification } = useNotificationStore();
   const companyId = sessionStorage.getItem('companyId');
   const [assets, setAssets] = useState([]);
   const [ledgers, setLedgers] = useState([]);
@@ -38,6 +40,11 @@ export default function FixedAssetsView() {
 
   // Action Form States
   const [depDate, setDepDate] = useState(new Date().toISOString().split('T')[0]);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
   const [disposeForm, setDisposeForm] = useState({
     disposalDate: new Date().toISOString().split('T')[0],
     disposalValue: '',
@@ -69,18 +76,19 @@ export default function FixedAssetsView() {
 
   const handleCreateAsset = async (e) => {
     e.preventDefault();
-    if (!assetForm.name.trim() || !assetForm.purchaseValue) return alert('Name and Purchase Value are required');
+    if (!assetForm.name.trim() || !assetForm.purchaseValue) return addNotification('Name and Purchase Value are required', 'warning');
     try {
       setLoading(true);
       await fixedAssetsAPI.create({
         ...assetForm,
         purchaseValue: parseFloat(assetForm.purchaseValue),
         usefulLife: parseInt(assetForm.usefulLife),
+        usefulLifeYears: parseInt(assetForm.usefulLife),
         scrapValue: parseFloat(assetForm.scrapValue),
         depreciationRate: parseFloat(assetForm.depreciationRate || 10),
         companyId
       });
-      alert('Asset acquired and logged successfully. Standard GL ledgers auto-resolved.');
+      addNotification('Asset acquired and logged successfully. Standard GL ledgers auto-resolved.', 'success');
       setActiveView('list');
       fetchData();
       // Reset form
@@ -97,7 +105,45 @@ export default function FixedAssetsView() {
       });
     } catch (err) {
       console.error(err);
-      alert('Failed to log asset acquisition.');
+      addNotification('Failed to log asset acquisition.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditAsset = async (e) => {
+    e.preventDefault();
+    if (!selectedAsset) return;
+    if (!assetForm.name.trim() || !assetForm.purchaseValue) return addNotification('Name and Purchase Value are required', 'warning');
+    try {
+      setLoading(true);
+      await fixedAssetsAPI.update(selectedAsset.id, {
+        ...assetForm,
+        purchaseValue: parseFloat(assetForm.purchaseValue),
+        usefulLife: parseInt(assetForm.usefulLife),
+        usefulLifeYears: parseInt(assetForm.usefulLife),
+        scrapValue: parseFloat(assetForm.scrapValue),
+        depreciationRate: parseFloat(assetForm.depreciationRate || 10),
+        companyId
+      });
+      addNotification('Asset details updated successfully.', 'success');
+      setActiveView('list');
+      fetchData();
+      // Reset form
+      setAssetForm({
+        name: '',
+        purchaseDate: new Date().toISOString().split('T')[0],
+        purchaseValue: '',
+        depreciationMethod: 'WDV',
+        usefulLife: '10',
+        scrapValue: '0',
+        depreciationRate: '10',
+        assetLedgerId: '',
+        depreciationLedgerId: ''
+      });
+    } catch (err) {
+      console.error(err);
+      addNotification('Failed to update asset details.', 'error');
     } finally {
       setLoading(false);
     }
@@ -109,22 +155,42 @@ export default function FixedAssetsView() {
     try {
       setLoading(true);
       await fixedAssetsAPI.depreciate(selectedAsset.id, { date: depDate });
-      alert('Depreciation posted successfully! Double-entry Journal Voucher logged in Daybook.');
+      addNotification('Depreciation posted successfully! Double-entry Journal Voucher logged in Daybook.', 'success');
       setActiveView('list');
       fetchData();
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.error || 'Depreciation posting failed.');
+      addNotification(err.response?.data?.error || 'Depreciation posting failed.', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRunBatchDepreciation = () => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'Are you sure you want to run batch depreciation for all active assets? This will generate double-entry Journal Vouchers.',
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          const res = await fixedAssetsAPI.depreciateBatch(companyId, { date: new Date().toISOString().split('T')[0] });
+          addNotification(`Batch depreciation posted successfully! Processed ${res.data.count} assets.`, 'success');
+          fetchData();
+        } catch (err) {
+          console.error(err);
+          addNotification(err.response?.data?.error || 'Batch depreciation posting failed.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const handleDisposeAsset = async (e) => {
     e.preventDefault();
     if (!selectedAsset) return;
     if (!disposeForm.bankLedgerId || !disposeForm.disposalValue) {
-      return alert('Bank ledger and sale value are required');
+      return addNotification('Bank ledger and sale value are required', 'warning');
     }
     try {
       setLoading(true);
@@ -133,12 +199,12 @@ export default function FixedAssetsView() {
         disposalValue: parseFloat(disposeForm.disposalValue),
         bankLedgerId: disposeForm.bankLedgerId
       });
-      alert('Asset disposal posted successfully! Realized capital gain/loss recognized in ledger entries.');
+      addNotification('Asset disposal posted successfully! Realized capital gain/loss recognized in ledger entries.', 'success');
       setActiveView('list');
       fetchData();
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.error || 'Asset disposal failed.');
+      addNotification(err.response?.data?.error || 'Asset disposal failed.', 'error');
     } finally {
       setLoading(false);
     }
@@ -184,28 +250,33 @@ export default function FixedAssetsView() {
         await fixedAssetsAPI.create(payload);
       }
 
-      alert('Demo Fixed Assets acquired and registered successfully!');
+      addNotification('Demo Fixed Assets acquired and registered successfully!', 'success');
       fetchData();
     } catch (err) {
       console.error(err);
-      alert('Failed to load demo fixed assets.');
+      addNotification('Failed to load demo fixed assets.', 'error');
     }
     setLoading(false);
   };
 
-  const handleDeleteAsset = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this asset record?')) return;
-    try {
-      setLoading(true);
-      await fixedAssetsAPI.delete(id);
-      alert('Asset deleted successfully.');
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.error || 'Failed to delete asset.');
-    } finally {
-      setLoading(false);
-    }
+  const handleDeleteAsset = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'Are you sure you want to delete this asset record?',
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await fixedAssetsAPI.delete(id);
+          addNotification('Asset deleted successfully.', 'success');
+          fetchData();
+        } catch (err) {
+          console.error(err);
+          addNotification(err.response?.data?.error || 'Failed to delete asset.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const totalAcquisition = assets.reduce((s, a) => s + parseFloat(a.purchaseValue || 0), 0);
@@ -235,12 +306,20 @@ export default function FixedAssetsView() {
         </div>
         
         {activeView === 'list' && (
-          <button 
-            onClick={() => setActiveView('create')}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-y-0"
-          >
-            <Plus size={16} /> Acquire Fixed Asset
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={handleRunBatchDepreciation}
+              className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-amber-500/20 flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Calculator size={16} /> Run Batch Depreciation
+            </button>
+            <button 
+              onClick={() => setActiveView('create')}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 flex items-center gap-1.5 transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Plus size={16} /> Acquire Fixed Asset
+            </button>
+          </div>
         )}
       </div>
 
@@ -415,6 +494,27 @@ export default function FixedAssetsView() {
                                     Dispose
                                   </button>
                                   <button 
+                                    onClick={() => { 
+                                      setSelectedAsset(asset); 
+                                      setAssetForm({
+                                        name: asset.name,
+                                        purchaseDate: asset.purchaseDate ? asset.purchaseDate.split('T')[0] : '',
+                                        purchaseValue: asset.purchaseValue,
+                                        usefulLife: asset.usefulLife || 10,
+                                        scrapValue: asset.scrapValue || 0,
+                                        depreciationMethod: asset.depreciationMethod || 'WDV',
+                                        depreciationRate: asset.depreciationRate !== undefined ? asset.depreciationRate : 10,
+                                        assetLedgerId: asset.assetLedgerId || '',
+                                        depreciationLedgerId: asset.depreciationLedgerId || '',
+                                        accumulatedDepreciationLedgerId: asset.accumulatedDepreciationLedgerId || ''
+                                      });
+                                      setActiveView('edit'); 
+                                    }}
+                                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100/30 px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wide transition-all hover:scale-[1.02]"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button 
                                     onClick={() => handleDeleteAsset(asset.id)}
                                     className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-all hover:scale-[1.02]"
                                     title="Delete Asset"
@@ -574,7 +674,7 @@ export default function FixedAssetsView() {
                           className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
                         >
                           <option value="">-- Auto-create Dedicated Asset Ledger --</option>
-                          {ledgers.filter(l => l.category === 'Asset').map(l => (
+                          {ledgers.filter(l => l.Group?.nature?.toLowerCase().startsWith('asset')).map(l => (
                             <option key={l.id} value={l.id}>{l.name}</option>
                           ))}
                         </select>
@@ -593,7 +693,7 @@ export default function FixedAssetsView() {
                           className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
                         >
                           <option value="">-- Resolve "Depreciation Expense" Ledger --</option>
-                          {ledgers.filter(l => l.category === 'Expense').map(l => (
+                          {ledgers.filter(l => l.Group?.nature?.toLowerCase().startsWith('expense')).map(l => (
                             <option key={l.id} value={l.id}>{l.name}</option>
                           ))}
                         </select>
@@ -792,7 +892,17 @@ export default function FixedAssetsView() {
                         className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
                       >
                         <option value="">-- Choose Account to Deposit Proceeds --</option>
-                        {ledgers.filter(l => l.category === 'Asset' && (l.groupName.toLowerCase().includes('bank') || l.groupName.toLowerCase().includes('cash'))).map(l => (
+                        {ledgers.filter(l => {
+                          const isAsset = l.Group?.nature?.toLowerCase().startsWith('asset');
+                          const groupName = (l.groupName || l.Group?.name || '').toLowerCase();
+                          const ledgerName = (l.name || '').toLowerCase();
+                          return isAsset && (
+                            groupName.includes('bank') || 
+                            groupName.includes('cash') || 
+                            ledgerName.includes('bank') || 
+                            ledgerName.includes('cash')
+                          );
+                        }).map(l => (
                           <option key={l.id} value={l.id}>{l.name}</option>
                         ))}
                       </select>
@@ -822,7 +932,217 @@ export default function FixedAssetsView() {
               </div>
             </div>
           )}
+
+          {/* VIEW: EDIT FIXED ASSET FORM */}
+          {activeView === 'edit' && selectedAsset && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
+                <button 
+                  onClick={() => setActiveView('list')}
+                  className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl transition-all hover:scale-105 active:scale-95"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <div>
+                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Edit Corporate Fixed Asset</h1>
+                  <p className="text-slate-500 text-xs mt-0.5 font-medium">Update details, adjust useful life, scrap value, and depreciation method</p>
+                </div>
+              </div>
+
+              <div className="max-w-4xl mx-auto bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-2xl shadow-slate-100/40">
+                <form onSubmit={handleEditAsset} className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset Name *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={assetForm.name}
+                        onChange={e => setAssetForm({ ...assetForm, name: e.target.value })}
+                        placeholder="e.g. Dell Enterprise Server"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purchase Date *</label>
+                      <input 
+                        type="date" 
+                        required 
+                        value={assetForm.purchaseDate}
+                        onChange={e => setAssetForm({ ...assetForm, purchaseDate: e.target.value })}
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purchase Value (₹) *</label>
+                      <input 
+                        type="number" 
+                        required 
+                        value={assetForm.purchaseValue}
+                        onChange={e => setAssetForm({ ...assetForm, purchaseValue: e.target.value })}
+                        placeholder="e.g. 150000"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Useful Life (Years)</label>
+                      <input 
+                        type="number" 
+                        value={assetForm.usefulLife}
+                        onChange={e => setAssetForm({ ...assetForm, usefulLife: e.target.value })}
+                        placeholder="e.g. 10"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scrap Value (₹)</label>
+                      <input 
+                        type="number" 
+                        value={assetForm.scrapValue}
+                        onChange={e => setAssetForm({ ...assetForm, scrapValue: e.target.value })}
+                        placeholder="e.g. 10000"
+                        className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Depreciation Method</label>
+                      <div className="relative">
+                        <select 
+                          value={assetForm.depreciationMethod}
+                          onChange={e => setAssetForm({ ...assetForm, depreciationMethod: e.target.value })}
+                          className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
+                        >
+                          <option value="WDV">Written Down Value (WDV - Declining Balance)</option>
+                          <option value="SLM">Straight Line Method (SLM)</option>
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                          <ChevronDown size={16} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {assetForm.depreciationMethod === 'WDV' && (
+                      <div className="flex flex-col gap-2 animate-fade-in">
+                        <label className="text-[10px] font-black text-[#1e61f0] uppercase tracking-widest">Depreciation Rate (% per year) *</label>
+                        <input 
+                          type="number" 
+                          required
+                          value={assetForm.depreciationRate}
+                          onChange={e => setAssetForm({ ...assetForm, depreciationRate: e.target.value })}
+                          placeholder="e.g. 15"
+                          className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-[#1e61f0] outline-none hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-blue-50/10 focus:bg-white"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asset G/L Account</label>
+                      <div className="relative">
+                        <select 
+                          value={assetForm.assetLedgerId}
+                          onChange={e => setAssetForm({ ...assetForm, assetLedgerId: e.target.value })}
+                          className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
+                        >
+                          <option value="">-- Auto-create Dedicated Asset Ledger --</option>
+                          {ledgers.filter(l => l.Group?.nature?.toLowerCase().startsWith('asset')).map(l => (
+                            <option key={l.id} value={l.id}>{l.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                          <ChevronDown size={16} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Depreciation Expense G/L</label>
+                      <div className="relative">
+                        <select 
+                          value={assetForm.depreciationLedgerId}
+                          onChange={e => setAssetForm({ ...assetForm, depreciationLedgerId: e.target.value })}
+                          className="w-full border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white appearance-none pr-10 cursor-pointer"
+                        >
+                          <option value="">-- Resolve "Depreciation Expense" Ledger --</option>
+                          {ledgers.filter(l => l.Group?.nature?.toLowerCase().startsWith('expense')).map(l => (
+                            <option key={l.id} value={l.id}>{l.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                          <ChevronDown size={16} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-5 border-t border-slate-100">
+                    <button 
+                      type="button" 
+                      onClick={() => setActiveView('list')}
+                      className="px-6 py-3.5 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest transition-all text-slate-600 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all disabled:opacity-50 hover:scale-[1.01]"
+                    >
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-300">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full mx-4 shadow-2xl border border-slate-100/80 transform scale-100 transition-all duration-300 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center space-y-5">
+              {/* Warning Icon Container */}
+              <div className="w-14 h-14 bg-amber-50 text-amber-655 text-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/10">
+                <AlertCircle size={24} />
+              </div>
+              
+              {/* Header */}
+              <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Confirm Action</h3>
+              
+              {/* Description */}
+              <p className="text-slate-500 text-xs font-semibold leading-relaxed px-2">
+                {confirmModal.message}
+              </p>
+              
+              {/* Button Action Bar */}
+              <div className="flex w-full gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal({ isOpen: false, message: '', onConfirm: null })}
+                  className="flex-1 px-5 py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-700 rounded-xl font-bold text-xs uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirmModal.onConfirm) confirmModal.onConfirm();
+                    setConfirmModal({ isOpen: false, message: '', onConfirm: null });
+                  }}
+                  className="flex-1 px-5 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all hover:scale-[1.01] active:scale-[0.99] hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

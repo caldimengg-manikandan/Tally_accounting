@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShoppingCart, Plus, Trash2, RefreshCcw, Filter, Check,
+  ShoppingCart, Plus, Trash2, RefreshCw, Filter, Check,
   AlertCircle, ChevronDown, Loader2, X
 } from 'lucide-react';
 import { purchaseAPI, ledgerAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const STATUS_COLORS = {
   Draft: 'bg-slate-100 text-slate-600',
@@ -29,6 +30,11 @@ export default function PurchaseOrderView() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -60,12 +66,17 @@ export default function PurchaseOrderView() {
     setSaving(false);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this purchase order?')) return;
-    try {
-      await purchaseAPI.delete(id);
-      fetchOrders();
-    } catch {}
+  const handleDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'Delete this purchase order? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await purchaseAPI.delete(id);
+          fetchOrders();
+        } catch {}
+      }
+    });
   };
 
   const handleStatusChange = async (id, status) => {
@@ -239,6 +250,14 @@ export default function PurchaseOrderView() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, message: '', onConfirm: null })}
+        onConfirm={confirmModal.onConfirm}
+        title="Confirm Action"
+        message={confirmModal.message}
+      />
     </div>
   );
 }

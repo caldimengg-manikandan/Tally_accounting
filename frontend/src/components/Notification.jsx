@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, AlertCircle, X, Info } from 'lucide-react';
+import { CheckCircle2, AlertCircle, AlertTriangle, X, Info } from 'lucide-react';
 import useNotificationStore from '../store/notificationStore';
 
 const Notification = () => {
@@ -24,16 +24,19 @@ const Notification = () => {
               {/* Type Indicator Bar */}
               <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
                 n.type === 'success' ? 'bg-emerald-500' : 
-                n.type === 'error' ? 'bg-rose-500' : 'bg-blue-500'
+                n.type === 'error' ? 'bg-rose-500' : 
+                n.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
               }`} />
 
               {/* Icon Container */}
               <div className={`shrink-0 p-2 rounded-xl ${
                 n.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 
-                n.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'
+                n.type === 'error' ? 'bg-rose-50 text-rose-600' : 
+                n.type === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
               }`}>
                 {n.type === 'success' && <CheckCircle2 size={20} />}
                 {n.type === 'error' && <AlertCircle size={20} />}
+                {n.type === 'warning' && <AlertTriangle size={20} />}
                 {n.type === 'info' && <Info size={20} />}
               </div>
 
@@ -41,7 +44,8 @@ const Notification = () => {
               <div className="flex-1 pt-0.5">
                 <h4 className="text-[14px] font-bold text-slate-800 uppercase tracking-tight">
                   {n.type === 'success' ? 'Action Successful' : 
-                   n.type === 'error' ? 'Something went wrong' : 'System Message'}
+                   n.type === 'error' ? 'Something went wrong' : 
+                   n.type === 'warning' ? 'Validation / Warning' : 'System Message'}
                 </h4>
                 <p className="text-[13px] text-slate-500 font-medium mt-0.5 leading-relaxed">
                   {n.message}

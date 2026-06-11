@@ -10,6 +10,7 @@ import {
   Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
 import { purchaseAPI, inventoryAPI, companyAPI, projectAPI, voucherAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
 import VendorForm from './VendorForm';
@@ -20,6 +21,7 @@ import { COUNTRY_CODES } from '../../utils/countryCodes';
 import { getGstinStateName } from '../../utils/gstinUtils';
 
 const BillEntryView = ({ companyId }) => {
+  const { addNotification } = useNotificationStore();
   const navigate = useNavigate();
   const { id } = useParams();
   const { search } = useLocation();
@@ -458,15 +460,15 @@ const BillEntryView = ({ companyId }) => {
 
   const handleSaveOrder = async (sendEmail = false) => {
     if (!formData.vendorId) {
-      alert('Please select a vendor');
+      addNotification('Please select a vendor', 'warning');
       return;
     }
     if (!formData.billNumber || !formData.billNumber.trim()) {
-      alert('Please enter a Bill number');
+      addNotification('Please enter a Bill number', 'warning');
       return;
     }
     if (items.some(item => !item.itemName || item.qty <= 0)) {
-      alert('Please ensure all items have a name and quantity');
+      addNotification('Please ensure all items have a name and quantity', 'warning');
       return;
     }
 
@@ -510,7 +512,7 @@ const BillEntryView = ({ companyId }) => {
     } catch (err) {
       console.error('Error saving Bill:', err);
       const errorMsg = err.response?.data?.error || err.message || 'Failed to save Bill. Please try again.';
-      alert('Error: ' + errorMsg);
+      addNotification('Error: ' + errorMsg, 'error');
     } finally {
       setIsSaving(false);
     }

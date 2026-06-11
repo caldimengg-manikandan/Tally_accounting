@@ -6,6 +6,7 @@ import {
   AlertCircle, Mail, X, Send, ArrowUpDown
 } from 'lucide-react';
 import { reportsAPI, mailAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const DaybookView = () => {
   const [rowData, setRowData] = useState([]);
@@ -16,6 +17,7 @@ const DaybookView = () => {
   const [email, setEmail] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
   const companyId = sessionStorage.getItem('companyId');
+  const { addNotification } = useNotificationStore();
 
   const fetchDaybook = useCallback(async () => {
     if (!companyId) {
@@ -53,10 +55,10 @@ const DaybookView = () => {
         text: `Attached is the Daybook report.`,
         companyId
       });
-      alert('Report sent successfully!');
+      addNotification('Report sent successfully!', 'success');
       setShowMailModal(false);
     } catch (err) {
-      alert('Failed to send report.');
+      addNotification('Failed to send report.', 'error');
     }
     setSendingMail(false);
   };

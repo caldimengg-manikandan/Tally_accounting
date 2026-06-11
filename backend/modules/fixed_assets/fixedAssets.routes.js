@@ -16,6 +16,7 @@ router.delete('/:id', authorizeRoles(...WRITE_ROLES), fixedAssetsController.dele
 
 // Operations
 router.post('/depreciate/:id', authorizeRoles(...WRITE_ROLES), fixedAssetsController.depreciateAsset);
+router.post('/depreciate-batch/:companyId', authorizeRoles(...WRITE_ROLES), fixedAssetsController.depreciateBatch);
 router.post('/dispose/:id', authorizeRoles(...WRITE_ROLES), fixedAssetsController.disposeAsset);
 
 module.exports = router;

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { voucherAPI, ledgerAPI, purchaseAPI, inventoryAPI, costCenterAPI, companyAPI, projectAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 import MileagePreferencesModal from './MileagePreferencesModal';
 import VendorModal from './VendorModal';
 import CreateAccountModal from './CreateAccountModal';
@@ -51,6 +52,7 @@ const PAID_THROUGH_LIST = [
 
 const ExpenseEntryView = ({ companyId }) => {
   const navigate = useNavigate();
+  const { addNotification } = useNotificationStore();
   const [activeTab, setActiveTab] = useState('Record Expense');
   
   // Data
@@ -369,7 +371,7 @@ const ExpenseEntryView = ({ companyId }) => {
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert("Maximum file size allowed is 10MB");
+      addNotification("Maximum file size allowed is 10MB", "warning");
       return;
     }
 
@@ -384,7 +386,7 @@ const ExpenseEntryView = ({ companyId }) => {
       setReceiptUrl(res.data.imageUrl);
     } catch (err) {
       console.error(err);
-      alert("Failed to upload receipt.");
+      addNotification("Failed to upload receipt.", "error");
       setReceiptFile(null);
     } finally {
       setUploading(false);

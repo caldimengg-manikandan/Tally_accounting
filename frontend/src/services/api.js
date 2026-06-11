@@ -337,6 +337,7 @@ export const fixedAssetsAPI = {
   update: (id, data) => api.put(`/fixed-assets/${id}`, data),
   delete: (id) => api.delete(`/fixed-assets/${id}`),
   depreciate: (id, data) => api.post(`/fixed-assets/depreciate/${id}`, data),
+  depreciateBatch: (companyId, data) => api.post(`/fixed-assets/depreciate-batch/${companyId}`, data),
   dispose: (id, data) => api.post(`/fixed-assets/dispose/${id}`, data),
 };
 
