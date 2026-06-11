@@ -456,7 +456,7 @@ const BillEntryView = ({ companyId }) => {
     });
   };
 
-  const handleSaveOrder = async (sendEmail = false) => {
+  const handleSaveOrder = async (status = 'OPEN', sendEmail = false) => {
     if (!formData.vendorId) {
       alert('Please select a vendor');
       return;
@@ -485,7 +485,7 @@ const BillEntryView = ({ companyId }) => {
         tdsRate: formData.tdsRate,
         tdsName: formData.tdsName,
         discount: formData.discount,
-        status: sendEmail ? 'Sent' : 'Draft',
+        status: status,
         notes: formData.notes,
         supplierLedgerId: formData.vendorId,
         companyId,
@@ -900,7 +900,8 @@ const BillEntryView = ({ companyId }) => {
 
        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-8 z-50">
           <div className="flex items-center gap-3">
-             <button onClick={() => handleSaveOrder(false)} disabled={isSaving} className="px-6 h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors shadow-sm disabled:opacity-50">{isSaving ? 'Saving...' : 'Save'}</button>
+             <button onClick={() => handleSaveOrder('OPEN')} disabled={isSaving} className="px-6 h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors shadow-sm disabled:opacity-50">{isSaving ? 'Saving...' : 'Save as Open'}</button>
+             <button onClick={() => handleSaveOrder('DRAFT')} disabled={isSaving} className="px-6 h-8 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded border border-slate-200 transition-colors shadow-sm disabled:opacity-50">{isSaving ? 'Saving...' : 'Save as Draft'}</button>
              <button onClick={handleCancel} className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded border border-slate-200 transition-colors">Cancel</button>
           </div>
        </div>

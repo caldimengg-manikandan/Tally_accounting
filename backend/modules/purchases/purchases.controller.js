@@ -181,7 +181,7 @@ exports.getBills = async (req, res) => {
 
             // Derive status from balance
             let status = bill.status; // Use persisted status if available
-            if (!status) {
+            if (!status || status === 'OPEN') {
                 if (totalAmount <= 0) status = 'DRAFT';
                 else if (balanceDue <= 0.01) status = 'PAID';
                 else if (amountPaid > 0) status = 'PARTIALLY_PAID';
@@ -348,7 +348,7 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
 
 exports.createBill = async (req, res) => {
     try {
-        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms } = req.body;
+        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms, status } = req.body;
         
         if (!supplierLedgerId) {
             return res.status(400).json({ error: 'Supplier Ledger is required' });
@@ -449,8 +449,8 @@ exports.createBill = async (req, res) => {
             projectId // Added this
         });
 
-        // Override with user-provided bill number
-        await voucher.update({ voucherNumber });
+        // Override with user-provided bill number and status
+        await voucher.update({ voucherNumber, status: (status || 'OPEN').toUpperCase() });
 
         // Update inventory stock quantities
         if (items && Array.isArray(items) && items.length > 0) {
@@ -475,7 +475,7 @@ exports.createBill = async (req, res) => {
 exports.updateBill = async (req, res) => {
     try {
         const { id } = req.params;
-        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms } = req.body;
+        const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms, status } = req.body;
         
         if (!supplierLedgerId) {
             return res.status(400).json({ error: 'Supplier Ledger is required' });
@@ -590,6 +590,9 @@ exports.updateBill = async (req, res) => {
             voucherNumber,
             projectId
         });
+
+        // 3. Update status in database
+        await voucher.update({ status: (status || 'OPEN').toUpperCase() });
 
         // 3. Increment stock with new quantities
         if (items && Array.isArray(items) && items.length > 0) {

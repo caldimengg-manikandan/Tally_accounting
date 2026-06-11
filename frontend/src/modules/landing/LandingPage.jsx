@@ -10,7 +10,7 @@ import Footer from './Footer';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#060d1a] selection:bg-teal-500/30 selection:text-teal-200 overflow-x-hidden">
+    <div className="min-h-screen bg-white selection:bg-teal-100 selection:text-teal-800 overflow-x-hidden">
       <Navbar />
       <HeroSection />
       <TrustSection />

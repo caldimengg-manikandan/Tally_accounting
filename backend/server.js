@@ -8,6 +8,11 @@ const path = require('path');
 
 // 1. Initial Config (Loaded from backend/.env)
 dotenv.config({ path: path.join(__dirname, '.env') });
+
+// Phase 2: Validate required env vars before any other code runs
+// If JWT_SECRET or other critical vars are missing, process.exit(1) is called.
+require('./config/env.validate')();
+
 console.log('--- DATABASE CONFIGURATION ENGINE ---');
 if (process.env.DATABASE_URL) {
   console.log('Connecting to CLOUD POSTGRES via DATABASE_URL');
@@ -22,6 +27,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(require('cookie-parser')()); // Phase 2: needed for httpOnly refresh token cookie
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
@@ -46,7 +52,7 @@ app.get('/api/auth/callback',
     const token = jwt.sign(
       { id: req.user.id, role: req.user.role, companyId: req.user.activeCompanyId },
       process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '15m' } // Phase 2: short-lived access token
     );
     res.redirect(`${CLIENT_URL}/auth-callback?token=${token}`);
   }
@@ -95,10 +101,24 @@ const syncOptions = {};
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');
 
-// Run everyday at midnight
+// Run everyday at midnight — recurring invoice automation
 cron.schedule('0 0 * * *', async () => {
   console.log('--- RUNNING RECURRING INVOICE AUTOMATION ---');
   await recurringController.processDueInvoices({}, { json: (r) => console.log('Cron Result:', r), status: () => ({ json: (r) => console.error('Cron Error:', r) }) });
+});
+
+// Extra 1: Run every day at 1am — purge expired refresh tokens to prevent DB bloat
+cron.schedule('0 1 * * *', async () => {
+  try {
+    const { RefreshToken } = require('./models');
+    const { Op } = require('sequelize');
+    const deleted = await RefreshToken.destroy({
+      where: { expiresAt: { [Op.lt]: new Date() } }
+    });
+    console.log(`--- REFRESH TOKEN CLEANUP: removed ${deleted} expired rows ---`);
+  } catch (err) {
+    console.error('--- REFRESH TOKEN CLEANUP FAILED:', err.message);
+  }
 });
 
 const startServer = async () => {
