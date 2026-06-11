@@ -6,8 +6,11 @@ import {
   Building2, Users2, Target, X, FileText, ChevronDown
 } from 'lucide-react';
 import { costCenterAPI, reportsAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const CostCenterView = ({ showNew }) => {
+    const { addNotification } = useNotificationStore();
     const [centers, setCenters] = useState([]);
     const [reportData, setReportData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,6 +24,11 @@ const CostCenterView = ({ showNew }) => {
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('General');
     const [parentCostCenterId, setParentCostCenterId] = useState('');
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        message: '',
+        onConfirm: null
+    });
     const companyId = sessionStorage.getItem('companyId');
 
     const fetchCenters = useCallback(async () => {
@@ -86,7 +94,7 @@ const CostCenterView = ({ showNew }) => {
             await fetchReport();
         } catch (err) {
             console.error(err);
-            alert('Failed to load demo data.');
+            addNotification('Failed to load demo data.', 'error');
         }
         setLoading(false);
     };
@@ -116,17 +124,23 @@ const CostCenterView = ({ showNew }) => {
             fetchCenters();
             fetchReport();
         } catch (err) { 
-            alert(editMode ? 'Failed to update cost center' : 'Failed to create cost center'); 
+            addNotification(editMode ? 'Failed to update cost center' : 'Failed to create cost center', 'error'); 
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Delete this cost center?')) return;
-        try {
-            await costCenterAPI.delete(id);
-            fetchCenters();
-            fetchReport();
-        } catch (err) { alert('Delete failed'); }
+    const handleDelete = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            message: 'Delete this cost center? This action cannot be undone.',
+            onConfirm: async () => {
+                try {
+                    await costCenterAPI.delete(id);
+                    addNotification('Cost center deleted successfully.', 'success');
+                    fetchCenters();
+                    fetchReport();
+                } catch (err) { addNotification('Delete failed', 'error'); }
+            }
+        });
     };
 
     const filtered = centers.filter(c => 
@@ -522,6 +536,14 @@ const CostCenterView = ({ showNew }) => {
                 </div>,
                 document.body
             )}
+
+            <ConfirmModal 
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ isOpen: false, message: '', onConfirm: null })}
+                onConfirm={confirmModal.onConfirm}
+                title="Confirm Action"
+                message={confirmModal.message}
+            />
         </div>
     );
 };

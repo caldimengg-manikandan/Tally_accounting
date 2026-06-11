@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, ChevronDown } from 'lucide-react';
+import useNotificationStore from '../../store/notificationStore';
 
 const CURRENCY_MAP = {
   'AED': { symbol: 'د.إ', name: 'UAE Dirham' },
@@ -105,6 +106,7 @@ const CURRENCY_MAP = {
 };
 
 const CreateCurrencyModal = ({ onClose, onSave }) => {
+  const { addNotification } = useNotificationStore();
   const [formData, setFormData] = useState({
     code: '',
     symbol: '',
@@ -147,7 +149,7 @@ const CreateCurrencyModal = ({ onClose, onSave }) => {
 
   const handleSave = () => {
     if (!formData.code || !formData.symbol || !formData.name) {
-      alert("Please fill in all required fields marked with *");
+      addNotification("Please fill in all required fields marked with *", "warning");
       return;
     }
     onSave(formData);

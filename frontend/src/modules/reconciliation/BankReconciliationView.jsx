@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Upload, CheckCircle2, AlertCircle, FileText, Search, PlusCircle } from 'lucide-react';
 import { reconciliationAPI, voucherAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const BankReconciliationView = () => {
     const [unmatched, setUnmatched] = useState([]);
@@ -8,6 +9,7 @@ const BankReconciliationView = () => {
     const [matchingVouchers, setMatchingVouchers] = useState([]);
     const [selectedEntry, setSelectedEntry] = useState(null);
     const companyId = sessionStorage.getItem('companyId');
+    const { addNotification } = useNotificationStore();
 
     const fetchUnmatched = async () => {
         try {
@@ -47,7 +49,7 @@ const BankReconciliationView = () => {
             }).filter(e => e.amount > 0);
 
             if (generatedEntries.length === 0) {
-                alert('No Payments or Receipts found in your database to generate a statement from!');
+                addNotification('No Payments or Receipts found in your database to generate a statement from!', 'warning');
                 return;
             }
 
@@ -55,8 +57,8 @@ const BankReconciliationView = () => {
             await reconciliationAPI.importStatement({ companyId, entries: generatedEntries });
             
             fetchUnmatched();
-            alert('Your Custom Real-World Bank Statement Imported Successfully!');
-        } catch (err) { alert(err.message); }
+            addNotification('Your Custom Real-World Bank Statement Imported Successfully!', 'success');
+        } catch (err) { addNotification(err.message, 'error'); }
     };
 
     const findMatches = async (entry) => {
@@ -76,8 +78,8 @@ const BankReconciliationView = () => {
             await reconciliationAPI.reconcile({ bankTransactionId: selectedEntry.id, voucherId });
             setSelectedEntry(null);
             fetchUnmatched();
-            alert('Voucher Reconciled Successfully!');
-        } catch (err) { alert(err.message); }
+            addNotification('Voucher Reconciled Successfully!', 'success');
+        } catch (err) { addNotification(err.message, 'error'); }
     };
 
     return (

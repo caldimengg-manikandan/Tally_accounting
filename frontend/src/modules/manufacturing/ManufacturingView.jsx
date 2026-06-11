@@ -4,16 +4,24 @@ import {
   Trash2, RefreshCw, AlertCircle, Calendar, ClipboardList, CheckCircle2, DollarSign
 } from 'lucide-react';
 import { manufacturingAPI, inventoryAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function ManufacturingView() {
+  const { addNotification } = useNotificationStore();
   const companyId = sessionStorage.getItem('companyId');
   const [boms, setBoms] = useState([]);
   const [orders, setOrders] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
   
   // Views: 'boms', 'orders', 'create_bom', 'run_production'
   const [activeTab, setActiveTab] = useState('boms');
@@ -65,8 +73,8 @@ export default function ManufacturingView() {
 
   const handleCreateBOM = async (e) => {
     e.preventDefault();
-    if (!bomForm.name.trim() || !bomForm.finishedGoodItemId) return alert('Name and Finished Good are required');
-    if (bomForm.ingredients.length === 0) return alert('Please add at least one ingredient raw material');
+    if (!bomForm.name.trim() || !bomForm.finishedGoodItemId) return addNotification('Name and Finished Good are required', 'warning');
+    if (bomForm.ingredients.length === 0) return addNotification('Please add at least one ingredient raw material', 'warning');
 
     try {
       setLoading(true);
@@ -81,7 +89,7 @@ export default function ManufacturingView() {
         })),
         companyId
       });
-      alert('Bill of Materials registered successfully.');
+      addNotification('Bill of Materials registered successfully.', 'success');
       setActiveTab('boms');
       fetchData();
       // Reset
@@ -94,7 +102,7 @@ export default function ManufacturingView() {
       });
     } catch (err) {
       console.error(err);
-      alert('Failed to register BOM recipe.');
+      addNotification('Failed to register BOM recipe.', 'error');
     } finally {
       setLoading(false);
     }
@@ -102,7 +110,7 @@ export default function ManufacturingView() {
 
   const handleRunProduction = async (e) => {
     e.preventDefault();
-    if (!prodForm.BOMId || !prodForm.quantity) return alert('BOM Recipe and Quantity are required');
+    if (!prodForm.BOMId || !prodForm.quantity) return addNotification('BOM Recipe and Quantity are required', 'warning');
     try {
       setLoading(true);
       await manufacturingAPI.createProductionOrder({
@@ -110,7 +118,7 @@ export default function ManufacturingView() {
         quantity: parseFloat(prodForm.quantity),
         companyId
       });
-      alert('Manufacturing run completed successfully! Raw stocks decremented, finished stocks incremented, and stock-in-hand double-entry voucher posted.');
+      addNotification('Manufacturing run completed successfully! Raw stocks decremented, finished stocks incremented, and stock-in-hand double-entry voucher posted.', 'success');
       setActiveTab('orders');
       fetchData();
       // Reset PO number
@@ -122,30 +130,36 @@ export default function ManufacturingView() {
       });
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.error || 'Manufacturing run failed.');
+      addNotification(err.response?.data?.error || 'Manufacturing run failed.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteBOM = async (id, e) => {
+  const handleDeleteBOM = (id, e) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this BOM?')) return;
-    try {
-      await manufacturingAPI.deleteBOM(id);
-      fetchData();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to delete BOM');
-    }
+    setConfirmModal({
+      isOpen: true,
+      message: 'Are you sure you want to delete this BOM? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await manufacturingAPI.deleteBOM(id);
+          addNotification('BOM deleted successfully.', 'success');
+          fetchData();
+        } catch (err) {
+          console.error(err);
+          addNotification('Failed to delete BOM', 'error');
+        }
+      }
+    });
   };
 
   const addIngredient = () => {
-    if (!selIngredientId) return alert('Please select an ingredient');
-    if (!ingQty || parseFloat(ingQty) <= 0) return alert('Please enter a valid quantity');
+    if (!selIngredientId) return addNotification('Please select an ingredient', 'warning');
+    if (!ingQty || parseFloat(ingQty) <= 0) return addNotification('Please enter a valid quantity', 'warning');
 
     if (bomForm.ingredients.some(ing => ing.rawMaterialItemId === selIngredientId)) {
-      return alert('Raw Material already exists in this recipe');
+      return addNotification('Raw Material already exists in this recipe', 'warning');
     }
 
     const matchedItem = items.find(it => it.id === selIngredientId);
@@ -633,6 +647,14 @@ export default function ManufacturingView() {
           )}
         </>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, message: '', onConfirm: null })}
+        onConfirm={confirmModal.onConfirm}
+        title="Confirm Action"
+        message={confirmModal.message}
+      />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   X, Send
 } from 'lucide-react';
 import { reportsAPI, mailAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const TrialBalanceView = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const TrialBalanceView = () => {
   const [email, setEmail] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
   const companyId = sessionStorage.getItem('companyId');
+  const { addNotification } = useNotificationStore();
 
   const fetchReport = async () => {
     if (!companyId) {
@@ -48,11 +50,11 @@ const TrialBalanceView = () => {
         text: `Attached is the Trial Balance report (${viewType}) for ${basis} basis.`,
         companyId
       });
-      alert('Report sent successfully!');
+      addNotification('Report sent successfully!', 'success');
       setShowMailModal(false);
     } catch (err) {
       console.error(err);
-      alert('Failed to send report. Please ensure your email is configured in the system.');
+      addNotification('Failed to send report. Please ensure your email is configured in the system.', 'error');
     }
     setSendingMail(false);
   };

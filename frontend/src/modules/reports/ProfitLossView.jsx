@@ -8,6 +8,7 @@ import {
   X, Send, BarChart3, PieChart
 } from 'lucide-react';
 import { reportsAPI, mailAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const ProfitLossView = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const ProfitLossView = () => {
   const [email, setEmail] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
   const companyId = sessionStorage.getItem('companyId');
+  const { addNotification } = useNotificationStore();
 
   const getDates = (range) => {
     const now = new Date();
@@ -82,11 +84,11 @@ const ProfitLossView = () => {
         text: `Attached is the Profit & Loss statement for ${basis} basis.`,
         companyId
       });
-      alert('Report sent successfully!');
+      addNotification('Report sent successfully!', 'success');
       setShowMailModal(false);
     } catch (err) {
       console.error(err);
-      alert('Failed to send report. Please ensure your email is configured in the system.');
+      addNotification('Failed to send report. Please ensure your email is configured in the system.', 'error');
     }
     setSendingMail(false);
   };

@@ -3,10 +3,12 @@ import { X, ChevronDown, Check, Search, Database, Upload, RefreshCw, Layers, Plu
 import { useNavigate, useParams } from 'react-router-dom';
 import { priceListAPI, inventoryAPI } from '../../services/api';
 import * as XLSX from 'xlsx';
+import useNotificationStore from '../../store/notificationStore';
 
 const PriceListEntryView = ({ companyId: propCompanyId }) => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { addNotification } = useNotificationStore();
   const isEditMode = !!id;
   
   // State-based companyId to ensure reactivity across refreshes and company switches
@@ -124,7 +126,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
       }
     } catch (err) {
       console.error('Fetch price list failed:', err);
-      alert('Failed to load price list details.');
+      addNotification('Failed to load price list details.', 'error');
     }
   };
 
@@ -209,7 +211,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
   const handleExportAll = () => {
     try {
       if (items.length === 0) {
-        alert('No items available to export.');
+        addNotification('No items available to export.', 'warning');
         return;
       }
 
@@ -246,14 +248,14 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
       XLSX.writeFile(workbook, `PriceList_Template_${new Date().toLocaleDateString()}.xlsx`);
     } catch (err) {
       console.error('Export failed:', err);
-      alert('Failed to export items. Please try again.');
+      addNotification('Failed to export items. Please try again.', 'error');
     }
   };
 
   const handleExportFiltered = () => {
     try {
       if (filteredItems.length === 0) {
-        alert('No filtered items to export.');
+        addNotification('No filtered items to export.', 'warning');
         return;
       }
 
@@ -281,7 +283,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
       XLSX.writeFile(workbook, `Filtered_PriceList_${new Date().toLocaleDateString()}.xlsx`);
     } catch (err) {
       console.error('Filtered export failed:', err);
-      alert('Failed to export filtered items.');
+      addNotification('Failed to export filtered items.', 'error');
     }
   };
 
@@ -303,7 +305,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
         if (jsonData.length === 0) {
-          alert('The uploaded file is empty.');
+          addNotification('The uploaded file is empty.', 'warning');
           return;
         }
 
@@ -345,10 +347,10 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
           showImportSection: false // Switch back to see the results
         });
 
-        alert('Data imported successfully! Check the customization table.');
+        addNotification('Data imported successfully! Check the customization table.', 'success');
       } catch (err) {
         console.error('Import failed:', err);
-        alert('Failed to parse the file. Please ensure it matches the template.');
+        addNotification('Failed to parse the file. Please ensure it matches the template.', 'error');
       }
     };
     reader.readAsArrayBuffer(file);
@@ -380,7 +382,7 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
     const numValue = parseFloat(value);
     
     if (isNaN(numValue)) {
-      alert('Please enter a valid number.');
+      addNotification('Please enter a valid number.', 'warning');
       return;
     }
 
@@ -425,20 +427,20 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
       showBulkOptions: false
     });
 
-    alert('Bulk update applied successfully!');
+    addNotification('Bulk update applied successfully!', 'success');
   };
 
   const handleSave = async () => {
     try {
       // Validation
       if (!formData.name.trim()) {
-        alert('Please fill the Name column. It is a required field.');
+        addNotification('Please fill the Name column. It is a required field.', 'warning');
         return;
       }
       
       if (formData.priceListType === 'All Items') {
         if (formData.percentage === '' || formData.percentage === null || formData.percentage === undefined) {
-          alert('Please fill the Percentage column. It is a required field.');
+          addNotification('Please fill the Percentage column. It is a required field.', 'warning');
           return;
         }
       }
@@ -450,15 +452,15 @@ const PriceListEntryView = ({ companyId: propCompanyId }) => {
 
       if (isEditMode) {
         await priceListAPI.update(id, payload);
-        alert('Price List updated successfully! ✨');
+        addNotification('Price List updated successfully! ✨', 'success');
       } else {
         await priceListAPI.create(payload);
-        alert('Price List saved successfully! ✨');
+        addNotification('Price List saved successfully! ✨', 'success');
       }
       navigate('/price-lists');
     } catch (err) {
       console.error('Save failed:', err);
-      alert('Failed to save price list. Please try again.');
+      addNotification('Failed to save price list. Please try again.', 'error');
     }
   };
 

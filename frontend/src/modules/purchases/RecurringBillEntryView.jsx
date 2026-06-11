@@ -11,6 +11,7 @@ import {
 import { purchaseAPI, inventoryAPI, companyAPI, recurringBillAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
+import useNotificationStore from '../../store/notificationStore';
 import VendorForm from './VendorForm';
 import PurchaseDeliveryAddressModal from './PurchaseDeliveryAddressModal';
 import CreateItemModal from '../inventory/CreateItemModal';
@@ -18,6 +19,7 @@ import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
 
 const RecurringBillEntryView = ({ companyId }) => {
+  const { addNotification } = useNotificationStore();
   // â”€â”€ Form State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [formData, setFormData] = useState({
     vendorName: '',
@@ -303,11 +305,11 @@ const RecurringBillEntryView = ({ companyId }) => {
 
   const handleSaveOrder = async (sendEmail = false) => {
     if (!formData.vendorId) {
-      alert('Please select a vendor');
+      addNotification('Please select a vendor', 'warning');
       return;
     }
     if (items.some(item => !item.itemName || item.qty <= 0)) {
-      alert('Please ensure all items have a name and quantity');
+      addNotification('Please ensure all items have a name and quantity', 'warning');
       return;
     }
 
@@ -342,12 +344,12 @@ const RecurringBillEntryView = ({ companyId }) => {
       if (sendEmail) {
         setIsEmailModalOpen(true);
       } else {
-        alert('Bill saved successfully');
+        addNotification('Bill saved successfully', 'success');
         window.history.back();
       }
     } catch (err) {
       console.error('Error saving Bill:', err);
-      alert('Failed to save Bill. Please try again.');
+      addNotification('Failed to save Bill. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -1299,7 +1301,7 @@ const RecurringBillEntryView = ({ companyId }) => {
             totals={totals}
             attachments={attachments}
             onSent={() => {
-              alert('Email sent successfully');
+              addNotification('Email sent successfully', 'success');
               window.history.back();
             }}
           />

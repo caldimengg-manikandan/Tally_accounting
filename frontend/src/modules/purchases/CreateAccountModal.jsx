@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { X, Info, HelpCircle } from 'lucide-react';
+import useNotificationStore from '../../store/notificationStore';
 
 const CreateAccountModal = ({ onClose, onSave, accounts }) => {
+  const { addNotification } = useNotificationStore();
   const [formData, setFormData] = useState({
     accountType: 'Fixed Asset',
     accountName: '',
@@ -19,7 +21,7 @@ const CreateAccountModal = ({ onClose, onSave, accounts }) => {
 
   const handleSave = () => {
     if (!formData.accountName) {
-      alert("Account Name is required");
+      addNotification("Account Name is required", "warning");
       return;
     }
     // Simulate API call and return the new account object

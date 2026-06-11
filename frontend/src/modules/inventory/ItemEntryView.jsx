@@ -8,6 +8,7 @@ import {
 import { inventoryAPI, purchaseAPI } from '../../services/api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CreateAccountModal from '../../components/accounting/CreateAccountModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const INITIAL_UNITS = [
   "CMS - cm", "DOZ - dz", "FTS - ft", "GMS - g", "INC - in",
@@ -42,6 +43,7 @@ const PURCHASE_ACCOUNTS_STRUCTURE = [
 const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { addNotification } = useNotificationStore();
   const editItem = location.state?.editItem || null;
   const isEditMode = !!editItem;
 
@@ -214,7 +216,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
 
     } catch (err) {
       if (err.response?.status === 401) return;
-      alert("Error saving item: " + (err.response?.data?.error || err.message));
+      addNotification("Error saving item: " + (err.response?.data?.error || err.message), "error");
     } finally {
       setLoading(false);
     }
@@ -256,7 +258,7 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
       setNewItem({ ...newItem, imageUrl: res.data.imageUrl });
     } catch (err) {
       if (err.response?.status === 401) return;
-      alert("Failed to upload image.");
+      addNotification("Failed to upload image.", "error");
     } finally {
       setUploading(false);
     }

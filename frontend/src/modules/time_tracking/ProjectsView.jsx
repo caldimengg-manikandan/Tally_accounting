@@ -1155,6 +1155,7 @@ const NewUserModal = ({ isOpen, onClose, onSaved }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
+  const addNotification = useNotificationStore(state => state.addNotification);
 
   if (!isOpen) return null;
 
@@ -1168,7 +1169,7 @@ const NewUserModal = ({ isOpen, onClose, onSaved }) => {
       onClose();
     } catch (err) {
       console.error(err);
-      alert('Failed to add new user.');
+      addNotification('Failed to add new user.', 'error');
     } finally {
       setSaving(false);
     }

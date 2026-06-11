@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { paymentMadeAPI, voucherAPI, companyAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -32,6 +33,7 @@ function numberToWords(num) {
 const PaymentsMadeListView = ({ companyId }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { addNotification } = useNotificationStore();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,7 +108,7 @@ const PaymentsMadeListView = ({ companyId }) => {
       await fetchPaymentDetail(selectedPaymentId);
     } catch (err) {
       console.error('Mark as Paid failed:', err);
-      alert('Failed to mark payment as paid: ' + (err.response?.data?.error || err.message));
+      addNotification('Failed to mark payment as paid: ' + (err.response?.data?.error || err.message), 'error');
     }
   };
 
