@@ -8,6 +8,7 @@ import { companyAPI, usersAPI } from '../../services/api';
 import { INDIAN_STATES } from '../../utils/indianStates';
 import { CURRENCIES } from '../../utils/currencies';
 import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const validateGSTIN = (gstin) => {
   if (!gstin) return true;
@@ -93,6 +94,7 @@ const SelectRow = ({ label, keyName, value, onChange, options, required = false,
 );
 
 const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
+  const { addNotification } = useNotificationStore();
   const [activeTab, setActiveTab] = useState(firstTime ? 'create' : 'switch'); // 'switch' | 'edit' | 'create' | 'users'
   const [loading, setLoading]     = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -200,7 +202,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
       await usersAPI.updateUserRole(userId, { role });
       fetchCompanyUsers();
     } catch (err) {
-      alert('Failed to update role');
+      addNotification('Failed to update role', 'error');
     }
   };
 

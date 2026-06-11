@@ -34,6 +34,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       defaultValue: 10
     },
+    usefulLifeYears: {
+      type: DataTypes.INTEGER,
+      defaultValue: 10
+    },
     scrapValue: {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0

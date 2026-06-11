@@ -8,9 +8,11 @@ import {
 } from 'lucide-react';
 import { groupAPI, ledgerAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const LedgersView = ({ showNew }) => {
     const navigate = useNavigate();
+    const { addNotification } = useNotificationStore();
     const [groups, setGroups] = useState([]);
     const [expandedGroups, setExpandedGroups] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
@@ -162,7 +164,7 @@ const LedgersView = ({ showNew }) => {
             }
             fetchData();
         } catch (err) {
-            alert("Delete failed: " + (err.response?.data?.error || err.message));
+            addNotification("Delete failed: " + (err.response?.data?.error || err.message), 'error');
         } finally {
             setIsDeleteModalOpen(false);
             setDeleteId(null);
@@ -245,7 +247,7 @@ const LedgersView = ({ showNew }) => {
             fetchData();
         } catch (err) { 
             console.error(err); 
-            alert(err.response?.data?.error || err.message || "An error occurred while saving.");
+            addNotification(err.response?.data?.error || err.message || "An error occurred while saving.", 'error');
         }
     };
 

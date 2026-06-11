@@ -5,10 +5,13 @@ import {
   Settings, Check, Search, Trash2, ArrowLeft, TrendingUp, AlertCircle, BarChart3, HelpCircle, RefreshCcw
 } from 'lucide-react';
 import { budgetAPI, ledgerAPI, groupAPI } from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
 export default function BudgetsView({ showNew }) {
+  const { addNotification } = useNotificationStore();
   const companyId = sessionStorage.getItem('companyId');
   const [budgets, setBudgets] = useState([]);
   const [ledgers, setLedgers] = useState([]);
@@ -18,6 +21,11 @@ export default function BudgetsView({ showNew }) {
   const [varianceData, setVarianceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
 
   // Form State
   const [formData, setFormData] = useState({
@@ -72,8 +80,8 @@ export default function BudgetsView({ showNew }) {
 
   const handleCreateBudget = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return alert('Budget name is required');
-    if (formData.items.length === 0) return alert('Please add at least one budget item');
+    if (!formData.name.trim()) return addNotification('Budget name is required', 'warning');
+    if (formData.items.length === 0) return addNotification('Please add at least one budget item', 'warning');
 
     try {
       setLoading(true);
@@ -88,7 +96,7 @@ export default function BudgetsView({ showNew }) {
         })),
         companyId
       });
-      alert('Budget created successfully');
+      addNotification('Budget created successfully', 'success');
       setFormData({
         name: '',
         fiscalYear: '2026-2027',
@@ -99,22 +107,28 @@ export default function BudgetsView({ showNew }) {
       fetchBudgets();
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.error || 'Failed to create budget');
+      addNotification(err.response?.data?.error || 'Failed to create budget', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteBudget = async (id, e) => {
+  const handleDeleteBudget = (id, e) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this budget?')) return;
-    try {
-      await budgetAPI.delete(id);
-      fetchBudgets();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to delete budget');
-    }
+    setConfirmModal({
+      isOpen: true,
+      message: 'Are you sure you want to delete this budget? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await budgetAPI.delete(id);
+          addNotification('Budget deleted successfully.', 'success');
+          fetchBudgets();
+        } catch (err) {
+          console.error(err);
+          addNotification('Failed to delete budget', 'error');
+        }
+      }
+    });
   };
 
   const handleViewVariance = async (budget) => {
@@ -133,9 +147,9 @@ export default function BudgetsView({ showNew }) {
   };
 
   const addItem = () => {
-    if (itemType === 'Ledger' && !selectedLedgerId) return alert('Please select a ledger');
-    if (itemType === 'Group' && !selectedGroupId) return alert('Please select a group');
-    if (!targetAmount || parseFloat(targetAmount) <= 0) return alert('Please enter a valid target amount');
+    if (itemType === 'Ledger' && !selectedLedgerId) return addNotification('Please select a ledger', 'warning');
+    if (itemType === 'Group' && !selectedGroupId) return addNotification('Please select a group', 'warning');
+    if (!targetAmount || parseFloat(targetAmount) <= 0) return addNotification('Please enter a valid target amount', 'warning');
 
     // Check duplicate
     const isDuplicate = itemType === 'Ledger' 
@@ -143,7 +157,7 @@ export default function BudgetsView({ showNew }) {
       : formData.items.some(item => item.groupId === selectedGroupId);
 
     if (isDuplicate) {
-      return alert(`${itemType} is already added to this budget`);
+      return addNotification(`${itemType} is already added to this budget`, 'warning');
     }
 
     if (itemType === 'Ledger') {
@@ -684,6 +698,14 @@ export default function BudgetsView({ showNew }) {
           )}
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, message: '', onConfirm: null })}
+        onConfirm={confirmModal.onConfirm}
+        title="Confirm Action"
+        message={confirmModal.message}
+      />
     </div>
   );
 }

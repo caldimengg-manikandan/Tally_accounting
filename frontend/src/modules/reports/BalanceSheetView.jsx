@@ -8,6 +8,7 @@ import {
   X, Send
 } from 'lucide-react';
 import { reportsAPI, mailAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const BalanceSheetView = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const BalanceSheetView = () => {
   const [email, setEmail] = useState('');
   const [sendingMail, setSendingMail] = useState(false);
   const companyId = sessionStorage.getItem('companyId');
+  const { addNotification } = useNotificationStore();
 
   const fetchBS = useCallback(async () => {
     if (!companyId) {
@@ -51,11 +53,11 @@ const BalanceSheetView = () => {
         text: `Attached is the Balance Sheet for ${basis} basis.`,
         companyId
       });
-      alert('Report sent successfully!');
+      addNotification('Report sent successfully!', 'success');
       setShowMailModal(false);
     } catch (err) {
       console.error(err);
-      alert('Failed to send report.');
+      addNotification('Failed to send report.', 'error');
     }
     setSendingMail(false);
   };

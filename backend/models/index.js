@@ -353,6 +353,7 @@ Company.hasMany(FixedAsset, { foreignKey: 'CompanyId' });
 FixedAsset.belongsTo(Company, { foreignKey: 'CompanyId' });
 FixedAsset.belongsTo(Ledger, { as: 'AssetLedger', foreignKey: 'assetLedgerId' });
 FixedAsset.belongsTo(Ledger, { as: 'DepreciationLedger', foreignKey: 'depreciationLedgerId' });
+FixedAsset.belongsTo(Ledger, { as: 'AccumulatedDepreciationLedger', foreignKey: 'accumulatedDepreciationLedgerId' });
 
 Company.hasMany(DepreciationLog, { foreignKey: 'CompanyId' });
 DepreciationLog.belongsTo(Company, { foreignKey: 'CompanyId' });

@@ -9,6 +9,7 @@ import { voucherAPI, ledgerAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ConfirmModal from '../../components/ConfirmModal';
 
 const fmt = (v) =>
   Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
@@ -601,6 +602,11 @@ const ManualJournalsListView = ({ companyId: propCompanyId }) => {
   const [error,       setError]       = useState(null);
   const [selectedId,  setSelectedId]  = useState(id || null);
   const [detailView,  setDetailView]  = useState('Details');
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    message: '',
+    onConfirm: null
+  });
   const user = React.useMemo(() => {
     try {
       return JSON.parse(sessionStorage.getItem('user') || '{}');
@@ -666,16 +672,21 @@ const ManualJournalsListView = ({ companyId: propCompanyId }) => {
     window.history.replaceState(null, '', '/accountant/journals');
   };
 
-  const handleDelete = async (jid) => {
-    if (!window.confirm('Delete this journal entry?')) return;
-    try {
-      await voucherAPI.delete(jid);
-      addNotification('Journal deleted.', 'success');
-      setJournals((prev) => prev.filter((j) => j.id !== jid));
-      handleClose();
-    } catch {
-      addNotification('Failed to delete journal.', 'error');
-    }
+  const handleDelete = (jid) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'Delete this journal entry? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await voucherAPI.delete(jid);
+          addNotification('Journal deleted.', 'success');
+          setJournals((prev) => prev.filter((j) => j.id !== jid));
+          handleClose();
+        } catch {
+          addNotification('Failed to delete journal.', 'error');
+        }
+      }
+    });
   };
 
   const totalAmt = (j) =>
@@ -917,6 +928,14 @@ const ManualJournalsListView = ({ companyId: propCompanyId }) => {
         onClose={handleClose}
         detailView={detailView}
         setDetailView={setDetailView}
+      />
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, message: '', onConfirm: null })}
+        onConfirm={confirmModal.onConfirm}
+        title="Confirm Action"
+        message={confirmModal.message}
       />
     </div>
   );

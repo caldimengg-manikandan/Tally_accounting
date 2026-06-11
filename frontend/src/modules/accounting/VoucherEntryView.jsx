@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { ledgerAPI, voucherAPI, groupAPI, costCenterAPI, accountingAPI } from '../../services/api';
 import CostCenterAllocationModal from './CostCenterAllocationModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra', 'Sales', 'Purchase', 'Debit Note', 'Credit Note'];
 
@@ -83,6 +84,7 @@ const newRow = (type = 'Dr', amount = '') => ({ _id: _uid++, ledgerId: '', costC
 
 export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const navigate = useNavigate();
+  const { addNotification } = useNotificationStore();
   const { id }   = useParams();
   const [searchParams] = useSearchParams();
   const initialType = searchParams.get('type') || 'Journal';
@@ -195,7 +197,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
   const handleSmartGST = async () => {
     const firstRow = rows.find(r => r.ledgerId && parseFloat(r.amount) > 0);
     const cid = sessionStorage.getItem('companyId');
-    if (!firstRow || !cid) { alert('Select a ledger and amount first.'); return; }
+    if (!firstRow || !cid) { addNotification('Select a ledger and amount first.', 'warning'); return; }
 
     try {
       const res = await accountingAPI.calculateGST({
@@ -221,7 +223,7 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
       }
     } catch (err) {
       console.error("GST Calc failed:", err);
-      alert('GST Calculation failed. Ensure CGST/SGST/IGST ledgers exist.');
+      addNotification('GST Calculation failed. Ensure CGST/SGST/IGST ledgers exist.', 'error');
     }
   };
 
@@ -403,11 +405,11 @@ export default function VoucherEntryView({ onSaveSuccess, onCancel }) {
                     type="button"
                     onClick={() => {
                       if (!row.ledgerId) {
-                        alert('Please select an Account/Ledger first.');
+                        addNotification('Please select an Account/Ledger first.', 'warning');
                         return;
                       }
                       if (!row.amount || parseFloat(row.amount) <= 0) {
-                        alert('Please enter a positive amount first.');
+                        addNotification('Please enter a positive amount first.', 'warning');
                         return;
                       }
                       setActiveRowId(row._id);

@@ -2,10 +2,46 @@ const { FixedAsset, DepreciationLog, Ledger, Group, Voucher, Transaction, sequel
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 
+// Helper to resolve or create the Accumulated Depreciation ledger for an asset
+const resolveAccumulatedDepreciationLedger = async (asset, transaction) => {
+  let accDepLedgerId = asset.accumulatedDepreciationLedgerId;
+  if (!accDepLedgerId) {
+    let accDepLedger = await Ledger.findOne({
+      where: { CompanyId: asset.CompanyId, name: `${asset.name} Accumulated Depreciation` },
+      transaction
+    });
+    if (!accDepLedger) {
+      accDepLedger = await Ledger.findOne({
+        where: { CompanyId: asset.CompanyId, name: 'Accumulated Depreciation' },
+        transaction
+      });
+    }
+    if (!accDepLedger) {
+      const assetGroup = await Group.findOne({
+        where: { CompanyId: asset.CompanyId, name: { [Op.like]: '%Fixed%Asset%' } },
+        transaction
+      });
+      accDepLedger = await Ledger.create({
+        name: `${asset.name} Accumulated Depreciation`,
+        code: 'AST-ACC-' + Date.now().toString().slice(-4),
+        category: 'Asset',
+        groupName: 'Fixed Assets',
+        GroupId: assetGroup ? assetGroup.id : null,
+        CompanyId: asset.CompanyId,
+        currentBalance: 0
+      }, { transaction });
+    }
+    
+    await asset.update({ accumulatedDepreciationLedgerId: accDepLedger.id }, { transaction });
+    accDepLedgerId = accDepLedger.id;
+  }
+  return accDepLedgerId;
+};
+
 // Create Asset
 exports.createAsset = async (req, res) => {
   try {
-    const { name, purchaseDate, purchaseValue, depreciationMethod, usefulLife, scrapValue, assetLedgerId, depreciationLedgerId, companyId, depreciationRate } = req.body;
+    const { name, purchaseDate, purchaseValue, depreciationMethod, usefulLife, scrapValue, assetLedgerId, depreciationLedgerId, companyId, depreciationRate, accumulatedDepreciationLedgerId, usefulLifeYears } = req.body;
     
     // Auto-create or resolve ledgers
     let resolvedAssetLedgerId = assetLedgerId;
@@ -30,19 +66,32 @@ exports.createAsset = async (req, res) => {
       resolvedDepreciationLedgerId = depLedger.id;
     }
 
+    let resolvedAccumulatedDepreciationLedgerId = accumulatedDepreciationLedgerId;
+    if (!resolvedAccumulatedDepreciationLedgerId) {
+      const assetGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Fixed%Asset%' } } });
+      const accDepLedger = await Ledger.create({
+        name: `${name} Accumulated Depreciation`, code: 'AST-ACC-' + Date.now().toString().slice(-4), category: 'Asset', groupName: 'Fixed Assets',
+        GroupId: assetGroup ? assetGroup.id : null, CompanyId: companyId, currentBalance: 0
+      });
+      resolvedAccumulatedDepreciationLedgerId = accDepLedger.id;
+    }
+
     const val = parseFloat(purchaseValue || 0);
+    const life = parseInt(usefulLifeYears || usefulLife || 10);
     const asset = await FixedAsset.create({
       name,
       purchaseDate,
       purchaseValue: val,
       depreciationMethod: depreciationMethod || 'WDV',
-      usefulLife: parseInt(usefulLife || 10),
+      usefulLife: life,
+      usefulLifeYears: life,
       scrapValue: parseFloat(scrapValue || 0),
       depreciationRate: parseFloat(depreciationRate !== undefined ? depreciationRate : 10.0),
       currentBookValue: val,
       accumulatedDepreciation: 0,
       assetLedgerId: resolvedAssetLedgerId,
       depreciationLedgerId: resolvedDepreciationLedgerId,
+      accumulatedDepreciationLedgerId: resolvedAccumulatedDepreciationLedgerId,
       CompanyId: companyId
     });
 
@@ -73,7 +122,7 @@ exports.getAssets = async (req, res) => {
 // Update Asset
 exports.updateAsset = async (req, res) => {
   try {
-    const asset = await FixedAsset.findByPk(req.params.id);
+    const asset = await FixedAsset.findOne({ where: { id: req.params.id, CompanyId: req.companyId } });
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
     await asset.update(req.body);
     res.json(asset);
@@ -85,7 +134,7 @@ exports.updateAsset = async (req, res) => {
 // Delete Asset
 exports.deleteAsset = async (req, res) => {
   try {
-    const asset = await FixedAsset.findByPk(req.params.id);
+    const asset = await FixedAsset.findOne({ where: { id: req.params.id, CompanyId: req.companyId } });
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
     await asset.destroy();
     res.json({ message: 'Asset deleted successfully' });
@@ -101,7 +150,7 @@ exports.depreciateAsset = async (req, res) => {
     const { id } = req.params;
     const { date } = req.body; // Date of running depreciation
 
-    const asset = await FixedAsset.findByPk(id, { transaction: t });
+    const asset = await FixedAsset.findOne({ where: { id, CompanyId: req.companyId }, transaction: t });
     if (!asset) {
       await t.rollback();
       return res.status(404).json({ error: 'Asset not found' });
@@ -109,22 +158,54 @@ exports.depreciateAsset = async (req, res) => {
 
     const bookValue = parseFloat(asset.currentBookValue || 0);
     const scrap = parseFloat(asset.scrapValue || 0);
-    const life = parseInt(asset.usefulLife || 10);
+    const lifeYears = parseInt(asset.usefulLifeYears || asset.usefulLife || 10);
 
     if (bookValue <= scrap) {
       await t.rollback();
       return res.status(400).json({ error: 'Asset has already depreciated to scrap value.' });
     }
 
-    let depAmount = 0;
-    if (asset.depreciationMethod === 'SLM') {
-      depAmount = parseFloat(asset.purchaseValue) / life;
-    } else {
-      // WDV Method
-      depAmount = bookValue * (parseFloat(asset.depreciationRate || 10) / 100);
+    const purchase = new Date(asset.purchaseDate);
+    const usefulLifeEnd = new Date(purchase);
+    usefulLifeEnd.setFullYear(purchase.getFullYear() + lifeYears);
+
+    let lastDepDate = new Date(asset.purchaseDate);
+    const lastLog = await DepreciationLog.findOne({
+      where: { FixedAssetId: asset.id },
+      order: [['date', 'DESC']],
+      transaction: t
+    });
+    if (lastLog) {
+      lastDepDate = new Date(lastLog.date);
     }
 
-    // Ensure we don't depreciate below scrap value
+    const runDate = new Date(date || new Date());
+
+    if (lastDepDate >= usefulLifeEnd) {
+      await t.rollback();
+      return res.status(400).json({ error: 'Asset useful life has already ended.' });
+    }
+
+    if (lastDepDate >= runDate) {
+      await t.rollback();
+      return res.status(400).json({ error: 'Filing date must be after the last depreciation date.' });
+    }
+
+    const actualRunDate = runDate > usefulLifeEnd ? usefulLifeEnd : runDate;
+
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysElapsed = Math.max(0, (actualRunDate.getTime() - lastDepDate.getTime()) / msPerDay);
+
+    let annualDep = 0;
+    if (asset.depreciationMethod === 'SLM') {
+      annualDep = parseFloat(asset.purchaseValue) / lifeYears;
+    } else {
+      // WDV Method
+      annualDep = bookValue * (parseFloat(asset.depreciationRate || 10) / 100);
+    }
+
+    let depAmount = annualDep * (daysElapsed / 365);
+
     if (bookValue - depAmount < scrap) {
       depAmount = bookValue - scrap;
     }
@@ -138,12 +219,15 @@ exports.depreciateAsset = async (req, res) => {
     const valueBefore = bookValue;
     const valueAfter = parseFloat((bookValue - depAmount).toFixed(2));
 
+    // Resolve Accumulated Depreciation Ledger
+    const accDepLedgerId = await resolveAccumulatedDepreciationLedger(asset, t);
+
     // 1. Post Journal Entry
     // DEBIT  → Depreciation Expense Ledger
-    // CREDIT → Asset Ledger
+    // CREDIT → Accumulated Depreciation Ledger
     const journalEntries = [
       { ledgerId: asset.depreciationLedgerId, debit: depAmount, credit: 0 },
-      { ledgerId: asset.assetLedgerId, debit: 0, credit: depAmount }
+      { ledgerId: accDepLedgerId, debit: 0, credit: depAmount }
     ];
 
     const voucher = await AccountingService.recordJournalEntry({
@@ -187,7 +271,7 @@ exports.disposeAsset = async (req, res) => {
     const { id } = req.params;
     const { disposalDate, disposalValue, bankLedgerId } = req.body;
 
-    const asset = await FixedAsset.findByPk(id, { transaction: t });
+    const asset = await FixedAsset.findOne({ where: { id, CompanyId: req.companyId }, transaction: t });
     if (!asset) {
       await t.rollback();
       return res.status(404).json({ error: 'Asset not found' });
@@ -245,6 +329,130 @@ exports.disposeAsset = async (req, res) => {
 
     await t.commit();
     res.json({ message: 'Asset disposed successfully', voucher, gainLoss });
+  } catch (err) {
+    if (t) await t.rollback();
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Run Batch Depreciation for all active assets of a company
+exports.depreciateBatch = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { companyId } = req.params;
+    const { date } = req.body;
+
+    if (companyId !== req.companyId) {
+      await t.rollback();
+      return res.status(403).json({ error: 'Access denied: Unauthorized company ID' });
+    }
+
+    const assets = await FixedAsset.findAll({
+      where: {
+        CompanyId: companyId,
+        currentBookValue: { [Op.gt]: sequelize.col('scrapValue') }
+      },
+      transaction: t
+    });
+
+    if (assets.length === 0) {
+      await t.rollback();
+      return res.status(400).json({ error: 'No depreciable assets found for this company.' });
+    }
+
+    const results = [];
+
+    for (const asset of assets) {
+      const bookValue = parseFloat(asset.currentBookValue || 0);
+      const scrap = parseFloat(asset.scrapValue || 0);
+      const lifeYears = parseInt(asset.usefulLifeYears || asset.usefulLife || 10);
+
+      const purchase = new Date(asset.purchaseDate);
+      const usefulLifeEnd = new Date(purchase);
+      usefulLifeEnd.setFullYear(purchase.getFullYear() + lifeYears);
+
+      let lastDepDate = new Date(asset.purchaseDate);
+      const lastLog = await DepreciationLog.findOne({
+        where: { FixedAssetId: asset.id },
+        order: [['date', 'DESC']],
+        transaction: t
+      });
+      if (lastLog) {
+        lastDepDate = new Date(lastLog.date);
+      }
+
+      const runDate = new Date(date || new Date());
+
+      if (lastDepDate >= usefulLifeEnd || lastDepDate >= runDate) {
+        continue;
+      }
+
+      const actualRunDate = runDate > usefulLifeEnd ? usefulLifeEnd : runDate;
+
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const daysElapsed = Math.max(0, (actualRunDate.getTime() - lastDepDate.getTime()) / msPerDay);
+
+      let annualDep = 0;
+      if (asset.depreciationMethod === 'SLM') {
+        annualDep = parseFloat(asset.purchaseValue) / lifeYears;
+      } else {
+        // WDV Method
+        annualDep = bookValue * (parseFloat(asset.depreciationRate || 10) / 100);
+      }
+
+      let depAmount = annualDep * (daysElapsed / 365);
+
+      if (bookValue - depAmount < scrap) {
+        depAmount = bookValue - scrap;
+      }
+
+      depAmount = parseFloat(depAmount.toFixed(2));
+      if (depAmount <= 0) continue;
+
+      const valueBefore = bookValue;
+      const valueAfter = parseFloat((bookValue - depAmount).toFixed(2));
+
+      const accDepLedgerId = await resolveAccumulatedDepreciationLedger(asset, t);
+
+      const journalEntries = [
+        { ledgerId: asset.depreciationLedgerId, debit: depAmount, credit: 0 },
+        { ledgerId: accDepLedgerId, debit: 0, credit: depAmount }
+      ];
+
+      const voucher = await AccountingService.recordJournalEntry({
+        companyId: asset.CompanyId,
+        date: date || new Date(),
+        voucherType: 'Journal',
+        narration: `Depreciation run (Batch) for ${asset.name}. Value before: ₹${valueBefore.toFixed(2)}, Value after: ₹${valueAfter.toFixed(2)}`,
+        entries: journalEntries,
+        userId: req.user?.id
+      }, t);
+
+      const log = await DepreciationLog.create({
+        FixedAssetId: asset.id,
+        date: date || new Date(),
+        amount: depAmount,
+        bookValueBefore: valueBefore,
+        bookValueAfter: valueAfter,
+        VoucherId: voucher.id,
+        CompanyId: asset.CompanyId
+      }, { transaction: t });
+
+      await asset.update({
+        currentBookValue: valueAfter,
+        accumulatedDepreciation: parseFloat((parseFloat(asset.accumulatedDepreciation || 0) + depAmount).toFixed(2))
+      }, { transaction: t });
+
+      results.push({ assetId: asset.id, name: asset.name, amount: depAmount, valueAfter });
+    }
+
+    if (results.length === 0) {
+      await t.rollback();
+      return res.status(400).json({ error: 'No depreciation was posted. All assets might already be fully depreciated.' });
+    }
+
+    await t.commit();
+    res.status(201).json({ message: 'Batch depreciation posted successfully', count: results.length, details: results });
   } catch (err) {
     if (t) await t.rollback();
     res.status(500).json({ error: err.message });

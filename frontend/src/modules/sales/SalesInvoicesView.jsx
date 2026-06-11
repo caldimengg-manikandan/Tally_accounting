@@ -146,6 +146,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
     const user = JSON.parse(sessionStorage.getItem('user') || '{}');
     const senderName = user.email ? user.email.split('@')[0] : 'Indus CAI Administrator';
     const companyName = company?.name || 'Indus CAI private Ltd';
+    const { addNotification } = useNotificationStore();
 
     const [to, setTo] = useState(invoice.CustomerLedger?.email || '');
     const [subject, setSubject] = useState(`Invoice - ${invoice.invoiceNumber} from ${companyName}`);
@@ -191,7 +192,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
     const [isSending, setIsSending] = useState(false);
 
     const handleSend = async () => {
-        if (!to) return alert('Recipient email is missing');
+        if (!to) return addNotification('Recipient email is missing', 'warning');
         setIsSending(true);
         try {
             await mailAPI.send({
@@ -206,7 +207,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
             if (onSent) onSent();
         } catch (err) {
             console.error(err);
-            alert('Failed to send email');
+            addNotification('Failed to send email', 'error');
         } finally {
             setIsSending(false);
         }
