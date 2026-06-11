@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import useNotificationStore from '../../store/notificationStore';
 import { 
   Plus, Trash2, ShoppingBag, PlusCircle, 
   ChevronDown, Search, Filter, MoreHorizontal,
@@ -19,6 +20,7 @@ import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
 
 const PurchaseOrderEntryView = ({ companyId }) => {
+  const { addNotification } = useNotificationStore();
   const { id } = useParams();
   const navigate = useNavigate();
   // ── Form State ──────────────────────────────────────────────────
@@ -457,11 +459,11 @@ const PurchaseOrderEntryView = ({ companyId }) => {
 
   const handleSaveOrder = async (sendEmail = false) => {
     if (!formData.vendorId) {
-      alert('Please select a vendor');
+      addNotification('Please select a vendor', 'warning');
       return;
     }
     if (items.some(item => !item.itemName || item.qty <= 0)) {
-      alert('Please ensure all items have a name and quantity');
+      addNotification('Please ensure all items have a name and quantity', 'warning');
       return;
     }
 
@@ -510,12 +512,12 @@ const PurchaseOrderEntryView = ({ companyId }) => {
       if (sendEmail) {
         navigate(`/purchase-orders/${savedData.id || id}/email`);
       } else {
-        alert('Purchase Order saved successfully');
+        addNotification('Purchase Order saved successfully', 'success');
         navigate(`/purchase-orders/view/${savedData.id || id}`);
       }
     } catch (err) {
       console.error('Error saving PO:', err);
-      alert('Failed to save Purchase Order. Please try again.');
+      addNotification('Failed to save Purchase Order. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -1521,7 +1523,25 @@ const PurchaseOrderEntryView = ({ companyId }) => {
           />
         )}
 
-
+        {isEmailModalOpen && (
+          <PurchaseOrderEmailModal 
+            isOpen={isEmailModalOpen}
+            onClose={() => {
+              setIsEmailModalOpen(false);
+              window.history.back();
+            }}
+            vendor={vendors.find(v => v.id === formData.vendorId)}
+            poData={{...formData, id: savedPO?.id, poNumber: formData.poNumber, companyId}}
+            totals={totals}
+            attachments={attachments}
+            selectedContacts={emailContacts.filter(c => selectedEmailContacts.includes(c.id))}
+            companyName={currentCompany?.name || ''}
+            onSent={() => {
+              addNotification('Email sent successfully', 'success');
+              window.history.back();
+            }}
+          />
+        )}
     </div>
   );
 };

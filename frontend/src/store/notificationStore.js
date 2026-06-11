@@ -8,12 +8,13 @@ const useNotificationStore = create((set) => ({
       notifications: [...state.notifications, { id, message, type }]
     }));
 
-    // Auto-remove after 3 seconds
+    // Make notifications stay longer (6 seconds for success, 8.5 seconds for warnings/errors/info)
+    const duration = type === 'success' ? 6000 : 8500;
     setTimeout(() => {
       set((state) => ({
         notifications: state.notifications.filter((n) => n.id !== id)
       }));
-    }, 4000);
+    }, duration);
   },
   removeNotification: (id) => {
     set((state) => ({

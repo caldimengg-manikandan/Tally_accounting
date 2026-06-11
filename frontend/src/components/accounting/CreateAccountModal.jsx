@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, HelpCircle, ChevronDown } from 'lucide-react';
 import { groupAPI, ledgerAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const CreateAccountModal = ({ isOpen, onClose, onSuccess, initialType = 'Cost Of Goods Sold' }) => {
+  const { addNotification } = useNotificationStore();
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState([]);
   const [formData, setFormData] = useState({
@@ -41,7 +43,7 @@ const CreateAccountModal = ({ isOpen, onClose, onSuccess, initialType = 'Cost Of
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!formData.name || !formData.groupId) {
-      alert("Please enter the Account Name and select an Account Type.");
+      addNotification("Please enter the Account Name and select an Account Type.", "warning");
       return;
     }
 
@@ -61,7 +63,7 @@ const CreateAccountModal = ({ isOpen, onClose, onSuccess, initialType = 'Cost Of
       // Reset form
       setFormData({ name: '', groupId: '', description: '', subAccount: false, parentGroupId: '', accountCode: '' });
     } catch (err) {
-      alert("Error creating account: " + (err.response?.data?.error || err.message));
+      addNotification("Error creating account: " + (err.response?.data?.error || err.message), "error");
     } finally {
       setLoading(false);
     }

@@ -53,6 +53,8 @@ const ProductionOrder = require('./productionOrder.model')(sequelize, DataTypes)
 const Budget = require('./budget.model')(sequelize, DataTypes);
 const BudgetItem = require('./budgetItem.model')(sequelize, DataTypes);
 const CostCenterAllocation = require('./costCenterAllocation.model')(sequelize, DataTypes);
+const RefreshToken = require('./refreshToken.model')(sequelize, DataTypes);
+const MfaSecret = require('./mfaSecret.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -353,6 +355,7 @@ Company.hasMany(FixedAsset, { foreignKey: 'CompanyId' });
 FixedAsset.belongsTo(Company, { foreignKey: 'CompanyId' });
 FixedAsset.belongsTo(Ledger, { as: 'AssetLedger', foreignKey: 'assetLedgerId' });
 FixedAsset.belongsTo(Ledger, { as: 'DepreciationLedger', foreignKey: 'depreciationLedgerId' });
+FixedAsset.belongsTo(Ledger, { as: 'AccumulatedDepreciationLedger', foreignKey: 'accumulatedDepreciationLedgerId' });
 
 Company.hasMany(DepreciationLog, { foreignKey: 'CompanyId' });
 DepreciationLog.belongsTo(Company, { foreignKey: 'CompanyId' });
@@ -388,6 +391,13 @@ BudgetItem.belongsTo(Budget, { foreignKey: 'BudgetId' });
 BudgetItem.belongsTo(Ledger, { foreignKey: 'LedgerId' });
 BudgetItem.belongsTo(Group, { foreignKey: 'GroupId' });
 Group.hasMany(BudgetItem, { foreignKey: 'GroupId' });
+
+// 24. Auth tokens
+User.hasMany(RefreshToken, { foreignKey: 'UserId', onDelete: 'CASCADE' });
+RefreshToken.belongsTo(User, { foreignKey: 'UserId' });
+
+User.hasOne(MfaSecret, { foreignKey: 'userId', onDelete: 'CASCADE' });
+MfaSecret.belongsTo(User, { foreignKey: 'userId' });
 
 
 module.exports = {
@@ -443,6 +453,8 @@ module.exports = {
   ProductionOrder,
   Budget,
   BudgetItem,
-  CostCenterAllocation
+  CostCenterAllocation,
+  RefreshToken,
+  MfaSecret
 };
 

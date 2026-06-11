@@ -34,6 +34,22 @@ module.exports = (sequelize, DataTypes) => {
     activeCompanyId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    // Phase 1: marks accounts created via Google OAuth — blocks password login
+    oauthOnly: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false
+    },
+    // Extra 3: account lockout after repeated failed login attempts
+    failedLoginAttempts: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false
+    },
+    lockedUntil: {
+      type: DataTypes.DATE,
+      allowNull: true  // null = not locked
     }
   });
 

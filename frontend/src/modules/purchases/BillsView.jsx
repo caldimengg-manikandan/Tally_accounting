@@ -534,8 +534,11 @@ const BillsView = ({ companyId }) => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-0.5 rounded uppercase text-[10px] font-bold tracking-widest border
-                                                    ${parseFloat(bill.balanceDue ?? bill.totalAmount) === 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
-                                                    {parseFloat(bill.balanceDue ?? bill.totalAmount) === 0 ? 'Paid' : 'Unpaid'}
+                                                    ${(bill.status || '').toUpperCase() === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                                      (bill.status || '').toUpperCase() === 'DRAFT' ? 'bg-slate-50 text-slate-600 border-slate-100' : 
+                                                      (bill.status || '').toUpperCase() === 'PARTIALLY_PAID' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 
+                                                      'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                    {(bill.status || 'Open').replace('_', ' ')}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right text-[14px] font-medium text-slate-900 tabular-nums">
@@ -613,9 +616,13 @@ const BillsView = ({ companyId }) => {
                                         <span className="text-[11px] text-slate-400 font-bold">{new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}</span>
                                     </div>
                                     <div className="mt-2 flex items-center justify-between">
-                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] ${parseFloat(bill.balanceDue ?? bill.totalAmount) === 0 ? 'bg-emerald-100/80 text-emerald-600' : 'bg-orange-100/80 text-orange-600'}`}>
-                                            {parseFloat(bill.balanceDue ?? bill.totalAmount) === 0 ? 'Paid' : 'Unpaid'}
-                                        </span>
+                                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] border
+                                             ${(bill.status || '').toUpperCase() === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                               (bill.status || '').toUpperCase() === 'DRAFT' ? 'bg-slate-50 text-slate-600 border-slate-100' : 
+                                               (bill.status || '').toUpperCase() === 'PARTIALLY_PAID' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 
+                                               'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                             {(bill.status || 'Open').replace('_', ' ')}
+                                         </span>
                                         <ChevronRight size={14} className={`transition-all duration-300 ${selectedBillId === bill.id ? 'translate-x-0 opacity-100 text-blue-500' : '-translate-x-2 opacity-0 text-slate-200'}`} />
                                     </div>
                                     

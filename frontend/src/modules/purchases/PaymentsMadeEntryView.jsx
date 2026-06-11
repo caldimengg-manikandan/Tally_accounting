@@ -6,10 +6,12 @@ import {
   ChevronRight, PanelRightClose, PanelRight, HelpCircle
 } from 'lucide-react';
 import { purchaseAPI, ledgerAPI, paymentMadeAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const PaymentsMadeEntryView = ({ companyId }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { addNotification } = useNotificationStore();
   const { id } = useParams();
   const isEditMode = !!id;
   const editAllocationsRef = useRef(null); // stores edit-mode allocations until bills are set
@@ -103,7 +105,7 @@ const PaymentsMadeEntryView = ({ companyId }) => {
         })
         .catch(err => {
           console.error('Failed to load payment', err);
-          alert('Unable to load payment for editing');
+          addNotification('Unable to load payment for editing', 'error');
         });
     }
   }, [id]);
@@ -345,12 +347,12 @@ const PaymentsMadeEntryView = ({ companyId }) => {
   const handleSave = async (status = 'Paid') => {
     const selectedPaidThroughName = getSelectedPaidThroughName();
     if (!formData.vendorId || !formData.paymentMade || !formData.paidThroughId) {
-      alert("Please ensure Vendor, Payment Made, and Paid Through fields are filled.");
+      addNotification("Please ensure Vendor, Payment Made, and Paid Through fields are filled.", "warning");
       return;
     }
 
     if (activeTab === 'Vendor Advance' && !formData.depositToId) {
-      alert("Please ensure the Deposit To field is filled.");
+      addNotification("Please ensure the Deposit To field is filled.", "warning");
       return;
     }
 
@@ -391,7 +393,7 @@ const PaymentsMadeEntryView = ({ companyId }) => {
       }
     } catch (err) {
       console.error("Save failed:", err);
-      alert("Failed to save payment: " + (err.response?.data?.error || err.message));
+      addNotification("Failed to save payment: " + (err.response?.data?.error || err.message), "error");
     } finally {
       setIsSaving(false);
     }

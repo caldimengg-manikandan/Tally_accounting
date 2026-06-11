@@ -9,6 +9,7 @@ import {
 import { purchaseAPI, companyAPI } from '../../services/api';
 import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
 import ConfirmModal from '../../components/ConfirmModal';
+import useNotificationStore from '../../store/notificationStore';
 
 const PurchaseOrdersView = ({ companyId }) => {
   const { id } = useParams();
@@ -24,6 +25,8 @@ const PurchaseOrdersView = ({ companyId }) => {
       return () => clearTimeout(timer);
     }
   }, [toastMessage]);
+
+  const { addNotification } = useNotificationStore();
 
   const currentUserEmail = useMemo(() => {
     try {
@@ -177,7 +180,7 @@ const PurchaseOrdersView = ({ companyId }) => {
       // Update local state
       setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'issued' } : o));
     } catch (err) {
-      alert("Failed to mark order as Issued");
+      addNotification("Failed to mark order as Issued", "error");
     } finally {
       setActionLoading(false);
     }
@@ -200,7 +203,7 @@ const PurchaseOrdersView = ({ companyId }) => {
       setIsDeleteModalOpen(false);
       setDeleteId(null);
     } catch (err) {
-      alert("Failed to delete purchase order");
+      addNotification("Failed to delete purchase order", "error");
     }
   };
 
@@ -761,6 +764,29 @@ const PurchaseOrdersView = ({ companyId }) => {
               </div>
             </div>
             
+            {/* Email Modal */}
+            <PurchaseOrderEmailModal 
+              isOpen={isEmailModalOpen}
+              onClose={() => setIsEmailModalOpen(false)}
+              vendor={selectedVendor}
+              poData={{
+                id: selectedOrder.id,
+                poNumber: selectedOrder.orderNumber,
+                date: selectedOrder.date,
+                companyId: selectedOrder.CompanyId
+              }}
+              totals={{
+                total: parseFloat(selectedOrder.totalAmount || 0)
+              }}
+              companyName={currentCompany?.name || ''}
+              onSent={() => {
+                addNotification("Purchase order email sent successfully!", "success");
+                if (selectedOrder.status === 'Draft') {
+                  setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'Sent' } : o));
+                }
+                setIsEmailModalOpen(false);
+              }}
+            />
           </div>
         ) : (
           

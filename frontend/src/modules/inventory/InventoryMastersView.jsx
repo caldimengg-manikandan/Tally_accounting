@@ -4,8 +4,10 @@ import {
   RefreshCcw, Search, ChevronRight, Info, HelpCircle
 } from 'lucide-react';
 import { inventoryAPI } from '../../services/api';
+import useNotificationStore from '../../store/notificationStore';
 
 const InventoryMastersView = () => {
+  const { addNotification } = useNotificationStore();
   const [activeTab, setActiveTab] = useState('groups'); // 'groups' | 'categories' | 'units' | 'godowns'
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -105,7 +107,7 @@ const InventoryMastersView = () => {
       setDeleteTargetId(null);
       fetchData();
     } catch (err) {
-      alert('Delete failed: ' + (err.response?.data?.error || err.message));
+      addNotification('Delete failed: ' + (err.response?.data?.error || err.message), 'error');
     }
   };
 
@@ -147,7 +149,7 @@ const InventoryMastersView = () => {
       setShowDrawer(false);
       fetchData();
     } catch (err) {
-      alert('Save failed: ' + (err.response?.data?.error || err.message));
+      addNotification('Save failed: ' + (err.response?.data?.error || err.message), 'error');
     }
   };
 
