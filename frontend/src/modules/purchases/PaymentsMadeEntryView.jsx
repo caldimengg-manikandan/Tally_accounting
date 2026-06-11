@@ -903,10 +903,12 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                     {billingAddr ? (
                        <div className="text-[12.5px] text-slate-700 leading-relaxed font-medium">
                           {billingAddr.attention && <p className="font-bold text-slate-800">{billingAddr.attention}</p>}
-                          {billingAddr.address1 && <p>{billingAddr.address1}</p>}
-                          {billingAddr.address2 && <p>{billingAddr.address2}</p>}
+                          {(billingAddr.street1 || billingAddr.address1) && <p>{billingAddr.street1 || billingAddr.address1}</p>}
+                          {(billingAddr.street2 || billingAddr.address2) && <p>{billingAddr.street2 || billingAddr.address2}</p>}
                           <p>{[billingAddr.city, billingAddr.state, billingAddr.country].filter(Boolean).join(', ')}</p>
-                          {billingAddr.zip && <p className="text-slate-500 text-[11px]">Zip: {billingAddr.zip}</p>}
+                          {(billingAddr.zip || billingAddr.pinCode || billingAddr.zipCode) && (
+                             <p className="text-slate-500 text-[11px]">Pin/Zip: {billingAddr.zip || billingAddr.pinCode || billingAddr.zipCode}</p>
+                          )}
                        </div>
                     ) : (
                        <p className="text-[12px] text-slate-400 italic font-medium">No address specified.</p>

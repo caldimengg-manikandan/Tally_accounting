@@ -99,6 +99,7 @@ const VendorDetailView = ({ companyId }) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
+  const [editingContactIndex, setEditingContactIndex] = useState(null);
   const [contactForm, setContactForm] = useState({
     salutation: 'Salutation',
     firstName: '',
@@ -262,7 +263,12 @@ const VendorDetailView = ({ companyId }) => {
         } catch(e) {}
       }
       
-      const updatedContacts = [...existingContacts, newContact];
+      let updatedContacts = [...existingContacts];
+      if (editingContactIndex !== null) {
+        updatedContacts[editingContactIndex] = newContact;
+      } else {
+        updatedContacts.push(newContact);
+      }
       
       await ledgerAPI.update(vendor.id, {
         ...vendor,
@@ -276,6 +282,7 @@ const VendorDetailView = ({ companyId }) => {
       ));
       
       setIsAddContactModalOpen(false);
+      setEditingContactIndex(null);
       setContactForm({
         salutation: 'Salutation',
         firstName: '',
@@ -288,6 +295,66 @@ const VendorDetailView = ({ companyId }) => {
       });
     } catch (err) {
       addNotification('Failed to add contact', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditContact = (idx) => {
+    let list = vendor.contacts || [];
+    if (list.length === 0 && vendor.contactPersonsJson) {
+      try { list = JSON.parse(vendor.contactPersonsJson); } catch(e) {}
+    }
+    const contact = list[idx];
+    if (contact) {
+      let salutation = 'Salutation';
+      let firstName = '';
+      let lastName = '';
+      if (contact.name) {
+        const parts = contact.name.split(' ');
+        if (parts[0] && parts[0].includes('.')) {
+          salutation = parts[0];
+          firstName = parts[1] || '';
+          lastName = parts.slice(2).join(' ');
+        } else {
+          firstName = parts[0] || '';
+          lastName = parts.slice(1).join(' ');
+        }
+      }
+      setContactForm({
+        salutation,
+        firstName,
+        lastName,
+        email: contact.email || '',
+        workPhoneCode: '+91',
+        workPhone: contact.phone || '',
+        mobileCode: '+91',
+        mobile: contact.mobile || ''
+      });
+      setEditingContactIndex(idx);
+      setIsAddContactModalOpen(true);
+    }
+  };
+
+  const handleDeleteContact = async (idx) => {
+    if (!window.confirm("Are you sure you want to delete this contact?")) return;
+    try {
+      setLoading(true);
+      let list = vendor.contacts || [];
+      if (list.length === 0 && vendor.contactPersonsJson) {
+        try { list = JSON.parse(vendor.contactPersonsJson); } catch(e) {}
+      }
+      const updatedContacts = list.filter((_, i) => i !== idx);
+      await ledgerAPI.update(vendor.id, {
+        ...vendor,
+        contactPersonsJson: JSON.stringify(updatedContacts)
+      });
+      addNotification('Contact deleted successfully.', 'success');
+      setAllLedgers(prev => prev.map(v => 
+        v.id === vendor.id ? { ...v, contacts: updatedContacts, contactPersonsJson: JSON.stringify(updatedContacts) } : v
+      ));
+    } catch (err) {
+      addNotification('Failed to delete contact', 'error');
     } finally {
       setLoading(false);
     }
@@ -1206,8 +1273,12 @@ const VendorDetailView = ({ companyId }) => {
                          addNotification({ message: 'Portal invitation sent successfully!', type: 'success' });
                        }}
                        onAddContact={() => {
+                         setContactForm({ salutation: 'Salutation', firstName: '', lastName: '', email: '', workPhoneCode: '+91', workPhone: '', mobileCode: '+91', mobile: '' });
+                         setEditingContactIndex(null);
                          setIsAddContactModalOpen(true);
                        }}
+                       onEditContact={handleEditContact}
+                       onDeleteContact={handleDeleteContact}
                        onSettingsClick={() => {
                          setIsSettingsOpen(!isSettingsOpen);
                        }}

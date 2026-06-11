@@ -146,11 +146,14 @@ exports.sendEmail = async (req, res) => {
     const userPass = process.env.SMTP_PASS || process.env.MAIL_PASS;
     const fromEmail = userEmail || 'contact@induspvtltd.in';
 
+    const bodyText = typeof body === 'string' ? body : String(body || '');
+
     const mailOptions = {
       from: `"Indus Pvt Ltd" <${fromEmail}>`,
       to: finalToEmail,
       subject: subject || `Quote ${quote.quoteNumber} from Indus Pvt Ltd`,
-      html: body,
+      text: bodyText,
+      html: bodyText.replace(/\n/g, '<br/>'),
       attachments: [{ filename: `${quote.quoteNumber}.pdf`, content: pdfBuffer }]
     };
 

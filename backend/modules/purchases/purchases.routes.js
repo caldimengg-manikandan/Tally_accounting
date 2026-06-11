@@ -14,10 +14,12 @@ router.get('/vendors/:companyId', purchasesController.getVendors);
 
 // Purchase Orders
 router.get('/orders/next-number/:companyId', purchasesController.getNextOrderNumber);
+router.get('/orders/:id/pdf-preview', purchasesController.getPurchaseOrderPdfPreview);
 router.get('/orders/:companyId', purchasesController.getOrders);
 router.post('/orders', purchasesController.createOrder);
 router.put('/orders/:id', purchasesController.updateOrder);
 router.delete('/orders/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), purchasesController.deleteOrder);
+
 
 // Bills
 router.get('/bills/:companyId', purchasesController.getBills);

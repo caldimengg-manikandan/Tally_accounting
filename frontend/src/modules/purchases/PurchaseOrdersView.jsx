@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Plus, Trash2, ShoppingBag, Edit, ChevronDown, Search, Filter, MoreHorizontal,
   Clock, CheckCircle2, XCircle, Send, Paperclip, Mail, Printer, Download,
@@ -14,6 +14,18 @@ import useNotificationStore from '../../store/notificationStore';
 const PurchaseOrdersView = ({ companyId }) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [toastMessage, setToastMessage] = useState(location.state?.successMessage || null);
+
+  useEffect(() => {
+    if (toastMessage) {
+      window.history.replaceState({}, document.title);
+      const timer = setTimeout(() => setToastMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
   const { addNotification } = useNotificationStore();
 
   const currentUserEmail = useMemo(() => {
@@ -34,7 +46,6 @@ const PurchaseOrdersView = ({ companyId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modals & Action State
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [showPDFView, setShowPDFView] = useState(true);
@@ -150,7 +161,7 @@ const PurchaseOrdersView = ({ companyId }) => {
   // Filter & Search Logic
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
-      const matchesStatus = filterStatus === 'All' || order.status === filterStatus;
+      const matchesStatus = filterStatus === 'All' || String(order.status).toLowerCase() === String(filterStatus).toLowerCase();
       const orderNo = (order.orderNumber || '').toLowerCase();
       const vendorName = (order.Ledger?.name || '').toLowerCase();
       const notes = (order.notes || '').toLowerCase();
@@ -165,9 +176,9 @@ const PurchaseOrdersView = ({ companyId }) => {
     if (!selectedOrder) return;
     setActionLoading(true);
     try {
-      await purchaseAPI.updateOrder(selectedOrder.id, { status: 'Sent' });
+      await purchaseAPI.updateOrder(selectedOrder.id, { status: 'issued' });
       // Update local state
-      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'Sent' } : o));
+      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'issued' } : o));
     } catch (err) {
       addNotification("Failed to mark order as Issued", "error");
     } finally {
@@ -198,12 +209,34 @@ const PurchaseOrdersView = ({ companyId }) => {
 
   // Utility to determine badge style
   const getStatusStyle = (status) => {
-    switch (status) {
-      case 'Draft': return 'bg-slate-100 text-slate-600 border-slate-200';
-      case 'Sent': return 'bg-blue-50 text-blue-600 border-blue-100';
-      case 'Received': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-      case 'Cancelled': return 'bg-red-50 text-red-600 border-red-100';
+    const s = String(status || '').toLowerCase();
+    switch (s) {
+      case 'draft': return 'bg-slate-100 text-slate-600 border-slate-200';
+      case 'issued': return 'bg-blue-50 text-blue-600 border-blue-100';
+      case 'partially_received': return 'bg-orange-50 text-orange-600 border-orange-100';
+      case 'received': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+      case 'cancelled': return 'bg-red-50 text-red-600 border-red-100';
       default: return 'bg-slate-100 text-slate-600 border-slate-200';
+    }
+  };
+
+  const getBilledStatusStyle = (status) => {
+    const s = String(status || '').toLowerCase();
+    switch (s) {
+      case 'yet_to_be_billed': return 'bg-slate-100 text-slate-600 border-slate-200';
+      case 'partially_billed': return 'bg-amber-50 text-amber-600 border-amber-100';
+      case 'billed': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+      default: return 'bg-slate-100 text-slate-600 border-slate-200';
+    }
+  };
+
+  const getBilledStatusLabel = (status) => {
+    const s = String(status || '').toLowerCase();
+    switch (s) {
+      case 'yet_to_be_billed': return 'YET TO BE BILLED';
+      case 'partially_billed': return 'PARTIALLY BILLED';
+      case 'billed': return 'BILLED';
+      default: return String(status || '').replace(/_/g, ' ').toUpperCase() || 'YET TO BE BILLED';
     }
   };
 
@@ -228,6 +261,15 @@ const PurchaseOrdersView = ({ companyId }) => {
   return (
     <div className="bg-slate-50/50 min-h-[calc(100vh-80px)] flex flex-col relative overflow-hidden">
       
+      {/* SUCCESS TOAST BANNER */}
+      {toastMessage && (
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 mt-4 z-[999] bg-slate-900 text-white px-6 py-2.5 rounded-full shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 no-print">
+          <div className="bg-emerald-500 rounded-full p-0.5">
+            <CheckCircle2 size={16} className="text-white" />
+          </div>
+          <span className="text-[13px] font-medium tracking-wide">{toastMessage}</span>
+        </div>
+      )}
       {/* Dynamic Printing Style overrides */}
       <style>{`
         @media print {
@@ -419,7 +461,7 @@ const PurchaseOrdersView = ({ companyId }) => {
 
                 {/* Send Email */}
                 <button 
-                  onClick={() => setIsEmailModalOpen(true)}
+                  onClick={() => navigate(`/purchase-orders/${selectedOrder.id}/email`)}
                   className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded text-[13px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
                 >
                   <Mail size={14} className="text-slate-500" />
@@ -436,16 +478,27 @@ const PurchaseOrdersView = ({ companyId }) => {
                 </button>
 
                 {/* Mark as Issued */}
-                {selectedOrder.status === 'Draft' && (
-                  <button 
-                    onClick={handleMarkAsIssued}
-                    disabled={actionLoading}
-                    className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded text-[13px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-                  >
-                    {actionLoading ? <Loader2 size={14} className="animate-spin text-slate-500" /> : <CheckCircle2 size={14} className="text-emerald-500" />}
-                    <span>Mark as Issued</span>
-                  </button>
-                )}
+                 {selectedOrder.status?.toLowerCase() === 'draft' && (
+                   <button 
+                     onClick={handleMarkAsIssued}
+                     disabled={actionLoading}
+                     className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded text-[13px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                   >
+                     {actionLoading ? <Loader2 size={14} className="animate-spin text-slate-500" /> : <CheckCircle2 size={14} className="text-emerald-500" />}
+                     <span>Mark as Issued</span>
+                   </button>
+                 )}
+
+                 {/* Convert to Bill */}
+                 {selectedOrder.status?.toLowerCase() === 'issued' && selectedOrder.billed_status?.toLowerCase() !== 'billed' && (
+                   <button 
+                     onClick={() => navigate(`/bills/new?poId=${selectedOrder.id}`)}
+                     className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[13px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                   >
+                     <Link size={14} className="text-white" />
+                     <span>Convert to Bill</span>
+                   </button>
+                 )}
                 
                 {/* Delete */}
                 <button 
@@ -462,7 +515,7 @@ const PurchaseOrdersView = ({ companyId }) => {
             <div className="flex-1 overflow-y-auto p-8 bg-slate-100/50 flex flex-col items-center">
               
               {/* WHAT'S NEXT Banner */}
-              {selectedOrder.status === 'Draft' && (
+              {selectedOrder.status?.toLowerCase() === 'draft' && (
                 <div className="no-print w-full max-w-[800px] mb-6 bg-[#f4f7fe] border border-blue-150 rounded-xl p-5 flex items-center justify-between animate-in fade-in duration-300 shadow-sm">
                   <div className="flex items-center gap-3">
                     <Sparkles size={20} className="text-blue-500" />
@@ -473,7 +526,7 @@ const PurchaseOrdersView = ({ companyId }) => {
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={() => setIsEmailModalOpen(true)}
+                      onClick={() => navigate(`/purchase-orders/${selectedOrder.id}/email`)}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-[12px] transition-all"
                     >
                       Send Purchase Order
@@ -506,7 +559,7 @@ const PurchaseOrdersView = ({ companyId }) => {
               <div className={`pdf-preview-paper bg-white w-full max-w-[800px] min-h-[1050px] shadow-lg border border-slate-200/80 p-12 relative overflow-hidden flex flex-col justify-between ${showPDFView ? '' : 'hidden'}`}>
                 
                 {/* Diagonal Ribbon for Draft POs */}
-                {selectedOrder.status === 'Draft' && (
+                {selectedOrder.status?.toLowerCase() === 'draft' && (
                   <div className="ribbon-wrapper">
                     <div className="ribbon">Draft</div>
                   </div>
@@ -544,9 +597,9 @@ const PurchaseOrdersView = ({ companyId }) => {
                           <>
                             {vendorBillingAddress.attention && <p className="font-medium">{vendorBillingAddress.attention}</p>}
                             <p className="font-semibold text-slate-700">{vendorBillingAddress.street1 || vendorBillingAddress.address1 || ''}</p>
-                            {vendorBillingAddress.street2 && <p className="font-semibold text-slate-700">{vendorBillingAddress.street2}</p>}
+                            {(vendorBillingAddress.street2 || vendorBillingAddress.address2) && <p className="font-semibold text-slate-700">{vendorBillingAddress.street2 || vendorBillingAddress.address2}</p>}
                             <p className="font-semibold text-slate-700">
-                              {[vendorBillingAddress.city, vendorBillingAddress.state, vendorBillingAddress.zipCode || vendorBillingAddress.pincode].filter(Boolean).join(', ')}
+                              {[vendorBillingAddress.city, vendorBillingAddress.state, vendorBillingAddress.pinCode || vendorBillingAddress.zipCode || vendorBillingAddress.zip || vendorBillingAddress.pincode].filter(Boolean).join(', ')}
                             </p>
                             <p className="font-semibold text-slate-700">{vendorBillingAddress.country || 'India'}</p>
                           </>
@@ -731,6 +784,7 @@ const PurchaseOrdersView = ({ companyId }) => {
                 if (selectedOrder.status === 'Draft') {
                   setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'Sent' } : o));
                 }
+                setIsEmailModalOpen(false);
               }}
             />
           </div>
@@ -800,9 +854,17 @@ const PurchaseOrdersView = ({ companyId }) => {
                           <td className="px-4 py-3 border-r border-slate-100/60 text-blue-600 font-bold hover:underline">{order.orderNumber}</td>
                           <td className="px-4 py-3 border-r border-slate-100/60 text-slate-500">{order.reference || '—'}</td>
                           <td className="px-4 py-3 border-r border-slate-100/60 text-slate-800">{order.Ledger?.name || '—'}</td>
-                          <td className="px-4 py-3 border-r border-slate-100/60 text-slate-700 uppercase">{order.status}</td>
-                          <td className="px-4 py-3 border-r border-slate-100/60 text-slate-500">—</td>
-                          <td className="px-4 py-3 border-r border-slate-100/60 text-right font-bold text-slate-900">₹ {parseFloat(order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                           <td className="px-4 py-3 border-r border-slate-100/60">
+                             <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border ${getStatusStyle(order.status)}`}>
+                               {order.status}
+                             </span>
+                           </td>
+                           <td className="px-4 py-3 border-r border-slate-100/60">
+                             <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider border ${getBilledStatusStyle(order.billed_status)}`}>
+                               {getBilledStatusLabel(order.billed_status)}
+                             </span>
+                           </td>
+                           <td className="px-4 py-3 border-r border-slate-100/60 text-right font-bold text-slate-900">₹ {parseFloat(order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                           <td className="px-4 py-3 text-slate-600 relative group">
                             <span>{formatDate(order.deliveryDate)}</span>
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white border border-slate-200 px-1 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
@@ -859,6 +921,8 @@ const PurchaseOrdersView = ({ companyId }) => {
           </div>
         )}
       </div>
+
+
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal 

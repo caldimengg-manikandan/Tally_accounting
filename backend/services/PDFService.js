@@ -335,6 +335,277 @@ class PDFService {
             doc.end();
         });
     }
+
+    static async generatePurchaseOrder(order, items, company, vendor) {
+        return new Promise((resolve, reject) => {
+            const doc = new PDFDocument({ margin: 40, size: 'A4' });
+            let buffers = [];
+            doc.on('data', buffers.push.bind(buffers));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+            doc.on('error', reject);
+
+            // ─── HEADER ──────────────────────────────────────────────────
+            doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold')
+               .text(company?.name || 'Our Company', 40, 40);
+            
+            let companyInfoY = 56;
+            doc.fontSize(9).font('Helvetica').fillColor('#444444');
+            if (company?.state) {
+                doc.text(company.state, 40, companyInfoY);
+                companyInfoY += 12;
+            }
+            if (company?.location) {
+                doc.text(company.location, 40, companyInfoY);
+                companyInfoY += 12;
+            }
+            if (company?.phone) {
+                doc.text(company.phone, 40, companyInfoY);
+                companyInfoY += 12;
+            }
+            if (company?.email) {
+                doc.text(company.email, 40, companyInfoY);
+                companyInfoY += 12;
+            }
+
+            // Right side: TITLE
+            doc.fontSize(22).font('Helvetica-Bold').fillColor('#000000')
+               .text('PURCHASE ORDER', 250, 40, { width: 305, align: 'right' });
+
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333')
+               .text(`# ${order.orderNumber || order.poNumber || 'PENDING'}`, 250, 66, { width: 305, align: 'right' });
+
+            // ─── ADDRESSES & DATES SECTION ────────────────────────────────
+            const addressY = 130;
+            
+            // 1. Vendor Address
+            doc.fillColor('#555555').fontSize(9).font('Helvetica-Bold')
+               .text('Vendor Address', 40, addressY);
+            
+            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+               .text(vendor?.name || order.vendorName || 'Vendor', 40, addressY + 13);
+            
+            // Build vendor address lines
+            const vendorLines = [];
+            const rawAddr = vendor?.billingAddressJson || vendor?.billingAddress || vendor?.address;
+            if (rawAddr) {
+                try {
+                    const parsed = typeof rawAddr === 'string' && (rawAddr.startsWith('{') || rawAddr.startsWith('[')) ? JSON.parse(rawAddr) : rawAddr;
+                    if (parsed && typeof parsed === 'object') {
+                        if (parsed.attention) vendorLines.push(parsed.attention);
+                        const street = [parsed.street1 || parsed.address1, parsed.street2 || parsed.address2].filter(Boolean).join(', ');
+                        if (street) vendorLines.push(street);
+                        const cityStatePin = [parsed.city, parsed.state, parsed.pinCode || parsed.zip || parsed.zipCode || parsed.pincode].filter(Boolean).join(', ');
+                        if (cityStatePin) vendorLines.push(cityStatePin);
+                        if (parsed.country) vendorLines.push(parsed.country);
+                        if (parsed.phone) vendorLines.push(parsed.phone);
+                    } else if (typeof rawAddr === 'string') {
+                        vendorLines.push(rawAddr);
+                    }
+                } catch (e) {
+                    if (typeof rawAddr === 'string') vendorLines.push(rawAddr);
+                }
+            }
+            
+            // Date formatting helper to prevent timezone / local offset issues
+            const formatDate = (dateVal) => {
+                if (!dateVal) return '—';
+                try {
+                    if (typeof dateVal === 'string') {
+                        const match = dateVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                        if (match) {
+                            return `${match[3]}/${match[2]}/${match[1]}`;
+                        }
+                    }
+                    const d = new Date(dateVal);
+                    if (isNaN(d.getTime())) return '—';
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    return `${day}/${month}/${year}`;
+                } catch (e) {
+                    return '—';
+                }
+            };
+
+            doc.font('Helvetica').fontSize(9).fillColor('#444444');
+            doc.x = 40;
+            doc.y = addressY + 26;
+            vendorLines.forEach(line => {
+                doc.text(line, { width: 170 });
+            });
+            let currentVendorY = doc.y;
+
+            // 2. Deliver To Address
+            doc.fillColor('#555555').fontSize(9).font('Helvetica-Bold')
+               .text('Deliver To', 220, addressY);
+
+            // Build delivery address lines
+            const deliveryLines = [];
+            let parsedDelivery = null;
+            try {
+                if (order.deliveryAddressDataJson) {
+                    parsedDelivery = JSON.parse(order.deliveryAddressDataJson);
+                }
+            } catch (e) {}
+
+            const isEmptyDelivery = !parsedDelivery || (!parsedDelivery.street1 && !parsedDelivery.city && !parsedDelivery.attention);
+            if ((order.deliveryAddress === 'Organization' || !order.deliveryAddress) && isEmptyDelivery && company) {
+                parsedDelivery = {
+                    attention: company.name || '',
+                    street1: company.street1 || '',
+                    street2: company.street2 || '',
+                    city: company.city || '',
+                    state: company.state || '',
+                    zip: company.pincode || '',
+                    country: company.location || 'India',
+                    phone: company.phone || ''
+                };
+            }
+
+            if (parsedDelivery) {
+                if (parsedDelivery.attention) deliveryLines.push(parsedDelivery.attention);
+                const street = [parsedDelivery.street1, parsedDelivery.street2].filter(Boolean).join(', ');
+                if (street) deliveryLines.push(street);
+                const cityStateZip = [parsedDelivery.city, parsedDelivery.state, parsedDelivery.zip || parsedDelivery.pincode || parsedDelivery.zipCode].filter(Boolean).join(', ');
+                if (cityStateZip) deliveryLines.push(cityStateZip);
+                if (parsedDelivery.country) deliveryLines.push(parsedDelivery.country);
+                if (parsedDelivery.phone) deliveryLines.push(parsedDelivery.phone);
+            } else if (order.deliveryAddressText) {
+                deliveryLines.push(order.deliveryAddressText);
+            }
+            if (company?.email && !deliveryLines.includes(company.email)) {
+                deliveryLines.push(company.email);
+            }
+
+            doc.font('Helvetica').fontSize(9).fillColor('#444444');
+            doc.x = 220;
+            doc.y = addressY + 13;
+            deliveryLines.forEach(line => {
+                doc.text(line, { width: 180 });
+            });
+            let currentDeliveryY = doc.y;
+
+            // 3. Date / Order Info
+            const orderDate = formatDate(order.date);
+            const deliveryDate = formatDate(order.deliveryDate);
+            
+            let dateY = addressY + 50;
+            doc.fillColor('#555555').fontSize(9).font('Helvetica');
+            
+            doc.text('Date :', 410, dateY);
+            doc.fillColor('#000000').font('Helvetica').text(orderDate, 470, dateY, { width: 85, align: 'right' });
+            dateY += 15;
+
+            doc.fillColor('#555555').text('Delivery Date :', 410, dateY);
+            doc.fillColor('#000000').text(deliveryDate, 470, dateY, { width: 85, align: 'right' });
+            dateY += 15;
+
+            if (order.paymentTerms) {
+                doc.fillColor('#555555').text('Payment Terms :', 410, dateY);
+                doc.fillColor('#000000').text(order.paymentTerms, 470, dateY, { width: 85, align: 'right' });
+                dateY += 15;
+            }
+            if (order.reference) {
+                doc.fillColor('#555555').text('Reference :', 410, dateY);
+                doc.fillColor('#000000').text(order.reference, 470, dateY, { width: 85, align: 'right' });
+                dateY += 15;
+            }
+
+            // ─── HORIZONTAL DIVIDER ───────────────────────────────────────
+            const maxAddressEnd = Math.max(currentVendorY, currentDeliveryY, dateY) + 15;
+            const dividerY = Math.max(maxAddressEnd, 235);
+            doc.moveTo(40, dividerY).lineTo(555, dividerY).strokeColor('#dddddd').lineWidth(0.5).stroke();
+
+            // ─── TABLE HEADER ─────────────────────────────────────────────
+            const tableTop = dividerY + 15;
+            doc.rect(40, tableTop, 515, 20).fill('#3c3c3c');
+            doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold')
+               .text('#', 50, tableTop + 6)
+               .text('Item & Description', 80, tableTop + 6)
+               .text('Qty', 340, tableTop + 6, { width: 50, align: 'right' })
+               .text('Rate', 400, tableTop + 6, { width: 70, align: 'right' })
+               .text('Amount', 480, tableTop + 6, { width: 75, align: 'right' });
+
+            // ─── TABLE ROWS ───────────────────────────────────────────────
+            let currentY = tableTop + 20;
+            let parsedItems = items;
+            if (!Array.isArray(items)) {
+                try { parsedItems = JSON.parse(items || '[]'); } catch (e) { parsedItems = []; }
+            }
+            doc.fillColor('#000000').font('Helvetica');
+
+            parsedItems.forEach((item, idx) => {
+                const itemName = item.itemDetails || item.itemName || item.name || item.description || 'Item';
+                const qty = parseFloat(item.quantity || item.qty || 0);
+                const rate = parseFloat(item.rate || item.unitPrice || 0);
+                const amount = parseFloat(item.amount || item.total || (qty * rate) || 0);
+
+                // Estimate row height
+                const textHeight = Math.max(20, Math.ceil(itemName.length / 45) * 12 + 8);
+                
+                doc.fillColor('#000000').fontSize(9)
+                   .text(idx + 1, 50, currentY + 6)
+                   .text(itemName, 80, currentY + 6, { width: 250 })
+                   .text(qty.toFixed(2), 340, currentY + 6, { width: 50, align: 'right' })
+                   .text(rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }), 400, currentY + 6, { width: 70, align: 'right' })
+                   .text(amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }), 480, currentY + 6, { width: 75, align: 'right' });
+
+                currentY += textHeight;
+                doc.moveTo(40, currentY).lineTo(555, currentY).strokeColor('#eeeeee').lineWidth(0.5).stroke();
+            });
+
+            if (parsedItems.length === 0) {
+                doc.fillColor('#888888').fontSize(9).font('Helvetica-Oblique')
+                   .text('No items found.', 80, currentY + 8);
+                currentY += 24;
+            }
+
+            // ─── TOTALS ───────────────────────────────────────────────────
+            const totalStart = currentY + 15;
+            const subtotal = parseFloat(order.subtotal || order.subTotal || 0);
+            const discountAmt = parseFloat(order.discountAmount || 0);
+            const taxAmt = parseFloat(order.taxAmount || 0);
+            const adjustment = parseFloat(order.adjustment || 0);
+            const total = parseFloat(order.totalAmount || 0);
+
+            let totY = totalStart;
+            
+            // Sub Total
+            doc.fillColor('#555555').fontSize(9).font('Helvetica')
+               .text('Sub Total', 380, totY)
+               .fillColor('#000000')
+               .text(`${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+            totY += 15;
+
+            if (discountAmt > 0) {
+                doc.fillColor('#555555').text(`Discount`, 380, totY).fillColor('#000000').text(`-${discountAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+                totY += 15;
+            }
+            if (taxAmt > 0) {
+                doc.fillColor('#555555').text(`Tax`, 380, totY).fillColor('#000000').text(`${taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+                totY += 15;
+            }
+            if (adjustment !== 0) {
+                doc.fillColor('#555555').text('Adjustment', 380, totY).fillColor('#000000').text(`${adjustment.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+                totY += 15;
+            }
+
+            doc.moveTo(380, totY).lineTo(555, totY).strokeColor('#dddddd').lineWidth(0.5).stroke();
+            totY += 5;
+            
+            // Grand Total
+            doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold')
+               .text('Total', 380, totY)
+               .text(`₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+
+            // ─── AUTHORIZED SIGNATURE ─────────────────────────────────────
+            const sigY = 700;
+            doc.fillColor('#000000').fontSize(9).font('Helvetica')
+               .text('Authorized Signature ____________________', 40, sigY);
+
+            doc.end();
+        });
+    }
 }
 
 module.exports = PDFService;

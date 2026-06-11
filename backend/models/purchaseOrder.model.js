@@ -29,8 +29,12 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0.00
     },
     status: {
-      type: DataTypes.ENUM('Draft', 'Sent', 'Received', 'Billed', 'Cancelled'),
-      defaultValue: 'Draft'
+      type: DataTypes.ENUM('draft', 'issued', 'partially_received', 'received', 'cancelled'),
+      defaultValue: 'draft'
+    },
+    billed_status: {
+      type: DataTypes.ENUM('yet_to_be_billed', 'partially_billed', 'billed'),
+      defaultValue: 'yet_to_be_billed'
     },
     notes: {
       type: DataTypes.TEXT,
@@ -111,6 +115,10 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0.00
     },
     terms: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    emailContactsJson: {
       type: DataTypes.TEXT,
       allowNull: true
     },

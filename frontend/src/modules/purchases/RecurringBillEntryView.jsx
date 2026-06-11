@@ -130,11 +130,18 @@ const RecurringBillEntryView = ({ companyId }) => {
   const getVendorBillingAddress = (vendor) => {
     if (!vendor) return null;
     try {
-      const addr = vendor.billingAddressJson ? JSON.parse(vendor.billingAddressJson) 
-                 : vendor.billingAddress ? JSON.parse(vendor.billingAddress) 
-                 : null;
-      return addr;
-    } catch { return null; }
+      if (vendor.billingAddressJson) return JSON.parse(vendor.billingAddressJson);
+      if (vendor.billingAddress) {
+        if (vendor.billingAddress.trim().startsWith('{')) {
+          return JSON.parse(vendor.billingAddress);
+        } else {
+          return { street1: vendor.billingAddress };
+        }
+      }
+      return null;
+    } catch { 
+      return vendor.billingAddress ? { street1: vendor.billingAddress } : null;
+    }
   };
   
   // â”€â”€ Context Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -439,13 +446,13 @@ const RecurringBillEntryView = ({ companyId }) => {
                       return (
                          <div className="mt-2 max-w-[400px]">
                             <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">BILLING ADDRESS</div>
-                            {addr && (addr.street1 || addr.city) ? (
+                            {addr && (addr.street1 || addr.address1 || addr.city) ? (
                                <div className="text-[12px] text-slate-600 leading-relaxed">
                                   {addr.attention && <div>{addr.attention}</div>}
-                                  {addr.street1 && <div>{addr.street1}</div>}
-                                  {addr.street2 && <div>{addr.street2}</div>}
-                                  {(addr.city || addr.state || addr.pinCode) && (
-                                     <div>{[addr.city, addr.state, addr.pinCode].filter(Boolean).join(', ')}</div>
+                                  {(addr.street1 || addr.address1) && <div>{addr.street1 || addr.address1}</div>}
+                                  {(addr.street2 || addr.address2) && <div>{addr.street2 || addr.address2}</div>}
+                                  {(addr.city || addr.state || addr.pinCode || addr.zipCode || addr.zip) && (
+                                     <div>{[addr.city, addr.state, addr.pinCode || addr.zipCode || addr.zip].filter(Boolean).join(', ')}</div>
                                   )}
                                   {addr.country && <div>{addr.country}</div>}
                                </div>
@@ -1157,16 +1164,16 @@ const RecurringBillEntryView = ({ companyId }) => {
                                    Address
                                    <ChevronDown size={14} className={`text-slate-400 transition-transform ${isAddressExpanded ? 'rotate-180' : ''}`} />
                                 </button>
-                                {isAddressExpanded && addr && (addr.street1 || addr.city) && (
+                                {isAddressExpanded && addr && (addr.street1 || addr.address1 || addr.city) && (
                                    <div className="px-4 pb-4 text-[13px] text-slate-600 leading-relaxed space-y-0.5">
                                       {addr.attention && <div className="font-medium text-slate-700">{addr.attention}</div>}
-                                      {addr.street1 && <div>{addr.street1}</div>}
-                                      {addr.street2 && <div>{addr.street2}</div>}
-                                      {(addr.city || addr.state || addr.pinCode) && <div>{[addr.city, addr.state, addr.pinCode].filter(Boolean).join(', ')}</div>}
+                                      {(addr.street1 || addr.address1) && <div>{addr.street1 || addr.address1}</div>}
+                                      {(addr.street2 || addr.address2) && <div>{addr.street2 || addr.address2}</div>}
+                                      {(addr.city || addr.state || addr.pinCode || addr.zipCode || addr.zip) && <div>{[addr.city, addr.state, addr.pinCode || addr.zipCode || addr.zip].filter(Boolean).join(', ')}</div>}
                                       {addr.country && <div>{addr.country}</div>}
                                    </div>
                                 )}
-                                {isAddressExpanded && (!addr || (!addr.street1 && !addr.city)) && (
+                                {isAddressExpanded && (!addr || (!addr.street1 && !addr.address1 && !addr.city)) && (
                                    <div className="px-4 pb-4 text-[12px] text-slate-400 italic">No address on file.</div>
                                 )}
                              </div>

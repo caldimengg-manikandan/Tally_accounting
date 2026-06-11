@@ -57,6 +57,7 @@ import PurchaseOrdersView from './modules/purchases/PurchaseOrdersView';
 import ExpenseEntryView from './modules/purchases/ExpenseEntryView';
 import RecurringExpenseEntryView from './modules/purchases/RecurringExpenseEntryView';
 import PurchaseOrderEntryView from './modules/purchases/PurchaseOrderEntryView';
+import PurchaseOrderEmailView from './modules/purchases/PurchaseOrderEmailView';
 import BillEntryView from './modules/purchases/BillEntryView';
 import RecurringBillEntryView from './modules/purchases/RecurringBillEntryView';
 import RecurringBillsView from './modules/purchases/RecurringBillsView';
@@ -758,6 +759,7 @@ function AuthenticatedApp() {
       <Route path="/recurring-bills/new" element={shell(RecurringBillEntryView)} />
       <Route path="/purchase-orders"     element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/view/:id" element={shell(PurchaseOrdersView)} />
+      <Route path="/purchase-orders/:id/email" element={shell(PurchaseOrderEmailView)} />
       <Route path="/purchase-orders/new" element={shell(PurchaseOrderEntryView)} />
       <Route path="/purchase-orders/edit/:id" element={shell(PurchaseOrderEntryView)} />
       <Route path="/payments-made"       element={shell(PaymentsMadeListView)} />

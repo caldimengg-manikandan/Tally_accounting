@@ -58,6 +58,39 @@ const getDueDate = (bill) => {
   return null;
 };
 
+const formatBillingAddress = (addressField) => {
+  if (!addressField) return '';
+  const trimmed = addressField.trim();
+  if (trimmed.startsWith('{')) {
+    try {
+      const addr = JSON.parse(trimmed);
+      const parts = [];
+      if (addr.attention) parts.push(addr.attention);
+      
+      const streetLine = addr.street1 || addr.address1;
+      if (streetLine) parts.push(streetLine);
+      
+      const streetLine2 = addr.street2 || addr.address2;
+      if (streetLine2) parts.push(streetLine2);
+      
+      const cityStateZip = [
+        addr.city,
+        addr.state,
+        addr.pinCode || addr.zipCode || addr.zip || addr.pincode
+      ].filter(Boolean).join(', ');
+      
+      if (cityStateZip) parts.push(cityStateZip);
+      if (addr.country) parts.push(addr.country);
+      
+      return parts.join('\n');
+    } catch (e) {
+      console.error("Failed to parse address JSON:", e);
+      return addressField;
+    }
+  }
+  return addressField;
+};
+
 const BillsView = ({ companyId }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -171,7 +204,8 @@ const BillsView = ({ companyId }) => {
       currentY += 5;
     }
     
-    const vendorAddress = billDetail?.Ledger?.billingAddress || billDetail?.Ledger?.address || '';
+    const rawAddress = billDetail?.Ledger?.billingAddress || billDetail?.Ledger?.address || '';
+    const vendorAddress = formatBillingAddress(rawAddress);
     if (vendorAddress) {
       const splitAddress = doc.splitTextToSize(vendorAddress, 85);
       splitAddress.forEach((line) => {
@@ -701,68 +735,121 @@ const BillsView = ({ companyId }) => {
                                     <div className="p-8 flex-1 bg-[#fcfdfe] space-y-12">
                                         {/* --- REAL BILL PREVIEW CARD --- */}
                                         <div className="max-w-4xl mx-auto bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden animate-in zoom-in-95 duration-500">
-                                            {/* Status Ribbon */}
-                                            <div className="h-1.5 w-full bg-blue-600" />
-                                            
-                                            <div className="p-12">
-                                                <div className="flex justify-between items-start border-b border-slate-100 pb-10 mb-10">
-                                                    <div className="space-y-4">
-                                                        {companyDetail?.logoUrl ? (
-                                                            <img src={companyDetail.logoUrl} alt="Logo" className="w-16 h-16 object-contain rounded-xl shadow-sm" />
-                                                        ) : (
-                                                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-[24px]">
-                                                                {companyDetail?.name?.charAt(0) || 'B'}
-                                                            </div>
-                                                        )}
-                                                        <div>
-                                                            <h3 className="text-[18px] font-bold text-slate-800">{companyDetail?.name || 'Company Name'}</h3>
-                                                            <p className="text-[13px] text-slate-400 font-medium">{companyDetail?.city || 'City'}, {companyDetail?.state || 'State'}</p>
-                                                            <p className="text-[12px] text-slate-400 font-medium">{companyDetail?.location || 'India'}</p>
-                                                            {companyDetail?.email && <p className="text-[12px] text-blue-500 font-medium mt-1">{companyDetail.email}</p>}
-                                                        </div>
+
+                                            <div className="p-10 relative">
+                                                {/* Blue "Open" status ribbon (top-left corner) */}
+                                                <div className="absolute top-0 left-0 overflow-hidden w-[90px] h-[90px] pointer-events-none">
+                                                    <div
+                                                        className="absolute bg-blue-600 text-white text-[10px] font-bold tracking-widest uppercase text-center shadow"
+                                                        style={{ width: '120px', top: '22px', left: '-30px', transform: 'rotate(-45deg)', padding: '4px 0' }}
+                                                    >
+                                                        {(() => {
+                                                            try {
+                                                                const s = billDetail?.status || (billDetail?.narration && JSON.parse(billDetail.narration)?.status) || 'open';
+                                                                return String(s).toUpperCase();
+                                                            } catch { return 'OPEN'; }
+                                                        })()}
+                                                    </div>
+                                                </div>
+
+                                                {/* Top Header: Company Left | BILL + Bill# + Balance Due Right */}
+                                                <div className="flex justify-between items-start pb-8 mb-8 border-b border-slate-100">
+                                                    <div>
+                                                        <h3 className="text-[17px] font-bold text-slate-900">{companyDetail?.name || 'Company Name'}</h3>
+                                                        {companyDetail?.state && <p className="text-[12px] text-slate-500 mt-0.5">{companyDetail.state}</p>}
+                                                        <p className="text-[12px] text-slate-500">{companyDetail?.location || 'India'}</p>
+                                                        {companyDetail?.phone && <p className="text-[12px] text-slate-500">{companyDetail.phone}</p>}
+                                                        {companyDetail?.email && <p className="text-[12px] text-blue-500 font-medium">{companyDetail.email}</p>}
                                                     </div>
                                                     <div className="text-right">
-                                                        <h1 className="text-[42px] font-bold text-slate-200 tracking-[0.1em] uppercase leading-none mb-6">Bill</h1>
-                                                        
-                                                        <div className="space-y-1 mt-4">
-                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill Date:</span><span className="font-bold text-slate-800">{billDetail?.date ? new Date(billDetail.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
-                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Bill#:</span><span className="font-bold text-slate-800">{billDetail?.voucherNumber}</span></div>
-                                                            <div className="text-[14px] flex justify-end gap-3"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Due Date:</span><span className="font-bold text-slate-800">{getDueDate(billDetail) ? new Date(getDueDate(billDetail)).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric'}) : '---'}</span></div>
-                                                            <div className="text-[14px] flex justify-end gap-3 pt-2 text-blue-600"><span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Balance Due:</span><span className="font-bold">₹{getDerivedTotal(billDetail).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
-                                                        </div>
+                                                        <h1 className="text-[38px] font-bold text-slate-800 tracking-widest leading-none">BILL</h1>
+                                                        <p className="text-[13px] text-slate-500 mt-1">Bill# {billDetail?.voucherNumber}</p>
+                                                        <p className="text-[22px] font-bold text-blue-600 mt-2">
+                                                            ₹{getDerivedTotal(billDetail).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-400 uppercase tracking-wider">Balance Due</p>
                                                     </div>
                                                 </div>
 
-                                                <div className="mb-12">
-                                                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Bill From</h4>
-                                                    <h3 className="text-[16px] font-bold text-blue-600">{billDetail?.Ledger?.name || 'Vendor Name'}</h3>
-                                                    {billDetail?.Ledger?.gstNumber && (
-                                                        <p className="text-[12px] text-slate-700 mt-1 font-bold">GSTIN: {billDetail.Ledger.gstNumber}</p>
-                                                    )}
-                                                    {(billDetail?.Ledger?.billingAddress || billDetail?.Ledger?.address) && (
-                                                        <p className="text-[12px] text-slate-500 mt-1.5 font-medium whitespace-pre-line leading-relaxed max-w-[280px]">
-                                                            {billDetail.Ledger.billingAddress || billDetail.Ledger.address}
-                                                        </p>
-                                                    )}
-                                                    {(billDetail?.Ledger?.email || billDetail?.Ledger?.phone || billDetail?.Ledger?.mobile) && (
-                                                        <div className="text-[12px] text-slate-400 font-semibold mt-2 space-y-0.5">
-                                                            {billDetail?.Ledger?.email && <p>Email: {billDetail.Ledger.email}</p>}
-                                                            {(billDetail?.Ledger?.phone || billDetail?.Ledger?.mobile) && (
-                                                                <p>Phone: {billDetail.Ledger.phone || billDetail.Ledger.mobile}</p>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    <p className="text-[12px] text-slate-400 mt-3 font-medium italic">Reference#: {billDetail?.referenceNumber || '---'}</p>
+                                                {/* Two-column: Bill From (left) | Order/Date/Terms (right) */}
+                                                <div className="flex gap-12 mb-10">
+                                                    <div className="flex-1">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Bill From</p>
+                                                        {(() => {
+                                                            // Vendor ledger is on the CREDIT transaction (vendor payable side)
+                                                            const vendorLedger =
+                                                                billDetail?.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.Ledger
+                                                                || billDetail?.Ledger  // fallback from list view
+                                                                || null;
+
+                                                            const rawAddress = vendorLedger?.billingAddress || vendorLedger?.address || '';
+                                                            const formattedAddress = formatBillingAddress(rawAddress);
+
+                                                            return (
+                                                                <>
+                                                                    <h3 className="text-[15px] font-bold text-blue-600">
+                                                                        {vendorLedger?.name || '—'}
+                                                                    </h3>
+                                                                    {formattedAddress && (
+                                                                        <p className="text-[12px] text-slate-500 mt-1.5 font-medium whitespace-pre-line leading-relaxed max-w-[280px]">
+                                                                            {formattedAddress}
+                                                                        </p>
+                                                                    )}
+                                                                    {vendorLedger?.gstNumber && (
+                                                                        <p className="text-[11px] text-slate-600 font-bold mt-1">GSTIN: {vendorLedger.gstNumber}</p>
+                                                                    )}
+                                                                    {(vendorLedger?.email || vendorLedger?.phone || vendorLedger?.mobile) && (
+                                                                        <div className="text-[12px] text-slate-400 mt-1.5 space-y-0.5">
+                                                                            {vendorLedger?.email && <p>{vendorLedger.email}</p>}
+                                                                            {(vendorLedger?.phone || vendorLedger?.mobile) && <p>{vendorLedger.phone || vendorLedger.mobile}</p>}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                    <div className="w-[220px] space-y-2">
+                                                        {(() => {
+                                                            let ref = '', paymentTerms = '';
+                                                            try { const p = JSON.parse(billDetail?.narration || '{}'); ref = p.reference || ''; paymentTerms = p.paymentTerms || ''; } catch {}
+                                                            return (
+                                                                <>
+                                                                    {ref && (
+                                                                        <div className="flex justify-between text-[12px]">
+                                                                            <span className="text-slate-400 font-semibold">Order Number</span>
+                                                                            <span className="font-bold text-slate-700">{ref}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex justify-between text-[12px]">
+                                                                        <span className="text-slate-400 font-semibold">Bill Date</span>
+                                                                        <span className="font-bold text-slate-700">{billDetail?.date ? new Date(billDetail.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '---'}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-[12px]">
+                                                                        <span className="text-slate-400 font-semibold">Due Date</span>
+                                                                        <span className="font-bold text-slate-700">{getDueDate(billDetail) ? new Date(getDueDate(billDetail)).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '---'}</span>
+                                                                    </div>
+                                                                    {paymentTerms && (
+                                                                        <div className="flex justify-between text-[12px]">
+                                                                            <span className="text-slate-400 font-semibold">Terms</span>
+                                                                            <span className="font-bold text-slate-700">{paymentTerms}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
                                                 </div>
 
-                                                <table className="w-full mb-12 border-collapse">
+
+                                                {/* Items Table */}
+                                                <table className="w-full mb-8 border-collapse">
                                                     <thead>
-                                                        <tr className="border-b-2 border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                            <th className="py-4 text-left w-12 text-slate-800">#</th>
-                                                            <th className="py-4 text-left">Item & Description</th>
-                                                            <th className="py-4 text-right px-4">Qty</th>
-                                                            <th className="py-4 text-right px-4">Rate</th>
-                                                            <th className="py-4 text-right">Amount</th>
+                                                        <tr className="bg-slate-800 text-white text-[10px] font-bold uppercase tracking-widest">
+                                                            <th className="py-3 px-4 text-left w-10">#</th>
+                                                            <th className="py-3 px-4 text-left">Item &amp; Description</th>
+                                                            <th className="py-3 px-4 text-right">Qty</th>
+                                                            <th className="py-3 px-4 text-right">Rate</th>
+                                                            <th className="py-3 px-4 text-right">Amount</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="text-[13px] font-bold text-slate-700">
@@ -791,15 +878,15 @@ const BillsView = ({ companyId }) => {
 
                                                             if (items && items.length > 0) {
                                                                 return items.map((item, idx) => (
-                                                                    <tr key={idx} className="border-b border-slate-50">
-                                                                        <td className="py-5 text-slate-400">{idx + 1}</td>
-                                                                        <td className="py-5">
+                                                                    <tr key={idx} className="border-b border-slate-100">
+                                                                        <td className="py-4 px-4 text-slate-400">{idx + 1}</td>
+                                                                        <td className="py-4 px-4">
                                                                             <span className="text-slate-900 font-bold truncate max-w-[300px] inline-block">{item.itemName || item.name || 'Service/Item'}</span>
                                                                             {item.notes && <p className="text-[11px] text-slate-400 font-medium mt-0.5">{item.notes}</p>}
                                                                         </td>
-                                                                        <td className="py-5 text-right px-4 tabular-nums">{item.quantity || item.qty || '1.00'}</td>
-                                                                        <td className="py-5 text-right px-4 tabular-nums">₹{parseFloat(item.rate || 0).toLocaleString()}</td>
-                                                                        <td className="py-5 text-right font-bold tabular-nums">₹{parseFloat(item.amount || item.total || 0).toLocaleString()}</td>
+                                                                        <td className="py-4 px-4 text-right tabular-nums">{item.quantity || item.qty || '1.00'}</td>
+                                                                        <td className="py-4 px-4 text-right tabular-nums">₹{parseFloat(item.rate || 0).toLocaleString()}</td>
+                                                                        <td className="py-4 px-4 text-right font-bold tabular-nums">₹{parseFloat(item.amount || item.total || 0).toLocaleString()}</td>
                                                                     </tr>
                                                                 ));
                                                             }
@@ -808,41 +895,40 @@ const BillsView = ({ companyId }) => {
                                                             const derivedTotal = getDerivedTotal(billDetail);
 
                                                             return (
-                                                                <tr className="border-b border-slate-50">
-                                                                    <td className="py-5 text-slate-400">1</td>
-                                                                    <td className="py-5">
+                                                                <tr className="border-b border-slate-100">
+                                                                    <td className="py-4 px-4 text-slate-400">1</td>
+                                                                    <td className="py-4 px-4">
                                                                         <span className="text-slate-900 font-bold">{billDetail?.Ledger?.name || 'Vendor'} Service/Supply</span>
                                                                         <p className="text-[11px] text-slate-400 mt-1">{(() => { try { const p = JSON.parse(billDetail?.narration || '{}'); return p.notes || 'No details'; } catch(e) { return billDetail?.narration?.split('||')[0] || 'No details'; } })()}</p>
                                                                     </td>
-                                                                    <td className="py-5 text-right px-4">1.00</td>
-                                                                    <td className="py-5 text-right px-4">₹{parseFloat(derivedTotal).toLocaleString()}</td>
-                                                                    <td className="py-5 text-right font-bold">₹{parseFloat(derivedTotal).toLocaleString()}</td>
+                                                                    <td className="py-4 px-4 text-right">1.00</td>
+                                                                    <td className="py-4 px-4 text-right">₹{parseFloat(derivedTotal).toLocaleString()}</td>
+                                                                    <td className="py-4 px-4 text-right font-bold">₹{parseFloat(derivedTotal).toLocaleString()}</td>
                                                                 </tr>
                                                             );
                                                         })()}
                                                     </tbody>
                                                 </table>
 
-                                                <div className="flex justify-between items-end border-t border-slate-100 pt-10">
-                                                    <div className="space-y-4">
-                                                        <div className="text-[12px] flex items-center gap-2"><span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Terms:</span><span className="font-bold text-slate-600 italic">Net 30 Days</span></div>
-                                                        <div className="text-[12px] flex items-center gap-2 max-w-sm">
-                                                            <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Narration:</span>
-                                                            <span className="text-slate-600 text-[11px] truncate">{(() => { try { const p = JSON.parse(billDetail?.narration || '{}'); return p.notes || p.reference || '---'; } catch(e) { return billDetail?.narration?.split('||')[0] || '---'; } })()}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="w-[320px] space-y-4">
+                                                {/* Totals Footer */}
+                                                <div className="flex justify-end mb-10">
+                                                    <div className="w-[280px] space-y-0">
                                                         {(() => {
                                                             const derivedTotal = getDerivedTotal(billDetail);
+                                                            const balanceDue = parseFloat(billDetail?.balanceDue ?? derivedTotal);
                                                             return (
                                                                 <>
-                                                                    <div className="flex justify-between text-[13px] py-1 border-b border-slate-50">
-                                                                        <span className="text-slate-400 font-bold">Sub Total</span>
-                                                                        <span className="font-bold text-slate-800 tabular-nums">₹{parseFloat(derivedTotal).toLocaleString()}</span>
+                                                                    <div className="flex justify-between text-[13px] py-2 border-b border-slate-100">
+                                                                        <span className="text-slate-500 font-medium">Sub Total</span>
+                                                                        <span className="font-bold text-slate-800 tabular-nums">₹{parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                                                     </div>
-                                                                    <div className="flex justify-between text-[18px] py-3 bg-slate-900 text-white px-6 rounded-xl items-center shadow-lg shadow-slate-200">
-                                                                        <span className="font-bold tracking-tight uppercase text-[12px]">Total Amount</span>
-                                                                        <span className="font-bold tabular-nums">₹{parseFloat(derivedTotal).toLocaleString()}</span>
+                                                                    <div className="flex justify-between text-[13px] py-2 border-b border-slate-100">
+                                                                        <span className="text-slate-500 font-medium">Total</span>
+                                                                        <span className="font-bold text-slate-800 tabular-nums">₹{parseFloat(derivedTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between text-[14px] py-3 bg-slate-100 px-4 rounded-lg mt-2 items-center">
+                                                                        <span className="font-bold text-slate-700 uppercase text-[11px] tracking-wider">Balance Due</span>
+                                                                        <span className="font-bold text-slate-900 tabular-nums text-[16px]">₹{balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                                                     </div>
                                                                 </>
                                                             );

@@ -7,11 +7,11 @@ import { purchaseAPI, ledgerAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
 
 const STATUS_COLORS = {
-  Draft: 'bg-slate-100 text-slate-600',
-  Sent: 'bg-blue-100 text-blue-700',
-  Received: 'bg-emerald-100 text-emerald-700',
-  Billed: 'bg-purple-100 text-purple-700',
-  Cancelled: 'bg-red-100 text-red-600',
+  draft: 'bg-slate-100 text-slate-600',
+  issued: 'bg-blue-100 text-blue-700',
+  partially_received: 'bg-orange-100 text-orange-700',
+  received: 'bg-emerald-100 text-emerald-700',
+  cancelled: 'bg-red-100 text-red-600',
 };
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -26,7 +26,7 @@ export default function PurchaseOrderView() {
   const [filterStatus, setFilterStatus] = useState('');
   const [form, setForm] = useState({
     supplierLedgerId: '', date: new Date().toISOString().split('T')[0],
-    orderNumber: `PO-${Date.now()}`, totalAmount: '', notes: '', status: 'Draft'
+    orderNumber: `PO-${Date.now()}`, totalAmount: '', notes: '', status: 'draft'
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -58,7 +58,7 @@ export default function PurchaseOrderView() {
     try {
       await purchaseAPI.create({ ...form, companyId });
       setShowModal(false);
-      setForm({ supplierLedgerId: '', date: new Date().toISOString().split('T')[0], orderNumber: `PO-${Date.now()}`, totalAmount: '', notes: '', status: 'Draft' });
+      setForm({ supplierLedgerId: '', date: new Date().toISOString().split('T')[0], orderNumber: `PO-${Date.now()}`, totalAmount: '', notes: '', status: 'draft' });
       fetchOrders();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create order');
@@ -86,7 +86,7 @@ export default function PurchaseOrderView() {
     } catch {}
   };
 
-  const filtered = filterStatus ? orders.filter(o => o.status === filterStatus) : orders;
+  const filtered = filterStatus ? orders.filter(o => String(o.status).toLowerCase() === filterStatus.toLowerCase()) : orders;
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto space-y-8 animate-fade-in">
@@ -114,23 +114,23 @@ export default function PurchaseOrderView() {
 
       {/* Filter bar */}
       <div className="flex gap-3 flex-wrap">
-        {['', 'Draft', 'Sent', 'Received', 'Billed', 'Cancelled'].map(s => (
+        {['', 'draft', 'issued', 'partially_received', 'received', 'cancelled'].map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all
               ${filterStatus === s ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'}`}>
-            {s || 'All'}
+            {s ? s.replace(/_/g, ' ') : 'All'}
           </button>
         ))}
       </div>
 
       {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {['Draft', 'Sent', 'Received', 'Billed'].map(s => {
-          const count = orders.filter(o => o.status === s).length;
-          const total = orders.filter(o => o.status === s).reduce((a, o) => a + parseFloat(o.totalAmount || 0), 0);
+        {['draft', 'issued', 'received', 'cancelled'].map(s => {
+          const count = orders.filter(o => String(o.status).toLowerCase() === s).length;
+          const total = orders.filter(o => String(o.status).toLowerCase() === s).reduce((a, o) => a + parseFloat(o.totalAmount || 0), 0);
           return (
             <div key={s} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{s}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{s.replace(/_/g, ' ')}</p>
               <p className="text-xl font-bold text-slate-900">{count} orders</p>
               <p className="text-xs font-bold text-slate-400 mt-1">{fmt(total)}</p>
             </div>
@@ -165,9 +165,9 @@ export default function PurchaseOrderView() {
                 <td className="px-8 py-4">
                   <select value={order.status}
                     onChange={e => handleStatusChange(order.id, e.target.value)}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border-0 outline-none cursor-pointer ${STATUS_COLORS[order.status] || ''}`}>
-                    {['Draft', 'Sent', 'Received', 'Billed', 'Cancelled'].map(s => (
-                      <option key={s} value={s}>{s}</option>
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wide border-0 outline-none cursor-pointer ${STATUS_COLORS[String(order.status).toLowerCase()] || ''}`}>
+                    {['draft', 'issued', 'partially_received', 'received', 'cancelled'].map(s => (
+                      <option key={s} value={s}>{s.replace(/_/g, ' ').toUpperCase()}</option>
                     ))}
                   </select>
                 </td>
@@ -230,7 +230,7 @@ export default function PurchaseOrderView() {
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Status</label>
                 <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
                   className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-orange-400 transition-all appearance-none">
-                  {['Draft', 'Sent', 'Received', 'Billed', 'Cancelled'].map(s => <option key={s}>{s}</option>)}
+                  {['draft', 'issued', 'partially_received', 'received', 'cancelled'].map(s => <option key={s} value={s}>{s.replace(/_/g, ' ').toUpperCase()}</option>)}
                 </select>
               </div>
               <div>

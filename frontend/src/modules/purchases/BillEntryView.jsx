@@ -10,7 +10,6 @@ import {
   Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
 import { purchaseAPI, inventoryAPI, companyAPI, projectAPI, voucherAPI } from '../../services/api';
-import useNotificationStore from '../../store/notificationStore';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
 import VendorForm from './VendorForm';
@@ -21,7 +20,6 @@ import { COUNTRY_CODES } from '../../utils/countryCodes';
 import { getGstinStateName } from '../../utils/gstinUtils';
 
 const BillEntryView = ({ companyId }) => {
-  const { addNotification } = useNotificationStore();
   const navigate = useNavigate();
   const { id } = useParams();
   const { search } = useLocation();
@@ -124,6 +122,60 @@ const BillEntryView = ({ companyId }) => {
   const [tdsSearchTerm, setTdsSearchTerm] = useState('');
   const tdsDropdownRef = useRef(null);
 
+  const [poDeliveryDate, setPoDeliveryDate] = useState('');
+  const [isDataLoaded, setIsDataLoaded] = useState(!id);
+  const hasCalculatedRef = useRef(false);
+
+  const calculateDueDate = (billDateStr, paymentTerm) => {
+    if (!billDateStr) return '';
+    const date = new Date(billDateStr);
+    if (isNaN(date.getTime())) return '';
+    
+    if (paymentTerm === 'Due on Receipt') {
+      return billDateStr;
+    } else if (paymentTerm === 'Net 15') {
+      date.setDate(date.getDate() + 15);
+    } else if (paymentTerm === 'Net 30') {
+      date.setDate(date.getDate() + 30);
+    } else if (paymentTerm === 'Net 45') {
+      date.setDate(date.getDate() + 45);
+    } else if (paymentTerm === 'Net 60') {
+      date.setDate(date.getDate() + 60);
+    } else if (paymentTerm === 'Due end of the month') {
+      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      return endOfMonth.toISOString().split('T')[0];
+    } else if (paymentTerm === 'Due end of next month') {
+      const endOfNextMonth = new Date(date.getFullYear(), date.getMonth() + 2, 0);
+      return endOfNextMonth.toISOString().split('T')[0];
+    } else {
+      const match = paymentTerm && paymentTerm.match(/\d+/);
+      if (match) {
+        const days = parseInt(match[0], 10);
+        date.setDate(date.getDate() + days);
+      } else {
+        return billDateStr;
+      }
+    }
+    return date.toISOString().split('T')[0];
+  };
+
+  useEffect(() => {
+    if (!isDataLoaded) return;
+
+    if (id && !hasCalculatedRef.current) {
+      hasCalculatedRef.current = true;
+      return;
+    }
+
+    if (formData.date && formData.paymentTerms) {
+      const computed = calculateDueDate(formData.date, formData.paymentTerms);
+      setFormData(prev => ({
+        ...prev,
+        deliveryDate: computed
+      }));
+    }
+  }, [formData.date, formData.paymentTerms, isDataLoaded, id]);
+
   const tdsOptions = [
     { name: 'Commission or Brokerage', rate: 2 },
     { name: 'Dividend', rate: 10 },
@@ -137,15 +189,21 @@ const BillEntryView = ({ companyId }) => {
     opt.name.toLowerCase().includes(tdsSearchTerm.toLowerCase())
   );
 
-  // Helper to parse vendor's billing address
   const getVendorBillingAddress = (vendor) => {
     if (!vendor) return null;
     try {
-      const addr = vendor.billingAddressJson ? JSON.parse(vendor.billingAddressJson) 
-                 : vendor.billingAddress ? JSON.parse(vendor.billingAddress) 
-                 : null;
-      return addr;
-    } catch { return null; }
+      if (vendor.billingAddressJson) return JSON.parse(vendor.billingAddressJson);
+      if (vendor.billingAddress) {
+        if (vendor.billingAddress.trim().startsWith('{')) {
+          return JSON.parse(vendor.billingAddress);
+        } else {
+          return { street1: vendor.billingAddress };
+        }
+      }
+      return null;
+    } catch { 
+      return vendor.billingAddress ? { street1: vendor.billingAddress } : null;
+    }
   };
   
   // ── Context Data ────────────────────────────────────────────────
@@ -172,12 +230,66 @@ const BillEntryView = ({ companyId }) => {
         setFormData(prev => ({
           ...prev,
           vendorId: match.id,
-          vendorName: match.name
+          vendorName: match.name,
+          paymentTerms: match.paymentTerms || 'Due on Receipt'
         }));
         setSelectedVendor(match);
       }
     }
   }, [queryVendorId, vendors]);
+
+  // Load Purchase Order details if converting from a PO
+  useEffect(() => {
+    const poId = queryParams.get('poId');
+    if (poId && companyId && vendors.length > 0) {
+      purchaseAPI.getOrders(companyId).then(res => {
+        const po = (res.data || []).find(o => String(o.id) === String(poId));
+        if (po) {
+          const vendor = vendors.find(v => String(v.id) === String(po.LedgerId));
+          setSelectedVendor(vendor || null);
+          
+          let poItems = [];
+          try {
+            poItems = po.itemsJson ? JSON.parse(po.itemsJson) : [];
+          } catch (e) {
+            console.error('Failed to parse PO itemsJson:', e);
+          }
+
+          setPoDeliveryDate(po.deliveryDate || '');
+
+          setFormData(prev => ({
+            ...prev,
+            vendorId: po.LedgerId || '',
+            vendorName: vendor?.name || '',
+            reference: po.orderNumber || '', // PO Number links to Bill's reference (Order Number)
+            projectId: po.ProjectId || '',
+            notes: po.notes || '',
+            discount: parseFloat(po.discount || 0),
+            adjustment: parseFloat(po.adjustment || 0),
+            taxRate: parseFloat(po.taxRate || 0),
+            tdsRate: parseFloat(po.tdsRate || 0),
+            tdsName: po.tdsName || '',
+            paymentTerms: vendor?.paymentTerms || 'Due on Receipt'
+          }));
+
+          if (poItems.length > 0) {
+            setItems(poItems.map((item, idx) => ({
+              id: Date.now() + idx,
+              itemName: item.itemName || '',
+              account: item.account || 'Cost of Goods Sold',
+              qty: parseFloat(item.qty || 1),
+              rate: parseFloat(item.rate || 0),
+              amount: parseFloat(item.amount || 0),
+              hsnCode: item.hsnCode || '',
+              gstRate: item.gstRate !== undefined ? item.gstRate : 18
+            })));
+          }
+        }
+      }).catch(err => {
+        console.error('Failed to fetch PO details:', err);
+      });
+    }
+  }, [companyId, queryParams, vendors]);
 
   useEffect(() => {
     if (id && companyId) {
@@ -292,9 +404,11 @@ const BillEntryView = ({ companyId }) => {
               gstRate: item.gstRate !== undefined ? item.gstRate : 18
             })));
           }
+          setIsDataLoaded(true);
         }
       }).catch(err => {
         console.error('Error fetching bill details:', err);
+        setIsDataLoaded(true);
       });
     }
   }, [id, companyId]);
@@ -458,18 +572,26 @@ const BillEntryView = ({ companyId }) => {
     });
   };
 
-  const handleSaveOrder = async (status = 'OPEN', sendEmail = false) => {
+  const handleSaveOrder = async (statusOrSendEmail = 'draft') => {
     if (!formData.vendorId) {
-      addNotification('Please select a vendor', 'warning');
+      alert('Please select a vendor');
       return;
     }
     if (!formData.billNumber || !formData.billNumber.trim()) {
-      addNotification('Please enter a Bill number', 'warning');
+      alert('Please enter a Bill number');
       return;
     }
     if (items.some(item => !item.itemName || item.qty <= 0)) {
-      addNotification('Please ensure all items have a name and quantity', 'warning');
+      alert('Please ensure all items have a name and quantity');
       return;
+    }
+
+    // Determine the save status
+    let billStatus = 'Draft';
+    if (statusOrSendEmail === true || statusOrSendEmail === 'open') {
+      billStatus = 'Open';
+    } else if (statusOrSendEmail === 'sent') {
+      billStatus = 'Sent';
     }
 
     setIsSaving(true);
@@ -487,14 +609,15 @@ const BillEntryView = ({ companyId }) => {
         tdsRate: formData.tdsRate,
         tdsName: formData.tdsName,
         discount: formData.discount,
-        status: status,
+        status: billStatus,
         notes: formData.notes,
         supplierLedgerId: formData.vendorId,
         companyId,
         items,
         projectId: formData.projectId || null,
         dueDate: formData.deliveryDate || '',
-        paymentTerms: formData.paymentTerms || 'Due on Receipt'
+        paymentTerms: formData.paymentTerms || 'Due on Receipt',
+        poId: queryParams.get('poId') || null
       };
 
       const res = id 
@@ -503,16 +626,12 @@ const BillEntryView = ({ companyId }) => {
       const savedData = res.data;
       setSavedPO(savedData);
       
-      if (sendEmail) {
-        setIsEmailModalOpen(true);
-      } else {
-        const targetId = savedData?.id || savedData?.voucher?.id;
-        navigate('/bills', { state: { selectedBillId: targetId } });
-      }
+      const targetId = savedData?.id || savedData?.voucher?.id;
+      navigate('/bills', { state: { selectedBillId: targetId } });
     } catch (err) {
       console.error('Error saving Bill:', err);
       const errorMsg = err.response?.data?.error || err.message || 'Failed to save Bill. Please try again.';
-      addNotification('Error: ' + errorMsg, 'error');
+      alert('Error: ' + errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -592,13 +711,13 @@ const BillEntryView = ({ companyId }) => {
                       return (
                          <div className="mt-2 max-w-[400px]">
                             <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">BILLING ADDRESS</div>
-                            {addr && (addr.street1 || addr.city) ? (
+                            {addr && (addr.street1 || addr.address1 || addr.city) ? (
                                <div className="text-[12px] text-slate-600 leading-relaxed">
                                   {addr.attention && <div>{addr.attention}</div>}
-                                  {addr.street1 && <div>{addr.street1}</div>}
-                                  {addr.street2 && <div>{addr.street2}</div>}
-                                  {(addr.city || addr.state || addr.pinCode) && (
-                                     <div>{[addr.city, addr.state, addr.pinCode].filter(Boolean).join(', ')}</div>
+                                  {(addr.street1 || addr.address1) && <div>{addr.street1 || addr.address1}</div>}
+                                  {(addr.street2 || addr.address2) && <div>{addr.street2 || addr.address2}</div>}
+                                  {(addr.city || addr.state || addr.pinCode || addr.zipCode || addr.zip) && (
+                                     <div>{[addr.city, addr.state, addr.pinCode || addr.zipCode || addr.zip].filter(Boolean).join(', ')}</div>
                                   )}
                                   {addr.country && <div>{addr.country}</div>}
                                </div>
@@ -614,7 +733,12 @@ const BillEntryView = ({ companyId }) => {
                          <div className="max-h-[200px] overflow-y-auto py-1 custom-scrollbar">
                             {filteredVendors.map(vendor => (
                                <div key={vendor.id} onClick={() => {
-                                  setFormData({ ...formData, vendorId: vendor.id, vendorName: vendor.name });
+                                  setFormData({ 
+                                     ...formData, 
+                                     vendorId: vendor.id, 
+                                     vendorName: vendor.name,
+                                     paymentTerms: vendor.paymentTerms || 'Due on Receipt'
+                                  });
                                   setSelectedVendor(vendor);
                                   setVendorSearch('');
                                   setIsVendorDropdownOpen(false);
@@ -780,7 +904,13 @@ const BillEntryView = ({ companyId }) => {
              {/* Summary Calculation Area */}
              <div className="max-w-[1200px] mt-6 flex justify-end">
                 <div className="w-[450px] bg-slate-50 border border-slate-200 rounded-md p-4 space-y-4">
-                   <div className="flex justify-between text-slate-600"><span className="text-[13px]">Sub Total</span><span className="font-medium text-slate-800">{(totals.subtotal).toFixed(2)}</span></div>
+                    <div className="flex justify-between items-start text-slate-700">
+                       <div className="flex flex-col">
+                          <span className="text-[13px] font-bold text-slate-800">Sub Total</span>
+                          <span className="text-[11px] font-bold text-blue-600 mt-0.5">Total Quantity : {items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0)}</span>
+                       </div>
+                       <span className="font-bold text-blue-600 text-[15px]">{(totals.subtotal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
                    <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2">
                          <span className="text-slate-600 text-[13px]">Discount</span>
@@ -867,7 +997,7 @@ const BillEntryView = ({ companyId }) => {
                       <span className="font-medium text-slate-800">{(parseFloat(formData.adjustment || 0)).toFixed(2)}</span>
                    </div>
                    <div className="flex justify-between items-center text-slate-800 pt-3 border-t-2 border-slate-200 mt-2">
-                      <span className="font-bold text-[16px]">Total ( ₹ )</span><span className="font-bold text-[18px]">{(totals.total).toFixed(2)}</span>
+                      <span className="font-bold text-[16px]">Total ( ₹ )</span><span className="font-bold text-[18px]">{(totals.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                    </div>
                 </div>
              </div>
@@ -902,9 +1032,38 @@ const BillEntryView = ({ companyId }) => {
 
        <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-8 z-50">
           <div className="flex items-center gap-3">
-             <button onClick={() => handleSaveOrder('OPEN')} disabled={isSaving} className="px-6 h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors shadow-sm disabled:opacity-50">{isSaving ? 'Saving...' : 'Save as Open'}</button>
-             <button onClick={() => handleSaveOrder('DRAFT')} disabled={isSaving} className="px-6 h-8 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded border border-slate-200 transition-colors shadow-sm disabled:opacity-50">{isSaving ? 'Saving...' : 'Save as Draft'}</button>
-             <button onClick={handleCancel} className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded border border-slate-200 transition-colors">Cancel</button>
+             {id ? (
+               // Edit mode: Save + Cancel
+               <>
+                 <button
+                   onClick={() => handleSaveOrder('open')}
+                   disabled={isSaving}
+                   className="px-5 h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors shadow-sm disabled:opacity-50"
+                 >
+                   {isSaving ? 'Saving...' : 'Save'}
+                 </button>
+                 <button onClick={handleCancel} className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-600 font-semibold rounded border border-slate-300 transition-colors">Cancel</button>
+               </>
+             ) : (
+               // Create mode: Save as Draft + Save as Open + Cancel
+               <>
+                 <button
+                   onClick={() => handleSaveOrder('draft')}
+                   disabled={isSaving}
+                   className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded border border-slate-300 transition-colors shadow-sm disabled:opacity-50"
+                 >
+                   {isSaving ? 'Saving...' : 'Save as Draft'}
+                 </button>
+                 <button
+                   onClick={() => handleSaveOrder('open')}
+                   disabled={isSaving}
+                   className="px-5 h-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors shadow-sm disabled:opacity-50"
+                 >
+                   {isSaving ? 'Saving...' : 'Save as Open'}
+                 </button>
+                 <button onClick={handleCancel} className="px-5 h-8 bg-white hover:bg-slate-50 text-slate-600 font-semibold rounded border border-slate-300 transition-colors">Cancel</button>
+               </>
+             )}
           </div>
        </div>
 

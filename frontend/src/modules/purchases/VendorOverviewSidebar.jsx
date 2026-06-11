@@ -24,13 +24,17 @@ import { getGstinStateName } from '../../utils/gstinUtils';
  * @param {Function} [props.onInvitePortal] - Callback for portal invitation
  * @param {Function} [props.onAddContact] - Callback for adding contact persons
  * @param {Function} [props.onSettingsClick] - Callback for settings gear click
+ * @param {Function} [props.onEditContact] - Callback for editing contact person
+ * @param {Function} [props.onDeleteContact] - Callback for deleting contact person
  */
 const VendorOverviewSidebar = ({
   vendor = {},
   onEditAddress,
   onInvitePortal,
   onAddContact,
-  onSettingsClick
+  onSettingsClick,
+  onEditContact,
+  onDeleteContact
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -42,6 +46,18 @@ const VendorOverviewSidebar = ({
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  const [openContactDropdown, setOpenContactDropdown] = useState(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.contact-dropdown-container')) {
+        setOpenContactDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Collapsible sections state
   const [sections, setSections] = useState({
@@ -88,7 +104,7 @@ const VendorOverviewSidebar = ({
   })();
 
   return (
-    <div className="w-full max-w-[420px] bg-white border border-slate-100 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] text-[14px] text-slate-800 overflow-hidden font-sans select-none">
+    <div className="w-full max-w-[420px] bg-white border border-slate-100 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.02)] text-[14px] text-slate-800 font-sans select-none relative">
       
       {/* ─── HEADER SECTION ─── */}
       <div className="m-4 mb-2 p-5 bg-[#f5f7fc]/90 rounded-2xl border border-slate-100/80">
@@ -408,9 +424,37 @@ const VendorOverviewSidebar = ({
                         )}
                       </div>
                     </div>
-                    <button className="p-1 text-slate-300 hover:text-slate-500 hover:bg-slate-100 rounded transition-all opacity-0 group-hover:opacity-100">
-                      <Settings size={14} className="stroke-[2.5]" />
-                    </button>
+                    <div className="relative contact-dropdown-container">
+                      <button 
+                        onClick={() => setOpenContactDropdown(openContactDropdown === idx ? null : idx)}
+                        className={`p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-all ${openContactDropdown === idx ? 'opacity-100 bg-slate-100 text-slate-600' : 'opacity-0 group-hover:opacity-100'}`}
+                      >
+                        <Settings size={14} className="stroke-[2.5]" />
+                      </button>
+                      
+                      {openContactDropdown === idx && (
+                        <div className="absolute right-0 top-full mt-1 w-28 bg-white rounded-lg shadow-lg shadow-slate-200/50 border border-slate-200 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+                          <button 
+                            className="w-full text-left px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                            onClick={() => {
+                              setOpenContactDropdown(null);
+                              if (onEditContact) onEditContact(idx);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            className="w-full text-left px-3 py-1.5 text-[12px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+                            onClick={() => {
+                              setOpenContactDropdown(null);
+                              if (onDeleteContact) onDeleteContact(idx);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

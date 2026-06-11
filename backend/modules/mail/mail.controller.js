@@ -10,8 +10,9 @@ exports.sendEmail = async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields (toEmail, subject, body, ledgerId, companyId)' });
     }
 
-    // 1. Prepare PDF attachment if it's an Invoice
+    // 1. Prepare PDF attachment based on type
     let attachments = [];
+
     if (type === 'Invoice') {
         const { SalesInvoice, SalesInvoiceItem, Company, Ledger, Item } = require('../../models');
         const PDFService = require('../../services/PDFService');
@@ -34,6 +35,49 @@ exports.sendEmail = async (req, res) => {
             }
         }
     }
+
+    if (type === 'Purchase Order' && req.body.isPdfAttached) {
+        const path = require('path');
+        const fs   = require('fs');
+        const { documentId } = req.body;
+
+        if (documentId) {
+            const filePath = path.join(__dirname, '../../uploads/temp', `po_${documentId}.pdf`);
+
+            // Use cached temp file if it exists, otherwise generate fresh
+            let pdfBuffer;
+            if (fs.existsSync(filePath)) {
+                pdfBuffer = fs.readFileSync(filePath);
+            } else {
+                const { PurchaseOrder, Ledger, Company } = require('../../models');
+                const PDFService = require('../../services/PDFService');
+                const order = await PurchaseOrder.findByPk(documentId, {
+                    include: [{ model: Ledger }, { model: Company }]
+                });
+                if (order) {
+                    const vendor  = order.Ledger  || {};
+                    const company = order.Company || {};
+                    let items = [];
+                    try { items = JSON.parse(order.itemsJson || '[]'); } catch (e) { items = []; }
+                    pdfBuffer = await PDFService.generatePurchaseOrder(order, items, company, vendor);
+                    // Cache it for later
+                    const tempDir = path.dirname(filePath);
+                    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+                    fs.writeFileSync(filePath, pdfBuffer);
+                }
+            }
+
+            if (pdfBuffer) {
+                const { PurchaseOrder } = require('../../models');
+                const order = await PurchaseOrder.findByPk(documentId, { attributes: ['orderNumber'] });
+                attachments.push({
+                    filename: `PurchaseOrder_${order?.orderNumber || documentId}.pdf`,
+                    content: pdfBuffer
+                });
+            }
+        }
+    }
+
 
     // 2. Configure Transport
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -59,12 +103,14 @@ exports.sendEmail = async (req, res) => {
     });
 
     const fromEmail = userEmail;
+    const bodyText = typeof body === 'string' ? body : String(body || '');
 
     const mailOptions = {
       from: fromEmail,
       to: toEmail,
       subject: subject,
-      html: body,
+      text: bodyText,
+      html: bodyText.replace(/\n/g, '<br/>'),
       attachments
     };
 
@@ -99,6 +145,15 @@ exports.sendEmail = async (req, res) => {
         const { documentId } = req.body;
         if (documentId) {
             await SalesInvoice.update({ status: 'Sent' }, { where: { id: documentId } });
+        }
+    }
+
+    // 4. If Purchase Order, update status to issued and billed_status to yet_to_be_billed
+    if (type === 'Purchase Order' && (mailStatus === 'Sent' || mailStatus === 'Sent (Mock)')) {
+        const { PurchaseOrder } = require('../../models');
+        const { documentId } = req.body;
+        if (documentId) {
+            await PurchaseOrder.update({ status: 'issued', billed_status: 'yet_to_be_billed' }, { where: { id: documentId } });
         }
     }
 

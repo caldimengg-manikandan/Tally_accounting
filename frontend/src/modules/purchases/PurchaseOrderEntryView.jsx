@@ -52,6 +52,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     taxRate: 0,
     tdsRate: 0,
     tdsName: '',
+    status: 'Draft',
     tags: [],
     projectId: ''
   });
@@ -108,7 +109,6 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [attachments, setAttachments] = useState([]);
   const [isAttachmentListOpen, setIsAttachmentListOpen] = useState(false);
   const [accountSearchTerm, setAccountSearchTerm] = useState('');
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [savedPO, setSavedPO] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isTDSDropdownOpen, setIsTDSDropdownOpen] = useState(false);
@@ -229,9 +229,18 @@ const PurchaseOrderEntryView = ({ companyId }) => {
             taxRate: parseFloat(order.taxRate || 0),
             tdsRate: parseFloat(order.tdsRate || 0),
             tdsName: order.tdsName || '',
+            status: order.status || 'Draft',
             tags: [],
             projectId: order.ProjectId || ''
           });
+
+          let loadedEmailContacts = [];
+          try {
+            if (order.emailContactsJson) {
+              loadedEmailContacts = JSON.parse(order.emailContactsJson);
+            }
+          } catch(e) {}
+          setSelectedEmailContacts(loadedEmailContacts);
 
           setItems(orderItems);
         }
@@ -464,7 +473,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
         orderNumber: formData.poNumber,
         date: formData.date,
         totalAmount: totals.total,
-        status: sendEmail ? 'Sent' : 'Draft',
+        status: formData.status || 'Draft',
         notes: formData.notes,
         supplierLedgerId: formData.vendorId,
         companyId,
@@ -486,7 +495,8 @@ const PurchaseOrderEntryView = ({ companyId }) => {
         terms: formData.terms,
         tdsRate: parseFloat(formData.tdsRate || 0),
         tdsAmount: parseFloat(totals.tdsAmount || 0),
-        tdsName: formData.tdsName
+        tdsName: formData.tdsName,
+        emailContactsJson: JSON.stringify(selectedEmailContacts)
       };
 
       let res;
@@ -500,7 +510,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
       setSavedPO(savedData);
       
       if (sendEmail) {
-        setIsEmailModalOpen(true);
+        navigate(`/purchase-orders/${savedData.id || id}/email`);
       } else {
         addNotification('Purchase Order saved successfully', 'success');
         navigate(`/purchase-orders/view/${savedData.id || id}`);
@@ -1401,20 +1411,28 @@ const PurchaseOrderEntryView = ({ companyId }) => {
              <button 
                onClick={() => handleSaveOrder(false)}
                disabled={isSaving}
-               className="px-4 h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 text-[13px] shadow-sm"
+               className={`px-4 h-8 font-medium rounded transition-colors disabled:opacity-50 text-[13px] ${
+                 id 
+                   ? 'bg-[#3b82f6] hover:bg-blue-600 text-white' 
+                   : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+               }`}
              >
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving ? 'Saving...' : (id ? 'Save' : 'Save as Draft')}
              </button>
              <button 
                onClick={() => handleSaveOrder(true)}
                disabled={isSaving}
-               className="px-4 h-9 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-lg border border-slate-200 transition-colors disabled:opacity-50 text-[13px] shadow-sm"
+               className={`px-4 h-8 font-medium rounded transition-colors disabled:opacity-50 text-[13px] ${
+                 id 
+                   ? 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200' 
+                   : 'bg-[#3b82f6] hover:bg-blue-600 text-white'
+               }`}
              >
                 Save and Send
              </button>
              <button 
                onClick={() => window.history.back()} 
-               className="px-4 h-9 bg-white hover:bg-slate-50 text-slate-600 font-bold rounded-lg border border-slate-200 transition-colors text-[13px]"
+               className="px-4 h-8 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium rounded border border-slate-200 transition-colors text-[13px]"
              >
                 Cancel
              </button>

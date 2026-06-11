@@ -131,19 +131,67 @@ exports.getNextOrderNumber = async (req, res) => {
     }
 };
 
+// ── PDF Preview ───────────────────────────────────────────────────────────
+exports.getPurchaseOrderPdfPreview = async (req, res) => {
+    const path = require('path');
+    const fs   = require('fs');
+
+    try {
+        const { id } = req.params;
+
+        // Fetch the PO with its vendor (Ledger) and Company
+        const order = await PurchaseOrder.findByPk(id, {
+            include: [
+                { model: Ledger },
+                { model: Company }
+            ]
+        });
+        if (!order) return res.status(404).json({ error: 'Purchase Order not found' });
+
+        // Temp directory for caching PDFs (one per PO)
+        const tempDir = path.join(__dirname, '../../uploads/temp');
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+        const filePath = path.join(tempDir, `po_${id}.pdf`);
+
+        // Re-generate if file doesn't already exist for this PO
+        if (!fs.existsSync(filePath)) {
+            const PDFService = require('../../services/PDFService');
+            const vendor  = order.Ledger  || {};
+            const company = order.Company || {};
+            let items = [];
+            try { items = JSON.parse(order.itemsJson || '[]'); } catch (e) { items = []; }
+
+            const pdfBuffer = await PDFService.generatePurchaseOrder(order, items, company, vendor);
+            fs.writeFileSync(filePath, pdfBuffer);
+        }
+
+        // Stream the file back to the browser as a preview
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="PO_${order.orderNumber || id}.pdf"`);
+        const stream = fs.createReadStream(filePath);
+        stream.pipe(res);
+    } catch (err) {
+        console.error('PDF Preview Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+
 exports.createOrder = async (req, res) => {
   try {
     const { 
       orderNumber, date, totalAmount, status, notes, supplierLedgerId, companyId, projectId,
       reference, deliveryDate, paymentTerms, shipmentPreference, deliveryAddress, deliveryAddressText,
       deliveryAddressDataJson, itemsJson, discount, adjustment, taxRate, subtotal, discountAmount,
-      taxAmount, terms, tdsAmount, tdsRate, tdsName
+      taxAmount, terms, tdsAmount, tdsRate, tdsName, emailContactsJson
     } = req.body;
     const order = await PurchaseOrder.create({
       orderNumber,
       date,
       totalAmount,
-      status,
+      status: (status || 'draft').toLowerCase(),
+      billed_status: req.body.billed_status || 'yet_to_be_billed',
       notes,
       LedgerId: supplierLedgerId,
       CompanyId: companyId,
@@ -165,7 +213,8 @@ exports.createOrder = async (req, res) => {
       terms,
       tdsAmount,
       tdsRate,
-      tdsName
+      tdsName,
+      emailContactsJson
     });
     res.status(201).json(order);
   } catch (err) {
@@ -185,6 +234,15 @@ exports.updateOrder = async (req, res) => {
     }
     
     await order.update(updateData);
+
+    // Delete cached preview PDF if it exists so that it is forced to regenerate
+    const path = require('path');
+    const fs   = require('fs');
+    const filePath = path.join(__dirname, '../../uploads/temp', `po_${id}.pdf`);
+    if (fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch (e) {}
+    }
+
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -512,6 +570,27 @@ exports.createBill = async (req, res) => {
         // Override with user-provided bill number and status
         await voucher.update({ voucherNumber, status: (status || 'OPEN').toUpperCase() });
 
+        // Link with Purchase Order and mark as billed
+        try {
+            const { PurchaseOrder } = require('../../models');
+            let poToUpdate = null;
+            if (req.body.poId) {
+                poToUpdate = await PurchaseOrder.findByPk(req.body.poId);
+            } else if (reference) {
+                poToUpdate = await PurchaseOrder.findOne({
+                    where: {
+                        orderNumber: reference,
+                        CompanyId: companyId
+                    }
+                });
+            }
+            if (poToUpdate) {
+                await poToUpdate.update({ billed_status: 'billed' });
+            }
+        } catch (poErr) {
+            console.error('Failed to update PO billed_status:', poErr);
+        }
+
         // Update inventory stock quantities
         if (items && Array.isArray(items) && items.length > 0) {
             for (const itemData of items) {
@@ -665,6 +744,27 @@ exports.updateBill = async (req, res) => {
                     }
                 }
             }
+        }
+
+        // Link with Purchase Order and mark as billed
+        try {
+            const { PurchaseOrder } = require('../../models');
+            let poToUpdate = null;
+            if (req.body.poId) {
+                poToUpdate = await PurchaseOrder.findByPk(req.body.poId);
+            } else if (reference) {
+                poToUpdate = await PurchaseOrder.findOne({
+                    where: {
+                        orderNumber: reference,
+                        CompanyId: companyId
+                    }
+                });
+            }
+            if (poToUpdate) {
+                await poToUpdate.update({ billed_status: 'billed' });
+            }
+        } catch (poErr) {
+            console.error('Failed to update PO billed_status:', poErr);
         }
 
         res.json(voucher);

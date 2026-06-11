@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   X, Send, Loader2, 
   Bold, Italic, Underline,
   AlignLeft, AlignCenter, AlignRight,
   List, FileText, ChevronDown, 
-  CheckCircle2, Paperclip,
+  CheckCircle2, Paperclip, ExternalLink,
   Image as ImageIcon, Link as LinkIcon,
-  HelpCircle, User, Strikethrough, Undo, Redo
+  HelpCircle, User, Strikethrough, Undo, Redo, PlusCircle
 } from 'lucide-react';
-import { mailAPI } from '../../services/api';
+import { mailAPI, purchaseAPI } from '../../services/api';
 
 const PurchaseOrderEmailModal = ({ 
   isOpen, 
@@ -19,7 +19,8 @@ const PurchaseOrderEmailModal = ({
   attachments = [],
   onSent,
   selectedContacts = [],
-  companyName = ''
+  companyName = '',
+  isFullScreenView = false
 }) => {
 
   // ── Logged-in user ──────────────────────────────────────────────
@@ -52,6 +53,8 @@ const PurchaseOrderEmailModal = ({
   const [showCc, setShowCc]             = useState(false);
   const [showBcc, setShowBcc]           = useState(false);
   const [attachPDF, setAttachPDF]       = useState(true);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [pdfPreviewLoading, setPdfPreviewLoading] = useState(false);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState(null);
 
@@ -86,8 +89,11 @@ Amount       : ${amount}
 
 Please go through it and confirm the order. We look forward to working with you again.
 
-—`;
-  }, [vendor, poData, totals]);
+Regards,
+
+${currentUserName}
+${companyName || 'Our Company'}`;
+  }, [vendor, poData, totals, currentUserName, companyName]);
 
   const [body, setBody] = useState(initialBody);
 
@@ -98,6 +104,26 @@ Please go through it and confirm the order. We look forward to working with you 
       setSubject(`Purchase Order from ${companyName || 'Our Company'} a Purchase Order # ${poData?.poNumber || 'PENDING'}`);
       setBody(initialBody);
       setError(null);
+      // Automatically scroll the main container to the top so the modal is instantly visible
+      const mainEl = document.querySelector('main');
+      if (mainEl) {
+        mainEl.scrollTo({ top: 0, behavior: 'instant' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+      // Pre-generate the PDF preview in the background
+      if (poData?.id) {
+        setPdfPreviewLoading(true);
+        setPdfPreviewUrl(null);
+        purchaseAPI.getPurchaseOrderPdfPreview(poData.id)
+          .then(res => {
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            setPdfPreviewUrl(url);
+          })
+          .catch(() => setPdfPreviewUrl(null))
+          .finally(() => setPdfPreviewLoading(false));
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, vendor, poData, totals, companyName, selectedContacts]);
@@ -129,10 +155,15 @@ Please go through it and confirm the order. We look forward to working with you 
         companyId: poData?.companyId,
         ledgerId: vendor?.id,
         type: 'Purchase Order',
-        referenceId: poData?.id
+        referenceId: poData?.id,
+        documentId: poData?.id,
+        isPdfAttached: attachPDF
       });
-      if (onSent) onSent();
-      onClose();
+      if (onSent) {
+        onSent();
+      } else {
+        onClose();
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to send email');
     } finally {
@@ -141,44 +172,220 @@ Please go through it and confirm the order. We look forward to working with you 
   };
 
   // ── Email chip tag ───────────────────────────────────────────────
-  const EmailChip = ({ name, email, onRemove }) => (
-    <span className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 text-[12px] font-semibold rounded px-2 py-0.5 max-w-[300px]">
-      <User size={11} className="text-blue-400 shrink-0" />
-      <span className="truncate">{name} &lt;{email}&gt;</span>
-      <button type="button" onClick={() => onRemove(email)} className="ml-0.5 text-blue-400 hover:text-red-500 shrink-0">
-        <X size={11} strokeWidth={2.5} />
-      </button>
-    </span>
-  );
+  const EmailChip = ({ name, email, onRemove }) => {
+    const initial = name ? name.charAt(0).toUpperCase() : (email ? email.charAt(0).toUpperCase() : 'U');
+    return (
+      <span className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 text-slate-700 text-[13px] font-medium rounded-md px-1.5 py-1">
+        <span className="w-4 h-4 rounded-[4px] bg-slate-200/80 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0">
+          {initial}
+        </span>
+        <span className="whitespace-nowrap">{name === email ? name : `${name} <${email}>`}</span>
+        <button type="button" onClick={() => onRemove(email)} className="ml-1 text-slate-400 hover:text-slate-600 shrink-0 flex items-center justify-center">
+          <X size={13} strokeWidth={2} />
+        </button>
+      </span>
+    );
+  };
+
+  // ── Compute available contacts from vendor ────────────────────────
+  const availableContacts = useMemo(() => {
+    if (!vendor) return [];
+    const contacts = [];
+    
+    const cleanNameStr = (str) => {
+      if (!str) return '';
+      return str.replace(/^(Mr\.|Ms\.|Mrs\.|Dr\.|Prof\.|Mr|Ms|Mrs)\s+/i, '').trim();
+    };
+
+    if (vendor.email) {
+      const name = cleanNameStr([vendor.firstName, vendor.lastName].filter(Boolean).join(' ') || vendor.name || 'Primary');
+      contacts.push({ id: 'primary-contact', name, email: vendor.email });
+    }
+    
+    try {
+       const others = vendor.contactPersonsJson ? JSON.parse(vendor.contactPersonsJson) : [];
+       if (Array.isArray(others)) {
+          others.forEach((c, idx) => {
+             if (c.email) {
+                let name = c.name || [c.firstName, c.lastName].filter(Boolean).join(' ') || c.salutation || `Contact ${idx+1}`;
+                name = cleanNameStr(name);
+                contacts.push({ id: `contact-${idx}`, name, email: c.email });
+             }
+          });
+       }
+    } catch(e) {}
+    
+    return contacts;
+  }, [vendor]);
 
   // ── Recipient row ────────────────────────────────────────────────
-  const RecipientRow = ({ label, list, setList, inputVal, setInput, showCcBcc }) => (
-    <div className="flex items-start border-b border-slate-100 min-h-[40px]">
-      <div className="w-[90px] shrink-0 px-4 py-2.5 text-[13px] text-slate-500 border-r border-slate-100">
-        {label}
-      </div>
-      <div className="flex-1 px-3 py-2 flex flex-wrap gap-1.5 items-center">
-        {list.map(r => (
-          <EmailChip key={r.email} name={r.name} email={r.email} onRemove={e => removeChip(list, setList, e)} />
-        ))}
-        <input
-          type="email"
-          value={inputVal}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => handleKeyDown(e, list, setList, inputVal, setInput)}
-          onBlur={() => addChip(list, setList, inputVal, setInput)}
-          className="outline-none text-[13px] text-slate-700 bg-transparent placeholder:text-slate-300 min-w-[120px] flex-1"
-          placeholder={list.length === 0 ? 'Add email...' : ''}
-        />
-      </div>
-      {showCcBcc && (
-        <div className="flex items-center gap-3 px-4 py-2.5 text-[12px] font-semibold text-blue-600 shrink-0">
-          <button type="button" onClick={() => setShowCc(p => !p)} className="hover:underline">Cc</button>
-          <button type="button" onClick={() => setShowBcc(p => !p)} className="hover:underline">Bcc</button>
+  const RecipientRow = ({ label, list, setList, inputVal, setInput, showCcBcc }) => {
+    const [isFocused, setIsFocused] = useState(false);
+    const containerRef = React.useRef(null);
+    const searchInputRef = React.useRef(null);
+
+    // Keep the search text inside the dropdown separate
+    const [searchQuery, setSearchQuery] = useState('');
+
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (containerRef.current && !containerRef.current.contains(event.target)) {
+          setIsFocused(false);
+          setSearchQuery('');
+          // If they typed a valid email in the row input itself (if we keep it)
+          if (inputVal && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputVal)) {
+            addChip(list, setList, inputVal, setInput);
+          }
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [inputVal, list, setList, setInput]);
+
+    // Focus the dropdown search input when opened
+    useEffect(() => {
+      if (isFocused && searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, [isFocused]);
+
+    const activeUserEmail = currentUserEmail;
+
+    // Filter available contacts (vendors) by search and exclude already selected
+    const filteredVendorContacts = availableContacts.filter(c => 
+      !list.some(r => r.email === c.email) &&
+      (c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      c.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+    // Record Participants = The sender (exclude if already selected)
+    const recordParticipants = activeUserEmail ? [{ id: 'sender', email: activeUserEmail }] : [];
+    const filteredRecordParticipants = recordParticipants.filter(c => 
+      !list.some(r => r.email === c.email) &&
+      c.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+      <div className={`flex items-start border-b border-slate-100 min-h-[40px] relative transition-colors ${isFocused ? 'bg-slate-50' : 'bg-transparent'}`} ref={containerRef}>
+        <div className="w-[90px] shrink-0 px-4 py-3 text-[13px] text-slate-500 border-r border-slate-100 flex items-center">
+          {label}
         </div>
-      )}
-    </div>
-  );
+        <div 
+          className="flex-1 px-3 py-2 flex flex-wrap gap-1.5 items-center relative cursor-text min-h-[40px]"
+          onClick={() => setIsFocused(true)}
+        >
+          {list.map(r => (
+            <EmailChip key={r.email} name={r.name} email={r.email} onRemove={e => removeChip(list, setList, e)} />
+          ))}
+          {!isFocused && list.length === 0 && (
+            <span className="text-[13px] text-slate-400">Add email...</span>
+          )}
+          {isFocused && (
+            <div className="absolute top-full left-0 mt-1 w-full max-w-[450px] bg-white border border-slate-200 rounded-lg shadow-xl z-[1000] py-0 overflow-hidden" onClick={e => e.stopPropagation()}>
+              
+              {/* Search Bar Inside Dropdown */}
+              <div className="p-2 border-b border-slate-100">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 text-[13px] text-slate-700 bg-white border border-slate-200 rounded-md outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all placeholder:text-slate-400"
+                    placeholder="Search"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (filteredVendorContacts.length > 0) {
+                          const c = filteredVendorContacts[0];
+                          if (!list.some(r => r.email === c.email)) {
+                            setList(prev => [...prev, { name: c.name, email: c.email }]);
+                          }
+                          setSearchQuery('');
+                          setIsFocused(false);
+                        } else if (searchQuery && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(searchQuery)) {
+                          addChip(list, setList, searchQuery, setSearchQuery);
+                          setIsFocused(false);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-[250px] overflow-y-auto custom-scrollbar py-1">
+                {filteredRecordParticipants.length > 0 && (
+                  <div className="mb-1">
+                    <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">RECORD PARTICIPANTS</div>
+                    {filteredRecordParticipants.map(c => (
+                      <div 
+                        key={c.id} 
+                        className="px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer text-[13px] text-slate-700 transition-colors flex items-center group"
+                        onClick={() => {
+                          if (!list.some(r => r.email === c.email)) {
+                            setList(prev => [...prev, { name: c.name, email: c.email }]);
+                          }
+                          setSearchQuery('');
+                          setIsFocused(false);
+                        }}
+                      >
+                        <span className="font-medium group-hover:text-white">&lt;{c.email}&gt;</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {filteredVendorContacts.length > 0 && (
+                  <div className="mb-1">
+                    <div className="px-4 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">CONTACT PERSONS</div>
+                    {filteredVendorContacts.map(c => (
+                      <div 
+                        key={c.id} 
+                        className="px-4 py-2 hover:bg-blue-50 hover:text-blue-700 cursor-pointer text-[13px] text-slate-600 transition-colors flex items-center group"
+                        onClick={() => {
+                          if (!list.some(r => r.email === c.email)) {
+                            setList(prev => [...prev, { name: c.name, email: c.email }]);
+                          }
+                          setSearchQuery('');
+                          setIsFocused(false);
+                        }}
+                      >
+                        <span className="font-medium mr-1 text-slate-700 group-hover:text-blue-800">{c.name}</span> &lt;{c.email}&gt;
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {filteredRecordParticipants.length === 0 && filteredVendorContacts.length === 0 && searchQuery && (
+                  <div className="px-4 py-3 text-[13px] text-slate-500">Press Enter to add "{searchQuery}"</div>
+                )}
+                {filteredRecordParticipants.length === 0 && filteredVendorContacts.length === 0 && !searchQuery && (
+                  <div className="px-4 py-3 text-[13px] text-slate-400 italic">No contacts available</div>
+                )}
+              </div>
+              <div className="border-t border-slate-100 mt-1 pt-1.5 px-2">
+                <button 
+                  type="button"
+                  className="flex items-center gap-1.5 text-[13px] text-blue-600 hover:text-blue-800 hover:bg-blue-50 font-medium px-3 py-1.5 rounded-md w-full transition-colors"
+                >
+                  <PlusCircle size={14} /> Add Contact Person
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        {showCcBcc && (
+          <div className="flex items-center gap-3 px-4 py-3 text-[12px] font-semibold text-blue-600 shrink-0">
+            <button type="button" onClick={() => setShowCc(p => !p)} className="hover:underline">Cc</button>
+            <button type="button" onClick={() => setShowBcc(p => !p)} className="hover:underline">Bcc</button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // ── Toolbar button ───────────────────────────────────────────────
   const TBtn = ({ Icon, title }) => (
@@ -191,7 +398,12 @@ Please go through it and confirm the order. We look forward to working with you 
   //  FULL-PAGE RENDER (no dark overlay, no centered card)
   // ════════════════════════════════════════════════════════════════
   return (
-    <div className="fixed inset-0 z-[999] bg-white flex flex-col overflow-hidden">
+    <div 
+      className={isFullScreenView 
+        ? "w-full h-full bg-white flex flex-col" 
+        : "absolute inset-0 z-[9999] bg-white flex flex-col"} 
+      style={{minHeight: 0}}
+    >
 
       {/* ── Page Header ──────────────────────────────────────────── */}
       <div className="shrink-0 flex items-center justify-between px-8 py-4 border-b border-slate-200 bg-white">
@@ -209,7 +421,7 @@ Please go through it and confirm the order. We look forward to working with you 
 
       {/* ── Scrollable body ──────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto bg-white">
-        <div className="max-w-[860px] mx-auto px-8 py-6 space-y-px">
+        <div className="max-w-[1200px] px-8 py-6 space-y-px">
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-[13px] font-medium">
@@ -218,7 +430,7 @@ Please go through it and confirm the order. We look forward to working with you 
           )}
 
           {/* Address block */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <div className="border border-slate-200 rounded-xl">
 
             {/* From */}
             <div className="flex items-center border-b border-slate-100">
@@ -304,10 +516,10 @@ Please go through it and confirm the order. We look forward to working with you 
 
             {/* Body textarea */}
             <div className="p-6 bg-white">
-              <textarea
+            <textarea
                 value={body}
                 onChange={e => setBody(e.target.value)}
-                className="w-full min-h-[340px] outline-none text-[13.5px] text-slate-800 font-medium leading-relaxed resize-none"
+                className="w-full min-h-[220px] max-h-[340px] outline-none text-[13.5px] text-slate-800 font-medium leading-relaxed resize-y"
                 placeholder="Compose your message..."
               />
             </div>
@@ -317,7 +529,7 @@ Please go through it and confirm the order. We look forward to working with you 
           <div className="pt-3 space-y-3">
             <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-xl">
               <label
-                className="flex items-center gap-3 cursor-pointer flex-1"
+                className="flex items-center gap-3 cursor-pointer"
                 onClick={() => setAttachPDF(p => !p)}
               >
                 <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${attachPDF ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
@@ -325,15 +537,34 @@ Please go through it and confirm the order. We look forward to working with you 
                 </div>
                 <span className="text-[13px] font-bold text-slate-700">Attach Purchase Order PDF</span>
               </label>
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-                <div className="w-6 h-6 rounded bg-red-50 flex items-center justify-center text-red-500">
-                  <FileText size={13} />
-                </div>
-                <span className="text-[12px] font-bold text-slate-700 uppercase tracking-tight">
-                  {poData?.poNumber || 'PO-PDF'}
-                </span>
-              </div>
+
+              {attachPDF && (
+                <button
+                  type="button"
+                  title={pdfPreviewUrl ? 'Click to preview the PDF that will be sent' : 'Generating PDF preview...'}
+                  onClick={() => { if (pdfPreviewUrl) window.open(pdfPreviewUrl, '_blank'); }}
+                  className={`ml-2 flex items-center gap-2 rounded-lg px-3 py-1.5 border transition-all group ${
+                    pdfPreviewUrl
+                      ? 'bg-red-50 border-red-200 hover:bg-red-100 hover:border-red-400 cursor-pointer'
+                      : 'bg-slate-50 border-slate-200 cursor-default opacity-70'
+                  }`}
+                >
+                  <div className="w-6 h-6 rounded bg-red-100 flex items-center justify-center text-red-500 shrink-0">
+                    {pdfPreviewLoading
+                      ? <Loader2 size={12} className="animate-spin text-slate-400" />
+                      : <FileText size={13} />
+                    }
+                  </div>
+                  <span className="text-[12px] font-bold text-slate-700 uppercase tracking-tight">
+                    {poData?.poNumber || 'PO-PDF'}
+                  </span>
+                  {pdfPreviewUrl && (
+                    <ExternalLink size={11} className="text-slate-400 group-hover:text-red-500 transition-colors" />
+                  )}
+                </button>
+              )}
             </div>
+
 
             {attachments.length > 0 && (
               <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3">
