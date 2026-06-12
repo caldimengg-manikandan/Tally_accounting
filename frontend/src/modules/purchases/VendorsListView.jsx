@@ -272,7 +272,7 @@ const VendorsListView = ({ companyId }) => {
                         </td>
                         <td className="px-6 py-4 text-right">
                            <span className="text-[14px] text-slate-900 font-medium whitespace-nowrap">
-                              {getCurrencyDisplay(v.currency)} {v.currentBalance?.toLocaleString() || '0.00'}
+                              {getCurrencyDisplay(v.currency)} {Math.abs(parseFloat(v.currentBalance || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </span>
                         </td>
                         <td className="px-6 py-4 text-right">

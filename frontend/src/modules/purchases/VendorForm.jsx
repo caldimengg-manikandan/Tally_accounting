@@ -110,7 +110,6 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
       const stateName = STATE_CODE_TO_NAME[stateCode];
       if (stateName) {
         setBillingAddress(prev => ({ ...prev, state: stateName, country: prev.country || 'India' }));
-        setShippingAddress(prev => ({ ...prev, state: stateName, country: prev.country || 'India' }));
       }
     }
 

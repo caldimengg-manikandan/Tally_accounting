@@ -84,8 +84,8 @@ const VendorOverviewSidebar = ({
     }
   };
 
-  const billingAddr = parseAddress(vendor.billingAddress || vendor.billingAddressJson);
-  const shippingAddr = parseAddress(vendor.shippingAddress || vendor.shippingAddressJson);
+  const billingAddr = parseAddress(vendor.billingAddressJson || vendor.billingAddress);
+  const shippingAddr = parseAddress(vendor.shippingAddressJson || vendor.shippingAddress);
 
   // Address isEmpty helper
   const isAddressEmpty = (addr) => {
@@ -110,7 +110,7 @@ const VendorOverviewSidebar = ({
       <div className="m-4 mb-2 p-5 bg-[#f5f7fc]/90 rounded-2xl border border-slate-100/80">
         {/* Vendor Name */}
         <h2 className="text-[16px] font-bold text-slate-900 tracking-tight mb-3">
-          {vendor.name || 'XYZ Technologies'}
+          {vendor.companyName || vendor.name || 'XYZ Technologies'}
         </h2>
         
         {/* Horizontal Divider Line */}
@@ -125,10 +125,10 @@ const VendorOverviewSidebar = ({
 
           {/* Contact Details stack */}
           <div className="flex-1 space-y-1.5 pt-0.5 min-w-0">
-            {/* Email with inline settings gear */}
+            {/* Contact Name with inline settings gear */}
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[13.5px] font-semibold text-slate-900 truncate hover:text-blue-600 transition-colors">
-                {vendor.email || 'xy@gmail.com'}
+              <span className="text-[14px] font-bold text-slate-900 truncate">
+                {[vendor.salutation && vendor.salutation !== 'Salutation' ? vendor.salutation : '', vendor.firstName, vendor.lastName].filter(Boolean).join(' ').trim() || 'Primary Contact'}
               </span>
               <button 
                 onClick={onSettingsClick}
@@ -137,6 +137,11 @@ const VendorOverviewSidebar = ({
               >
                 <Settings size={15} className="stroke-[2.5]" />
               </button>
+            </div>
+
+            {/* Email */}
+            <div className="text-[13px] text-slate-700 truncate hover:text-blue-600 transition-colors">
+              {vendor.email || 'No email provided'}
             </div>
 
             {/* Primary Phone */}
@@ -201,18 +206,15 @@ const VendorOverviewSidebar = ({
               {!isAddressEmpty(billingAddr) ? (
                 <div className="text-[13.5px] text-slate-800 leading-relaxed font-medium">
                   {billingAddr.attention && <p className="font-semibold text-slate-900">{billingAddr.attention}</p>}
-                  {billingAddr.street1 && <p>{billingAddr.street1}</p>}
-                  {billingAddr.street2 && <p>{billingAddr.street2}</p>}
-                  {billingAddr.address1 && <p>{billingAddr.address1}</p>}
-                  {billingAddr.address2 && <p>{billingAddr.address2}</p>}
+                  {(billingAddr.address1 || billingAddr.street1) && <p>{billingAddr.address1 || billingAddr.street1}</p>}
+                  {(billingAddr.address2 || billingAddr.street2) && <p>{billingAddr.address2 || billingAddr.street2}</p>}
                   <p>
                     {[billingAddr.city, billingAddr.state, billingAddr.country].filter(Boolean).join(', ')}
                   </p>
                   {(billingAddr.phone || billingAddr.zip || billingAddr.pinCode) && (
                     <p className="mt-1 text-slate-600 text-[12px] font-medium">
                       {billingAddr.phone && `Phone: ${billingAddr.phone}`}
-                      {billingAddr.zip && ` (Zip: ${billingAddr.zip})`}
-                      {billingAddr.pinCode && ` (Pin: ${billingAddr.pinCode})`}
+                      {(billingAddr.pinCode || billingAddr.zip) && ` (Pin: ${billingAddr.pinCode || billingAddr.zip})`}
                     </p>
                   )}
                 </div>
@@ -246,13 +248,17 @@ const VendorOverviewSidebar = ({
               {!isAddressEmpty(shippingAddr) ? (
                 <div className="text-[13.5px] text-slate-800 leading-relaxed font-medium">
                   {shippingAddr.attention && <p className="font-semibold text-slate-900">{shippingAddr.attention}</p>}
-                  {shippingAddr.street1 && <p>{shippingAddr.street1}</p>}
-                  {shippingAddr.street2 && <p>{shippingAddr.street2}</p>}
-                  {shippingAddr.address1 && <p>{shippingAddr.address1}</p>}
-                  {shippingAddr.address2 && <p>{shippingAddr.address2}</p>}
+                  {(shippingAddr.address1 || shippingAddr.street1) && <p>{shippingAddr.address1 || shippingAddr.street1}</p>}
+                  {(shippingAddr.address2 || shippingAddr.street2) && <p>{shippingAddr.address2 || shippingAddr.street2}</p>}
                   <p>
                     {[shippingAddr.city, shippingAddr.state, shippingAddr.country].filter(Boolean).join(', ')}
                   </p>
+                  {(shippingAddr.phone || shippingAddr.zip || shippingAddr.pinCode) && (
+                    <p className="mt-1 text-slate-600 text-[12px] font-medium">
+                      {shippingAddr.phone && `Phone: ${shippingAddr.phone}`}
+                      {(shippingAddr.pinCode || shippingAddr.zip) && ` (Pin: ${shippingAddr.pinCode || shippingAddr.zip})`}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="text-[13.5px] text-slate-500 leading-relaxed font-medium">
@@ -410,13 +416,13 @@ const VendorOverviewSidebar = ({
                             {contact.phone}
                           </div>
                         )}
-                        {!contact.phone && contact.mobile && (
+                        {contact.mobile && (
                           <div className="flex items-center gap-1.5 text-slate-700 mt-0.5 text-[12px] font-medium">
                             <Smartphone size={11} className="stroke-[2.5]" />
                             {contact.mobile}
                           </div>
                         )}
-                        {!contact.phone && !contact.mobile && contact.email && (
+                        {contact.email && (
                           <div className="flex items-center gap-1.5 text-slate-700 mt-0.5 text-[12px] font-medium">
                             <Mail size={11} className="stroke-[2.5]" />
                             {contact.email}
