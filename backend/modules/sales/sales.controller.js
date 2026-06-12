@@ -10,7 +10,7 @@ exports.createOrder = async (req, res) => {
     const { 
       companyId, customerId, orderNumber, referenceNumber, date, 
       expectedShipmentDate, paymentTerms, deliveryMethod, salesperson, 
-      customerNotes, termsConditions, subTotal, discount, tax, 
+      customerNotes, termsConditions, subTotal, discount, tax, taxPercent,
       adjustment, totalAmount, status, items, attachments, projectId 
     } = req.body;
 
@@ -20,7 +20,7 @@ exports.createOrder = async (req, res) => {
       orderNumber,
       referenceNumber,
       date,
-      expectedShipmentDate,
+      expectedShipmentDate: expectedShipmentDate || null,
       paymentTerms,
       deliveryMethod,
       salesperson,
@@ -29,11 +29,12 @@ exports.createOrder = async (req, res) => {
       subTotal,
       discount,
       tax,
+      taxPercent: parseFloat(taxPercent || 0),
       adjustment,
       totalAmount,
       status: status || 'Draft',
       attachments,
-      ProjectId: projectId
+      ProjectId: projectId || null
     }, { transaction: t });
 
     if (items && items.length > 0) {
@@ -84,7 +85,7 @@ exports.updateOrder = async (req, res) => {
     const { 
       customerId, orderNumber, referenceNumber, date, 
       expectedShipmentDate, paymentTerms, deliveryMethod, salesperson, 
-      customerNotes, termsConditions, subTotal, discount, tax, 
+      customerNotes, termsConditions, subTotal, discount, tax, taxPercent,
       adjustment, totalAmount, status, items, attachments, projectId
     } = req.body;
 
@@ -96,7 +97,7 @@ exports.updateOrder = async (req, res) => {
       orderNumber,
       referenceNumber,
       date,
-      expectedShipmentDate,
+      expectedShipmentDate: expectedShipmentDate || null,
       paymentTerms,
       deliveryMethod,
       salesperson,
@@ -105,11 +106,12 @@ exports.updateOrder = async (req, res) => {
       subTotal,
       discount,
       tax,
+      taxPercent: taxPercent !== undefined ? parseFloat(taxPercent || 0) : order.taxPercent,
       adjustment,
       totalAmount,
       status: status || order.status,
       attachments,
-      ProjectId: projectId
+      ProjectId: projectId || null
     }, { transaction: t });
 
     if (items) {
@@ -154,7 +156,7 @@ exports.createInvoice = async (req, res) => {
       discountAmount, gstAmount, adjustment, totalAmount,
       customerNotes, termsConditions, status: status || 'Draft',
       balance: totalAmount, // Initialize balance
-      ProjectId: projectId
+      ProjectId: projectId || null
     }, { transaction: t });
 
     // 2. Create line items
@@ -264,7 +266,7 @@ exports.updateInvoice = async (req, res) => {
       customerNotes: customerNotes !== undefined ? customerNotes : invoice.customerNotes,
       termsConditions: termsConditions !== undefined ? termsConditions : invoice.termsConditions,
       balance: totalAmount !== undefined ? (parseFloat(totalAmount) - parseFloat(invoice.amountPaid || 0)) : invoice.balance,
-      ProjectId: projectId !== undefined ? projectId : invoice.ProjectId
+      ProjectId: projectId !== undefined ? (projectId || null) : invoice.ProjectId
     }, { transaction: t });
 
     // Update items

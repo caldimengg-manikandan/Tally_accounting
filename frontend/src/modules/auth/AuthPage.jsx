@@ -15,6 +15,8 @@ const AuthPage = ({ onLogin }) => {
   const [role, setRole] = useState('ADMIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +40,11 @@ const AuthPage = ({ onLogin }) => {
         setIsLogin(true);
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Authentication failed.');
+      if (err.response?.data?.issues && Array.isArray(err.response.data.issues)) {
+        setError(`Password does not meet requirements: ${err.response.data.issues.join(', ')}`);
+      } else {
+        setError(err.response?.data?.error || err.message || 'Authentication failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -161,6 +167,33 @@ const AuthPage = ({ onLogin }) => {
                 className="w-full px-4 py-3 bg-[#F5F8FA] border border-slate-200 rounded-md text-sm outline-none focus:border-blue-400 focus:bg-white transition-all font-medium"
                 required
               />
+              {!isLogin && (
+                <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-md text-[11px] space-y-1.5 animate-fade-in">
+                  <p className="font-bold text-slate-700">Password must contain:</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-1">
+                    <div className={`flex items-center gap-1.5 ${password.length >= 8 ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                      {password.length >= 8 ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                      At least 8 characters
+                    </div>
+                    <div className={`flex items-center gap-1.5 ${/[a-z]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                      {/[a-z]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                      One lowercase letter
+                    </div>
+                    <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                      {/[A-Z]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                      One uppercase letter
+                    </div>
+                    <div className={`flex items-center gap-1.5 ${/[0-9]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                      {/[0-9]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                      One numeric digit
+                    </div>
+                    <div className={`flex items-center gap-1.5 ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-600 font-semibold' : 'text-slate-400'}`}>
+                      {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? <Check size={12} className="shrink-0" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300 ml-1 mr-1 shrink-0" />}
+                      One special character
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {!isLogin && (
@@ -169,7 +202,7 @@ const AuthPage = ({ onLogin }) => {
                     <Check size={12} strokeWidth={4}/>
                  </div>
                  <p className="text-[11px] text-slate-500 font-medium">
-                   I agree to the <span className="text-blue-600 underline cursor-pointer">Terms of Service</span> and <span className="text-blue-600 underline cursor-pointer">Privacy Policy</span>.
+                   I agree to the <span onClick={() => setShowTermsModal(true)} className="text-blue-600 underline cursor-pointer hover:text-blue-700">Terms of Service</span> and <span onClick={() => setShowPrivacyModal(true)} className="text-blue-600 underline cursor-pointer hover:text-blue-700">Privacy Policy</span>.
                  </p>
                </div>
             )}
@@ -217,10 +250,69 @@ const AuthPage = ({ onLogin }) => {
           <p className="mt-10 text-[9px] text-center text-slate-300 font-bold uppercase tracking-[0.1em]">
             *This offer is applicable only for CalTally users
           </p>
-        </div>
-
       </div>
 
+      {/* ─── TERMS OF SERVICE MODAL ───────────────────────── */}
+      {showTermsModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl border border-slate-200 relative animate-scale-up">
+            <h3 className="text-lg font-bold text-[#1F314F] border-b pb-3 mb-4">Terms of Service</h3>
+            <div className="text-xs text-slate-600 space-y-4 max-h-[300px] overflow-y-auto pr-2">
+              <p className="font-semibold">1. Acceptance of Terms</p>
+              <p>Welcome to CalTally. By creating an account, you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.</p>
+              
+              <p className="font-semibold">2. Account Registration</p>
+              <p>You must provide accurate and complete information when registering. You are solely responsible for maintaining the confidentiality of your credentials (including passwords and multi-factor authentication secrets).</p>
+              
+              <p className="font-semibold">3. Permitted Use</p>
+              <p>CalTally is provided for financial tracking and cloud accounting replication. You agree not to misuse the platform or conduct any unauthorized activities that could disrupt server security.</p>
+              
+              <p className="font-semibold">4. Limitation of Liability</p>
+              <p>The application is provided "as is". CalTally and its developers make no warranties and shall not be held liable for any data loss, financial discrepancy, or server unavailability.</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={() => setShowTermsModal(false)}
+                className="px-5 py-2 bg-[#F15A29] hover:bg-[#D94F25] text-white rounded font-bold text-xs shadow-md transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PRIVACY POLICY MODAL ─────────────────────────── */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl border border-slate-200 relative animate-scale-up">
+            <h3 className="text-lg font-bold text-[#1F314F] border-b pb-3 mb-4">Privacy Policy</h3>
+            <div className="text-xs text-slate-600 space-y-4 max-h-[300px] overflow-y-auto pr-2">
+              <p className="font-semibold">1. Data Collected</p>
+              <p>We collect essential registration data including your email, full name, and hashed passwords. When using Google Login, we request access to your basic profile metadata.</p>
+              
+              <p className="font-semibold">2. Data Security</p>
+              <p>Passwords are cryptographically salted and hashed using bcrypt. We use multi-factor authentication (MFA) and strict rate limiters to protect user access from brute-force attempts.</p>
+              
+              <p className="font-semibold">3. Cookies & Session Storage</p>
+              <p>We set secure HttpOnly cookies for session verification and JWT tokens. These are strictly required for security validation and account integrity.</p>
+              
+              <p className="font-semibold">4. Third-Party Sharing</p>
+              <p>We do not sell, distribute, or share user data or transaction histories with any third parties.</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={() => setShowPrivacyModal(false)}
+                className="px-5 py-2 bg-[#F15A29] hover:bg-[#D94F25] text-white rounded font-bold text-xs shadow-md transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      </div>
     </div>
     </GoogleOAuthProvider>
   );

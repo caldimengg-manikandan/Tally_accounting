@@ -69,6 +69,7 @@ import ChartOfAccountsView from './modules/accounting/ChartOfAccountsView';
 import JournalEntriesView from './modules/accounting/JournalEntriesView';
 import FixedAssetsView from './modules/fixed_assets/FixedAssetsView';
 import ManufacturingView from './modules/manufacturing/ManufacturingView';
+import ProjectsView from './modules/time_tracking/ProjectsView';
 
 import BulkUpdateView from './modules/accountant/BulkUpdateView';
 import CurrencyAdjustmentsView from './modules/accountant/CurrencyAdjustmentsView';
@@ -794,7 +795,11 @@ function AuthenticatedApp() {
       <Route path="/payments/new"       element={shell(PaymentsReceivedView)} />
       <Route path="/tax-invoices"       element={shell(GSTInvoiceView)} />
 
-      {/* Time Tracking (Removed from main menu/routing shell, keeping definitions but routing to dashboard or disabled) */}
+      {/* Time Tracking */}
+      <Route path="/time-tracking/projects"          element={shell(ProjectsView)} />
+      <Route path="/time-tracking/projects/new"      element={shell(ProjectsView)} />
+      <Route path="/time-tracking/projects/edit/:id" element={shell(ProjectsView)} />
+      <Route path="/time-tracking/projects/view/:id" element={shell(ProjectsView)} />
 
       {/* Operations */}
       <Route path="/inventory"          element={shell(InventoryView)} />

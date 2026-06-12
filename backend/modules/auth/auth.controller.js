@@ -62,9 +62,21 @@ const setRefreshCookie = (res, rawToken) => {
  */
 const validatePasswordComplexity = (password) => {
   const issues = [];
-  if (!password || password.length < 8) issues.push('At least 8 characters');
-  if (!/[a-zA-Z]/.test(password)) issues.push('At least one letter');
-  if (!/[0-9]/.test(password)) issues.push('At least one digit');
+  if (!password || password.length < 8) {
+    issues.push('At least 8 characters');
+  }
+  if (!/[a-z]/.test(password)) {
+    issues.push('At least one lowercase letter');
+  }
+  if (!/[A-Z]/.test(password)) {
+    issues.push('At least one uppercase letter');
+  }
+  if (!/[0-9]/.test(password)) {
+    issues.push('At least one numeric digit');
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    issues.push('At least one special character (e.g. !@#$%^&*)');
+  }
   return issues;
 };
 

@@ -1,4 +1,4 @@
-const express = require('express'); // Restarted to apply DB changes
+const express = require('express'); // Restarted to apply recent DB schema updates
 const cors = require('cors');
 const dotenv = require('dotenv');
 const passport = require('passport');

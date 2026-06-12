@@ -66,6 +66,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0
     },
+    taxPercent: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0
+    },
     adjustment: {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0
