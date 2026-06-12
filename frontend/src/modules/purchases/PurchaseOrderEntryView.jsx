@@ -73,6 +73,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const [isEditingDeliveryAddress, setIsEditingDeliveryAddress] = useState(false);
   const [selectedEmailContacts, setSelectedEmailContacts] = useState([]);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [activeRowForItemModal, setActiveRowForItemModal] = useState(null);
   
   // Custom Payment Terms Dropdown State
@@ -143,21 +144,6 @@ const PurchaseOrderEntryView = ({ companyId }) => {
       companyAPI.getById(companyId).then(res => {
         const co = res.data;
         setCurrentCompany(co);
-        if (co && !id) {
-          setFormData(prev => ({
-            ...prev,
-            deliveryAddressData: {
-              attention: co.name || '',
-              street1: co.street1 || '',
-              street2: co.street2 || '',
-              city: co.city || '',
-              state: co.state || '',
-              zip: co.pincode || '',
-              country: co.location || 'India',
-              phone: co.phone || ''
-            }
-          }));
-        }
       }).catch(err => console.error('Failed to fetch company details:', err));
 
       if (!id) {
@@ -348,9 +334,11 @@ const PurchaseOrderEntryView = ({ companyId }) => {
     const tdsAmount = (taxableAmount * (formData.tdsRate / 100));
     
     const total = taxableAmount + taxAmount - tdsAmount + parseFloat(formData.adjustment || 0);
+    const totalQty = items.reduce((sum, item) => sum + Number(item.qty || 0), 0);
 
     return {
       subtotal,
+      totalQty,
       discountAmount,
       taxableAmount,
       taxAmount,
@@ -591,7 +579,12 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                   <div 
                                      key={vendor.id}
                                      onClick={() => {
-                                        setFormData({ ...formData, vendorId: vendor.id, vendorName: vendor.name });
+                                        setFormData({ 
+                                          ...formData, 
+                                          vendorId: vendor.id, 
+                                          vendorName: vendor.name,
+                                          paymentTerms: vendor.paymentTerms || formData.paymentTerms
+                                        });
                                         setVendorSearch('');
                                         setIsVendorDropdownOpen(false);
                                      }}
@@ -890,7 +883,7 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                      type="date"
                      value={formData.deliveryDate}
                      onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
-                     className="w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-400 focus:border-blue-500 outline-none"
+                     className="w-[280px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none"
                    />
                    <div className="flex items-center gap-4">
                       <span className="text-slate-700 min-w-[100px]">Payment Terms</span>
@@ -1165,8 +1158,11 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                 <div className="w-[450px] bg-slate-50 border border-slate-200 rounded-md p-4 animate-in fade-in duration-500">
                    <div className="space-y-4">
                       {/* Sub Total */}
-                      <div className="flex justify-between text-slate-600">
-                         <span className="text-[13px]">Sub Total</span>
+                      <div className="flex justify-between items-start text-slate-600">
+                         <div className="flex flex-col gap-1">
+                            <span className="text-[13px] font-medium text-slate-800">Sub Total</span>
+                            <span className="text-[11px] font-semibold text-slate-700">Total Quantity : {totals.totalQty}</span>
+                         </div>
                          <span className="font-medium text-slate-800">{(totals.subtotal).toFixed(2)}</span>
                       </div>
                       

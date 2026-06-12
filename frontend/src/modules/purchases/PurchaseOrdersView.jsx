@@ -50,6 +50,7 @@ const PurchaseOrdersView = ({ companyId }) => {
   const [deleteId, setDeleteId] = useState(null);
   const [showPDFView, setShowPDFView] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Fetching Data
   const fetchData = async () => {
@@ -755,6 +756,201 @@ const PurchaseOrdersView = ({ companyId }) => {
                   </div>
                 </div>
               </div>
+
+              {/* --- ALTERNATIVE APP VIEW --- */}
+              {!showPDFView && (
+                <div className="w-full max-w-[800px] bg-white shadow-sm border border-slate-200 p-10 animate-in fade-in zoom-in-95 duration-300 rounded-lg">
+                  <div className="grid grid-cols-2 gap-12 mb-10">
+                    {/* Left Column */}
+                    <div>
+                      <h2 className="text-[18px] font-extrabold text-slate-800 tracking-tight mb-1">PURCHASE ORDER</h2>
+                      <p className="text-[13px] font-medium text-slate-700 mb-8">Purchase Order# <span className="font-bold">{selectedOrder.orderNumber}</span></p>
+
+                      {/* Status Pipeline */}
+                      <div className="mb-8 flex">
+                        <div className="w-24 text-[10px] font-bold text-slate-500 uppercase tracking-widest space-y-6 pt-1">
+                           <p>Status</p>
+                        </div>
+                        <div className="flex-1 relative">
+                          <div className="absolute left-[3px] top-2 bottom-3 w-[2px] bg-amber-400 z-0 rounded-full"></div>
+                          
+                          <div className="relative z-10 space-y-5">
+                             {/* Order Status */}
+                             <div className="flex items-center gap-4">
+                               <div className="w-2 h-2 bg-amber-500 rounded-full ring-4 ring-white shadow-sm"></div>
+                               <div className="flex justify-between w-full text-[12px] font-bold">
+                                 <span className="text-slate-800">Order</span>
+                                 <span className="bg-blue-600 text-white px-2 py-0.5 rounded-[4px] text-[10px] uppercase tracking-wider">{selectedOrder.status}</span>
+                               </div>
+                             </div>
+                             
+                             {/* Receive Status */}
+                             <div className="flex items-center gap-4 opacity-50">
+                               <div className="w-2 h-2 bg-slate-300 rounded-full ring-4 ring-white shadow-sm"></div>
+                               <div className="flex justify-between w-full text-[12px] font-bold">
+                                 <span className="text-slate-700">Receive</span>
+                                 <span className="text-slate-500">Yet To Be Received</span>
+                               </div>
+                             </div>
+
+                             {/* Bill Status */}
+                             <div className="flex items-center gap-4 opacity-50">
+                               <div className="w-2 h-2 bg-slate-300 rounded-full ring-4 ring-white shadow-sm"></div>
+                               <div className="flex justify-between w-full text-[12px] font-bold">
+                                 <span className="text-slate-700">Bill</span>
+                                 <span className="text-slate-500">Yet To Be Billed</span>
+                               </div>
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Meta Information */}
+                      <div className="space-y-4">
+                        <div className="flex justify-between text-[11px] font-bold">
+                          <span className="text-slate-400 uppercase tracking-widest w-32">Order Date</span>
+                          <span className="text-slate-700 flex-1">{new Date(selectedOrder.date).toLocaleDateString('en-GB')}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-bold">
+                          <span className="text-slate-400 uppercase tracking-widest w-32">Delivery Date</span>
+                          <span className="text-slate-700 flex-1">{selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleDateString('en-GB') : '-'}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-bold">
+                          <span className="text-slate-400 uppercase tracking-widest w-32">Payment Terms</span>
+                          <span className="text-slate-700 flex-1">{selectedOrder.paymentTerms || '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-8 mt-[72px]">
+                      {/* Vendor Address */}
+                      <div>
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Vendor Address</h4>
+                        <div className="text-[12px] text-slate-700 leading-relaxed font-semibold">
+                          <p className="text-blue-500 font-bold hover:underline cursor-pointer mb-1">{selectedOrder.Ledger?.name}</p>
+                          {vendorBillingAddress ? (
+                            <>
+                              {vendorBillingAddress.attention && <p>{vendorBillingAddress.attention}</p>}
+                              <p>{vendorBillingAddress.street1 || vendorBillingAddress.address1 || ''}</p>
+                              {vendorBillingAddress.street2 && <p>{vendorBillingAddress.street2}</p>}
+                              <p>{[vendorBillingAddress.city, vendorBillingAddress.state].filter(Boolean).join(', ')}</p>
+                              <p>{[vendorBillingAddress.country, vendorBillingAddress.zip || vendorBillingAddress.pinCode].filter(Boolean).join(' - ')}</p>
+                              {vendorBillingAddress.phone && <p>{vendorBillingAddress.phone}</p>}
+                            </>
+                          ) : (
+                            <p className="text-slate-400 italic">No billing address</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Delivery Address */}
+                      <div>
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Delivery Address</h4>
+                        <div className="text-[12px] text-slate-700 leading-relaxed font-semibold">
+                          {deliveryAddressData ? (
+                            <>
+                              <p className="font-extrabold text-slate-900 mb-1">{deliveryAddressData.attention}</p>
+                              <p>{deliveryAddressData.street1}</p>
+                              {deliveryAddressData.street2 && <p>{deliveryAddressData.street2}</p>}
+                              <p>{[deliveryAddressData.city, deliveryAddressData.state].filter(Boolean).join(',')}</p>
+                              <p>{deliveryAddressData.country}</p>
+                              {deliveryAddressData.phone && <p>{deliveryAddressData.phone}</p>}
+                            </>
+                          ) : (
+                            <p className="text-slate-400 italic">No delivery address</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Items Table */}
+                  <table className="w-full text-left mb-6">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-[#fbfcfd]">
+                        <th className="py-3 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[40%]">Items & Description</th>
+                        <th className="py-3 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Ordered</th>
+                        <th className="py-3 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
+                        <th className="py-3 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Rate</th>
+                        <th className="py-3 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-[12px] text-slate-800 font-semibold">
+                      {orderItems.map((item, idx) => (
+                        <tr key={idx} className="border-b border-slate-50">
+                          <td className="py-4 px-2">
+                            <p className="text-blue-500 font-bold hover:underline cursor-pointer">{item.itemName || item.name}</p>
+                          </td>
+                          <td className="py-4 px-2 text-center">{item.qty}</td>
+                          <td className="py-4 px-2 text-center text-slate-600">
+                            <span className="font-extrabold text-slate-900">0</span> Billed
+                          </td>
+                          <td className="py-4 px-2 text-right">₹{parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td className="py-4 px-2 text-right">{parseFloat(item.amount || (parseFloat(item.qty || 0) * parseFloat(item.rate || 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Summary Block */}
+                  <div className="flex justify-end pt-4 border-t border-slate-100">
+                    <div className="w-[350px]">
+                      {/* Sub Total */}
+                      <div className="flex justify-between items-start text-[13px] font-extrabold text-slate-900 mb-4">
+                        <div className="flex flex-col gap-1">
+                          <span>Sub Total</span>
+                          <span className="text-[11px] font-semibold text-slate-500">Total Quantity : {orderItems.reduce((sum, i) => sum + Number(i.qty || 0), 0)}</span>
+                        </div>
+                        <span>₹{parseFloat(selectedOrder.subtotal || orderItems.reduce((sum, item) => sum + (parseFloat(item.qty || 0) * parseFloat(item.rate || 0)), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      </div>
+
+                      {/* Discount */}
+                      {parseFloat(selectedOrder.discountAmount || 0) > 0 ? (
+                        <div className="flex justify-between text-[13px] font-bold text-slate-500 mb-3 pb-3 border-b border-slate-100">
+                          <span>Discount</span>
+                          <span>₹{parseFloat(selectedOrder.discountAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between text-[13px] font-bold text-slate-500 mb-3 pb-3 border-b border-slate-100">
+                          <span>Discount</span>
+                          <span>₹0.00</span>
+                        </div>
+                      )}
+
+                      {/* GST */}
+                      {parseFloat(selectedOrder.taxAmount || 0) > 0 && (
+                        <div className="flex justify-between text-[13px] font-bold text-slate-500 mb-2">
+                          <span>GST</span>
+                          <span>₹{parseFloat(selectedOrder.taxAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+
+                      {/* TDS */}
+                      {parseFloat(selectedOrder.tdsAmount || 0) > 0 && (
+                        <div className="flex justify-between text-[13px] font-bold text-slate-500 mb-2">
+                          <span>TDS</span>
+                          <span>-₹{parseFloat(selectedOrder.tdsAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+
+                      {/* Adjustment */}
+                      {parseFloat(selectedOrder.adjustment || 0) !== 0 && (
+                        <div className="flex justify-between text-[13px] font-bold text-slate-500 mb-2">
+                          <span>Adjustment</span>
+                          <span>{parseFloat(selectedOrder.adjustment) > 0 ? '+' : ''}{parseFloat(selectedOrder.adjustment).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
+
+                      {/* Grand Total */}
+                      <div className="flex justify-between items-center text-[15px] font-extrabold text-slate-900 pt-3">
+                        <span>Total</span>
+                        <span>₹{parseFloat(selectedOrder.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Template Link */}
               <div className="no-print mt-6 text-[12px] font-bold text-slate-400 flex items-center gap-1.5 justify-center">
