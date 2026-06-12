@@ -549,6 +549,7 @@ exports.createBill = async (req, res) => {
             companyId,
             date: date || new Date(),
             voucherType: 'Purchase',
+            reference: reference || '',
             narration: JSON.stringify({
                 notes,
                 items: items || [],
@@ -574,8 +575,9 @@ exports.createBill = async (req, res) => {
         try {
             const { PurchaseOrder } = require('../../models');
             let poToUpdate = null;
-            if (req.body.poId) {
-                poToUpdate = await PurchaseOrder.findByPk(req.body.poId);
+            const poId = req.body.purchase_order_id || req.body.poId;
+            if (poId) {
+                poToUpdate = await PurchaseOrder.findByPk(poId);
             } else if (reference) {
                 poToUpdate = await PurchaseOrder.findOne({
                     where: {
@@ -584,11 +586,15 @@ exports.createBill = async (req, res) => {
                     }
                 });
             }
-            if (poToUpdate) {
-                await poToUpdate.update({ billed_status: 'billed' });
+            if (poToUpdate && voucher.status === 'OPEN') {
+                await poToUpdate.update({ 
+                    status: 'closed',
+                    billed_status: 'billed' 
+                });
+                console.log(`PO ID ${poToUpdate.id} successfully updated to CLOSED & BILLED.`);
             }
         } catch (poErr) {
-            console.error('Failed to update PO billed_status:', poErr);
+            console.error('Failed to update parent purchase order status:', poErr);
         }
 
         // Update inventory stock quantities
@@ -750,8 +756,9 @@ exports.updateBill = async (req, res) => {
         try {
             const { PurchaseOrder } = require('../../models');
             let poToUpdate = null;
-            if (req.body.poId) {
-                poToUpdate = await PurchaseOrder.findByPk(req.body.poId);
+            const poId = req.body.purchase_order_id || req.body.poId;
+            if (poId) {
+                poToUpdate = await PurchaseOrder.findByPk(poId);
             } else if (reference) {
                 poToUpdate = await PurchaseOrder.findOne({
                     where: {
@@ -760,11 +767,15 @@ exports.updateBill = async (req, res) => {
                     }
                 });
             }
-            if (poToUpdate) {
-                await poToUpdate.update({ billed_status: 'billed' });
+            if (poToUpdate && voucher.status === 'OPEN') {
+                await poToUpdate.update({ 
+                    status: 'closed',
+                    billed_status: 'billed' 
+                });
+                console.log(`PO ID ${poToUpdate.id} successfully updated to CLOSED & BILLED.`);
             }
         } catch (poErr) {
-            console.error('Failed to update PO billed_status:', poErr);
+            console.error('Failed to update parent purchase order status:', poErr);
         }
 
         res.json(voucher);
