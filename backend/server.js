@@ -36,18 +36,18 @@ require('./config/passport');
 app.use(passport.initialize());
 
 // 🚀 CLOUD WORKSPACE HANDLERS (Direct Binding)
-app.get('/api/auth/google', passport.authenticate('google', { 
-  scope: ['profile', 'email'], 
-  session: false 
+app.get('/api/auth/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+  session: false
 }));
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
-app.get('/api/auth/callback', 
-  passport.authenticate('google', { 
-    session: false, 
-    failureRedirect: `${CLIENT_URL}/login?error=auth_failed` 
-  }), 
+app.get('/api/auth/callback',
+  passport.authenticate('google', {
+    session: false,
+    failureRedirect: `${CLIENT_URL}/login?error=auth_failed`
+  }),
   (req, res) => {
     const token = jwt.sign(
       { id: req.user.id, role: req.user.role, companyId: req.user.activeCompanyId },
@@ -66,7 +66,7 @@ app.use('/api/groups', require('./modules/accounting/group.routes'));
 app.use('/api/ledgers', require('./modules/accounting/ledger.routes'));
 app.use('/api/vouchers', require('./modules/accounting/voucher.routes'));
 app.use('/api/accounting', require('./modules/accounting/accounting.routes'));
-app.use('/api/purchase', require('./modules/accounting/purchase.routes'));
+
 app.use('/api/reports', require('./modules/reports/reports.routes'));
 app.use('/api/sales', require('./modules/sales/sales.routes'));
 app.use('/api/quotes', require('./modules/sales/quote.routes'));
@@ -78,7 +78,8 @@ app.use('/api/cost-categories', require('./modules/accounting/costCategory.route
 app.use('/api/retainer-invoices', require('./modules/sales/retainerInvoice.routes'));
 app.use('/api/recurring-invoices', require('./modules/sales/recurringInvoice.routes'));
 app.use('/api/pricelists', require('./modules/inventory/pricelist.routes'));
-app.use('/api/purchases', require('./modules/purchases/purchases.routes'));
+app.use('/api/:companyId/purchases', require('./modules/purchases/purchases.routes'));
+
 app.use('/api/mail', require('./modules/mail/mail.routes'));
 app.use('/api/tax/gst', require('./modules/tax/gst.routes'));
 app.use('/api/payroll', require('./modules/payroll/payroll.routes'));

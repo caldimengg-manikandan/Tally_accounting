@@ -1,6 +1,11 @@
 const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit, Item, Company } = require('../../models');
 const { Op } = require('sequelize');
 
+exports.createVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
+exports.updateVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
+exports.deleteVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
+exports.markOrderAsPaid = async (req, res) => res.status(501).json({ error: 'Not implemented.' });
+
 exports.getVendors = async (req, res) => {
   try {
     const { companyId } = req.params;
@@ -140,13 +145,14 @@ exports.getPurchaseOrderPdfPreview = async (req, res) => {
         const { id } = req.params;
 
         // Fetch the PO with its vendor (Ledger) and Company
-        const order = await PurchaseOrder.findByPk(id, {
+        const order = await PurchaseOrder.findOne({
+            where: { id, CompanyId: req.companyId },
             include: [
                 { model: Ledger },
                 { model: Company }
             ]
         });
-        if (!order) return res.status(404).json({ error: 'Purchase Order not found' });
+        if (!order) return res.status(404).json({ error: 'Record not found or access denied' });
 
         // Temp directory for caching PDFs (one per PO)
         const tempDir = path.join(__dirname, '../../uploads/temp');
@@ -225,8 +231,10 @@ exports.createOrder = async (req, res) => {
 exports.updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const order = await PurchaseOrder.findByPk(id);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    const order = await PurchaseOrder.findOne({
+      where: { id, CompanyId: req.companyId }
+    });
+    if (!order) return res.status(404).json({ error: 'Record not found or access denied' });
     
     const updateData = { ...req.body };
     if (updateData.supplierLedgerId) {
@@ -252,7 +260,8 @@ exports.updateOrder = async (req, res) => {
 exports.deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    await PurchaseOrder.destroy({ where: { id } });
+    const deleted = await PurchaseOrder.destroy({ where: { id, CompanyId: req.companyId } });
+    if (!deleted) return res.status(404).json({ error: 'Record not found or access denied' });
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -693,7 +702,11 @@ exports.updateBill = async (req, res) => {
         const voucherNumber = billNumber || `BILL-${Date.now()}`;
 
         // 1. Reverse old stock quantities from current stock
-        const oldVoucher = await Voucher.findByPk(id);
+        const oldVoucher = await Voucher.findOne({
+            where: { id, CompanyId: req.companyId }
+        });
+        if (!oldVoucher) return res.status(404).json({ error: 'Record not found or access denied' });
+        
         if (oldVoucher && oldVoucher.narration) {
             try {
                 const parsed = JSON.parse(oldVoucher.narration);
