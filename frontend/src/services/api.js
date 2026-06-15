@@ -93,56 +93,56 @@ export const voucherAPI = {
 
 // ─── Purchase Module ───────────────────────────────
 export const purchaseAPI = {
-  getVendors: (companyId) => api.get(`/purchases/vendors/${companyId}`),
-  getOrders: (companyId) => api.get(`/purchases/orders/${companyId}`),
-  createOrder: (data) => api.post('/purchases/orders', data),
-  updateOrder: (id, data) => api.put(`/purchases/orders/${id}`, data),
-  deleteOrder: (id) => api.delete(`/purchases/orders/${id}`),
-  getBills: (companyId) => api.get(`/purchases/bills/${companyId}`),
-  createBill: (data) => api.post('/purchases/bills', data),
-  updateBill: (id, data) => api.put(`/purchases/bills/${id}`, data),
-  getExpenses: (companyId) => api.get(`/purchases/expenses/${companyId}`),
-  getNextOrderNumber: (companyId) => api.get(`/purchases/orders/next-number/${companyId}`),
-  getPurchaseOrderPdfPreview: (id) => api.get(`/purchases/orders/${id}/pdf-preview`, { responseType: 'blob' }),
+  getVendors: (companyId) => api.get(`/${companyId}/purchases/vendors`),
+  getOrders: (companyId) => api.get(`/${companyId}/purchases/orders`),
+  createOrder: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders`, data),
+  updateOrder: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders/${id}`, data),
+  deleteOrder: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/orders/${id}`),
+  getBills: (companyId) => api.get(`/${companyId}/purchases/bills`),
+  createBill: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/bills`, data),
+  updateBill: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/bills/${id}`, data),
+  getExpenses: (companyId) => api.get(`/${companyId}/purchases/expenses`),
+  getNextOrderNumber: (companyId) => api.get(`/${companyId}/purchases/orders/next-number`),
+  getPurchaseOrderPdfPreview: (id) => api.get(`/${sessionStorage.getItem('companyId')}/purchases/orders/${id}/pdf-preview`, { responseType: 'blob' }),
 
   // Legacy support
-  getByCompany: (companyId) => api.get(`/purchases/orders/${companyId}`),
-  delete: (id) => api.delete(`/purchases/orders/${id}`),
+  getByCompany: (companyId) => api.get(`/${companyId}/purchases/orders`),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/orders/${id}`),
 };
 
 export const paymentMadeAPI = {
-  getPayments: (companyId) => api.get(`/purchases/payments-made/${companyId}`),
-  getPayment: (id) => api.get(`/purchases/payments-made/payment/${id}`),
-  create: (data) => api.post('/purchases/payments-made', data),
-  update: (id, data) => api.put(`/purchases/payments-made/${id}`, data),
-  delete: (id) => api.delete(`/purchases/payments-made/${id}`),
-  markAsPaid: (id) => api.patch(`/purchases/payments-made/${id}/mark-paid`),
-  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/purchases/unpaid-bills/${vendorId}`, { params: { companyId, excludePaymentId } }),
-  getNextNumber: (companyId) => api.get(`/purchases/payments-made/next-number/${companyId}`),
+  getPayments: (companyId) => api.get(`/${companyId}/purchases/payments-made`),
+  getPayment: (id) => api.get(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`),
+  create: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/payments-made`, data),
+  update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`, data),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`),
+  markAsPaid: (id) => api.patch(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}/mark-paid`),
+  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/${companyId}/purchases/unpaid-bills/${vendorId}`, { params: { excludePaymentId } }),
+  getNextNumber: (companyId) => api.get(`/${companyId}/purchases/payments-made/next-number`),
 };
 
 export const recurringExpenseAPI = {
-  create: (data) => api.post('/purchases/recurring', data),
-  getByCompany: (companyId) => api.get(`/purchases/recurring/${companyId}`),
-  update: (id, data) => api.put(`/purchases/recurring/${id}`, data),
-  delete: (id) => api.delete(`/purchases/recurring/${id}`),
-  processDue: () => api.post('/purchases/recurring/process-due')
+  create: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/recurring`, data),
+  getByCompany: (companyId) => api.get(`/${companyId}/purchases/recurring`),
+  update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/recurring/${id}`, data),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/recurring/${id}`),
+  processDue: () => api.post(`/${sessionStorage.getItem('companyId')}/purchases/recurring/process-due`)
 };
 
 export const recurringBillAPI = {
-  create: (data) => api.post('/purchases/recurring-bills', data),
-  getByCompany: (companyId) => api.get(`/purchases/recurring-bills/${companyId}`),
-  update: (id, data) => api.put(`/purchases/recurring-bills/${id}`, data),
-  delete: (id) => api.delete(`/purchases/recurring-bills/${id}`),
-  processDue: () => api.post('/purchases/recurring-bills/process-due')
+  create: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/recurring-bills`, data),
+  getByCompany: (companyId) => api.get(`/${companyId}/purchases/recurring-bills`),
+  update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/recurring-bills/${id}`, data),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/recurring-bills/${id}`),
+  processDue: () => api.post(`/${sessionStorage.getItem('companyId')}/purchases/recurring-bills/process-due`)
 };
 
 export const vendorCreditAPI = {
-  create: (data) => api.post('/purchases/vendor-credits', data),
-  getByCompany: (companyId) => api.get(`/purchases/vendor-credits/${companyId}`),
-  getById: (id) => api.get(`/purchases/vendor-credit/${id}`),
-  update: (id, data) => api.put(`/purchases/vendor-credits/${id}`, data),
-  delete: (id) => api.delete(`/purchases/vendor-credits/${id}`)
+  create: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/vendor-credits`, data),
+  getByCompany: (companyId) => api.get(`/${companyId}/purchases/vendor-credits`),
+  getById: (id) => api.get(`/${sessionStorage.getItem('companyId')}/purchases/vendor-credits/${id}`),
+  update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/vendor-credits/${id}`, data),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/vendor-credits/${id}`)
 };
 
 // ─── Reports ───────────────────────────────────────

@@ -17,7 +17,8 @@ exports.getByCompany = async (req, res) => {
 
 exports.getById = async (req, res) => {
     try {
-        const credit = await VendorCredit.findByPk(req.params.id, {
+        const credit = await VendorCredit.findOne({
+            where: { id: req.params.id, CompanyId: req.companyId },
             include: [
                 { model: Ledger, as: 'Vendor' },
                 { model: Ledger, as: 'APAccount' },
@@ -31,6 +32,7 @@ exports.getById = async (req, res) => {
                 }
             ]
         });
+        if (!credit) return res.status(404).json({ error: 'Record not found or access denied' });
         res.json(credit);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -51,7 +53,7 @@ exports.create = async (req, res) => {
             vendorLedgerId, accountsPayableId,
             subTotal, taxAmount, adjustment, totalAmount,
             vendorNotes, termsConditions,
-            CompanyId: companyId,
+            CompanyId: req.companyId || companyId,
             ProjectId: projectId
         });
 
@@ -115,8 +117,10 @@ exports.update = async (req, res) => {
         const { id } = req.params;
         const { items, ...updateData } = req.body;
 
-        const credit = await VendorCredit.findByPk(id);
-        if (!credit) return res.status(404).json({ error: 'Vendor Credit not found' });
+        const credit = await VendorCredit.findOne({ 
+            where: { id, CompanyId: req.companyId } 
+        });
+        if (!credit) return res.status(404).json({ error: 'Record not found or access denied' });
 
         await credit.update(updateData);
 
@@ -141,8 +145,10 @@ exports.update = async (req, res) => {
 
 exports.delete = async (req, res) => {
     try {
-        const credit = await VendorCredit.findByPk(req.params.id);
-        if (!credit) return res.status(404).json({ error: 'Not found' });
+        const credit = await VendorCredit.findOne({ 
+            where: { id: req.params.id, CompanyId: req.companyId } 
+        });
+        if (!credit) return res.status(404).json({ error: 'Record not found or access denied' });
         
         if (credit.VoucherId) {
             await Voucher.destroy({ where: { id: credit.VoucherId } });

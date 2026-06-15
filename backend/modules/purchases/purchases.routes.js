@@ -1,5 +1,6 @@
 const express = require('express');
-const router = express.Router();
+// mergeParams is REQUIRED to access :companyId from the parent router/mount path
+const router = express.Router({ mergeParams: true });
 const purchasesController = require('./purchases.controller');
 const recurringExpenseController = require('./recurringExpense.controller');
 const recurringBillController = require('./recurringBill.controller');
@@ -9,55 +10,56 @@ const { verifyToken, tenantAccess, authorizeRoles } = require('../../middleware/
 
 router.use(verifyToken, tenantAccess);
 
-// Vendors
-router.get('/vendors/:companyId', purchasesController.getVendors);
+// ─── 1. VENDORS ──────────────────────────────────────────────────────────
+router.get('/vendors', purchasesController.getVendors);
+router.post('/vendors', purchasesController.createVendor);
+router.put('/vendors/:id', purchasesController.updateVendor);
+router.delete('/vendors/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), purchasesController.deleteVendor);
 
-// Purchase Orders
-router.get('/orders/next-number/:companyId', purchasesController.getNextOrderNumber);
+// ─── 2. PURCHASE ORDERS ──────────────────────────────────────────────────
+router.get('/orders/next-number', purchasesController.getNextOrderNumber);
+router.get('/orders', purchasesController.getOrders);
 router.get('/orders/:id/pdf-preview', purchasesController.getPurchaseOrderPdfPreview);
-router.get('/orders/:companyId', purchasesController.getOrders);
 router.post('/orders', purchasesController.createOrder);
 router.put('/orders/:id', purchasesController.updateOrder);
+router.patch('/orders/:id/mark-paid', purchasesController.markOrderAsPaid);
 router.delete('/orders/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), purchasesController.deleteOrder);
 
+// ─── 3. VENDOR CREDITS ───────────────────────────────────────────────────
+router.get('/vendor-credits', vendorCreditController.getByCompany);
+router.get('/vendor-credits/:id', vendorCreditController.getById);
+router.post('/vendor-credits', vendorCreditController.create);
+router.put('/vendor-credits/:id', vendorCreditController.update);
+router.delete('/vendor-credits/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), vendorCreditController.delete);
 
-// Bills
-router.get('/bills/:companyId', purchasesController.getBills);
+// ─── 4. BILLS & PAYMENTS ─────────────────────────────────────────────────
+router.get('/bills', purchasesController.getBills);
 router.post('/bills', purchasesController.createBill);
 router.put('/bills/:id', purchasesController.updateBill);
 
-// Payments Made
-router.get('/payments-made/next-number/:companyId', paymentMadeController.getNextPaymentNumber);
-router.get('/payments-made/payment/:id', paymentMadeController.getPayment);
-router.get('/payments-made/:companyId', paymentMadeController.getPayments);
+router.get('/payments-made/next-number', paymentMadeController.getNextPaymentNumber);
+router.get('/payments-made', paymentMadeController.getPayments);
+router.get('/payments-made/:id', paymentMadeController.getPayment);
 router.post('/payments-made', paymentMadeController.createPayment);
 router.patch('/payments-made/:id/mark-paid', paymentMadeController.markAsPaid);
 router.put('/payments-made/:id', paymentMadeController.updatePayment);
 router.delete('/payments-made/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), paymentMadeController.deletePayment);
 router.get('/unpaid-bills/:vendorId', paymentMadeController.getUnpaidBills);
 
-// Expenses
-router.get('/expenses/:companyId', purchasesController.getExpenses);
+// ─── 5. EXPENSES ─────────────────────────────────────────────────────────
+router.get('/expenses', purchasesController.getExpenses);
 
-// Recurring Expenses
-router.get('/recurring/:companyId', recurringExpenseController.getByCompany);
+// ─── 6. RECURRING EXPENSES & BILLS ───────────────────────────────────────
+router.get('/recurring', recurringExpenseController.getByCompany);
 router.post('/recurring', recurringExpenseController.create);
 router.put('/recurring/:id', recurringExpenseController.update);
 router.delete('/recurring/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), recurringExpenseController.delete);
 router.post('/recurring/process-due', recurringExpenseController.processDue);
 
-// Recurring Bills
-router.get('/recurring-bills/:companyId', recurringBillController.getByCompany);
+router.get('/recurring-bills', recurringBillController.getByCompany);
 router.post('/recurring-bills', recurringBillController.create);
 router.put('/recurring-bills/:id', recurringBillController.update);
 router.delete('/recurring-bills/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), recurringBillController.delete);
 router.post('/recurring-bills/process-due', recurringBillController.processDue);
-
-// Vendor Credits
-router.get('/vendor-credits/:companyId', vendorCreditController.getByCompany);
-router.get('/vendor-credit/:id', vendorCreditController.getById);
-router.post('/vendor-credits', vendorCreditController.create);
-router.put('/vendor-credits/:id', vendorCreditController.update);
-router.delete('/vendor-credits/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), vendorCreditController.delete);
 
 module.exports = router;
