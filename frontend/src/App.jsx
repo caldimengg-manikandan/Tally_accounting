@@ -45,6 +45,7 @@ import CashFlowView from './modules/reports/CashFlowView';
 import ReceivablesReportView from './modules/reports/ReceivablesReportView';
 import PayablesReportView from './modules/reports/PayablesReportView';
 import InventoryReportView from './modules/reports/InventoryReportView';
+import PayrollSummaryReportView from './modules/reports/PayrollSummaryReportView';
 import AIAssistantView from './modules/dashboard/AIAssistantView';
 import VendorsListView from './modules/purchases/VendorsListView';
 import VendorsView from './modules/purchases/VendorsView';
@@ -172,10 +173,10 @@ const NAV = [
     ]
   },
   {
-    group: 'HR & Payroll',
+    group: 'Payroll',
     icon: Users,
     items: [
-      { label: 'Payroll',           path: '/payroll', icon: UserCheck }
+      { label: 'Payroll',           path: '/payroll', icon: Users }
     ]
   },
   {
@@ -189,6 +190,7 @@ const NAV = [
       { label: 'Receivables Report', path: '/reports/receivables-report', icon: FileText },
       { label: 'Payables Report',    path: '/reports/payables-report', icon: FileStack },
       { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
+      { label: 'Payroll Summary',    path: '/reports/payroll-summary', icon: Users },
       { label: 'GST Returns',        path: '/reports/gst', icon: FileText },
     ]
   },
@@ -316,7 +318,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
   }
 
   // EXPANDED VIEW
-  if (group === 'Home' || items.length === 0) {
+  if (items.length <= 1) {
     return items.map(item => (
       <NavItem
         key={item.path}
@@ -478,7 +480,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         flexDirection: 'column',
         transition: 'width .2s ease-in-out',
         position: 'relative',
-        zIndex: 50,
+        zIndex: 60,
       }}>
 
         <div className={`flex items-center h-20 border-b border-slate-50 overflow-hidden transition-all duration-300 ${collapsed ? 'justify-center' : 'px-8 gap-3'}`}>
@@ -499,7 +501,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             const role = user.role || 'VIEWER';
             if (role === 'VIEWER') return ['Home', 'Reports'].includes(section.group);
             if (role === 'AUDITOR') return ['Home', 'Reports', 'Setup'].includes(section.group);
-            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Operations', 'HR & Payroll'].includes(section.group);
+            if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Operations', 'Payroll'].includes(section.group);
             if (role === 'EMPLOYEE') return ['Home', 'Items', 'Sales', 'Purchases', 'Banking', 'Accounting', 'Reports'].includes(section.group);
             return true; // ADMIN, SUPER_ADMIN, ACCOUNTANT, MANAGER see all
           }).map(section => (
@@ -549,7 +551,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 relative z-40 shrink-0 no-print">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 relative z-[60] shrink-0 no-print">
           <div className="flex items-center gap-4">
           </div>
 
@@ -571,7 +573,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
 
         {/* Page content */}
         <main className="bg-[#f8fafc]" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
-          <div className="animate-fade-up" style={{ animationDuration: '.35s' }}>
+          <div className="animate-in fade-in duration-500">
             {children}
           </div>
         </main>
@@ -798,6 +800,10 @@ function AuthenticatedApp() {
       {/* Time Tracking */}
       <Route path="/time-tracking/projects"          element={shell(ProjectsView)} />
       <Route path="/time-tracking/projects/new"      element={shell(ProjectsView)} />
+      
+      {/* Payroll / Employees */}
+      <Route path="/payroll" element={shell(PayrollView)} />
+      <Route path="/employees" element={shell(PayrollView, { showNewEmployeeForm: true })} />
       <Route path="/time-tracking/projects/edit/:id" element={shell(ProjectsView)} />
       <Route path="/time-tracking/projects/view/:id" element={shell(ProjectsView)} />
 
@@ -832,6 +838,7 @@ function AuthenticatedApp() {
       <Route path="/reports/receivables-report"    element={shell(ReceivablesReportView)} />
       <Route path="/reports/payables-report"       element={shell(PayablesReportView)} />
       <Route path="/reports/inventory-report"      element={shell(InventoryReportView)} />
+      <Route path="/reports/payroll-summary"       element={shell(PayrollSummaryReportView)} />
       <Route path="/reports/customer-outstanding"  element={shell(CustomerOutstandingView)} />
       <Route path="/reports/vendor-outstanding"    element={shell(VendorOutstandingView)} />
 

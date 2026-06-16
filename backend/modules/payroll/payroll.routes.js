@@ -16,6 +16,11 @@ router.delete('/employees/:id', authorizeRoles(...WRITE_ROLES), payrollControlle
 
 // Salary Structure
 router.post('/salary-structure', authorizeRoles(...WRITE_ROLES), payrollController.saveSalaryStructure);
+router.post('/:companyId/salary-structures', authorizeRoles(...WRITE_ROLES), payrollController.saveSalaryStructure);
+
+// Payroll Settings
+router.get('/:companyId/settings', authorizeRoles(...ALL_ROLES), payrollController.getSettings);
+router.put('/:companyId/settings', authorizeRoles(...WRITE_ROLES), payrollController.saveSettings);
 
 // Attendance Log
 router.post('/attendance', authorizeRoles(...WRITE_ROLES), payrollController.saveAttendance);

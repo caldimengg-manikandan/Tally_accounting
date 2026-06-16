@@ -371,6 +371,8 @@ export const payrollAPI = {
   getAttendance: (companyId) => api.get(`/payroll/attendance/${companyId}`),
   process: (data) => api.post('/payroll/process', data),
   getPayslips: (companyId) => api.get(`/payroll/payslips/${companyId}`),
+  getSettings: (companyId) => api.get(`/payroll/${companyId}/settings`),
+  saveSettings: (companyId, data) => api.put(`/payroll/${companyId}/settings`, data),
 };
 
 // ─── Indian GST Returns ────────────────────────────
