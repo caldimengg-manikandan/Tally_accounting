@@ -6,14 +6,6 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
-    CreatedBy: {
-      type: DataTypes.UUID,
-      allowNull: true
-    },
-    ModifiedBy: {
-      type: DataTypes.UUID,
-      allowNull: true
-    },
     employeeId: {
       type: DataTypes.STRING,
       allowNull: false
@@ -21,6 +13,35 @@ module.exports = (sequelize, DataTypes) => {
     name: {
       type: DataTypes.STRING,
       allowNull: false
+    },
+    dateOfJoining: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    phone: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    gender: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    workLocation: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    isDirector: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    portalAccess: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true
     },
     department: {
       type: DataTypes.STRING,
@@ -30,45 +51,38 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
-    dateOfJoining: {
-      type: DataTypes.DATE,
-      allowNull: true
-    },
-    bankAccount: {
+    panNumber: {
       type: DataTypes.STRING,
       allowNull: true
     },
-    bankName: {
+    bankAccountNumber: {
       type: DataTypes.STRING,
       allowNull: true
     },
-    ifsc: {
+    ifscCode: {
       type: DataTypes.STRING,
       allowNull: true
     },
-    pan: {
-      type: DataTypes.STRING,
+    status: {
+      type: DataTypes.ENUM('Active', 'Inactive'),
+      defaultValue: 'Active'
+    },
+    CompanyId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'Companies', // Will link to Company model automatically via associations
+        key: 'id'
+      }
+    },
+    // Retaining standard audit fields that are common in this system
+    CreatedBy: {
+      type: DataTypes.UUID,
       allowNull: true
     },
-    pfNumber: {
-      type: DataTypes.STRING,
+    ModifiedBy: {
+      type: DataTypes.UUID,
       allowNull: true
-    },
-    esiNumber: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    phone: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    active: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true
     }
   });
 
