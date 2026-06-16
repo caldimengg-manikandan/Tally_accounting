@@ -6,40 +6,40 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
-    CreatedBy: {
+    EmployeeId: {
+      type: DataTypes.UUID,
+      allowNull: false
+    },
+    CompanyId: {
       type: DataTypes.UUID,
       allowNull: true
     },
-    ModifiedBy: {
-      type: DataTypes.UUID,
-      allowNull: true
-    },
-    basic: {
-      type: DataTypes.DECIMAL(15, 2),
+    annualCtc: {
+      type: DataTypes.DECIMAL(12, 2),
       defaultValue: 0
     },
-    hra: {
-      type: DataTypes.DECIMAL(15, 2),
+    monthlyBasic: {
+      type: DataTypes.DECIMAL(12, 2),
       defaultValue: 0
     },
-    da: {
-      type: DataTypes.DECIMAL(15, 2),
+    monthlyFixedAllowance: {
+      type: DataTypes.DECIMAL(12, 2),
       defaultValue: 0
     },
-    incentives: {
-      type: DataTypes.DECIMAL(15, 2),
+    annualBasic: {
+      type: DataTypes.DECIMAL(12, 2),
       defaultValue: 0
     },
-    pfDeduction: {
-      type: DataTypes.DECIMAL(15, 2),
+    monthlyHra: {
+      type: DataTypes.DECIMAL(12, 2),
       defaultValue: 0
     },
-    esiDeduction: {
-      type: DataTypes.DECIMAL(15, 2),
+    annualHra: {
+      type: DataTypes.DECIMAL(12, 2),
       defaultValue: 0
     },
-    profTaxDeduction: {
-      type: DataTypes.DECIMAL(15, 2),
+    annualFixedAllowance: {
+      type: DataTypes.DECIMAL(12, 2),
       defaultValue: 0
     }
   });

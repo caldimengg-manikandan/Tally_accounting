@@ -45,6 +45,7 @@ const Employee = require('./employee.model')(sequelize, DataTypes);
 const Attendance = require('./attendance.model')(sequelize, DataTypes);
 const SalaryStructure = require('./salaryStructure.model')(sequelize, DataTypes);
 const Payslip = require('./payslip.model')(sequelize, DataTypes);
+const PayrollSettings = require('./payrollSettings.model')(sequelize, DataTypes);
 const FixedAsset = require('./fixedAsset.model')(sequelize, DataTypes);
 const DepreciationLog = require('./depreciationLog.model')(sequelize, DataTypes);
 const BOM = require('./bom.model')(sequelize, DataTypes);
@@ -446,6 +447,7 @@ module.exports = {
   Attendance,
   SalaryStructure,
   Payslip,
+  PayrollSettings,
   FixedAsset,
   DepreciationLog,
   BOM,

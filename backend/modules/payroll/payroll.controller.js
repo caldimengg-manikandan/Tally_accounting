@@ -1,4 +1,4 @@
-const { Employee, Attendance, SalaryStructure, Payslip, Ledger, Group, Voucher, Transaction, sequelize } = require('../../models');
+const { Employee, Attendance, SalaryStructure, Payslip, Ledger, Group, Voucher, Transaction, PayrollSettings, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 
@@ -50,15 +50,23 @@ exports.deleteEmployee = async (req, res) => {
 // --- Salary Structure ---
 exports.saveSalaryStructure = async (req, res) => {
   try {
-    const { employeeId, basic, hra, da, incentives, pfDeduction, esiDeduction, profTaxDeduction, companyId } = req.body;
-    let struct = await SalaryStructure.findOne({ where: { EmployeeId: employeeId } });
-    if (struct) {
-      await struct.update({ basic, hra, da, incentives, pfDeduction, esiDeduction, profTaxDeduction });
-    } else {
-      struct = await SalaryStructure.create({
-        EmployeeId: employeeId, basic, hra, da, incentives, pfDeduction, esiDeduction, profTaxDeduction, CompanyId: companyId
-      });
-    }
+    const { employeeId, annualCtc, companyId, monthlyBasic, monthlyFixedAllowance, annualBasic, annualFixedAllowance, hraMonthly, hraAnnual } = req.body;
+    
+    const ctc = parseFloat(annualCtc || 0);
+
+    // Use SalaryStructure.upsert() to dynamically save or update this compensation contract
+    const [struct] = await SalaryStructure.upsert({
+      EmployeeId: employeeId,
+      CompanyId: companyId || req.params.companyId,
+      annualCtc: ctc,
+      monthlyBasic: monthlyBasic || 0,
+      monthlyFixedAllowance: monthlyFixedAllowance || 0,
+      annualBasic: annualBasic || 0,
+      annualFixedAllowance: annualFixedAllowance || 0,
+      monthlyHra: hraMonthly || 0,
+      annualHra: hraAnnual || 0
+    });
+
     res.json(struct);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -87,13 +95,51 @@ exports.getAttendanceRange = async (req, res) => {
   try {
     const { companyId } = req.params;
     const { startDate, endDate } = req.query;
+    
+    const whereClause = {};
+    if (startDate && endDate) {
+      whereClause.date = { [Op.between]: [startDate, endDate] };
+    }
+
     const attendance = await Attendance.findAll({
-      where: {
-        CompanyId: companyId,
-        date: { [Op.between]: [startDate, endDate] }
-      }
+      where: whereClause,
+      include: [{
+        model: Employee,
+        where: { CompanyId: companyId },
+        attributes: ['id', 'name', 'employeeId']
+      }]
     });
     res.json(attendance);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// --- Payroll Settings ---
+exports.getSettings = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+    let settings = await PayrollSettings.findOne({ where: { CompanyId: companyId } });
+    if (!settings) {
+      settings = await PayrollSettings.create({ CompanyId: companyId });
+    }
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.saveSettings = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+    const { pfEmployeeRate, esiEmployeeRate, ptMonthlyAmount } = req.body;
+    let settings = await PayrollSettings.findOne({ where: { CompanyId: companyId } });
+    if (!settings) {
+      settings = await PayrollSettings.create({ CompanyId: companyId, pfEmployeeRate, esiEmployeeRate, ptMonthlyAmount });
+    } else {
+      await settings.update({ pfEmployeeRate, esiEmployeeRate, ptMonthlyAmount });
+    }
+    res.json(settings);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -165,6 +211,11 @@ exports.processPayroll = async (req, res) => {
       }, { transaction: t });
     }
 
+    let settings = await PayrollSettings.findOne({ where: { CompanyId: companyId }, transaction: t });
+    if (!settings) {
+      settings = { pfEmployeeRate: 12.00, esiEmployeeRate: 0.75, ptMonthlyAmount: 200.00 };
+    }
+
     let totalGrossSalary = 0;
     let totalNetSalary = 0;
     let totalPF = 0;
@@ -193,18 +244,23 @@ exports.processPayroll = async (req, res) => {
       });
 
       // Deduct basic pay proportionally for absent days
-      const basic = parseFloat(struct.basic || 0);
+      const basic = parseFloat(struct.monthlyBasic || 0);
       const absentDeduction = absentCount > 0 ? (basic / daysInMonth) * absentCount : 0;
       const actualBasic = Math.max(0, basic - absentDeduction);
 
-      const hra = parseFloat(struct.hra || 0);
-      const da = parseFloat(struct.da || 0);
-      const incentives = parseFloat(struct.incentives || 0);
-      const pf = parseFloat(struct.pfDeduction || 0);
-      const esi = parseFloat(struct.esiDeduction || 0);
-      const pt = parseFloat(struct.profTaxDeduction || 0);
+      const hra = parseFloat(struct.monthlyHra || 0);
+      const actualHra = Math.max(0, hra - (absentCount > 0 ? (hra / daysInMonth) * absentCount : 0));
+      
+      const fixedAllowance = parseFloat(struct.monthlyFixedAllowance || 0);
+      const actualFixedAllowance = Math.max(0, fixedAllowance - (absentCount > 0 ? (fixedAllowance / daysInMonth) * absentCount : 0));
 
-      const gross = actualBasic + hra + da + incentives;
+      const gross = actualBasic + actualHra + actualFixedAllowance;
+      
+      // Calculate Deductions dynamically based on Settings
+      const pf = Math.round(actualBasic * (parseFloat(settings.pfEmployeeRate) / 100));
+      const esi = Math.round(gross * (parseFloat(settings.esiEmployeeRate) / 100));
+      const pt = parseFloat(settings.ptMonthlyAmount || 0);
+
       const deductions = pf + esi + pt;
       const net = Math.max(0, gross - deductions);
 
@@ -219,9 +275,9 @@ exports.processPayroll = async (req, res) => {
         month,
         year: parseInt(year),
         basic: actualBasic,
-        hra,
-        da,
-        incentives,
+        hra: actualHra,
+        da: actualFixedAllowance, // Storing fixed allowance in DA field temporarily to avoid altering Payslip model
+        incentives: 0,
         pf,
         esi,
         profTax: pt,
@@ -282,8 +338,10 @@ exports.getPayslips = async (req, res) => {
   try {
     const { companyId } = req.params;
     const payslips = await Payslip.findAll({
-      where: { CompanyId: companyId },
-      include: [{ model: Employee }]
+      include: [{ 
+        model: Employee,
+        where: { CompanyId: companyId }
+      }]
     });
     res.json(payslips);
   } catch (err) {
