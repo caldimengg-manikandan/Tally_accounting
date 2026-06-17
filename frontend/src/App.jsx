@@ -69,7 +69,6 @@ import { TransactionLockingView } from './modules/accountant/AccountantSubModule
 import ChartOfAccountsView from './modules/accounting/ChartOfAccountsView';
 import JournalEntriesView from './modules/accounting/JournalEntriesView';
 import FixedAssetsView from './modules/fixed_assets/FixedAssetsView';
-import ManufacturingView from './modules/manufacturing/ManufacturingView';
 import ProjectsView from './modules/time_tracking/ProjectsView';
 
 import BulkUpdateView from './modules/accountant/BulkUpdateView';
@@ -166,13 +165,6 @@ const NAV = [
     ]
   },
   {
-    group: 'Operations',
-    icon: Sliders,
-    items: [
-      { label: 'Manufacturing',     path: '/manufacturing', icon: Package }
-    ]
-  },
-  {
     group: 'Payroll',
     icon: Users,
     items: [
@@ -187,11 +179,7 @@ const NAV = [
       { label: 'Balance Sheet',      path: '/reports/bs', icon: FileBarChart2 },
       { label: 'Trial Balance',      path: '/reports/trial-balance', icon: BarChart2 },
       { label: 'Cash Flow',          path: '/reports/cash-flow', icon: TrendingUp },
-      { label: 'Receivables Report', path: '/reports/receivables-report', icon: FileText },
-      { label: 'Payables Report',    path: '/reports/payables-report', icon: FileStack },
       { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
-      { label: 'Payroll Summary',    path: '/reports/payroll-summary', icon: Users },
-      { label: 'GST Returns',        path: '/reports/gst', icon: FileText },
     ]
   },
   {
@@ -824,8 +812,6 @@ function AuthenticatedApp() {
       <Route path="/reconciliation"     element={shell(BankReconciliationView)} />
       <Route path="/payroll"            element={shell(PayrollView)} />
       <Route path="/fixed-assets"       element={shell(FixedAssetsView)} />
-      <Route path="/manufacturing"      element={shell(ManufacturingView)} />
-
       {/* Tax */}
       <Route path="/reports/gst"           element={shell(GSTReturnsView)} />
 

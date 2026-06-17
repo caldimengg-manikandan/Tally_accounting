@@ -606,6 +606,152 @@ class PDFService {
             doc.end();
         });
     }
+
+    static async generateEmployeeProfile(employee, company) {
+        return new Promise((resolve, reject) => {
+            const doc = new PDFDocument({ margin: 40, size: 'A4' });
+            let buffers = [];
+            doc.on('data', buffers.push.bind(buffers));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+            doc.on('error', reject);
+
+            // --- HEADER ---
+            doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold')
+               .text(company?.name || 'Company Profile', 40, 40);
+            
+            doc.fontSize(9).font('Helvetica').fillColor('#444444')
+               .text(company?.state || '', 40, 56)
+               .text(company?.email || '', 40, 68);
+
+            doc.fontSize(22).font('Helvetica-Bold').fillColor('#1e3a8a')
+               .text('EMPLOYEE PROFILE', 250, 40, { width: 305, align: 'right' });
+
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333')
+               .text(`ID: ${employee.employeeId}`, 250, 66, { width: 305, align: 'right' });
+
+            doc.moveTo(40, 95).lineTo(555, 95).strokeColor('#dddddd').lineWidth(0.5).stroke();
+
+            let y = 110;
+
+            const printSectionHeader = (title) => {
+                if (y > 700) {
+                    doc.addPage();
+                    y = 40;
+                }
+                doc.rect(40, y, 515, 18).fill('#f1f5f9');
+                doc.fillColor('#1e3a8a').fontSize(9).font('Helvetica-Bold').text(title, 48, y + 5);
+                y += 25;
+            };
+
+            const printField = (label, value, x) => {
+                doc.fillColor('#64748b').fontSize(8).font('Helvetica').text(label, x, y);
+                doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(value || '—', x, y + 10);
+            };
+
+            // 1. Personal Details
+            printSectionHeader('1. PERSONAL DETAILS');
+            printField('First Name', employee.firstName, 45);
+            printField('Middle Name', employee.middleName, 210);
+            printField('Last Name', employee.lastName, 380);
+            y += 28;
+
+            printField('Gender', employee.gender, 45);
+            printField('Date of Birth', employee.dob, 210);
+            printField('Blood Group', employee.bloodGroup, 380);
+            y += 28;
+
+            printField('Father\'s Name', employee.fatherName, 45);
+            printField('Mother\'s Name', employee.motherName, 210);
+            printField('Marital Status', employee.maritalStatus, 380);
+            y += 35;
+
+            // 2. Contact Details
+            printSectionHeader('2. CONTACT DETAILS');
+            printField('Work Email', employee.email, 45);
+            printField('Personal Email', employee.personalEmail, 210);
+            printField('Mobile Number', employee.phone, 380);
+            y += 28;
+
+            printField('Emergency Contact Name', employee.emergencyContactName, 45);
+            printField('Relationship', employee.emergencyContactRelation, 210);
+            printField('Emergency Contact Phone', employee.emergencyContactPhone, 380);
+            y += 35;
+
+            // 3. Address Details
+            printSectionHeader('3. ADDRESS DETAILS');
+            const presentAddr = [
+                employee.presentAddressLine1,
+                employee.presentAddressLine2,
+                [employee.presentAddressCity, employee.presentAddressState].filter(Boolean).join(', '),
+                [employee.presentAddressCountry, employee.presentAddressZip].filter(Boolean).join(' - ')
+            ].filter(Boolean).join('\n');
+            
+            const permanentAddr = employee.sameAsPresentAddress ? 'Same as Present Address' : [
+                employee.permanentAddressLine1,
+                employee.permanentAddressLine2,
+                [employee.permanentAddressCity, employee.permanentAddressState].filter(Boolean).join(', '),
+                [employee.permanentAddressCountry, employee.permanentAddressZip].filter(Boolean).join(' - ')
+            ].filter(Boolean).join('\n');
+
+            doc.fillColor('#64748b').fontSize(8).font('Helvetica').text('Present Address', 45, y);
+            doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(presentAddr || '—', 45, y + 10, { width: 240, lineGap: 2 });
+
+            doc.fillColor('#64748b').fontSize(8).font('Helvetica').text('Permanent Address', 300, y);
+            doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(permanentAddr || '—', 300, y + 10, { width: 240, lineGap: 2 });
+            y += 65;
+
+            // 4. Employment Details
+            printSectionHeader('4. EMPLOYMENT DETAILS');
+            printField('Employee ID', employee.employeeId, 45);
+            printField('Date of Joining', employee.dateOfJoining, 210);
+            printField('Employment Type', employee.employmentType, 380);
+            y += 28;
+
+            printField('Department', employee.department, 45);
+            printField('Designation', employee.designation, 210);
+            printField('Work Location', employee.workLocation, 380);
+            y += 28;
+
+            printField('Status', employee.status, 45);
+            printField('Resignation Date', employee.resignationDate, 210);
+            y += 35;
+
+            // 5. Bank Details
+            printSectionHeader('5. BANK DETAILS');
+            printField('Bank Name', employee.bankName, 45);
+            printField('Account Number', employee.bankAccountNumber, 210);
+            printField('Account Type', employee.bankAccountType, 380);
+            y += 28;
+
+            printField('IFSC Code', employee.ifscCode, 45);
+            printField('Branch Name', employee.bankBranchName, 210);
+            y += 35;
+
+            // 6. Tax & Compliance Details
+            printSectionHeader('6. TAX & COMPLIANCE');
+            printField('PAN Number', employee.panNumber, 45);
+            printField('Aadhaar Number', employee.aadhaarNumber, 210);
+            printField('UAN / PF Number', employee.pfNumber, 380);
+            y += 28;
+
+            printField('ESI Number', employee.esiNumber, 45);
+            printField('PRAN Number', employee.pranNumber, 210);
+            y += 35;
+
+            // 7. Education & Experience Details
+            printSectionHeader('7. EDUCATION & EXPERIENCE');
+            printField('Highest Qualification', employee.highestQualification, 45);
+            printField('University/College', employee.universityCollege, 210);
+            printField('Year of Passing', employee.yearOfPassing ? employee.yearOfPassing.toString() : '—', 380);
+            y += 28;
+
+            printField('Previous Company', employee.previousCompany, 45);
+            printField('Years of Experience', employee.previousExperience ? employee.previousExperience.toString() : '—', 210);
+            y += 35;
+
+            doc.end();
+        });
+    }
 }
 
 module.exports = PDFService;
