@@ -43,8 +43,12 @@ const Currency = require('./currency.model')(sequelize, DataTypes);
 const CostCategory = require('./costCategory.model')(sequelize, DataTypes);
 const Employee = require('./employee.model')(sequelize, DataTypes);
 const Attendance = require('./attendance.model')(sequelize, DataTypes);
+const SalaryComponent = require('./salaryComponent.model')(sequelize, DataTypes);
 const SalaryStructure = require('./salaryStructure.model')(sequelize, DataTypes);
+const SalaryStructureComponent = require('./salaryStructureComponent.model')(sequelize, DataTypes);
+const EmployeeSalaryAssignment = require('./employeeSalaryAssignment.model')(sequelize, DataTypes);
 const Payslip = require('./payslip.model')(sequelize, DataTypes);
+const SalarySlip = require('./salarySlip.model')(sequelize, DataTypes);
 const PayrollSettings = require('./payrollSettings.model')(sequelize, DataTypes);
 const FixedAsset = require('./fixedAsset.model')(sequelize, DataTypes);
 const DepreciationLog = require('./depreciationLog.model')(sequelize, DataTypes);
@@ -339,17 +343,38 @@ Company.hasMany(Attendance, { foreignKey: 'CompanyId' });
 Attendance.belongsTo(Company, { foreignKey: 'CompanyId' });
 Employee.hasMany(Attendance, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
 Attendance.belongsTo(Employee, { foreignKey: 'EmployeeId' });
+Attendance.belongsTo(User, { as: 'CreatedByUser', foreignKey: 'CreatedBy', constraints: false });
+Attendance.belongsTo(User, { as: 'ApprovedByUser', foreignKey: 'ApprovedBy', constraints: false });
+// Salary Components
+Company.hasMany(SalaryComponent, { foreignKey: 'CompanyId' });
+SalaryComponent.belongsTo(Company, { foreignKey: 'CompanyId' });
 
+// Salary Structures
 Company.hasMany(SalaryStructure, { foreignKey: 'CompanyId' });
 SalaryStructure.belongsTo(Company, { foreignKey: 'CompanyId' });
-Employee.hasOne(SalaryStructure, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
-SalaryStructure.belongsTo(Employee, { foreignKey: 'EmployeeId' });
+
+// Salary Structure Components (Junction Table)
+SalaryStructure.hasMany(SalaryStructureComponent, { foreignKey: 'SalaryStructureId', as: 'components', onDelete: 'CASCADE' });
+SalaryStructureComponent.belongsTo(SalaryStructure, { foreignKey: 'SalaryStructureId' });
+SalaryComponent.hasMany(SalaryStructureComponent, { foreignKey: 'SalaryComponentId', as: 'structureComponents', onDelete: 'CASCADE' });
+SalaryStructureComponent.belongsTo(SalaryComponent, { foreignKey: 'SalaryComponentId', as: 'component' });
+
+// Employee Salary Assignments
+Company.hasMany(EmployeeSalaryAssignment, { foreignKey: 'CompanyId' });
+EmployeeSalaryAssignment.belongsTo(Company, { foreignKey: 'CompanyId' });
+Employee.hasMany(EmployeeSalaryAssignment, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
+EmployeeSalaryAssignment.belongsTo(Employee, { foreignKey: 'EmployeeId' });
+SalaryStructure.hasMany(EmployeeSalaryAssignment, { foreignKey: 'SalaryStructureId', onDelete: 'RESTRICT' });
+EmployeeSalaryAssignment.belongsTo(SalaryStructure, { foreignKey: 'SalaryStructureId', as: 'structure' });
 
 Company.hasMany(Payslip, { foreignKey: 'CompanyId' });
 Payslip.belongsTo(Company, { foreignKey: 'CompanyId' });
 Employee.hasMany(Payslip, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
 Payslip.belongsTo(Employee, { foreignKey: 'EmployeeId' });
 Payslip.belongsTo(Voucher, { foreignKey: 'VoucherId', onDelete: 'SET NULL' });
+
+Company.hasMany(SalarySlip, { foreignKey: 'companyId' });
+Employee.hasMany(SalarySlip, { foreignKey: 'employeeId' });
 
 // 21. Fixed Assets
 Company.hasMany(FixedAsset, { foreignKey: 'CompanyId' });
@@ -445,8 +470,12 @@ module.exports = {
   CostCategory,
   Employee,
   Attendance,
+  SalaryComponent,
   SalaryStructure,
+  SalaryStructureComponent,
+  EmployeeSalaryAssignment,
   Payslip,
+  SalarySlip,
   PayrollSettings,
   FixedAsset,
   DepreciationLog,

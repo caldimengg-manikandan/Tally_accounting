@@ -1,20 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, Plus, Check, X, AlertCircle, Loader2, RefreshCcw, DollarSign, Calendar, FileText, Settings, UserCheck, Info, Pencil, Sliders, Banknote, TrendingUp, TrendingDown
 } from 'lucide-react';
 import { payrollAPI, ledgerAPI } from '../../services/api';
 import CreatableSelect from '../../components/CreatableSelect';
 
+// Subcomponents
+import EmployeeList from './components/EmployeeList';
+import EmployeeForm from './components/EmployeeForm';
+import EmployeeDetails from './components/EmployeeDetails';
+import EmployeeImport from './components/EmployeeImport';
+import AttendanceLogsPage from './components/AttendanceLogsPage';
+import SalaryStructuresPage from './components/salary/SalaryStructuresPage';
+import PayrollSettingsForm from './components/PayrollSettingsForm';
+import ProcessPayrollForm from './components/step4/ProcessPayrollForm';
+import EmployeeDetailsDrawer from '../../components/payroll/EmployeeDetailsDrawer';
+
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function PayrollView({ companyId, showNewEmployeeForm }) {
-  
   const [activeTab, setActiveTab] = useState('employees'); // 'employees' | 'attendance' | 'structures' | 'process' | 'payslips' | 'settings'
   
   const [payrollSettings, setPayrollSettings] = useState({ pfEmployeeRate: 12.00, esiEmployeeRate: 0.75, ptMonthlyAmount: 200.00 });
   
+  // Employees list data states
   const [employees, setEmployees] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const [empPage, setEmpPage] = useState(1);
+  const [empLimit, setEmpLimit] = useState(10);
+  const [empPages, setEmpPages] = useState(1);
+  const [empSearch, setEmpSearch] = useState('');
+  const [empFilters, setEmpFilters] = useState({
+    status: '',
+    department: '',
+    employmentType: '',
+    includeArchived: 'false',
+    sortBy: 'createdAt',
+    sortDir: 'DESC'
+  });
+
+  // Flow states
+  const [selectedEmpForForm, setSelectedEmpForForm] = useState(null);
+  const [showEmpFormView, setShowEmpFormView] = useState(false);
+  const [selectedEmpForDetail, setSelectedEmpForDetail] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showImportDrawer, setShowImportDrawer] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+
   const [ledgers, setLedgers] = useState([]);
   const [payslips, setPayslips] = useState([]);
   const [attendanceLogs, setAttendanceLogs] = useState([]);
@@ -25,30 +59,10 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
   const [success, setSuccess] = useState('');
   
   // Forms & Modal states
-  const [showEmpModal, setShowEmpModal] = useState(showNewEmployeeForm || false);
   const [showHRA, setShowHRA] = useState(false);
-  
-  useEffect(() => {
-    setShowEmpModal(!!showNewEmployeeForm);
-  }, [showNewEmployeeForm]);
   const [showStructModal, setShowStructModal] = useState(false);
   const [showAttModal, setShowAttModal] = useState(false);
-  const [selectedEmp, setSelectedEmp] = useState(null);
-  
-  const [empForm, setEmpForm] = useState({
-    firstName: '', lastName: '', employeeId: '', dateOfJoining: '', email: '', phone: '',
-    isDirector: false, gender: '', workLocation: '', designation: '', department: '', portalAccess: false,
-    bankAccount: '', bankName: '', ifsc: '', pan: '', pfNumber: '', esiNumber: ''
-  });
-  
-  const [designations, setDesignations] = useState(['System Engineer', 'Project Manager', 'HR Manager', 'Sales Executive']);
-  const [departments, setDepartments] = useState(['Engineering', 'Human Resources', 'Sales', 'Marketing']);
-  const [showNewDesigModal, setShowNewDesigModal] = useState(false);
-  const [showNewDeptModal, setShowNewDeptModal] = useState(false);
-  const [newOptionValue, setNewOptionValue] = useState('');
-  const [formStep, setFormStep] = useState(1);
-  const [salaryStep, setSalaryStep] = useState(1);
-  const [showEarningDropdown, setShowEarningDropdown] = useState(false);
+  const [selectedEmp, setSelectedEmp] = useState(null); // Used specifically for attendance/structures
   
   const [structForm, setStructForm] = useState({
     annualCTC: '', basic: '', hra: '', da: '', incentives: '', pfDeduction: '', esiDeduction: '', profTaxDeduction: ''
@@ -64,17 +78,36 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
     paymentLedgerId: ''
   });
 
+  // Parse User Role for permission checks
+  const user = useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+  const userRole = user.role || 'VIEWER';
+
+  // Toggle form view if triggered via routing parameter
+  useEffect(() => {
+    if (showNewEmployeeForm) {
+      setSelectedEmpForForm(null);
+      setShowEmpFormView(true);
+    }
+  }, [showNewEmployeeForm]);
+
   const fetchData = async () => {
     setLoading(true);
+    setError('');
     try {
-      const [empRes, ledgRes, attRes, payRes, setRes] = await Promise.all([
-        payrollAPI.getEmployees(companyId),
+      const [allEmpRes, ledgRes, attRes, payRes, setRes] = await Promise.all([
+        payrollAPI.getEmployees(companyId, { limit: 1000 }),
         ledgerAPI.getByCompany(companyId),
         payrollAPI.getAttendance(companyId),
         payrollAPI.getPayslips(companyId),
         payrollAPI.getSettings(companyId)
       ]);
-      setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
+      setAllEmployees(Array.isArray(allEmpRes.data.employees) ? allEmpRes.data.employees : []);
       setLedgers(Array.isArray(ledgRes.data) ? ledgRes.data : []);
       setAttendanceLogs(Array.isArray(attRes.data) ? attRes.data : []);
       setPayslips(Array.isArray(payRes.data) ? payRes.data : []);
@@ -87,91 +120,94 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const res = await payrollAPI.getEmployees(companyId, {
+        page: empPage,
+        limit: empLimit,
+        search: empSearch,
+        ...empFilters
+      });
+      setEmployees(Array.isArray(res.data.employees) ? res.data.employees : []);
+      setTotalEmployees(res.data.total || 0);
+      setEmpPages(res.data.pages || 1);
+    } catch (err) {
+      console.error(err);
+      setError('Fetch Employees Error: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   useEffect(() => {
-    fetchData();
+    if (companyId) {
+      fetchData();
+    }
   }, [companyId]);
 
-  const closeEmpModal = () => {
-    setShowEmpModal(false);
-    setTimeout(() => {
-      setFormStep(1);
-      setEmpForm({ 
-        firstName: '', middleName: '', lastName: '', employeeId: '', dateOfJoining: '', email: '', phone: '',
-        isDirector: false, gender: '', workLocation: '', designation: '', department: '', portalAccess: false,
-        bankAccount: '', bankName: '', ifsc: '', pan: '', pfNumber: '', esiNumber: '' 
-      });
-    }, 300);
-  };
-
-  // Employee creation & editing
-  const handleEditEmployee = (emp) => {
-    const parts = emp.name ? emp.name.split(' ') : [];
-    const firstName = parts[0] || '';
-    const lastName = parts.slice(1).join(' ');
-    setEmpForm({
-      ...emp,
-      id: emp.id,
-      firstName,
-      middleName: '',
-      lastName,
-    });
-    setSalaryStep(1);
-    setShowEmpModal(true);
-  };
-
-  const handleCreateEmployee = async () => {
-    if (!empForm.employeeId || !empForm.firstName) {
-      setError('Employee ID and First Name are required.');
-      return;
+  useEffect(() => {
+    if (companyId) {
+      fetchEmployees();
     }
-    setSaving(true);
-    setError('');
+  }, [companyId, empPage, empLimit, empSearch, empFilters]);
+
+  // Soft Delete (Archive)
+  const handleArchiveEmployee = async (id) => {
     try {
-      const name = `${empForm.firstName} ${empForm.middleName ? empForm.middleName + ' ' : ''}${empForm.lastName || ''}`.trim();
-      
-      const payload = {
-        employeeId: empForm.employeeId,
-        name,
-        firstName: empForm.firstName,
-        middleName: empForm.middleName,
-        lastName: empForm.lastName,
-        dateOfJoining: empForm.dateOfJoining,
-        email: empForm.email,
-        phone: empForm.phone,
-        isDirector: empForm.isDirector,
-        gender: empForm.gender,
-        workLocation: empForm.workLocation,
-        designation: empForm.designation,
-        department: empForm.department,
-        portalAccess: empForm.portalAccess,
-        bankAccount: empForm.bankAccount,
-        bankName: empForm.bankName,
-        ifsc: empForm.ifsc,
-        pan: empForm.pan,
-        pfNumber: empForm.pfNumber,
-        esiNumber: empForm.esiNumber,
-        companyId
-      };
-      
-      if (empForm.id) {
-        await payrollAPI.updateEmployee(empForm.id, payload);
-        setSuccess('Employee updated successfully!');
-      } else {
-        await payrollAPI.createEmployee(payload);
-        setSuccess('Employee created successfully!');
-      }
-      
-      setShowEmpModal(false);
-      setEmpForm({
-        firstName: '', lastName: '', employeeId: '', dateOfJoining: '', email: '', phone: '',
-        isDirector: false, gender: '', workLocation: '', designation: '', department: '', portalAccess: false,
-        bankAccount: '', bankName: '', ifsc: '', pan: '', pfNumber: '', esiNumber: ''
-      });
-      fetchData();
+      await payrollAPI.deleteEmployee(id);
+      setSuccess('Employee archived (deactivated) successfully!');
+      fetchEmployees();
+      // Refetch allEmployees
+      const res = await payrollAPI.getEmployees(companyId, { limit: 1000 });
+      setAllEmployees(Array.isArray(res.data.employees) ? res.data.employees : []);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save employee');
-    } finally {
-      setSaving(false);
+      setError(err.response?.data?.error || 'Failed to archive employee');
+    }
+  };
+
+  // Reactivate Soft Deleted
+  const handleReactivateEmployee = async (id) => {
+    try {
+      await payrollAPI.reactivateEmployee(id);
+      setSuccess('Employee reactivated successfully!');
+      fetchEmployees();
+      // Refetch allEmployees
+      const res = await payrollAPI.getEmployees(companyId, { limit: 1000 });
+      setAllEmployees(Array.isArray(res.data.employees) ? res.data.employees : []);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to reactivate employee');
+    }
+  };
+
+  // Export CSV
+  const handleExportCSV = async () => {
+    try {
+      const response = await payrollAPI.exportEmployees();
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `employees_list_${companyId}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setSuccess('Employee list exported to CSV successfully!');
+    } catch (err) {
+      setError('Failed to export CSV: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  // Download PDF
+  const handleDownloadPDF = async (id) => {
+    try {
+      const response = await payrollAPI.exportEmployeePDF(id);
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `employee_profile_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setSuccess('PDF profile sheet downloaded successfully!');
+    } catch (err) {
+      setError('Failed to download PDF profile: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -182,14 +218,8 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
     try {
       await payrollAPI.saveSalaryStructure({
         ...structForm,
-        employeeId: selectedEmp?.id || empForm.id,
+        employeeId: selectedEmp?.id,
         companyId,
-        monthlyBasic,
-        monthlyFixedAllowance,
-        annualBasic,
-        annualFixedAllowance,
-        hraMonthly,
-        hraAnnual
       });
       setSuccess('Salary structure saved successfully!');
       setShowStructModal(false);
@@ -280,614 +310,231 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
       setSaving(false);
     }
   };
-  const ctc = Number(structForm.annualCTC) || 0;
-  const monthlyCTC = Math.floor(ctc / 12);
-  const basicMonthly = Math.round(monthlyCTC * 0.50);
-  const hraMonthly = showHRA ? Math.round(basicMonthly * 0.50) : 0;
-  const fixedAllowanceMonthly = monthlyCTC > 0 ? (monthlyCTC - basicMonthly - hraMonthly) : 0;
-  
-  const basicAnnual = basicMonthly * 12;
-  const hraAnnual = hraMonthly * 12;
-  const fixedAllowanceAnnual = fixedAllowanceMonthly * 12;
-  
-  const totalAnnual = basicAnnual + hraAnnual + fixedAllowanceAnnual;
+
+  // Render employee onboarding multi-page form inline
+  if (showEmpFormView) {
+    return (
+      <div className="p-8 max-w-[1400px] mx-auto animate-fade-in">
+        <EmployeeForm
+          employee={selectedEmpForForm}
+          companyId={companyId}
+          onClose={() => setShowEmpFormView(false)}
+          onSave={() => {
+            setShowEmpFormView(false);
+            setSuccess(selectedEmpForForm ? 'Employee updated successfully!' : 'Employee created successfully!');
+            fetchEmployees();
+            payrollAPI.getEmployees(companyId, { limit: 1000 }).then(res => {
+              setAllEmployees(Array.isArray(res.data.employees) ? res.data.employees : []);
+            });
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto animate-fade-in">
-      
-      {!showEmpModal && (
-        <div className="space-y-8">
-          {/* Header */}
-          <div className="flex justify-between items-end border-b border-slate-100 pb-8">
-            <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/10">
-              <Users size={18} />
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex justify-between items-end border-b border-slate-100 pb-8">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/10">
+                <Users size={18} />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Payroll</span>
             </div>
-            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-[0.2em]">Payroll</span>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Payroll Management</h1>
+            <p className="text-slate-400 text-xs mt-1 font-medium">Standard Indian Payroll (Basic, HRA, PF, ESI, PT) with dynamic G/L integration</p>
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Payroll Management</h1>
-          <p className="text-slate-400 text-xs mt-1 font-medium">Standard Indian Payroll (Basic, HRA, PF, ESI, PT) with dynamic G/L integration</p>
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => setShowEmpModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-600/10 flex items-center gap-1.5 transition-all">
-            <Plus size={16} /> Add Employee
-          </button>
-        </div>
-      </div>
 
-      {success && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex gap-3 text-sm text-emerald-700 font-bold">
-          <Check size={16} className="shrink-0 mt-0.5" /> {success}
-        </div>
-      )}
+        {success && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex gap-3 text-sm text-emerald-700 font-bold">
+            <Check size={16} className="shrink-0 mt-0.5" /> {success}
+          </div>
+        )}
 
-      {/* Tabs Menu */}
-      <div className="flex border-b border-slate-100">
-        {[
-          { id: 'employees', label: 'Employees', icon: Users },
-          { id: 'attendance', label: 'Attendance logs', icon: Calendar },
-          { id: 'structures', label: 'Salary Structures', icon: Settings },
-          { id: 'settings', label: 'Taxes & Settings', icon: Sliders },
-          { id: 'process', label: 'Process Payroll', icon: DollarSign },
-          { id: 'payslips', label: 'Payslips', icon: FileText }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => { setActiveTab(tab.id); setError(''); setSuccess(''); }}
-            className={`flex items-center gap-2 px-6 py-3.5 border-b-2 text-xs font-bold uppercase tracking-wider transition-all
-              ${activeTab === tab.id 
-                ? 'border-blue-600 text-blue-600 bg-slate-50/30' 
-                : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-          >
-            <tab.icon size={14} />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex gap-3 text-sm text-rose-700 font-bold">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" /> {error}
+          </div>
+        )}
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-blue-600" size={32} />
+        {/* Tabs Menu */}
+        <div className="flex border-b border-slate-100">
+          {[
+            { id: 'employees', label: 'Employees', icon: Users },
+            { id: 'attendance', label: 'Attendance logs', icon: Calendar },
+            { id: 'structures', label: 'Salary Structures', icon: Settings },
+            { id: 'settings', label: 'Taxes & Settings', icon: Sliders },
+            { id: 'process', label: 'Process Payroll', icon: DollarSign },
+            { id: 'payslips', label: 'Payslips', icon: FileText }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setError(''); setSuccess(''); }}
+              className={`flex items-center gap-2 px-6 py-3.5 border-b-2 text-xs font-bold uppercase tracking-wider transition-all
+                ${activeTab === tab.id 
+                  ? 'border-blue-600 text-blue-600 bg-slate-50/30' 
+                  : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </button>
+          ))}
         </div>
-      ) : (
-        <div className="space-y-6">
-          {/* TAB 1: EMPLOYEES */}
-          {activeTab === 'employees' && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50/50">
-                  <tr>
-                    <th className="px-6 py-4">Emp ID</th>
-                    <th className="px-6 py-4">Name</th>
-                    <th className="px-6 py-4">Dept / Desg</th>
-                    <th className="px-6 py-4">Bank Details</th>
-                    <th className="px-6 py-4">PF / ESI</th>
-                    <th className="px-6 py-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-700">
-                  {employees.length === 0 ? (
+
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin text-blue-600" size={32} />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* TAB 1: EMPLOYEES LIST */}
+            {activeTab === 'employees' && (
+              <EmployeeList
+                employees={employees}
+                total={totalEmployees}
+                page={empPage}
+                limit={empLimit}
+                pages={empPages}
+                onPageChange={setEmpPage}
+                onLimitChange={setEmpLimit}
+                onSearchChange={setEmpSearch}
+                onFilterChange={setEmpFilters}
+                onViewEmployee={(emp) => {
+                  setSelectedEmployee(emp);
+                }}
+                onEditEmployee={(emp) => {
+                  setSelectedEmpForForm(emp);
+                  setShowEmpFormView(true);
+                }}
+                onArchiveEmployee={handleArchiveEmployee}
+                onReactivateEmployee={handleReactivateEmployee}
+                onOpenImport={() => setShowImportDrawer(true)}
+                onOpenAdd={() => {
+                  setSelectedEmpForForm(null);
+                  setShowEmpFormView(true);
+                }}
+                onExportCSV={handleExportCSV}
+              />
+            )}
+
+            {/* TAB 2: ATTENDANCE - Full Attendance Logs Module */}
+            {activeTab === 'attendance' && (
+              <AttendanceLogsPage
+                companyId={companyId}
+                employees={allEmployees}
+              />
+            )}
+
+            {/* TAB 3: SALARY STRUCTURES (Dynamic) */}
+            {activeTab === 'structures' && (
+              <SalaryStructuresPage />
+            )}
+
+            {/* TAB 4: PROCESS PAYROLL */}
+            {activeTab === 'process' && (
+              <ProcessPayrollForm 
+                companyId={companyId} 
+                onComplete={() => {
+                  fetchData();
+                  setActiveTab('payslips');
+                }} 
+              />
+            )}
+
+            {/* TAB 5: PAYSLIPS */}
+            {activeTab === 'payslips' && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50/50">
                     <tr>
-                      <td colSpan={6} className="py-24 text-center">
-                        <p className="text-slate-400 font-bold mb-4">No employees have been added to the system yet.</p>
-                        <button 
-                          onClick={() => setShowEmpModal(true)}
-                          className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
-                        >
-                          + Add Your First Employee
-                        </button>
-                      </td>
+                      <th className="px-6 py-4">Employee</th>
+                      <th className="px-6 py-4">Month/Year</th>
+                      <th className="px-6 py-4 text-right">Gross Earnings</th>
+                      <th className="px-6 py-4 text-right">Deductions</th>
+                      <th className="px-6 py-4 text-right">Net Payable</th>
+                      <th className="px-6 py-4 text-center">Status</th>
                     </tr>
-                  ) : employees.map(emp => (
-                    <tr key={emp.id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => handleEditEmployee(emp)}>
-                      <td className="px-6 py-4 text-blue-600 font-bold">#{emp.employeeId}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">
-                            {emp.name ? emp.name.charAt(0).toUpperCase() : '?'}
-                          </div>
-                          <div>
-                            <p className="font-bold text-slate-900 text-sm">{emp.name}</p>
-                            <p className="text-xs text-slate-500 font-normal">{emp.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500">
-                        {emp.department || '—'} <span className="text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full ml-1 font-bold">{emp.designation || 'Staff'}</span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500 text-xs">
-                        {emp.bankName ? `${emp.bankName} - A/c ${emp.bankAccount}` : '—'}
-                      </td>
-                      <td className="px-6 py-4 text-slate-500 text-xs">
-                        PF: {emp.pfNumber || '—'} <br/> ESI: {emp.esiNumber || '—'}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${emp.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                          {emp.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* TAB 2: ATTENDANCE */}
-          {activeTab === 'attendance' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-100 p-8 shadow-xl space-y-4">
-                <h3 className="text-lg font-bold text-slate-800">Select Employee to Log Attendance</h3>
-                <div className="divide-y divide-slate-100">
-                  {employees.map(emp => (
-                    <div key={emp.id} className="flex justify-between items-center py-3">
-                      <div>
-                        <p className="font-bold text-slate-800">{emp.name}</p>
-                        <p className="text-[10px] text-slate-400">#{emp.employeeId} · {emp.designation || 'Staff'}</p>
-                      </div>
-                      <button 
-                        onClick={() => { setSelectedEmp(emp); setShowAttModal(true); }}
-                        className="px-4 py-2 border border-slate-200 hover:border-blue-600 hover:text-blue-600 rounded-xl text-xs font-bold transition-all"
-                      >
-                        Log Status
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-700">
+                    {payslips.length === 0 ? (
+                      <tr><td colSpan={6} className="py-16 text-center text-slate-500 font-medium">No processed payslips found. Process payroll first.</td></tr>
+                    ) : payslips.map(slip => {
+                      const gross = parseFloat(slip.basic||0) + parseFloat(slip.hra||0) + parseFloat(slip.da||0) + parseFloat(slip.incentives||0);
+                      const ded = parseFloat(slip.pf||0) + parseFloat(slip.esi||0) + parseFloat(slip.profTax||0);
+                      return (
+                        <tr key={slip.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <p className="font-bold text-slate-900">{slip.Employee?.name}</p>
+                            <p className="text-xs text-slate-500">#{slip.Employee?.employeeId}</p>
+                          </td>
+                          <td className="px-6 py-4 text-slate-700 font-medium">{slip.month} {slip.year}</td>
+                          <td className="px-6 py-4 text-right text-slate-600">{fmt(gross)}</td>
+                          <td className="px-6 py-4 text-right text-rose-500 font-medium">-{fmt(ded)}</td>
+                          <td className="px-6 py-4 text-right font-bold text-blue-700">{fmt(slip.netSalary)}</td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase tracking-wider">
+                              {slip.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <div className="bg-slate-50 rounded-[2rem] border border-slate-200/60 p-6 space-y-4">
-                <h4 className="font-bold text-slate-800 text-[14px]">Deduction Rule</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Salary is computed on a pro-rata basis. Any days logged as **"Absent"** will automatically deduct basic wages proportionally for that pay period:
-                  <br/><br/>
-                  <code className="bg-white p-2 rounded block font-mono text-[11px] text-rose-600 border border-slate-100">
-                    Deduction = (Basic / Days in Month) * Absent Days
-                  </code>
-                </p>
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* TAB 3: SALARY STRUCTURES */}
-          {activeTab === 'structures' && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50/50">
-                  <tr>
-                    <th className="px-6 py-4">Employee</th>
-                    <th className="px-6 py-4 text-right">Basic Pay</th>
-                    <th className="px-6 py-4 text-right">HRA</th>
-                    <th className="px-6 py-4 text-right">DA</th>
-                    <th className="px-6 py-4 text-right">Incentives</th>
-                    <th className="px-6 py-4 text-right">Deductions (PF/ESI/PT)</th>
-                    <th className="px-6 py-4 text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-700">
-                  {employees.map(emp => {
-                    const struct = emp.SalaryStructure || {};
-                    const totalDed = parseFloat(struct.pfDeduction||0) + parseFloat(struct.esiDeduction||0) + parseFloat(struct.profTaxDeduction||0);
-                    return (
-                      <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-slate-900">{emp.name}</p>
-                          <p className="text-xs text-slate-500">#{emp.employeeId}</p>
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-900">{fmt(struct.basic || 0)}</td>
-                        <td className="px-6 py-4 text-right text-slate-500">{fmt(struct.hra || 0)}</td>
-                        <td className="px-6 py-4 text-right text-slate-500">{fmt(struct.da || 0)}</td>
-                        <td className="px-6 py-4 text-right text-emerald-600 font-bold">{fmt(struct.incentives || 0)}</td>
-                        <td className="px-6 py-4 text-right text-rose-500 font-bold">-{fmt(totalDed)}</td>
-                        <td className="px-6 py-4 text-center">
-                          <button 
-                            onClick={() => {
-                              setSelectedEmp(emp);
-                              setStructForm({
-                                basic: struct.basic || '',
-                                hra: struct.hra || '',
-                                da: struct.da || '',
-                                incentives: struct.incentives || '',
-                                pfDeduction: struct.pfDeduction || '',
-                                esiDeduction: struct.esiDeduction || '',
-                                profTaxDeduction: struct.profTaxDeduction || ''
-                              });
-                              setShowStructModal(true);
-                            }}
-                            className="bg-white hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-slate-200 shadow-sm"
-                          >
-                            Setup Structure
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* TAB 4: PROCESS PAYROLL */}
-          {activeTab === 'process' && (
-            <div className="max-w-2xl bg-white rounded-[2rem] border border-slate-100 p-8 shadow-xl space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-                  <DollarSign size={20} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Run Monthly Payroll</h3>
-                  <p className="text-xs text-slate-400 font-bold">Aggregates salary components, subtracts absents, and posts double-entry</p>
-                </div>
-              </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex gap-3 text-sm text-red-600 font-bold">
-                  <AlertCircle size={16} className="shrink-0 mt-0.5" /> {error}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Month</label>
-                  <select value={processForm.month} onChange={e => setProcessForm({ ...processForm, month: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none">
-                    {MONTHS.map(m => <option key={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Year</label>
-                  <input type="number" value={processForm.year} onChange={e => setProcessForm({ ...processForm, year: parseInt(e.target.value) })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Paid From (Bank / Cash Ledger)*</label>
-                <select value={processForm.paymentLedgerId} onChange={e => setProcessForm({ ...processForm, paymentLedgerId: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none">
-                  <option value="">— Select Cash/Bank Ledger —</option>
-                  {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                </select>
-              </div>
-
-              <button 
-                onClick={handleProcessPayroll}
-                disabled={saving}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-              >
-                {saving ? <><Loader2 size={16} className="animate-spin" /> Processing…</> : 'Process & Post G/L Voucher'}
-              </button>
-            </div>
-          )}
-
-          {/* TAB 5: PAYSLIPS */}
-          {activeTab === 'payslips' && (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200 bg-slate-50/50">
-                  <tr>
-                    <th className="px-6 py-4">Employee</th>
-                    <th className="px-6 py-4">Month/Year</th>
-                    <th className="px-6 py-4 text-right">Gross Earnings</th>
-                    <th className="px-6 py-4 text-right">Deductions</th>
-                    <th className="px-6 py-4 text-right">Net Payable</th>
-                    <th className="px-6 py-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-700">
-                  {payslips.length === 0 ? (
-                    <tr><td colSpan={6} className="py-16 text-center text-slate-500 font-medium">No processed payslips found. Process payroll first.</td></tr>
-                  ) : payslips.map(slip => {
-                    const gross = parseFloat(slip.basic||0) + parseFloat(slip.hra||0) + parseFloat(slip.da||0) + parseFloat(slip.incentives||0);
-                    const ded = parseFloat(slip.pf||0) + parseFloat(slip.esi||0) + parseFloat(slip.profTax||0);
-                    return (
-                      <tr key={slip.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-slate-900">{slip.Employee?.name}</p>
-                          <p className="text-xs text-slate-500">#{slip.Employee?.employeeId}</p>
-                        </td>
-                        <td className="px-6 py-4 text-slate-700 font-medium">{slip.month} {slip.year}</td>
-                        <td className="px-6 py-4 text-right text-slate-600">{fmt(gross)}</td>
-                        <td className="px-6 py-4 text-right text-rose-500 font-medium">-{fmt(ded)}</td>
-                        <td className="px-6 py-4 text-right font-bold text-blue-700">{fmt(slip.netSalary)}</td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase tracking-wider">
-                            {slip.status}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* TAB 6: SETTINGS */}
-          {activeTab === 'settings' && (
-            <div className="max-w-3xl bg-white rounded-[2rem] border border-slate-100 p-8 shadow-xl space-y-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center">
-                  <Sliders size={20} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Payroll Settings & Taxes</h3>
-                  <p className="text-xs text-slate-400 font-bold">Configure PF, ESI, and Professional Tax statutory rules</p>
-                </div>
-              </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex gap-3 text-sm text-red-600 font-bold">
-                  <AlertCircle size={16} className="shrink-0 mt-0.5" /> {error}
-                </div>
-              )}
-              {success && (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex gap-3 text-sm text-emerald-600 font-bold">
-                  <Check size={16} className="shrink-0 mt-0.5" /> {success}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">PF Employee Contribution (%)</label>
-                  <input type="number" step="0.01" value={payrollSettings.pfEmployeeRate} onChange={e => setPayrollSettings({ ...payrollSettings, pfEmployeeRate: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all" />
-                  <p className="text-[10px] text-slate-400 mt-2 font-semibold">Standard is 12% of Basic Pay</p>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">ESI Employee Contribution (%)</label>
-                  <input type="number" step="0.01" value={payrollSettings.esiEmployeeRate} onChange={e => setPayrollSettings({ ...payrollSettings, esiEmployeeRate: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all" />
-                  <p className="text-[10px] text-slate-400 mt-2 font-semibold">Standard is 0.75% of Gross Pay</p>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Professional Tax (Fixed Amount)</label>
-                  <input type="number" step="1" value={payrollSettings.ptMonthlyAmount} onChange={e => setPayrollSettings({ ...payrollSettings, ptMonthlyAmount: e.target.value })}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 transition-all" />
-                  <p className="text-[10px] text-slate-400 mt-2 font-semibold">e.g. ₹200/month</p>
-                </div>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-                <button 
-                  onClick={handleSaveSettings}
-                  disabled={saving}
-                  className="bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                >
-                  {saving ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : 'Save Settings'}
-                </button>
-              </div>
-            </div>
-          )}
-
-        </div>
-      )}
-      
+            {/* TAB 6: SETTINGS */}
+            {activeTab === 'settings' && (
+              <PayrollSettingsForm 
+                companyId={companyId} 
+                initialSettings={payrollSettings} 
+                onSaveSuccess={(data) => {
+                  setPayrollSettings(data);
+                  setSuccess('Payroll settings synchronized successfully.');
+                }} 
+              />
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Slide-over/Modal: Employee Detail View */}
+      {showDetailModal && selectedEmpForDetail && (
+        <EmployeeDetails
+          employee={selectedEmpForDetail}
+          userRole={userRole}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedEmpForDetail(null);
+          }}
+          onEdit={(emp) => {
+            setShowDetailModal(false);
+            setSelectedEmpForDetail(null);
+            setSelectedEmpForForm(emp);
+            setShowEmpFormView(true);
+          }}
+          onDownloadPDF={handleDownloadPDF}
+        />
       )}
 
-      {/* FULL PAGE: ADD EMPLOYEE */}
-      {showEmpModal && (
-        <div className="flex flex-col w-full min-h-[80vh] animate-fade-in pb-20 mt-4">
-          <div className="flex justify-between items-center mb-10 relative">
-            <h2 className="text-3xl font-semibold text-slate-800 flex-1 text-center">
-              {empForm.id ? `${empForm.firstName}'s Profile` : 'Add Employee'}
-            </h2>
-            <button onClick={closeEmpModal} className="p-2 rounded-xl text-slate-500 hover:bg-slate-200 transition-all absolute right-0"><X size={28} /></button>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-6 flex items-center gap-2 max-w-5xl mx-auto w-full">
-              <AlertCircle size={18} className="shrink-0" /> 
-              <span className="font-medium text-sm">{error}</span>
-            </div>
-          )}
-          
-          {/* No Stepper */}
-          
-            <div className="overflow-y-visible grow mt-6">
-                <div className="space-y-8 max-w-5xl mx-auto">
-                  <div className="grid grid-cols-2 gap-8">
-                    <div>
-                      <label className="block text-base font-medium text-slate-700 mb-2">Employee Name<span className="text-red-500">*</span></label>
-                      <div className="grid grid-cols-3 gap-5">
-                        <input value={empForm.firstName} onChange={e => setEmpForm({ ...empForm, firstName: e.target.value })}
-                          placeholder="First Name" className="w-full border border-slate-300 rounded-xl px-5 py-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white" />
-                        <input value={empForm.middleName || ''} onChange={e => setEmpForm({ ...empForm, middleName: e.target.value })}
-                          placeholder="Middle Name" className="w-full border border-slate-300 rounded-xl px-5 py-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white" />
-                        <input value={empForm.lastName} onChange={e => setEmpForm({ ...empForm, lastName: e.target.value })}
-                          placeholder="Last Name" className="w-full border border-slate-300 rounded-xl px-5 py-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8">
-                    <div>
-                      <label className="block text-base font-medium text-slate-700 mb-2">Employee ID<span className="text-red-500">*</span></label>
-                      <input value={empForm.employeeId} onChange={e => setEmpForm({ ...empForm, employeeId: e.target.value })}
-                        className="w-full border border-slate-300 rounded-xl px-5 py-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white" />
-                    </div>
-                    <div>
-                      <label className="block text-base font-medium text-slate-700 mb-2">Date of Joining<span className="text-red-500">*</span></label>
-                      <input type="date" value={empForm.dateOfJoining} onChange={e => setEmpForm({ ...empForm, dateOfJoining: e.target.value })}
-                        className="w-full border border-slate-300 rounded-xl px-5 py-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8">
-                    <div>
-                      <label className="block text-base font-medium text-slate-700 mb-2">Work Email<span className="text-red-500">*</span></label>
-                      <input type="email" value={empForm.email} onChange={e => setEmpForm({ ...empForm, email: e.target.value })}
-                        className="w-full border border-slate-300 rounded-xl px-5 py-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white" />
-                    </div>
-                    <div>
-                      <label className="block text-base font-medium text-slate-700 mb-2">Mobile Number<span className="text-red-500">*</span></label>
-                      <input value={empForm.phone} onChange={e => setEmpForm({ ...empForm, phone: e.target.value })}
-                        className="w-full border border-slate-300 rounded-xl px-5 py-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white" />
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50/50 rounded-xl p-5 flex gap-4 text-base text-blue-800 border border-blue-100">
-                    <Info size={22} className="shrink-0 text-blue-500 mt-0.5" />
-                    <p>You cannot change this Email address later on, as this will be used to send payslips and also for employees to sign in to their portal, where they can view/download their payslips.</p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <input type="checkbox" id="isDirector" checked={empForm.isDirector} onChange={e => setEmpForm({ ...empForm, isDirector: e.target.checked })}
-                      className="w-5 h-5 text-blue-600 rounded border-gray-400 focus:ring-blue-500" />
-                    <label htmlFor="isDirector" className="text-base text-slate-800 flex items-center gap-2 cursor-pointer">
-                      Employee is a <span className="font-semibold">Director/person with substantial interest</span> in the company.
-                      <Info size={16} className="text-slate-400" />
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8">
-                    <div>
-                      <label className="block text-base font-medium text-slate-700 mb-2">Gender<span className="text-red-500">*</span></label>
-                      <select value={empForm.gender} onChange={e => setEmpForm({ ...empForm, gender: e.target.value })}
-                        className="w-full border border-slate-300 rounded-xl px-5 py-3 text-base outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 appearance-none bg-white">
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div></div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="[&_label]:text-base [&_label]:mb-2 [&_input]:text-base [&_span]:text-base">
-                      <CreatableSelect
-                        label="Designation"
-                        required={true}
-                        value={empForm.designation}
-                        onChange={(val) => setEmpForm({ ...empForm, designation: val })}
-                        options={designations}
-                        onAddNew={() => setShowNewDesigModal(true)}
-                        addNewText="New Designation"
-                      />
-                    </div>
-                    <div className="[&_label]:text-base [&_label]:mb-2 [&_input]:text-base [&_span]:text-base">
-                      <CreatableSelect
-                        label="Department"
-                        required={true}
-                        value={empForm.department}
-                        onChange={(val) => setEmpForm({ ...empForm, department: val })}
-                        options={departments}
-                        onAddNew={() => setShowNewDeptModal(true)}
-                        addNewText="New Department"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <div className="flex items-start gap-3">
-                      <input type="checkbox" id="portalAccess" checked={empForm.portalAccess} onChange={e => setEmpForm({ ...empForm, portalAccess: e.target.checked })}
-                        className="w-5 h-5 text-blue-600 rounded border-gray-400 focus:ring-blue-500 mt-1" />
-                      <div>
-                        <label htmlFor="portalAccess" className="text-base font-medium text-slate-900 cursor-pointer">
-                          Enable Portal Access <a href="#" className="text-blue-500 font-normal hover:underline ml-2">Preview mail</a>
-                        </label>
-                        <p className="text-base text-slate-500 mt-2">
-                          The employee will be able to view payslips, submit their IT declaration and create reimbursement claims through the employee portal.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="max-w-5xl mx-auto flex justify-between items-center mt-16 pt-8 border-t border-slate-200">
-                  <div className="flex gap-4">
-                    <button onClick={handleCreateEmployee} disabled={saving} className="px-8 py-3 bg-blue-600 text-white rounded-xl text-base font-medium hover:bg-blue-700 shadow-sm transition-all flex items-center gap-3">
-                      {saving && <Loader2 size={20} className="animate-spin" />}
-                      {empForm.id ? 'Update Employee' : 'Save Employee'}
-                    </button>
-                    <button onClick={closeEmpModal} className="px-8 py-3 rounded-xl border border-slate-300 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 transition-all">Cancel</button>
-                  </div>
-                  <span className="text-sm font-medium text-red-500">* Indicates mandatory fields</span>
-                </div>
-            </div>
-          </div>
-      )}
-
-      {/* NEW DESIGNATION MODAL */}
-      {showNewDesigModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-lg font-medium text-slate-800">New Designation</h2>
-              <button onClick={() => { setShowNewDesigModal(false); setNewOptionValue(''); }} className="text-blue-500 hover:text-blue-700"><X size={20} /></button>
-            </div>
-            <div className="p-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Designation Name <span className="text-red-500">*</span></label>
-              <input 
-                autoFocus
-                value={newOptionValue} 
-                onChange={e => setNewOptionValue(e.target.value)}
-                className="w-full border border-blue-400 ring-2 ring-blue-100 rounded-lg px-4 py-2.5 text-sm outline-none" 
-              />
-            </div>
-            <div className="px-6 py-4 border-t border-slate-100 flex justify-between items-center bg-white">
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => {
-                    if (newOptionValue.trim()) {
-                      setDesignations(prev => [...prev, newOptionValue.trim()]);
-                      setEmpForm(prev => ({ ...prev, designation: newOptionValue.trim() }));
-                      setShowNewDesigModal(false);
-                      setNewOptionValue('');
-                    }
-                  }} 
-                  className="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600"
-                >
-                  Save
-                </button>
-                <button onClick={() => { setShowNewDesigModal(false); setNewOptionValue(''); }} className="px-5 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-              </div>
-              <span className="text-xs text-red-500">* indicates mandatory fields</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* NEW DEPARTMENT MODAL */}
-      {showNewDeptModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h2 className="text-lg font-medium text-slate-800">New Department</h2>
-              <button onClick={() => { setShowNewDeptModal(false); setNewOptionValue(''); }} className="text-blue-500 hover:text-blue-700"><X size={20} /></button>
-            </div>
-            <div className="p-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Department Name <span className="text-red-500">*</span></label>
-              <input 
-                autoFocus
-                value={newOptionValue} 
-                onChange={e => setNewOptionValue(e.target.value)}
-                className="w-full border border-blue-400 ring-2 ring-blue-100 rounded-lg px-4 py-2.5 text-sm outline-none" 
-              />
-            </div>
-            <div className="px-6 py-4 border-t border-slate-100 flex justify-between items-center bg-white">
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => {
-                    if (newOptionValue.trim()) {
-                      setDepartments(prev => [...prev, newOptionValue.trim()]);
-                      setEmpForm(prev => ({ ...prev, department: newOptionValue.trim() }));
-                      setShowNewDeptModal(false);
-                      setNewOptionValue('');
-                    }
-                  }} 
-                  className="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600"
-                >
-                  Save
-                </button>
-                <button onClick={() => { setShowNewDeptModal(false); setNewOptionValue(''); }} className="px-5 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-              </div>
-              <span className="text-xs text-red-500">* indicates mandatory fields</span>
-            </div>
-          </div>
-        </div>
+      {/* Drawer: CSV Bulk Import */}
+      {showImportDrawer && (
+        <EmployeeImport
+          onClose={() => setShowImportDrawer(false)}
+          onImportSuccess={() => {
+            setShowImportDrawer(false);
+            setSuccess('Employees imported successfully!');
+            fetchEmployees();
+            payrollAPI.getEmployees(companyId, { limit: 1000 }).then(res => {
+              setAllEmployees(Array.isArray(res.data.employees) ? res.data.employees : []);
+            });
+          }}
+        />
       )}
 
       {/* MODAL 2: SETUP SALARY STRUCTURE */}
@@ -1042,6 +689,13 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
           </div>
         </div>
       )}
+
+      {/* Slide-Out Profile Drawer */}
+      <EmployeeDetailsDrawer
+        isOpen={!!selectedEmployee}
+        onClose={() => setSelectedEmployee(null)}
+        employeeData={selectedEmployee}
+      />
     </div>
   );
 }

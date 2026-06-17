@@ -68,7 +68,7 @@ export default function CreatableSelect({
               <input
                 type="text"
                 className="w-full bg-transparent outline-none text-sm text-gray-700 placeholder-gray-400"
-                placeholder="Search..."
+                placeholder="Select or type to search..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
@@ -103,17 +103,22 @@ export default function CreatableSelect({
             )}
           </div>
 
-          <div className="border-t border-gray-100 p-1">
-            <button
-              onClick={() => {
-                setIsOpen(false);
-                if (onAddNew) onAddNew();
-              }}
-              className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <Plus size={16} /> {addNewText}
-            </button>
-          </div>
+          {onAddNew && (
+            <div className="border-t border-gray-100 p-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsOpen(false);
+                  onAddNew();
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              >
+                <Plus size={16} /> {addNewText}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

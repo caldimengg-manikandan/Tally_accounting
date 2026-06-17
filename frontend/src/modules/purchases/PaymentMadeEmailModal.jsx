@@ -8,7 +8,7 @@ import {
   Image as ImageIcon, Link as LinkIcon,
   HelpCircle, User, Strikethrough, Undo, Redo, PlusCircle
 } from 'lucide-react';
-import { mailAPI, purchaseAPI } from '../../services/api';
+import { mailAPI } from '../../services/api';
 
 const PaymentMadeEmailModal = ({ 
   isOpen, 
@@ -62,7 +62,7 @@ const PaymentMadeEmailModal = ({
     `Payment has been made for your invoice(s)`
   );
 
-  const initialBody = useMemo(() => {
+  const initialBodyHtml = useMemo(() => {
     const vendorName = vendor?.name || 'Sir/Madam';
     const amount = totals?.total
       ? `₹${parseFloat(totals.total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
@@ -82,34 +82,54 @@ const PaymentMadeEmailModal = ({
       ? new Date(paymentDetail.date).toLocaleDateString('en-GB')
       : '—';
 
-    return `Hi ${vendorName},
-
-We have made the payment for your invoice(s). It's been a pleasure doing business with you. We look forward to working with you again.
-
-------------------------------------------------------------------------
-
-Payment Made
-${amount}
-
-------------------------------------------------------------------------
-
-Invoice Number    ${invoiceNo}
-Payment Date      ${paymentDate}
-
-Regards,
-${currentUserName}
-
-${companyName || 'Our Company'}`;
+    return `
+      <div style="font-family: Arial, sans-serif; color: #333; padding: 20px;">
+        <div style="background-color: #438cf1; color: white; text-align: center; padding: 40px 20px; margin-bottom: 30px;">
+          <h2 style="margin: 0; font-size: 24px; font-weight: normal; letter-spacing: 0.5px;">Payment Made</h2>
+        </div>
+        <p style="text-align: center; font-size: 14px; margin-bottom: 30px;">Hi ${vendorName},</p>
+        <p style="text-align: center; color: #555; font-size: 14px; line-height: 1.6; max-width: 600px; margin: 0 auto 30px auto;">We have made the payment for your invoice(s). It's been a pleasure doing business with you. We look forward to working with you again.</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">Payment Made</div>
+          <div style="font-size: 24px; font-weight: bold; color: #1e293b;">${amount}</div>
+        </div>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+        <table style="width: 100%; max-width: 400px; margin: 0 auto; color: #475569; font-size: 14px;">
+          <tr>
+            <td style="padding: 8px 0;">Invoice Number</td>
+            <td style="text-align: right; font-weight: bold; color: #0f172a;">${invoiceNo}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;">Payment Date</td>
+            <td style="text-align: right; font-weight: bold; color: #0f172a;">${paymentDate}</td>
+          </tr>
+        </table>
+        <p style="margin-top: 50px; text-align: center; color: #64748b; font-size: 13px;">
+          Regards,<br/>
+          <strong style="color: #334155; margin-top: 4px; display: inline-block;">${currentUserName}</strong><br/>
+          ${companyName || 'Our Company'}
+        </p>
+      </div>
+    `;
   }, [vendor, paymentDetail, totals, currentUserName, companyName]);
 
-  const [body, setBody] = useState(initialBody);
+  const [body, setBody] = useState(initialBodyHtml);
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && editorRef.current) {
+      editorRef.current.innerHTML = initialBodyHtml;
+    }
+  }, [isOpen, initialBodyHtml]);
+
 
   // Sync when reopened with fresh data
   useEffect(() => {
     if (isOpen) {
       setRecipients(buildInitialRecipients());
       setSubject(`Payment has been made for your invoice(s)`);
-      setBody(initialBody);
+      setBody(initialBodyHtml);
       setError(null);
       // Automatically scroll the main container to the top so the modal is instantly visible
       const mainEl = document.querySelector('main');
@@ -125,7 +145,6 @@ ${companyName || 'Our Company'}`;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, vendor, paymentDetail, totals, companyName, selectedContacts]);
 
-  if (!isOpen) return null;
 
   // ── Chip helpers ────────────────────────────────────────────────
   const addChip = (list, setList, inputVal, setInput) => {
@@ -148,7 +167,7 @@ ${companyName || 'Our Company'}`;
     try {
       await mailAPI.send({
         toEmail: recipients.map(r => r.email).join(','),
-        subject, body,
+        subject, body: editorRef.current?.innerHTML || body,
         companyId: paymentDetail?.companyId || paymentDetail?.CompanyId,
         ledgerId: vendor?.id,
         type: 'Payment Made',
@@ -391,13 +410,15 @@ ${companyName || 'Our Company'}`;
     </button>
   );
 
+  if (!isOpen) return null;
+
   // ════════════════════════════════════════════════════════════════
   //  FULL-PAGE RENDER (no dark overlay, no centered card)
   // ════════════════════════════════════════════════════════════════
   return (
     <div 
       className={isFullScreenView 
-        ? "w-full h-full bg-white flex flex-col" 
+        ? "absolute inset-0 z-50 bg-white flex flex-col animate-in slide-in-from-bottom-4 duration-300" 
         : "absolute inset-0 z-[9999] bg-white flex flex-col"} 
       style={{minHeight: 0}}
     >
@@ -511,13 +532,14 @@ ${companyName || 'Our Company'}`;
               <TBtn Icon={Redo} title="Redo" />
             </div>
 
-            {/* Body textarea */}
-            <div className="p-6 bg-white">
-            <textarea
-                value={body}
-                onChange={e => setBody(e.target.value)}
-                className="w-full min-h-[220px] max-h-[340px] outline-none text-[13.5px] text-slate-800 font-medium leading-relaxed resize-y"
-                placeholder="Compose your message..."
+            <div className="p-0 bg-white">
+              <div
+                ref={editorRef}
+                contentEditable={true}
+                onInput={e => setBody(e.currentTarget.innerHTML)}
+                className="w-full min-h-[350px] max-h-[500px] overflow-y-auto outline-none text-[13.5px] text-slate-800 font-medium leading-relaxed bg-white border-t-0 p-4"
+                style={{ cursor: 'text' }}
+                dangerouslySetInnerHTML={{ __html: initialBodyHtml }}
               />
             </div>
           </div>

@@ -6,42 +6,56 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       allowNull: false
     },
-    EmployeeId: {
+    CompanyId: {
       type: DataTypes.UUID,
+      allowNull: false,
+      references: { model: 'Companies', key: 'id' }
+    },
+    name: {
+      type: DataTypes.STRING,
       allowNull: false
     },
-    CompanyId: {
+    code: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    gradeLevel: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
+    },
+    effectiveFrom: {
+      type: DataTypes.DATEONLY,
+      allowNull: false
+    },
+    effectiveTo: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    CreatedBy: {
       type: DataTypes.UUID,
       allowNull: true
     },
-    annualCtc: {
-      type: DataTypes.DECIMAL(12, 2),
-      defaultValue: 0
-    },
-    monthlyBasic: {
-      type: DataTypes.DECIMAL(12, 2),
-      defaultValue: 0
-    },
-    monthlyFixedAllowance: {
-      type: DataTypes.DECIMAL(12, 2),
-      defaultValue: 0
-    },
-    annualBasic: {
-      type: DataTypes.DECIMAL(12, 2),
-      defaultValue: 0
-    },
-    monthlyHra: {
-      type: DataTypes.DECIMAL(12, 2),
-      defaultValue: 0
-    },
-    annualHra: {
-      type: DataTypes.DECIMAL(12, 2),
-      defaultValue: 0
-    },
-    annualFixedAllowance: {
-      type: DataTypes.DECIMAL(12, 2),
-      defaultValue: 0
+    UpdatedBy: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
+  }, {
+    indexes: [
+      {
+        name: 'salary_struct_code_unique',
+        unique: true,
+        fields: ['CompanyId', 'code'],
+        where: { isActive: true }
+      }
+    ]
   });
 
   return SalaryStructure;
