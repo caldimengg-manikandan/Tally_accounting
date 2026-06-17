@@ -1,4 +1,4 @@
-const { VendorCredit, VendorCreditItem, Voucher, Transaction, Ledger, Item } = require('../../models');
+   const { VendorCredit, VendorCreditItem, Voucher, Transaction, Ledger, Item } = require('../../models');
 const { v4: uuidv4 } = require('uuid');
 
 exports.getByCompany = async (req, res, next) => {
@@ -17,7 +17,8 @@ exports.getByCompany = async (req, res, next) => {
 
 exports.getById = async (req, res, next) => {
     try {
-        const credit = await VendorCredit.findByPk(req.params.id, {
+        const credit = await VendorCredit.findOne({
+            where: { id: req.params.id, CompanyId: req.companyId },
             include: [
                 { model: Ledger, as: 'Vendor' },
                 { model: Ledger, as: 'APAccount' },
@@ -38,7 +39,6 @@ exports.getById = async (req, res, next) => {
         if (requestingCompanyId && String(credit.CompanyId) !== String(requestingCompanyId)) {
             return res.status(403).json({ error: 'Access denied' });
         }
-        
         res.json(credit);
     } catch (err) {
         next(err);
@@ -59,7 +59,7 @@ exports.create = async (req, res, next) => {
             vendorLedgerId, accountsPayableId,
             subTotal, taxAmount, adjustment, totalAmount,
             vendorNotes, termsConditions,
-            CompanyId: companyId,
+            CompanyId: req.companyId || companyId,
             ProjectId: projectId
         });
 
@@ -123,8 +123,10 @@ exports.update = async (req, res, next) => {
         const { id } = req.params;
         const { items, ...updateData } = req.body;
 
-        const credit = await VendorCredit.findByPk(id);
-        if (!credit) return res.status(404).json({ error: 'Vendor Credit not found' });
+        const credit = await VendorCredit.findOne({ 
+            where: { id, CompanyId: req.companyId } 
+        });
+        if (!credit) return res.status(404).json({ error: 'Record not found or access denied' });
 
         // BOLA guard
         const requestingCompanyId = req.body.CompanyId || req.body.companyId || req.user?.CompanyId;
@@ -155,8 +157,10 @@ exports.update = async (req, res, next) => {
 
 exports.delete = async (req, res, next) => {
     try {
-        const credit = await VendorCredit.findByPk(req.params.id);
-        if (!credit) return res.status(404).json({ error: 'Not found' });
+        const credit = await VendorCredit.findOne({ 
+            where: { id: req.params.id, CompanyId: req.companyId } 
+        });
+        if (!credit) return res.status(404).json({ error: 'Record not found or access denied' });
         
         // BOLA guard
         const requestingCompanyId = req.query.companyId || req.user?.CompanyId;

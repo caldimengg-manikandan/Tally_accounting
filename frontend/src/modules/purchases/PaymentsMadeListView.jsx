@@ -3,13 +3,14 @@ import {
   Plus, Search, Filter, MoreHorizontal, 
   ChevronRight, Wallet, ArrowDownUp,
   Download, Printer, Edit, Trash2, X, AlertCircle, RefreshCw,
-  Sliders, ChevronDown, CheckCircle2
+  Sliders, ChevronDown, CheckCircle2, Mail
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { paymentMadeAPI, voucherAPI, companyAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import PaymentMadeEmailModal from './PaymentMadeEmailModal';
 
 // Indian Number to Words Converter
 function numberToWords(num) {
@@ -46,6 +47,7 @@ const PaymentsMadeListView = ({ companyId }) => {
   const [paymentDetail, setPaymentDetail] = useState(null);
   const [companyDetail, setCompanyDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   useEffect(() => {
     if (!companyId) return;
@@ -215,7 +217,7 @@ const PaymentsMadeListView = ({ companyId }) => {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden animate-fade-in">
+    <div className="flex flex-col h-[calc(100vh-80px)] bg-slate-50 overflow-hidden animate-fade-in relative">
         {/* --- GLOBAL HEADER --- */}
         <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100 bg-white">
             <div className="flex items-center gap-2">
@@ -411,8 +413,19 @@ const PaymentsMadeListView = ({ companyId }) => {
                                         <Edit size={14} /> Edit
                                     </button>
                                     <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                                    <button 
+                                      onClick={() => setIsEmailModalOpen(true)} 
+                                      className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-all text-[12px] font-bold"
+                                    >
+                                        <Mail size={14} /> Send Email
+                                    </button>
+                                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
                                     <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-all text-[12px] font-bold">
                                         <Printer size={14} /> PDF/Print <ChevronDown size={14} />
+                                    </button>
+                                    <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                                    <button className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-all">
+                                        <MoreHorizontal size={14} />
                                     </button>
                                     <div className="w-px h-4 bg-slate-200 mx-1"></div>
                                     {(!paymentDetail?.status || paymentDetail.status !== 'Paid') && (
@@ -568,6 +581,25 @@ const PaymentsMadeListView = ({ companyId }) => {
             </div>
             )}
         </div>
+
+        {/* Email Modal */}
+        {paymentDetail && (
+          <PaymentMadeEmailModal
+            isOpen={isEmailModalOpen}
+            onClose={() => setIsEmailModalOpen(false)}
+            vendor={{ id: vendorTx?.Ledger?.id, name: vendorName, email: vendorTx?.Ledger?.email }}
+            paymentDetail={paymentDetail}
+            totals={{ total: amountPaid }}
+            companyName={companyDetail?.name}
+            isFullScreenView={true}
+            onSent={() => {
+              setIsEmailModalOpen(false);
+              addNotification('Email sent successfully!', 'success');
+              fetchPayments();
+              if (selectedPaymentId) fetchPaymentDetail(selectedPaymentId);
+            }}
+          />
+        )}
     </div>
   );
 };

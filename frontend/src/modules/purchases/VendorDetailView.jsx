@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, Edit, Trash2, MoreHorizontal, Plus, Search, 
   Settings, Paperclip, Mail, Phone, Smartphone, MapPin, Globe, 
-  Info, CreditCard, Clock, Activity, ArrowRight,
+  Info, CreditCard, Clock, Activity, ArrowRight, ArrowDown,
   ChevronDown, MessageSquare, History, FileText, Send, HelpCircle,
   Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
   Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2, MoreVertical,
@@ -19,6 +19,8 @@ import ConfirmModal from '../../components/ConfirmModal';
 import ComposeMailModal from '../../components/ComposeMailModal';
 import VendorOverviewSidebar from './VendorOverviewSidebar';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import { INDIAN_STATES } from '../../utils/indianStates';
+import { COUNTRY_CODES } from '../../utils/countryCodes';
 
 const DetailRow = ({ label, value }) => (
   <div className="flex justify-between items-center py-1">
@@ -816,10 +818,7 @@ const VendorDetailView = ({ companyId }) => {
                   <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">{vendor.name}</h1>
                </div>
                <div className="flex items-center gap-2.5">
-                  <button onClick={handleSaveProfile} disabled={loading} className="px-6 py-2 bg-slate-900 text-white rounded-lg text-[13px] font-bold hover:bg-black shadow-xl shadow-slate-200 transition-all flex items-center gap-2 disabled:opacity-50">
-                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16}/>}
-                     {loading ? 'Saving...' : 'Save Profile'}
-                  </button>
+
                   <div className="w-px h-6 bg-slate-200 mx-1"></div>
                   <button onClick={() => navigate(`/vendors/${vendor.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-white shadow-sm">Edit</button>
                   <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600"><Paperclip size={16}/></button>
@@ -1268,7 +1267,25 @@ const VendorDetailView = ({ companyId }) => {
                      <VendorOverviewSidebar 
                        vendor={vendor} 
                        onEditAddress={(type) => {
-                         navigate(`/vendors/${vendor.id}`);
+                         let initialAddr = {};
+                         if (type === 'billing') {
+                           initialAddr = vendor.billingAddressJson ? JSON.parse(vendor.billingAddressJson) : vendor.billingAddress ? JSON.parse(vendor.billingAddress) : {};
+                         } else if (type === 'shipping') {
+                           initialAddr = vendor.shippingAddressJson ? JSON.parse(vendor.shippingAddressJson) : vendor.shippingAddress ? JSON.parse(vendor.shippingAddress) : {};
+                         }
+                         setAddressForm({
+                           attention: initialAddr.attention || '',
+                           country: initialAddr.country || '',
+                           address1: initialAddr.address1 || initialAddr.street1 || '',
+                           address2: initialAddr.address2 || initialAddr.street2 || '',
+                           city: initialAddr.city || '',
+                           state: initialAddr.state || '',
+                           zip: initialAddr.zip || initialAddr.pinCode || '',
+                           phone: initialAddr.phone || '',
+                           fax: initialAddr.fax || ''
+                         });
+                         setAddressType(type);
+                         setIsAddressDrawerOpen(true);
                        }}
                        onInvitePortal={() => {
                          addNotification({ message: 'Portal invitation sent successfully!', type: 'success' });
@@ -1815,13 +1832,15 @@ const VendorDetailView = ({ companyId }) => {
 
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50 mt-auto">
                <button 
+                  type="button"
                   onClick={() => setIsAddContactModalOpen(false)} 
                   className="px-5 py-2 border border-slate-200 rounded text-[13px] font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
                >
                   Cancel
                </button>
                <button 
-                  onClick={handleAddContactSubmit} 
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); handleAddContactSubmit(); }} 
                   disabled={loading}
                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-[13px] font-medium shadow-sm transition-colors disabled:opacity-50"
                >
@@ -1830,6 +1849,215 @@ const VendorDetailView = ({ companyId }) => {
             </div>
           </div>
         </div>
+      )}
+      {/* Address Edit Modal */}
+      {isAddressDrawerOpen && (
+        <>
+          {/* Invisible backdrop to close on click outside, or just let them click cancel */}
+          <div className="absolute top-[300px] left-[720px] z-[100] animate-fade-in shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-xl border border-slate-200">
+            <div className="bg-white rounded-xl w-full max-w-[480px] overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h2 className="text-[14px] font-bold text-slate-800 tracking-tight">
+                {addressType === 'billing' ? 'Billing Address' : 'Shipping Address'}
+              </h2>
+              <button onClick={() => setIsAddressDrawerOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
+                <X size={16} strokeWidth={2.5}/>
+              </button>
+            </div>
+            
+            {addressType === 'shipping' && (
+              <div className="px-5 pt-3 pb-1 border-b border-slate-50 bg-white">
+                <button 
+                  onClick={() => {
+                    const initialAddr = vendor.billingAddressJson 
+                      ? JSON.parse(vendor.billingAddressJson) 
+                      : vendor.billingAddress 
+                        ? JSON.parse(vendor.billingAddress) 
+                        : {};
+                    setAddressForm({
+                      ...addressForm,
+                      attention: initialAddr.attention || '',
+                      country: initialAddr.country || '',
+                      address1: initialAddr.address1 || initialAddr.street1 || '',
+                      address2: initialAddr.address2 || initialAddr.street2 || '',
+                      city: initialAddr.city || '',
+                      state: initialAddr.state || '',
+                      zip: initialAddr.zip || initialAddr.pinCode || '',
+                      phone: initialAddr.phone || '',
+                      fax: initialAddr.fax || ''
+                    });
+                  }}
+                  className="flex items-center gap-1.5 text-[12.5px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  <ArrowDown size={14} className="stroke-[2.5]" />
+                  Copy billing address
+                </button>
+              </div>
+            )}
+
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="space-y-1">
+                <label className="text-[12px] font-medium text-slate-600">Attention</label>
+                <input 
+                  type="text" 
+                  value={addressForm.attention} 
+                  onChange={e => setAddressForm({...addressForm, attention: e.target.value})}
+                  className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[12px] font-medium text-slate-600">Country/Region</label>
+                <select 
+                  value={addressForm.country} 
+                  onChange={e => setAddressForm({...addressForm, country: e.target.value})}
+                  className="w-full h-[34px] px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                >
+                  <option value="">Select Country</option>
+                  {COUNTRY_CODES.map(c => <option key={c.code} value={c.country}>{c.country}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[12px] font-medium text-slate-600">Address</label>
+                <textarea 
+                  value={addressForm.address1} 
+                  onChange={e => setAddressForm({...addressForm, address1: e.target.value})}
+                  className="w-full p-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 resize-none min-h-[60px]"
+                  placeholder="Street 1"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <textarea 
+                  value={addressForm.address2} 
+                  onChange={e => setAddressForm({...addressForm, address2: e.target.value})}
+                  className="w-full p-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 resize-none min-h-[60px]"
+                  placeholder="Street 2"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[12px] font-medium text-slate-600">City</label>
+                <input 
+                  type="text" 
+                  value={addressForm.city} 
+                  onChange={e => setAddressForm({...addressForm, city: e.target.value})}
+                  className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-600">State</label>
+                  <select 
+                    value={addressForm.state} 
+                    onChange={e => setAddressForm({...addressForm, state: e.target.value})}
+                    className="w-full h-[34px] px-2 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500 bg-white"
+                  >
+                    <option value="">Select State</option>
+                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-600">Pin Code</label>
+                  <input 
+                    type="text" 
+                    value={addressForm.zip} 
+                    onChange={e => setAddressForm({...addressForm, zip: e.target.value})}
+                    className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-600">Phone</label>
+                  <div className="flex">
+                    <select className="w-[70px] h-[34px] px-1 border border-r-0 border-slate-200 rounded-l text-[13px] outline-none focus:border-blue-500 bg-slate-50">
+                      <option>+91</option>
+                      <option>+1</option>
+                      <option>+44</option>
+                    </select>
+                    <input 
+                      type="text" 
+                      value={addressForm.phone} 
+                      onChange={e => setAddressForm({...addressForm, phone: e.target.value})}
+                      className="flex-1 h-[34px] px-3 border border-slate-200 rounded-r text-[13px] outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[12px] font-medium text-slate-600">Fax Number</label>
+                  <input 
+                    type="text" 
+                    value={addressForm.fax} 
+                    onChange={e => setAddressForm({...addressForm, fax: e.target.value})}
+                    className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-slate-100 flex items-center gap-3 bg-white">
+              <button 
+                type="button"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  try {
+                    setLoading(true);
+                    const addressData = {
+                      attention: addressForm.attention,
+                      country: addressForm.country,
+                      address1: addressForm.address1,
+                      address2: addressForm.address2,
+                      street1: addressForm.address1,
+                      street2: addressForm.address2,
+                      city: addressForm.city,
+                      state: addressForm.state,
+                      zip: addressForm.zip,
+                      pinCode: addressForm.zip,
+                      phone: addressForm.phone,
+                      fax: addressForm.fax
+                    };
+                    
+                    const payload = { ...vendor };
+                    if (addressType === 'billing') {
+                       payload.billingAddressJson = JSON.stringify(addressData);
+                    } else if (addressType === 'shipping') {
+                       payload.shippingAddressJson = JSON.stringify(addressData);
+                    }
+                    
+                    await ledgerAPI.update(vendor.id, payload);
+                    addNotification('Address updated successfully', 'success');
+                    
+                    setAllLedgers(prev => prev.map(v => 
+                      v.id === vendor.id ? payload : v
+                    ));
+                    
+                    setIsAddressDrawerOpen(false);
+                  } catch (err) {
+                    addNotification('Failed to update address', 'error');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                className="px-5 py-1.5 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded text-[13px] font-medium transition-colors"
+              >
+                Save
+              </button>
+              <button 
+                type="button"
+                onClick={() => setIsAddressDrawerOpen(false)}
+                className="px-4 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded text-[13px] font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          </div>
+        </>
       )}
     </div>
   );

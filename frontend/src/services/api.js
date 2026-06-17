@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://127.0.0.1:5000/api');
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -51,7 +51,6 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
     // ── CSRF token expired (403) ──────────────────────────────────────
     // The CSRF cookie can expire independently. When it does, the backend
     // returns 403 "CSRF validation failed". We silently refresh tokens to
@@ -208,56 +207,56 @@ export const voucherAPI = {
 
 // ─── Purchase Module ───────────────────────────────
 export const purchaseAPI = {
-  getVendors: (companyId) => api.get(`/purchases/vendors/${companyId}`),
-  getOrders: (companyId) => api.get(`/purchases/orders/${companyId}`),
-  createOrder: (data) => api.post('/purchases/orders', data),
-  updateOrder: (id, data) => api.put(`/purchases/orders/${id}`, data),
-  deleteOrder: (id) => api.delete(`/purchases/orders/${id}`),
-  getBills: (companyId) => api.get(`/purchases/bills/${companyId}`),
-  createBill: (data) => api.post('/purchases/bills', data),
-  updateBill: (id, data) => api.put(`/purchases/bills/${id}`, data),
-  getExpenses: (companyId) => api.get(`/purchases/expenses/${companyId}`),
-  getNextOrderNumber: (companyId) => api.get(`/purchases/orders/next-number/${companyId}`),
-  getPurchaseOrderPdfPreview: (id) => api.get(`/purchases/orders/${id}/pdf-preview`, { responseType: 'blob' }),
+  getVendors: (companyId) => api.get(`/${companyId}/purchases/vendors`),
+  getOrders: (companyId) => api.get(`/${companyId}/purchases/orders`),
+  createOrder: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders`, data),
+  updateOrder: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/orders/${id}`, data),
+  deleteOrder: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/orders/${id}`),
+  getBills: (companyId) => api.get(`/${companyId}/purchases/bills`),
+  createBill: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/bills`, data),
+  updateBill: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/bills/${id}`, data),
+  getExpenses: (companyId) => api.get(`/${companyId}/purchases/expenses`),
+  getNextOrderNumber: (companyId) => api.get(`/${companyId}/purchases/orders/next-number`),
+  getPurchaseOrderPdfPreview: (id) => api.get(`/${sessionStorage.getItem('companyId')}/purchases/orders/${id}/pdf-preview`, { responseType: 'blob' }),
 
   // Legacy support
-  getByCompany: (companyId) => api.get(`/purchases/orders/${companyId}`),
-  delete: (id) => api.delete(`/purchases/orders/${id}`),
+  getByCompany: (companyId) => api.get(`/${companyId}/purchases/orders`),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/orders/${id}`),
 };
 
 export const paymentMadeAPI = {
-  getPayments: (companyId) => api.get(`/purchases/payments-made/${companyId}`),
-  getPayment: (id) => api.get(`/purchases/payments-made/payment/${id}`),
-  create: (data) => api.post('/purchases/payments-made', data),
-  update: (id, data) => api.put(`/purchases/payments-made/${id}`, data),
-  delete: (id) => api.delete(`/purchases/payments-made/${id}`),
-  markAsPaid: (id) => api.patch(`/purchases/payments-made/${id}/mark-paid`),
-  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/purchases/unpaid-bills/${vendorId}`, { params: { companyId, excludePaymentId } }),
-  getNextNumber: (companyId) => api.get(`/purchases/payments-made/next-number/${companyId}`),
+  getPayments: (companyId) => api.get(`/${companyId}/purchases/payments-made`),
+  getPayment: (id) => api.get(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`),
+  create: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/payments-made`, data),
+  update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`, data),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`),
+  markAsPaid: (id) => api.patch(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}/mark-paid`),
+  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/${companyId}/purchases/unpaid-bills/${vendorId}`, { params: { excludePaymentId } }),
+  getNextNumber: (companyId) => api.get(`/${companyId}/purchases/payments-made/next-number`),
 };
 
 export const recurringExpenseAPI = {
-  create: (data) => api.post('/purchases/recurring', data),
-  getByCompany: (companyId) => api.get(`/purchases/recurring/${companyId}`),
-  update: (id, data) => api.put(`/purchases/recurring/${id}`, data),
-  delete: (id) => api.delete(`/purchases/recurring/${id}`),
-  processDue: () => api.post('/purchases/recurring/process-due')
+  create: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/recurring`, data),
+  getByCompany: (companyId) => api.get(`/${companyId}/purchases/recurring`),
+  update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/recurring/${id}`, data),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/recurring/${id}`),
+  processDue: () => api.post(`/${sessionStorage.getItem('companyId')}/purchases/recurring/process-due`)
 };
 
 export const recurringBillAPI = {
-  create: (data) => api.post('/purchases/recurring-bills', data),
-  getByCompany: (companyId) => api.get(`/purchases/recurring-bills/${companyId}`),
-  update: (id, data) => api.put(`/purchases/recurring-bills/${id}`, data),
-  delete: (id) => api.delete(`/purchases/recurring-bills/${id}`),
-  processDue: () => api.post('/purchases/recurring-bills/process-due')
+  create: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/recurring-bills`, data),
+  getByCompany: (companyId) => api.get(`/${companyId}/purchases/recurring-bills`),
+  update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/recurring-bills/${id}`, data),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/recurring-bills/${id}`),
+  processDue: () => api.post(`/${sessionStorage.getItem('companyId')}/purchases/recurring-bills/process-due`)
 };
 
 export const vendorCreditAPI = {
-  create: (data) => api.post('/purchases/vendor-credits', data),
-  getByCompany: (companyId) => api.get(`/purchases/vendor-credits/${companyId}`),
-  getById: (id) => api.get(`/purchases/vendor-credit/${id}`),
-  update: (id, data) => api.put(`/purchases/vendor-credits/${id}`, data),
-  delete: (id) => api.delete(`/purchases/vendor-credits/${id}`)
+  create: (data) => api.post(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/vendor-credits`, data),
+  getByCompany: (companyId) => api.get(`/${companyId}/purchases/vendor-credits`),
+  getById: (id) => api.get(`/${sessionStorage.getItem('companyId')}/purchases/vendor-credits/${id}`),
+  update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/vendor-credits/${id}`, data),
+  delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/vendor-credits/${id}`)
 };
 
 // ─── Reports ───────────────────────────────────────
@@ -477,15 +476,61 @@ export const budgetAPI = {
 
 // ─── Payroll ───────────────────────────────────────
 export const payrollAPI = {
-  getEmployees: (companyId) => api.get(`/payroll/employees/${companyId}`),
+  getEmployees: (companyId, params) => api.get(`/payroll/employees/${companyId}`, { params }),
+  getEmployeesFiltered: (params) => api.get('/payroll/employees', { params }),
+  getEmployeeById: (id) => api.get(`/payroll/employees/detail/${id}`),
   createEmployee: (data) => api.post('/payroll/employees', data),
   updateEmployee: (id, data) => api.put(`/payroll/employees/${id}`, data),
   deleteEmployee: (id) => api.delete(`/payroll/employees/${id}`),
+  reactivateEmployee: (id) => api.post(`/payroll/employees/${id}/reactivate`),
   saveSalaryStructure: (data) => api.post('/payroll/salary-structure', data),
   saveAttendance: (data) => api.post('/payroll/attendance', data),
   getAttendance: (companyId) => api.get(`/payroll/attendance/${companyId}`),
   process: (data) => api.post('/payroll/process', data),
   getPayslips: (companyId) => api.get(`/payroll/payslips/${companyId}`),
+  getSettings: (companyId) => api.get(`/payroll/${companyId}/settings`),
+  saveSettings: (companyId, data) => api.put(`/payroll/${companyId}/settings`, data),
+  validateEmail: (data) => api.post('/payroll/employees/validate/email', data),
+  validatePan: (data) => api.post('/payroll/employees/validate/pan', data),
+  validateAadhaar: (data) => api.post('/payroll/employees/validate/aadhaar', data),
+  uploadPhoto: (id, formData) => api.post(`/payroll/employees/${id}/upload-photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  importEmployees: (csvData) => api.post('/payroll/employees/import', { csvData }),
+  exportEmployees: () => api.get('/payroll/employees/export', { responseType: 'blob' }),
+  exportEmployeePDF: (id) => api.get(`/payroll/employees/${id}/pdf`, { responseType: 'blob' }),
+};
+
+// ─── Attendance ─────────────────────────────────────────────
+export const attendanceAPI = {
+  getAll: (params) => api.get('/attendances', { params }),
+  getById: (id) => api.get(`/attendances/${id}`),
+  create: (data) => api.post('/attendances', data),
+  update: (id, data) => api.put(`/attendances/${id}`, data),
+  remove: (id) => api.delete(`/attendances/${id}`),
+  approve: (id, data) => api.put(`/attendances/${id}/approve`, data),
+  getMonthlySummary: (params) => api.get('/attendances/summary/monthly', { params }),
+  bulkImport: (records) => api.post('/attendances/bulk-import', { records }),
+  exportCSV: (params) => api.get('/attendances/export', { params, responseType: 'blob' }),
+};
+
+// ─── Salary Structures & Assignments ────────────────────────
+export const salaryAPI = {
+  getComponents: () => api.get('/salary/components'),
+  createComponent: (data) => api.post('/salary/components', data),
+  updateComponent: (id, data) => api.put(`/salary/components/${id}`, data),
+  deleteComponent: (id) => api.delete(`/salary/components/${id}`),
+  
+  getStructures: () => api.get('/salary/structures'),
+  getStructureById: (id) => api.get(`/salary/structures/${id}`),
+  createStructure: (data) => api.post('/salary/structures', data),
+  updateStructure: (id, data) => api.put(`/salary/structures/${id}`, data),
+  deleteStructure: (id) => api.delete(`/salary/structures/${id}`),
+  
+  getAssignments: () => api.get('/salary/assignments'),
+  getEmployeeAssignment: (employeeId) => api.get(`/salary/assignments/employee/${employeeId}`),
+  assignSalary: (data) => api.post('/salary/assignments', data),
+  deleteAssignment: (id) => api.delete(`/salary/assignments/${id}`),
+  
+  calculatePreview: (data) => api.post('/salary/calculate-preview', data)
 };
 
 // ─── Indian GST Returns ────────────────────────────

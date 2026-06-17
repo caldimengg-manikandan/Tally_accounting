@@ -1,6 +1,11 @@
 const { PurchaseOrder, Ledger, Group, sequelize, Voucher, Transaction, VendorCredit, Item, Company } = require('../../models');
 const { Op } = require('sequelize');
 
+exports.createVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
+exports.updateVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
+exports.deleteVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
+exports.markOrderAsPaid = async (req, res) => res.status(501).json({ error: 'Not implemented.' });
+
 exports.getVendors = async (req, res, next) => {
   try {
     const { companyId } = req.params;
@@ -140,13 +145,14 @@ exports.getPurchaseOrderPdfPreview = async (req, res, next) => {
         const { id } = req.params;
 
         // Fetch the PO with its vendor (Ledger) and Company
-        const order = await PurchaseOrder.findByPk(id, {
+        const order = await PurchaseOrder.findOne({
+            where: { id, CompanyId: req.companyId },
             include: [
                 { model: Ledger },
                 { model: Company }
             ]
         });
-        if (!order) return res.status(404).json({ error: 'Purchase Order not found' });
+        if (!order) return res.status(404).json({ error: 'Record not found or access denied' });
 
         // BOLA guard
         const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
@@ -231,8 +237,10 @@ exports.createOrder = async (req, res, next) => {
 exports.updateOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const order = await PurchaseOrder.findByPk(id);
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    const order = await PurchaseOrder.findOne({
+      where: { id, CompanyId: req.companyId }
+    });
+    if (!order) return res.status(404).json({ error: 'Record not found or access denied' });
     
     // BOLA guard
     const requestingCompanyId = req.body.companyId || req.body.CompanyId || req.user?.CompanyId;
@@ -570,6 +578,7 @@ exports.createBill = async (req, res, next) => {
             companyId,
             date: date || new Date(),
             voucherType: 'Purchase',
+            reference: reference || '',
             narration: JSON.stringify({
                 notes,
                 items: items || [],
@@ -595,8 +604,9 @@ exports.createBill = async (req, res, next) => {
         try {
             const { PurchaseOrder } = require('../../models');
             let poToUpdate = null;
-            if (req.body.poId) {
-                poToUpdate = await PurchaseOrder.findByPk(req.body.poId);
+            const poId = req.body.purchase_order_id || req.body.poId;
+            if (poId) {
+                poToUpdate = await PurchaseOrder.findByPk(poId);
             } else if (reference) {
                 poToUpdate = await PurchaseOrder.findOne({
                     where: {
@@ -605,11 +615,15 @@ exports.createBill = async (req, res, next) => {
                     }
                 });
             }
-            if (poToUpdate) {
-                await poToUpdate.update({ billed_status: 'billed' });
+            if (poToUpdate && voucher.status === 'OPEN') {
+                await poToUpdate.update({ 
+                    status: 'closed',
+                    billed_status: 'billed' 
+                });
+                console.log(`PO ID ${poToUpdate.id} successfully updated to CLOSED & BILLED.`);
             }
         } catch (poErr) {
-            console.error('Failed to update PO billed_status:', poErr);
+            console.error('Failed to update parent purchase order status:', poErr);
         }
 
         // Update inventory stock quantities
@@ -779,8 +793,9 @@ exports.updateBill = async (req, res, next) => {
         try {
             const { PurchaseOrder } = require('../../models');
             let poToUpdate = null;
-            if (req.body.poId) {
-                poToUpdate = await PurchaseOrder.findByPk(req.body.poId);
+            const poId = req.body.purchase_order_id || req.body.poId;
+            if (poId) {
+                poToUpdate = await PurchaseOrder.findByPk(poId);
             } else if (reference) {
                 poToUpdate = await PurchaseOrder.findOne({
                     where: {
@@ -789,11 +804,15 @@ exports.updateBill = async (req, res, next) => {
                     }
                 });
             }
-            if (poToUpdate) {
-                await poToUpdate.update({ billed_status: 'billed' });
+            if (poToUpdate && voucher.status === 'OPEN') {
+                await poToUpdate.update({ 
+                    status: 'closed',
+                    billed_status: 'billed' 
+                });
+                console.log(`PO ID ${poToUpdate.id} successfully updated to CLOSED & BILLED.`);
             }
         } catch (poErr) {
-            console.error('Failed to update PO billed_status:', poErr);
+            console.error('Failed to update parent purchase order status:', poErr);
         }
 
         res.json(voucher);

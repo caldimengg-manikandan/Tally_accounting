@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { reportsAPI } from '../../services/api';
 
+
 export default function AuditReportView() {
   const companyId = sessionStorage.getItem('companyId');
   const [logs, setLogs] = useState([]);

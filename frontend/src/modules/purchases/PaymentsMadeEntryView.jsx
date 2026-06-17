@@ -212,12 +212,25 @@ const PaymentsMadeEntryView = ({ companyId }) => {
   // Pre-allocate if initialBillDetail exists
   useEffect(() => {
     if (initialBillDetail) {
+      const initialAmt = parseFloat(initialBillDetail.balanceDue || 0);
       setAllocations({
-        [initialBillDetail.id]: parseFloat(initialBillDetail.balanceDue || 0)
+        [initialBillDetail.id]: initialAmt
       });
-      setFormData(prev => ({ ...prev, vendorId: initialBillDetail.LedgerId || initialBillDetail.supplierLedgerId || '' }));
+      
+      let foundVendorId = initialVendorId || '';
+      if (!foundVendorId && initialBillDetail.Transactions) {
+         const vendorTx = initialBillDetail.Transactions.find(t => parseFloat(t.credit || 0) > 0);
+         if (vendorTx) foundVendorId = vendorTx.LedgerId;
+      }
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        vendorId: foundVendorId || initialBillDetail.LedgerId || initialBillDetail.supplierLedgerId || prev.vendorId,
+        paymentMade: initialAmt 
+      }));
+      setPayFullAmount(true);
     }
-  }, [initialBillDetail]);
+  }, [initialBillDetail, initialVendorId]);
 
   const loadedVendorIdRef = useRef(null);
 
@@ -255,15 +268,22 @@ const PaymentsMadeEntryView = ({ companyId }) => {
              // Keep existing allocations
           }
           // Otherwise, clear allocations if we're not tied to an initial bill
-          else if (!initialBillDetail || initialBillDetail.LedgerId !== formData.vendorId) {
-            setAllocations({});
+          else {
+            let initialVendor = initialBillDetail?.LedgerId || initialBillDetail?.supplierLedgerId;
+            if (!initialVendor && initialBillDetail?.Transactions) {
+              const vendorTx = initialBillDetail.Transactions.find(t => parseFloat(t.credit || 0) > 0);
+              if (vendorTx) initialVendor = vendorTx.LedgerId;
+            }
+            if (!initialBillDetail || String(initialVendor) !== String(formData.vendorId)) {
+               setAllocations({});
+            }
           }
         })
         .finally(() => setFetchingBills(false));
     } else {
       setOutstandingBills([]);
     }
-  }, [formData.vendorId, activeTab, companyId, isEditMode, id, formData.paymentMade]);
+  }, [formData.vendorId, activeTab, companyId, isEditMode, id]);
 
   const handleAllocationChange = (billId, value) => {
     const amount = value === '' ? '' : parseFloat(value) || 0;
@@ -320,6 +340,10 @@ const PaymentsMadeEntryView = ({ companyId }) => {
   const ensureRealLedger = async (id, name, companyId) => {
     if (id && id.length === 36) return id;
     
+    // Check if a ledger with this exact name already exists
+    const existingLedger = ledgers.find(l => l.name?.toLowerCase() === name?.toLowerCase());
+    if (existingLedger) return existingLedger.id;
+
     let groupName = 'Current Liabilities';
     if (name === 'Petty Cash' || name === 'Undeposited Funds') groupName = 'Cash-in-Hand';
     else if (name === 'Employee Reimbursements') groupName = 'Current Liabilities';
@@ -506,8 +530,30 @@ const PaymentsMadeEntryView = ({ companyId }) => {
                              type="number" 
                              value={formData.paymentMade}
                              onChange={(e) => {
-                                setFormData({...formData, paymentMade: e.target.value});
-                                if (parseFloat(e.target.value) !== totalAmountDue) setPayFullAmount(false);
+                                const val = e.target.value;
+                                setFormData({...formData, paymentMade: val});
+                                
+                                const numVal = parseFloat(val) || 0;
+                                if (numVal !== totalAmountDue) {
+                                  setPayFullAmount(false);
+                                } else {
+                                  setPayFullAmount(true);
+                                }
+                                
+                                // Auto-allocate entered amount across bills
+                                let remaining = numVal;
+                                const newAllocations = {};
+                                if (remaining > 0) {
+                                   outstandingBills.forEach(b => {
+                                      if (remaining > 0) {
+                                         const due = parseFloat(b.balanceDue || 0);
+                                         const allocate = Math.min(remaining, due);
+                                         newAllocations[b.id] = allocate;
+                                         remaining -= allocate;
+                                      }
+                                   });
+                                }
+                                setAllocations(newAllocations);
                              }}
                              className="w-full h-8.5 px-3 border border-slate-300 rounded-r outline-none text-[13px] font-bold text-slate-800 hover:border-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                            />

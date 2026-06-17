@@ -33,8 +33,8 @@ const BillEntryView = ({ companyId }) => {
     deliveryAddressText: 'No. 42, Innovation Hub,\nBangalore, Karnataka, 560001\nIndia',
     billNumber: '',
     reference: '',
-    date: new Date().toISOString().split('T')[0],
-    deliveryDate: '',
+    date: '',
+    deliveryDate: new Date().toISOString().split('T')[0],
     paymentTerms: 'Due on Receipt',
     shipmentPreference: '',
     deliveryAddressData: {

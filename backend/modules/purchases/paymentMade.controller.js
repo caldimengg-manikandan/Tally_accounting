@@ -134,13 +134,15 @@ exports.getUnpaidBills = async (req, res, next) => {
             const amountPaid = payments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
             const balance = billAmount - amountPaid;
 
-            // Parse dueDate and notes from narration JSON if present
+            // Parse dueDate, reference, and notes from narration JSON if present
             let dueDate = null;
             let notes = '';
+            let narrationRef = '';
             try {
                 const narrationData = typeof bill.narration === 'string' ? JSON.parse(bill.narration) : bill.narration;
                 dueDate = narrationData?.dueDate || null;
                 notes = narrationData?.notes || '';
+                narrationRef = narrationData?.reference || '';
             } catch (e) {}
 
             return {
@@ -152,7 +154,7 @@ exports.getUnpaidBills = async (req, res, next) => {
                 amountPaid,
                 balanceDue: balance,
                 balance,
-                reference: bill.reference || notes
+                reference: bill.reference || narrationRef || notes
             };
         }));
 

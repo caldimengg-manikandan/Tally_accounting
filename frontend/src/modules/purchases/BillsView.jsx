@@ -487,10 +487,13 @@ const BillsView = ({ companyId }) => {
                         <table className="w-full text-left">
                             <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 sticky top-0 z-10">
                                 <tr>
+                                    <th className="px-6 py-4 w-12"><div className="flex items-center justify-center"><input type="checkbox" onChange={toggleSelectAll} checked={filteredBills.length > 0 && selectedBills.length === filteredBills.length} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" /></div></th>
                                     <th className="px-6 py-4">Date</th>
                                     <th className="px-6 py-4">Bill#</th>
+                                    <th className="px-6 py-4">Reference Number</th>
                                     <th className="px-6 py-4">Vendor Name</th>
                                     <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Due Date</th>
                                     <th className="px-6 py-4 text-right">Amount</th>
                                     <th className="px-6 py-4 text-right">Balance Due</th>
                                     <th className="px-6 py-4 text-center">Actions</th>
@@ -499,7 +502,7 @@ const BillsView = ({ companyId }) => {
                             <tbody className="divide-y divide-slate-100">
                                 {filteredBills.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="py-20 text-center">
+                                        <td colSpan="10" className="py-20 text-center">
                                            <div className="flex flex-col items-center justify-center gap-3">
                                               <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
                                                  <Receipt size={24} />
@@ -519,13 +522,31 @@ const BillsView = ({ companyId }) => {
                                             }}
                                             className="hover:bg-slate-50 cursor-pointer group transition-colors"
                                         >
+                                            <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-center">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={selectedBills.includes(bill.id)}
+                                                        onChange={() => toggleSelectBill(bill.id)}
+                                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" 
+                                                    />
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-4 text-[13px] text-slate-500 font-medium whitespace-nowrap">
-                                                {new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}
+                                                {new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-[14px] font-medium text-blue-600 group-hover:underline">
                                                     {bill.voucherNumber}
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-[13px] text-slate-500 font-medium">
+                                                {(() => {
+                                                    try {
+                                                        const parsed = JSON.parse(bill.narration);
+                                                        return parsed.reference || '-';
+                                                    } catch (e) { return '-'; }
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-[14px] font-medium text-slate-800 uppercase tracking-tight">
@@ -540,6 +561,12 @@ const BillsView = ({ companyId }) => {
                                                       'bg-blue-50 text-blue-600 border-blue-100'}`}>
                                                     {(bill.status || 'Open').replace('_', ' ')}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-[13px] text-slate-500 font-medium whitespace-nowrap">
+                                                {(() => {
+                                                    const dd = getDueDate(bill);
+                                                    return dd ? new Date(dd).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '-';
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4 text-right text-[14px] font-medium text-slate-900 tabular-nums">
                                                 ₹{parseFloat(bill.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
