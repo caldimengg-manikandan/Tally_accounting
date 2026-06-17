@@ -1,7 +1,7 @@
    const { VendorCredit, VendorCreditItem, Voucher, Transaction, Ledger, Item } = require('../../models');
 const { v4: uuidv4 } = require('uuid');
 
-exports.getByCompany = async (req, res) => {
+exports.getByCompany = async (req, res, next) => {
     try {
         const { companyId } = req.params;
         const credits = await VendorCredit.findAll({
@@ -11,11 +11,11 @@ exports.getByCompany = async (req, res) => {
         });
         res.json(credits);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.getById = async (req, res) => {
+exports.getById = async (req, res, next) => {
     try {
         const credit = await VendorCredit.findOne({
             where: { id: req.params.id, CompanyId: req.companyId },
@@ -32,14 +32,20 @@ exports.getById = async (req, res) => {
                 }
             ]
         });
-        if (!credit) return res.status(404).json({ error: 'Record not found or access denied' });
+        if (!credit) return res.status(404).json({ error: 'Vendor Credit not found' });
+        
+        // BOLA guard
+        const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+        if (requestingCompanyId && String(credit.CompanyId) !== String(requestingCompanyId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
         res.json(credit);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.create = async (req, res) => {
+exports.create = async (req, res, next) => {
     try {
         const {
             vendorCreditNumber, referenceNumber, date, status,
@@ -108,11 +114,11 @@ exports.create = async (req, res) => {
 
         res.status(201).json(credit);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.update = async (req, res) => {
+exports.update = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { items, ...updateData } = req.body;
@@ -121,6 +127,12 @@ exports.update = async (req, res) => {
             where: { id, CompanyId: req.companyId } 
         });
         if (!credit) return res.status(404).json({ error: 'Record not found or access denied' });
+
+        // BOLA guard
+        const requestingCompanyId = req.body.CompanyId || req.body.companyId || req.user?.CompanyId;
+        if (requestingCompanyId && String(credit.CompanyId) !== String(requestingCompanyId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
 
         await credit.update(updateData);
 
@@ -139,17 +151,23 @@ exports.update = async (req, res) => {
         
         res.json(credit);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.delete = async (req, res) => {
+exports.delete = async (req, res, next) => {
     try {
         const credit = await VendorCredit.findOne({ 
             where: { id: req.params.id, CompanyId: req.companyId } 
         });
         if (!credit) return res.status(404).json({ error: 'Record not found or access denied' });
         
+        // BOLA guard
+        const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+        if (requestingCompanyId && String(credit.CompanyId) !== String(requestingCompanyId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
         if (credit.VoucherId) {
             await Voucher.destroy({ where: { id: credit.VoucherId } });
         }
@@ -157,6 +175,6 @@ exports.delete = async (req, res) => {
         await credit.destroy();
         res.json({ message: 'Deleted' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };

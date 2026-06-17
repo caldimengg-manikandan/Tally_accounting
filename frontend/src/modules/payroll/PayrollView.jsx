@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Users, Plus, Check, X, AlertCircle, Loader2, RefreshCcw, DollarSign, Calendar, FileText, Settings, UserCheck, Info, Pencil, Sliders, Banknote, TrendingUp, TrendingDown
 } from 'lucide-react';
@@ -542,6 +543,7 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200/60 ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-200">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
+
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
                   <Banknote size={24} strokeWidth={2} />
@@ -569,6 +571,7 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
               </div>
 
               {/* Earnings Section */}
+>>>>>>> origin/main
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="h-6 w-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">
@@ -643,11 +646,12 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 3: LOG ATTENDANCE */}
-      {showAttModal && (
+      {showAttModal && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
@@ -687,7 +691,8 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Slide-Out Profile Drawer */}

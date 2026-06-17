@@ -47,16 +47,19 @@ const ConfirmModal = ({
       ></div>
 
       {/* Modal Container */}
-      <div className="relative bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl shadow-slate-900/40 animate-in zoom-in-95 fade-in duration-300 overflow-hidden border border-slate-100 p-2">
-        <div className="bg-white rounded-[2rem] overflow-hidden">
+      <div className="relative bg-white w-full max-w-md rounded-[2rem] shadow-2xl shadow-slate-900/40 animate-in zoom-in-95 fade-in duration-300 overflow-hidden border border-slate-100 p-2">
+        <div className="bg-white rounded-[1.75rem] overflow-hidden relative">
             {/* Header */}
-            <div className="px-8 pt-10 pb-6 flex items-center justify-between">
-            <div className={`w-14 h-14 rounded-3xl flex items-center justify-center ${getColors()}`}>
-                {getIcon()}
-            </div>
-            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
-                <X size={24} />
-            </button>
+            <div className="px-8 pt-10 pb-6 flex justify-center">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${getColors()}`}>
+                  {getIcon()}
+              </div>
+              <button 
+                onClick={onClose} 
+                className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
+              >
+                  <X size={20} />
+              </button>
             </div>
 
             {/* Content */}

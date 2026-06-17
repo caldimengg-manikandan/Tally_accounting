@@ -79,7 +79,7 @@ exports.seedDefaultLedgers = async (companyId, transaction = null) => {
   }
 };
 
-exports.createCompany = async (req, res) => {
+exports.createCompany = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
     const { 
@@ -159,11 +159,11 @@ exports.createCompany = async (req, res) => {
     });
   } catch (err) {
     await transaction.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getCompanies = async (req, res) => {
+exports.getCompanies = async (req, res, next) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -184,11 +184,11 @@ exports.getCompanies = async (req, res) => {
     })));
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getCompanyById = async (req, res) => {
+exports.getCompanyById = async (req, res, next) => {
   try {
     const company = await Company.findByPk(req.params.id);
     if (!company) return res.status(404).json({ error: 'Company not found' });
@@ -213,11 +213,11 @@ exports.getCompanyById = async (req, res) => {
       ledgerCount
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateCompany = async (req, res) => {
+exports.updateCompany = async (req, res, next) => {
   try {
     const { gstNumber, panNumber } = req.body;
     if (gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
@@ -274,11 +274,11 @@ exports.updateCompany = async (req, res) => {
     await company.save();
     res.json(company);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.closeFinancialYear = async (req, res) => {
+exports.closeFinancialYear = async (req, res, next) => {
   try {
     const { id } = req.params;
     const company = await Company.findByPk(id);
@@ -390,11 +390,11 @@ exports.closeFinancialYear = async (req, res) => {
       nextFinancialYearStart: nextFYStart
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteCompany = async (req, res) => {
+exports.deleteCompany = async (req, res, next) => {
   try {
     const { id } = req.params;
     const company = await Company.findByPk(id);
@@ -407,11 +407,11 @@ exports.deleteCompany = async (req, res) => {
     await company.destroy();
     res.json({ message: 'Company deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.seedGroupsForCompany = async (req, res) => {
+exports.seedGroupsForCompany = async (req, res, next) => {
   try {
     const companyId = req.params.id;
     const company = await Company.findByPk(companyId);
@@ -432,11 +432,11 @@ exports.seedGroupsForCompany = async (req, res) => {
       count: finalCount 
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.syncDefaultLedgers = async (req, res) => {
+exports.syncDefaultLedgers = async (req, res, next) => {
   try {
     const { id } = req.params;
     const company = await Company.findByPk(id);
@@ -451,6 +451,6 @@ exports.syncDefaultLedgers = async (req, res) => {
     await exports.seedDefaultLedgers(id);
     res.json({ message: 'Default ledgers synced successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

@@ -31,7 +31,7 @@ const parseFiscalYearRange = (fy) => {
 };
 
 // Create Budget
-exports.createBudget = async (req, res) => {
+exports.createBudget = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { name, fiscalYear, period, items, companyId } = req.body;
@@ -58,12 +58,12 @@ exports.createBudget = async (req, res) => {
     res.status(201).json(budget);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Get Budgets
-exports.getBudgets = async (req, res) => {
+exports.getBudgets = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const budgets = await Budget.findAll({
@@ -79,24 +79,24 @@ exports.getBudgets = async (req, res) => {
     });
     res.json(budgets);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Delete Budget
-exports.deleteBudget = async (req, res) => {
+exports.deleteBudget = async (req, res, next) => {
   try {
     const budget = await Budget.findByPk(req.params.id);
     if (!budget) return res.status(404).json({ error: 'Budget not found' });
     await budget.destroy();
     res.json({ message: 'Budget deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Budget vs Actual Variance Report
-exports.getBudgetVariance = async (req, res) => {
+exports.getBudgetVariance = async (req, res, next) => {
   try {
     const { id } = req.params; // budgetId
 
@@ -224,7 +224,7 @@ exports.getBudgetVariance = async (req, res) => {
       items: reports
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 

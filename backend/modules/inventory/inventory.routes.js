@@ -1,31 +1,76 @@
 const express = require('express');
-
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const crypto = require('crypto');
 const inventoryController = require('./inventory.controller');
 const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/auth.middleware');
 
-// Multer Storage Config
+// 🔐 SECURE MULTER CONFIG
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+const UPLOAD_DIR = path.join(__dirname, '../../uploads');
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads');
-    cb(null, uploadPath);
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    // Generate secure random filename (ignore user-supplied name)
+    const timestamp = Date.now();
+    const randomBytes = crypto.randomBytes(8).toString('hex');
+    // Extract actual extension safely or default to jpg
+    let ext = path.extname(file.originalname).toLowerCase();
+    if (!['.jpg', '.jpeg', '.png', '.webp'].includes(ext)) {
+      ext = '.jpg';
+    }
+    cb(null, `${timestamp}-${randomBytes}${ext}`);
   }
 });
 
-const upload = multer({ storage: storage });
+// 🔐 MULTER FILE FILTER
+const fileFilter = (req, file, cb) => {
+  // Validate MIME type
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'), false);
+    return;
+  }
+  cb(null, true);
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: MAX_FILE_SIZE // 2 MB max
+  }
+});
 
 router.use(verifyToken, tenantAccess);
 
-// Upload Item Image
-router.post('/upload', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  const imageUrl = `http://localhost:5000/uploads/${req.file.filename}`;
-  res.json({ imageUrl });
+// Upload Item Image (Secure)
+router.post('/upload', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      // Pass upload/multer validation errors to global handler
+      return next(err);
+    }
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      // ✅ Use environment variable for base URL (never hardcode)
+      const baseUrl = process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' 
+                        ? 'https://tally-backend-wfml.onrender.com' 
+                        : 'http://127.0.0.1:5000');
+      
+      const imageUrl = `${baseUrl}/uploads/inventory/${req.file.filename}`;
+      res.json({ imageUrl });
+    } catch (err) {
+      next(err);
+    }
+  });
 });
 
 const mastersController = require('./inventoryMasters.controller');

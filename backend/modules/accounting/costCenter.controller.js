@@ -1,6 +1,6 @@
 const { CostCenter, CostCategory, AuditLog } = require('../../models');
 
-exports.createCostCenter = async (req, res) => {
+exports.createCostCenter = async (req, res, next) => {
   try {
     const { name, category, description, companyId, CompanyId, costCategoryId, parentCostCenterId } = req.body;
     const finalCompanyId = req.companyId || companyId || CompanyId;
@@ -25,11 +25,11 @@ exports.createCostCenter = async (req, res) => {
 
     res.status(201).json(costCenter);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getCostCenters = async (req, res) => {
+exports.getCostCenters = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const costCenters = await CostCenter.findAll({ 
@@ -41,11 +41,11 @@ exports.getCostCenters = async (req, res) => {
     });
     res.json(costCenters);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateCostCenter = async (req, res) => {
+exports.updateCostCenter = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, category, description, costCategoryId, parentCostCenterId } = req.body;
@@ -72,11 +72,11 @@ exports.updateCostCenter = async (req, res) => {
 
     res.json(costCenter);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteCostCenter = async (req, res) => {
+exports.deleteCostCenter = async (req, res, next) => {
   try {
     const costCenter = await CostCenter.findByPk(req.params.id);
     if (!costCenter) return res.status(404).json({ error: 'Cost Center not found' });
@@ -93,7 +93,7 @@ exports.deleteCostCenter = async (req, res) => {
 
     res.json({ message: 'Cost Center deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 

@@ -1,6 +1,6 @@
 const { PurchaseOrder, Ledger, Company } = require('../../models');
 
-exports.getPurchaseOrders = async (req, res) => {
+exports.getPurchaseOrders = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const orders = await PurchaseOrder.findAll({
@@ -10,11 +10,11 @@ exports.getPurchaseOrders = async (req, res) => {
     });
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.createPurchaseOrder = async (req, res) => {
+exports.createPurchaseOrder = async (req, res, next) => {
   try {
     const { companyId, supplierLedgerId, date, orderNumber, totalAmount, notes, status, items } = req.body;
     const order = await PurchaseOrder.create({
@@ -28,11 +28,11 @@ exports.createPurchaseOrder = async (req, res) => {
     });
     res.status(201).json(order);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updatePurchaseOrder = async (req, res) => {
+exports.updatePurchaseOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
     const order = await PurchaseOrder.findByPk(id);
@@ -40,11 +40,11 @@ exports.updatePurchaseOrder = async (req, res) => {
     await order.update(req.body);
     res.json(order);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deletePurchaseOrder = async (req, res) => {
+exports.deletePurchaseOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
     const order = await PurchaseOrder.findByPk(id);
@@ -52,6 +52,6 @@ exports.deletePurchaseOrder = async (req, res) => {
     await order.destroy();
     res.json({ message: 'Deleted' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

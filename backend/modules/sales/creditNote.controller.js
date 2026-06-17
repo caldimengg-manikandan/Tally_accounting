@@ -1,6 +1,6 @@
 const { CreditNote, CreditNoteItem, Ledger, Item, sequelize } = require('../../models');
 
-exports.createCreditNote = async (req, res) => {
+exports.createCreditNote = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { 
@@ -47,11 +47,11 @@ exports.createCreditNote = async (req, res) => {
     res.status(201).json(cn);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getCreditNotes = async (req, res) => {
+exports.getCreditNotes = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const notes = await CreditNote.findAll({
@@ -63,13 +63,14 @@ exports.getCreditNotes = async (req, res) => {
     });
     res.json(notes);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getCreditNoteById = async (req, res) => {
+exports.getCreditNoteById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { companyId } = req.query;
     const cn = await CreditNote.findByPk(id, {
       include: [
         { model: Ledger, as: 'Customer', attributes: ['name', 'email', 'currency'] },
@@ -81,24 +82,38 @@ exports.getCreditNoteById = async (req, res) => {
       ]
     });
     if (!cn) return res.status(404).json({ error: 'Credit Note not found' });
+    // BOLA guard
+    if (companyId && String(cn.CompanyId) !== String(companyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     res.json(cn);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateCreditNote = async (req, res) => {
+exports.updateCreditNote = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
     const { 
       customerLedgerId, accountsReceivableId, creditNoteNumber, referenceNumber, date, 
       salesperson, subject, subTotal, discount, 
-      taxAmount, adjustment, totalAmount, status, items, projectId 
+      taxAmount, adjustment, totalAmount, status, items, projectId, companyId
     } = req.body;
 
     const cn = await CreditNote.findByPk(id);
-    if (!cn) return res.status(404).json({ error: 'Credit Note not found' });
+    if (!cn) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Credit Note not found' });
+    }
+
+    // BOLA guard
+    const requestingCompanyId = companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(cn.CompanyId) !== String(requestingCompanyId)) {
+      await t.rollback();
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     await cn.update({
       customerLedgerId,
@@ -138,16 +153,26 @@ exports.updateCreditNote = async (req, res) => {
     res.json(cn);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteCreditNote = async (req, res) => {
+exports.deleteCreditNote = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+
+    const cn = await CreditNote.findByPk(id);
+    if (!cn) return res.status(404).json({ error: 'Credit Note not found' });
+
+    // BOLA guard
+    if (requestingCompanyId && String(cn.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     await CreditNote.destroy({ where: { id } });
     res.json({ message: 'Credit Note deleted.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

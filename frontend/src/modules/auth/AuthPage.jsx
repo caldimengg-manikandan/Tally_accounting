@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { login, register, googleLogin } from '../../services/api';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { setUser } from '../../stores/authStore';
 
 const AuthPage = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(false); // Start with signup as per screenshot
@@ -25,8 +26,7 @@ const AuthPage = ({ onLogin }) => {
     try {
       if (isLogin) {
         const res = await login(email, password);
-        sessionStorage.setItem('token', res.data.token);
-        sessionStorage.setItem('user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
         if (res.data.companies && res.data.companies.length > 0) {
           sessionStorage.setItem('companyId', res.data.companies[0].id);
         } else {
@@ -55,8 +55,7 @@ const AuthPage = ({ onLogin }) => {
     setError('');
     try {
       const res = await googleLogin(credentialResponse.credential);
-      sessionStorage.setItem('token', res.data.token);
-      sessionStorage.setItem('user', JSON.stringify(res.data.user));
+      setUser(res.data.user);
       if (res.data.companies && res.data.companies.length > 0) {
         sessionStorage.setItem('companyId', res.data.companies[0].id);
       } else {

@@ -362,6 +362,7 @@ export default function ProfessionalInvoiceView() {
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const projectDropdownRef = React.useRef(null);
   const [projectSearch, setProjectSearch] = useState('');
+  const [openProjectDropdownLineId, setOpenProjectDropdownLineId] = useState(null);
 
   // Handle Currency Change & Exchange Rate (Real-time API) - Now explicitly called instead of useEffect
   const fetchLiveExchangeRate = async (code) => {
@@ -485,7 +486,8 @@ export default function ProfessionalInvoiceView() {
                 description: it.description || it.itemDetails || it.detail || '',
                 quantity: parseFloat(it.quantity || 0),
                 rate: parseFloat(it.rate || 0),
-                amount: parseFloat(it.quantity || 0) * parseFloat(it.rate || 0)
+                amount: parseFloat(it.quantity || 0) * parseFloat(it.rate || 0),
+                projectId: it.projectId || ''
               })));
             }
 
@@ -533,7 +535,8 @@ export default function ProfessionalInvoiceView() {
                     description: item.description || '',
                     quantity: item.quantity,
                     rate: item.rate,
-                    amount: item.quantity * item.rate
+                    amount: item.quantity * item.rate,
+                    projectId: item.projectId || ''
                  })));
               }
            }
@@ -633,7 +636,7 @@ export default function ProfessionalInvoiceView() {
   const totalQuantity = useMemo(() => lineItems.reduce((acc, line) => acc + parseFloat(line.quantity || 0), 0), [lineItems]);
 
   // ─── Handlers ───────────────────────────────────────────────────
-  const addLine = () => setLineItems([...lineItems, { id: Date.now(), itemId: '', description: '', quantity: 1, rate: 0, discount: 0, discountType: '%', amount: 0 }]);
+  const addLine = () => setLineItems([...lineItems, { id: Date.now(), itemId: '', description: '', quantity: 1, rate: 0, discount: 0, discountType: '%', amount: 0, projectId: '' }]);
   const removeLine = (id) => lineItems.length > 1 && setLineItems(lineItems.filter(l => l.id !== id));
   
   const updateLine = (id, field, value) => {
@@ -710,7 +713,8 @@ export default function ProfessionalInvoiceView() {
           quantity: l.quantity, 
           rate: l.rate,
           discount: l.discount,
-          discountType: l.discountType
+          discountType: l.discountType,
+          projectId: l.projectId || null
         })),
         projectId: projectId || null
       };
@@ -720,16 +724,25 @@ export default function ProfessionalInvoiceView() {
          if (status === 'Confirmed') {
              const customer = customers.find(c => String(c.id) === String(customerId));
              setSavedInvoiceData({
-                 ...payload,
-                 id: id,
-                 CompanyId: companyId,
-                 number: invoiceNo,
-                 total: total,
-                 date: invoiceDate,
-                 dueDate: dueDate,
-                 Customer: { email: customer?.email },
-                 customerName: customer?.displayName || customer?.name
-             });
+                  ...payload,
+                  id: id,
+                  CompanyId: companyId,
+                  number: invoiceNo,
+                  total: total,
+                  taxAmount: gstAmount,
+                  gstPercent: gstPercent,
+                  subTotal: subTotal,
+                  date: invoiceDate,
+                  dueDate: dueDate,
+                  Customer: { email: customer?.email },
+                  customerName: customer?.displayName || customer?.name,
+                  items: lineItems.filter(l => l.itemId).map(l => ({
+                      name: l.description || '',
+                      quantity: l.quantity,
+                      rate: l.rate,
+                      amount: l.amount
+                  }))
+              });
              setShowEmailModal(true);
          } else {
              navigate(`/sales-invoices/${id}`);
@@ -747,10 +760,19 @@ export default function ProfessionalInvoiceView() {
                      CompanyId: companyId,
                      number: invoiceNo,
                      total: total,
+                     taxAmount: gstAmount,
+                     gstPercent: gstPercent,
+                     subTotal: subTotal,
                      date: invoiceDate,
                      dueDate: dueDate,
                      Customer: { email: customer?.email },
-                     customerName: customer?.displayName || customer?.name
+                     customerName: customer?.displayName || customer?.name,
+                     items: lineItems.filter(l => l.itemId).map(l => ({
+                         name: l.description || ``,
+                         quantity: l.quantity,
+                         rate: l.rate,
+                         amount: l.amount
+                     }))
                  });
                  setShowEmailModal(true);
              } else {
@@ -796,7 +818,7 @@ export default function ProfessionalInvoiceView() {
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto">
         <div className="max-w-[1000px] mx-auto py-10 px-6">
           <div className="bg-white rounded border border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-12 space-y-12 animate-fade-in">
           
@@ -1322,11 +1344,68 @@ export default function ProfessionalInvoiceView() {
                                 ))}
                               </select>
                            </div>
+                           <div className="relative border-l border-slate-200 pl-4 flex items-center">
+                               <button 
+                                 type="button"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   setOpenProjectDropdownLineId(openProjectDropdownLineId === line.id ? null : line.id);
+                                   setProjectSearch('');
+                                 }}
+                                 className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-[#1e61f0] transition-colors"
+                               >
+                                  <FileText size={14} /> 
+                                  <span>{projects.find(p => p.id === line.projectId)?.name || 'Select a project'}</span>
+                                  <ChevronDown size={12} className={`transition-transform ${openProjectDropdownLineId === line.id ? 'rotate-180' : ''}`} />
+                               </button>
+
+                               {openProjectDropdownLineId === line.id && (
+                                 <>
+                                   <div className="fixed inset-0 z-[150]" onClick={() => setOpenProjectDropdownLineId(null)} />
+                                   <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in text-left">
+                                     <div className="p-2 border-b border-slate-100">
+                                       <div className="relative">
+                                         <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                         <input
+                                           autoFocus
+                                           value={projectSearch}
+                                           onChange={e => setProjectSearch(e.target.value)}
+                                           placeholder="Search projects..."
+                                           className="w-full pl-7 pr-2 py-1 bg-slate-50 border border-slate-200 rounded text-[12px] font-medium outline-none focus:border-blue-400 transition-all text-slate-700"
+                                           onClick={(e) => e.stopPropagation()}
+                                         />
+                                       </div>
+                                     </div>
+                                     <div className="max-h-40 overflow-y-auto no-scrollbar">
+                                       <div 
+                                         onClick={() => { updateLine(line.id, 'projectId', ''); setOpenProjectDropdownLineId(null); }}
+                                         className={`px-3 py-2 cursor-pointer text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 border-b border-slate-50 ${!line.projectId ? 'text-blue-600' : 'text-slate-600'}`}
+                                       >
+                                         No Project
+                                       </div>
+                                       {projects.filter(p => !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase())).length === 0 ? (
+                                         <div className="py-4 text-center text-[11px] text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
+                                       ) : (
+                                         projects
+                                           .filter(p => !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase()))
+                                           .map(p => (
+                                             <div
+                                               key={p.id}
+                                               onClick={() => { updateLine(line.id, 'projectId', p.id); setOpenProjectDropdownLineId(null); }}
+                                               className={`px-3 py-2 cursor-pointer text-[12px] font-medium hover:bg-blue-50 transition-colors
+                                                 ${line.projectId === p.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
+                                             >
+                                               {p.name}
+                                             </div>
+                                           ))
+                                       )}
+                                     </div>
+                                   </div>
+                                 </>
+                               )}
+                           </div>
                            <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-[#1e61f0] transition-colors border-l border-slate-200 pl-4">
-                              <FileText size={14} /> Select a project <ChevronDown size={12} />
-                           </button>
-                           <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-[#1e61f0] transition-colors border-l border-slate-200 pl-4">
-                              <ShieldCheck size={14} /> Reporting Tags
+                               <ShieldCheck size={14} /> Reporting Tags
                            </button>
                         </div>
                       </td>
@@ -1460,18 +1539,13 @@ export default function ProfessionalInvoiceView() {
                >
                    {isSaving ? '...' : 'Save as Draft'}
                </button>
-               <div className="flex shadow-sm">
-                <button 
-                    onClick={() => handleSave('Confirmed')}
-                    disabled={isSaving}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-l font-bold text-[13px] hover:bg-blue-700 transition-all flex items-center gap-2"
-                >
-                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : 'Save and Send'}
-                </button>
-                <button className="px-2 bg-blue-600 text-white rounded-r border-l border-blue-500/50 hover:bg-blue-700">
-                  <ChevronDown size={16} />
-                </button>
-               </div>
+               <button 
+                   onClick={() => handleSave('Confirmed')}
+                   disabled={isSaving}
+                   className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 transition-all flex items-center gap-2 shadow-sm"
+               >
+                   {isSaving ? <Loader2 size={16} className="animate-spin" /> : 'Save and Send'}
+               </button>
                <button 
                    onClick={() => navigate('/sales-invoices')}
                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded text-[13px] font-medium hover:bg-slate-50 transition-all shadow-sm"

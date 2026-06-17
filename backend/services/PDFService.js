@@ -1,24 +1,29 @@
 const PDFDocument = require('pdfkit');
 
 class PDFService {
-    static async generateRetainerInvoice(retainer, items) {
+    static async generateRetainerInvoice(retainer, items, company = {}) {
         return new Promise((resolve, reject) => {
             const doc = new PDFDocument({ margin: 50, size: 'A4' });
             let buffers = [];
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
+            const companyName = company.name || 'Your Company';
+            const companyState = company.state || '';
+            const companyEmail = company.email || '';
+
             // --- HEADER ---
             doc.fillColor('#000000')
                .fontSize(12)
                .font('Helvetica-Bold')
-               .text('Indus CAI private Ltd', 50, 50);
+               .text(companyName, 50, 50);
             
             doc.fontSize(10)
-               .font('Helvetica')
-               .text('Tamil Nadu', 50, 65)
-               .text('India', 50, 78)
-               .text('naveenswathi1811@gmail.com', 50, 91);
+               .font('Helvetica');
+            
+            let headerY = 65;
+            if (companyState) { doc.text(companyState, 50, headerY); headerY += 13; }
+            if (companyEmail) { doc.text(companyEmail, 50, headerY); }
 
             doc.fontSize(36)
                .font('Helvetica-Bold')
@@ -115,24 +120,29 @@ class PDFService {
         });
     }
 
-    static async generateQuote(quote, items) {
+    static async generateQuote(quote, items, company = {}) {
         return new Promise((resolve, reject) => {
             const doc = new PDFDocument({ margin: 50, size: 'A4' });
             let buffers = [];
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
 
+            const companyName = company.name || 'Your Company';
+            const companyState = company.state || '';
+            const companyEmail = company.email || '';
+
             // --- HEADER ---
             doc.fillColor('#000000')
                .fontSize(14)
                .font('Helvetica-Bold')
-               .text('Indus CAI private Ltd', 50, 50);
+               .text(companyName, 50, 50);
             
             doc.fontSize(10)
-               .font('Helvetica')
-               .text('Tamil Nadu', 50, 68)
-               .text('India', 50, 81)
-               .text('naveenswathi1811@gmail.com', 50, 94);
+               .font('Helvetica');
+
+            let headerY = 68;
+            if (companyState) { doc.text(companyState, 50, headerY); headerY += 13; }
+            if (companyEmail) { doc.text(companyEmail, 50, headerY); }
 
             doc.fontSize(36)
                .font('Helvetica-Bold')

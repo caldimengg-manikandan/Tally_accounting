@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 
 // ── Components ───────────────────────────────────────────────────
 import Notification from './components/Notification';
+import { setUser, getUser } from './stores/authStore';
 import AuthPage from './modules/auth/AuthPage';
 import LandingPage from './modules/landing/LandingPage';
 import DashboardView from './modules/dashboard/DashboardView';
@@ -77,7 +78,7 @@ import ManualJournalEntryView from './modules/accountant/ManualJournalEntryView'
 import ManualJournalsListView from './modules/accountant/ManualJournalsListView';
 
 // ── APIs ─────────────────────────────────────────────────────────
-import { companyAPI, reportsAPI, voucherAPI } from './services/api';
+import { companyAPI, reportsAPI, voucherAPI, exchangeOAuthToken, getCurrentUser } from './services/api';
 
 // ── Icons ─────────────────────────────────────────────────────────
 import {
@@ -428,9 +429,20 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
   const location   = useLocation();
   const { pathname } = location;
   const [collapsed, setCollapsed] = useState(false);
-  const user = useMemo(() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
+  const user = useMemo(() => getUser(), []);
 
   const sidebarW = collapsed ? 84 : 230;
+
+  // Clear any stuck HMR or modal scroll locks on page transition
+  useEffect(() => {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.style.overflowY = 'auto';
+      mainEl.style.overflowX = 'auto';
+    }
+  }, [pathname]);
 
   // Breadcrumb
   const breadcrumbs = useMemo(() => {
@@ -843,7 +855,38 @@ function AuthenticatedApp() {
 // ROOT
 // ═══════════════════════════════════════════════════════════════════
 export default function App() {
-  const [authed, setAuthed] = useState(!!sessionStorage.getItem('token'));
+  const [authed, setAuthed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if the user has an active session via the secure /me endpoint
+    getCurrentUser()
+      .then(res => {
+        if (res.data && res.data.user) {
+          setUser(res.data.user);
+          // Sync company context to sessionStorage if needed by other components
+          if (!sessionStorage.getItem('companyId') && res.data.companies && res.data.companies.length > 0) {
+            sessionStorage.setItem('companyId', res.data.companies[0].id);
+          }
+          setAuthed(true);
+        }
+      })
+      .catch(() => {
+        setAuthed(false);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#EAF5FF' }}>
+        <div style={{ width: 48, height: 48, border: '4px solid #2563eb', borderTop: '4px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   if (!authed) {
     return (
@@ -855,6 +898,8 @@ export default function App() {
             onAuthSuccess={() => setAuthed(true)}
           />
         } />
+        {/* OAuth redirect landing page — exchanges httpOnly cookie for session */}
+        <Route path="/auth-callback" element={<OAuthCallbackPage onSuccess={() => setAuthed(true)} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -864,5 +909,59 @@ export default function App() {
       <Notification />
       <AuthenticatedApp />
     </>
+  );
+}
+
+// ── OAuth Callback Page ────────────────────────────────────────────────────────
+// Shown after Google redirects back to /auth-callback.
+// Calls the exchange endpoint to swap the httpOnly oauthAccessToken cookie for a session.
+function OAuthCallbackPage({ onSuccess }) {
+  const [status, setStatus] = useState('loading'); // 'loading' | 'error'
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    exchangeOAuthToken()
+      .then(res => {
+        if (cancelled) return;
+        const { message, user, companies } = res.data;
+        if (message) {
+          // No longer storing 'token' or 'user' in sessionStorage
+          if (companies && companies.length > 0) {
+            sessionStorage.setItem('companyId', companies[0].id);
+          }
+          onSuccess();
+        } else {
+          setStatus('error');
+          setErrorMsg('Authentication failed. Please try again.');
+        }
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setStatus('error');
+        setErrorMsg(err.response?.data?.error || 'Google sign-in failed. Please try again.');
+      });
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (status === 'error') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#EAF5FF', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ textAlign: 'center', padding: 32 }}>
+          <p style={{ color: '#dc2626', fontWeight: 700, marginBottom: 12 }}>{errorMsg}</p>
+          <a href="/login" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'underline' }}>Back to Login</a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#EAF5FF', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 48, height: 48, border: '4px solid #2563eb', borderTop: '4px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: '#1F314F', fontWeight: 700, fontSize: 16 }}>Completing sign-in...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </div>
   );
 }

@@ -7,8 +7,6 @@ import {
 } from 'lucide-react';
 import { reportsAPI } from '../../services/api';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 
-  (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://127.0.0.1:5000/api');
 
 export default function AuditReportView() {
   const companyId = sessionStorage.getItem('companyId');
@@ -21,10 +19,8 @@ export default function AuditReportView() {
     if (!companyId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/reports/audit/${companyId}`, {
-        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
-      });
-      const data = await response.json();
+      const response = await reportsAPI.auditTrail(companyId);
+      const data = response.data;
       setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Audit Fetch Error:', err);

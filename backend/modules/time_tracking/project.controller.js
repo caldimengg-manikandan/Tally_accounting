@@ -4,7 +4,7 @@ const {
 } = require('../../models');
 const { Op } = require('sequelize');
 
-exports.createProject = async (req, res) => {
+exports.createProject = async (req, res, next) => {
   try {
     const { 
       name, projectCode, description, billingMethod, budgetType, budgetAmount, 
@@ -28,11 +28,11 @@ exports.createProject = async (req, res) => {
 
     res.status(201).json(project);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getProjectsByCompany = async (req, res) => {
+exports.getProjectsByCompany = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     console.log('--- Fetching projects for company:', companyId);
@@ -52,11 +52,11 @@ exports.getProjectsByCompany = async (req, res) => {
     res.json(projects);
   } catch (err) {
     console.error('Error fetching projects:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getProjectById = async (req, res) => {
+exports.getProjectById = async (req, res, next) => {
   try {
     const project = await Project.findOne({
       where: { id: req.params.id, CompanyId: req.companyId },
@@ -69,11 +69,11 @@ exports.getProjectById = async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Project not found' });
     res.json(project);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateProject = async (req, res) => {
+exports.updateProject = async (req, res, next) => {
   try {
     const { tasks, users, ...projectData } = req.body;
     const project = await Project.findOne({ where: { id: req.params.id, CompanyId: req.companyId } });
@@ -97,22 +97,22 @@ exports.updateProject = async (req, res) => {
     
     res.json(project);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteProject = async (req, res) => {
+exports.deleteProject = async (req, res, next) => {
   try {
     const project = await Project.findOne({ where: { id: req.params.id, CompanyId: req.companyId } });
     if (!project) return res.status(404).json({ error: 'Project not found' });
     await project.destroy();
     res.json({ message: 'Project deleted' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getProjectPurchases = async (req, res) => {
+exports.getProjectPurchases = async (req, res, next) => {
   try {
     const { id } = req.params;
     // Bills (VoucherType 'Purchase') and Expenses (VoucherType 'Payment')
@@ -159,11 +159,11 @@ exports.getProjectPurchases = async (req, res) => {
       timesheets
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getProjectSales = async (req, res) => {
+exports.getProjectSales = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { SalesOrder, Quote, DeliveryChallan, CreditNote } = require('../../models');
@@ -200,11 +200,11 @@ exports.getProjectSales = async (req, res) => {
 
     res.json({ invoices, orders, quotes, challans, creditNotes });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getProjectActivity = async (req, res) => {
+exports.getProjectActivity = async (req, res, next) => {
   try {
     const { id } = req.params;
     const logs = await AuditLog.findAll({
@@ -214,6 +214,6 @@ exports.getProjectActivity = async (req, res) => {
     });
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

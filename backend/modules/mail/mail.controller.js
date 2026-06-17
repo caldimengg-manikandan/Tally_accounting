@@ -1,7 +1,7 @@
 const { SystemMail, Company, Ledger, User } = require('../../models');
 const nodemailer = require('nodemailer');
 
-exports.sendEmail = async (req, res) => {
+exports.sendEmail = async (req, res, next) => {
   try {
     const { toEmail, subject, body, ledgerId, companyId, type } = req.body;
     const senderId = req.user.id;
@@ -27,6 +27,12 @@ exports.sendEmail = async (req, res) => {
                 ]
             });
             if (invoice) {
+                // BOLA guard
+                const requestingCompanyId = companyId || req.companyId || req.user?.CompanyId;
+                if (requestingCompanyId && String(invoice.CompanyId) !== String(requestingCompanyId)) {
+                    return res.status(403).json({ error: 'Access denied: Invoice does not belong to your company' });
+                }
+
                 const pdfBuffer = await PDFService.generateInvoice(invoice, invoice.items, invoice.Company);
                 attachments.push({
                     filename: `Invoice_${invoice.invoiceNumber}.pdf`,
@@ -47,6 +53,13 @@ exports.sendEmail = async (req, res) => {
             // Use cached temp file if it exists, otherwise generate fresh
             let pdfBuffer;
             if (fs.existsSync(filePath)) {
+                // We should still verify BOLA even if the file is cached!
+                const { PurchaseOrder } = require('../../models');
+                const order = await PurchaseOrder.findByPk(documentId);
+                const requestingCompanyId = companyId || req.companyId || req.user?.CompanyId;
+                if (order && requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+                    return res.status(403).json({ error: 'Access denied: Purchase Order does not belong to your company' });
+                }
                 pdfBuffer = fs.readFileSync(filePath);
             } else {
                 const { PurchaseOrder, Ledger, Company } = require('../../models');
@@ -55,11 +68,17 @@ exports.sendEmail = async (req, res) => {
                     include: [{ model: Ledger }, { model: Company }]
                 });
                 if (order) {
+                    // BOLA guard
+                    const requestingCompanyId = companyId || req.companyId || req.user?.CompanyId;
+                    if (requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+                        return res.status(403).json({ error: 'Access denied: Purchase Order does not belong to your company' });
+                    }
+
                     const vendor  = order.Ledger  || {};
-                    const company = order.Company || {};
+                    const companyObj = order.Company || {};
                     let items = [];
                     try { items = JSON.parse(order.itemsJson || '[]'); } catch (e) { items = []; }
-                    pdfBuffer = await PDFService.generatePurchaseOrder(order, items, company, vendor);
+                    pdfBuffer = await PDFService.generatePurchaseOrder(order, items, companyObj, vendor);
                     // Cache it for later
                     const tempDir = path.dirname(filePath);
                     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -69,7 +88,14 @@ exports.sendEmail = async (req, res) => {
 
             if (pdfBuffer) {
                 const { PurchaseOrder } = require('../../models');
-                const order = await PurchaseOrder.findByPk(documentId, { attributes: ['orderNumber'] });
+                const order = await PurchaseOrder.findByPk(documentId, { attributes: ['orderNumber', 'CompanyId'] });
+                
+                // Double check BOLA guard here just in case
+                const requestingCompanyId = companyId || req.companyId || req.user?.CompanyId;
+                if (order && requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+                    return res.status(403).json({ error: 'Access denied: Purchase Order does not belong to your company' });
+                }
+
                 attachments.push({
                     filename: `PurchaseOrder_${order?.orderNumber || documentId}.pdf`,
                     content: pdfBuffer
@@ -167,7 +193,7 @@ exports.sendEmail = async (req, res) => {
   }
 };
 
-exports.getMailsByLedger = async (req, res) => {
+exports.getMailsByLedger = async (req, res, next) => {
   try {
     const { ledgerId } = req.params;
     const mails = await SystemMail.findAll({
@@ -179,6 +205,6 @@ exports.getMailsByLedger = async (req, res) => {
     });
     res.json(mails);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

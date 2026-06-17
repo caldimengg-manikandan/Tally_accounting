@@ -803,7 +803,7 @@ const CreditNoteDetail = ({ id, navigate, companyId }) => {
                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Doc-Hash: {note.id?.substring(0, 12)}...</p>
                          </div>
                          <div className="text-right">
-                             <div className="w-32 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
+                             <div className="w-48 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
                              <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Authorized Signature</p>
                          </div>
                     </div>

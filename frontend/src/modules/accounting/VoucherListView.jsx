@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -44,7 +45,7 @@ const VoucherListView = ({
   const [deleting, setDeleting] = useState(false);
 
   const companyId = sessionStorage.getItem('companyId');
-  const user = useMemo(() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
+  const user = useMemo(() => { try { return getUser(); } catch { return {}; } }, []);
   const role = user.role || 'ADMIN';
   const canEdit = !['VIEWER', 'AUDITOR'].includes(role);
   const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(role);

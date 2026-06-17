@@ -8,7 +8,7 @@ const logToFile = (msg) => {
   fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
 };
 
-exports.createItem = async (req, res) => {
+exports.createItem = async (req, res, next) => {
   try {
     const { 
       name, unit, openingStock, standardRate, companyId,
@@ -59,11 +59,11 @@ exports.createItem = async (req, res) => {
 
     res.status(201).json(item);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getItems = async (req, res) => {
+exports.getItems = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { type } = req.query;
@@ -78,11 +78,11 @@ exports.getItems = async (req, res) => {
     const items = await Item.findAll({ where });
     res.json(items);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateStock = async (req, res) => {
+exports.updateStock = async (req, res, next) => {
   try {
     const { itemId } = req.params;
     const { quantity, type } = req.body; // type: 'add' or 'subtract'
@@ -109,11 +109,11 @@ exports.updateStock = async (req, res) => {
 
     res.json(item);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateItem = async (req, res) => {
+exports.updateItem = async (req, res, next) => {
   try {
     const { itemId } = req.params;
     const item = await Item.findByPk(itemId);
@@ -163,11 +163,11 @@ exports.updateItem = async (req, res) => {
 
     res.json(item);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getItemHistory = async (req, res) => {
+exports.getItemHistory = async (req, res, next) => {
   try {
     const { itemId } = req.params;
     logToFile(`Fetching history for item: ${itemId}`);
@@ -189,11 +189,11 @@ exports.getItemHistory = async (req, res) => {
     res.json(logs);
   } catch (err) {
     logToFile(`[CRITICAL] History error: ${err.message}\n${err.stack}`);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteItem = async (req, res) => {
+exports.deleteItem = async (req, res, next) => {
   const { itemId } = req.params;
   try {
     const item = await Item.findByPk(itemId);
@@ -232,7 +232,7 @@ exports.deleteItem = async (req, res) => {
     }
 
     if (!res.headersSent) {
-      res.status(500).json({ error: 'Failed to delete item: ' + err.message });
+      next(err);
     }
   }
 };

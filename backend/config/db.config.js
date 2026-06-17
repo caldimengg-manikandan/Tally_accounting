@@ -1,6 +1,7 @@
 const { Sequelize } = require('sequelize');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -11,11 +12,7 @@ if (process.env.DATABASE_URL) {
   let dbUrl = process.env.DATABASE_URL;
 
   // Fix Render internal URLs — convert to external hostname to bypass internal DNS issues.
-  // Render internal hostnames look like: dpg-XXXXXXXX-a (no .region.render.com suffix)
   if (dbUrl.includes('dpg-') && !dbUrl.includes('.render.com')) {
-    // Extract the internal hostname and append the correct external region suffix
-    // Render external postgres hostnames follow: <id>.oregon-postgres.render.com OR <id>.singapore-postgres.render.com etc.
-    // We try a generic approach — replace the short hostname with the long external form
     dbUrl = dbUrl.replace(
       /(@)(dpg-[a-z0-9]+(-[a-z])?)(\/)/,
       '$1$2.oregon-postgres.render.com$4'
@@ -23,14 +20,25 @@ if (process.env.DATABASE_URL) {
     console.log('🔄 Converted internal Render DB URL to external to bypass DNS issues.');
   }
 
+  // 🔐 SECURE TLS WITH CERTIFICATE VALIDATION
+  const sslOptions = {
+    require: true,
+    rejectUnauthorized: process.env.NODE_ENV === 'production', // ✅ ENFORCE CERTIFICATE VERIFICATION IN PRODUCTION
+  };
+
+  // Load CA certificate if provided (for Render/Supabase with custom CAs)
+  if (process.env.DB_SSL_CA_PATH && fs.existsSync(process.env.DB_SSL_CA_PATH)) {
+    sslOptions.ca = fs.readFileSync(process.env.DB_SSL_CA_PATH).toString();
+    console.log('🔒 Database CA Certificate loaded successfully.');
+  } else {
+    console.warn('⚠️ WARNING: DB_SSL_CA_PATH not found or file does not exist. SSL verification will run without custom CA.');
+  }
+
   sequelize = new Sequelize(dbUrl, {
     dialect: 'postgres',
     protocol: 'postgres',
     dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false // Essential for Render/Supabase free tiers
-      },
+      ssl: sslOptions,
       keepAlive: true,
       connectTimeout: 30000,
     },
@@ -58,6 +66,8 @@ else {
       logging: false,
     });
   } else if (dialect === 'postgres') {
+    const localSsl = process.env.NODE_ENV === 'production' ? { require: true, rejectUnauthorized: true } : false;
+    
     sequelize = new Sequelize(
       process.env.DB_NAME || 'tally_replica',
       process.env.DB_USER || 'postgres',
@@ -66,10 +76,14 @@ else {
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '5432'),
         dialect: 'postgres',
+        dialectOptions: {
+          ssl: localSsl
+        },
         logging: false,
       }
     );
   } else if (dialect === 'mysql') {
+    const localSsl = process.env.NODE_ENV === 'production' ? true : false;
     sequelize = new Sequelize(
       process.env.DB_NAME || 'tally_replica',
       process.env.DB_USER || 'root',
@@ -77,6 +91,9 @@ else {
       {
         host: process.env.DB_HOST || 'localhost',
         dialect: 'mysql',
+        dialectOptions: {
+          ssl: localSsl
+        },
         logging: false,
       }
     );

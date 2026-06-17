@@ -1,103 +1,170 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, X, FileText, Send, RefreshCw, CheckCircle, Clock, Paperclip, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mail, X, FileText, Send, RefreshCw, CheckCircle, Clock, ArrowLeft, Plus } from 'lucide-react';
 import useNotificationStore from '../store/notificationStore';
 
 const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, apiFunc }) => {
     const addNotification = useNotificationStore(state => state.addNotification);
-    const [customerEmail, setCustomerEmail] = useState("");
-    const [ccEmail, setCcEmail] = useState("finance@induspvtltd.in");
-    const [subject, setSubject] = useState("");
-    const [body, setBody] = useState("");
+    const [customerEmail, setCustomerEmail] = useState('');
+    const [ccEmails, setCcEmails] = useState(['finance@induspvtltd.in']);
+    const [ccInput, setCcInput] = useState('');
+    const [subject, setSubject] = useState('');
+    const [body, setBody] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [sentPreview, setSentPreview] = useState(null);
+    const ccInputRef = useRef(null);
 
-    
-    // Synchronize states when modal opens or documentData changes
+
+
+    // Build professional HTML email body
+    const buildEmailBody = (data, type) => {
+        const accentColor = type === 'Quote' ? '#4f46e5' : '#1d4ed8';
+        const itemRows = (data.items && data.items.length > 0)
+            ? data.items.map(item => `
+                <tr>
+                  <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-size:13px;">${item.name || item.itemDetails || item.description || '—'}</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;text-align:center;">${item.quantity || 1}</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;text-align:right;">₹${parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-size:13px;font-weight:700;text-align:right;">₹${parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                </tr>`).join('')
+            : `<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">No items listed</td></tr>`;
+
+        const subtotal = parseFloat(data.subTotal || 0) || (data.items || []).reduce((s, i) => s + parseFloat(i.amount || 0), 0);
+        const tax = parseFloat(data.taxAmount || data.tax || 0);
+        const total = parseFloat(data.total || 0);
+
+        return `
+<div style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f8fafc;padding:32px 16px;min-height:100%;">
+  <div style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+    <!-- Header -->
+    <div style="background:${accentColor};padding:36px 40px 32px;position:relative;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:0.12em;text-transform:uppercase;">From Indus Pvt Ltd</p>
+          <h1 style="margin:0;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">${type} #${data.number}</h1>
+        </div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:14px 20px;text-align:right;">
+          <p style="margin:0 0 2px;font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">${type === 'Quote' ? 'Quote' : 'Invoice'} Date</p>
+          <p style="margin:0;font-size:15px;color:#ffffff;font-weight:700;">${data.date || new Date().toLocaleDateString('en-IN')}</p>
+          ${data.dueDate || data.expiryDate ? `<p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.7);">Due: <strong style="color:#ffffff;">${data.dueDate || data.expiryDate}</strong></p>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Greeting -->
+    <div style="padding:32px 40px 20px;">
+      <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#1e293b;">Dear ${data.customerName || 'Valued Customer'},</p>
+      <p style="margin:0;font-size:14px;color:#64748b;line-height:1.7;">Thank you for choosing us. Please find your ${type.toLowerCase()} details below. You can view, download, and pay from the secure link provided.</p>
+    </div>
+
+    <!-- Divider -->
+    <div style="margin:0 40px;height:1px;background:#f1f5f9;"></div>
+
+    <!-- Items Table -->
+    ${(data.items && data.items.length > 0) ? `
+    <div style="padding:24px 40px;">
+      <p style="margin:0 0 16px;font-size:11px;font-weight:800;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;">Items &amp; Services</p>
+      <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:12px;overflow:hidden;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Description</th>
+            <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Qty</th>
+            <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Rate</th>
+            <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemRows}
+        </tbody>
+      </table>
+
+      <!-- Totals -->
+      <table style="width:100%;margin-top:16px;border-collapse:collapse;">
+        ${subtotal !== total ? `
+        <tr>
+          <td style="padding:6px 0;font-size:13px;color:#64748b;">Subtotal</td>
+          <td style="padding:6px 0;font-size:13px;color:#1e293b;text-align:right;">₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+        </tr>
+        ${tax > 0 ? `<tr>
+          <td style="padding:6px 0;font-size:13px;color:#64748b;">(+) Tax / GST</td>
+          <td style="padding:6px 0;font-size:13px;color:#1e293b;text-align:right;">₹${tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+        </tr>` : ''}
+        <tr><td colspan="2" style="padding:4px 0;"><div style="height:1px;background:#e2e8f0;"></div></td></tr>
+        ` : ''}
+        <tr>
+          <td style="padding:10px 0 4px;font-size:15px;font-weight:800;color:#1e293b;">Total</td>
+          <td style="padding:10px 0 4px;font-size:20px;font-weight:900;color:${accentColor};text-align:right;">₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+        </tr>
+      </table>
+    </div>
+    ` : `
+    <div style="padding:24px 40px;">
+      <div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">${type} Amount</p>
+        <p style="margin:0;font-size:36px;font-weight:900;color:${accentColor};">₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+      </div>
+    </div>
+    `}
+
+    <!-- CTA Button -->
+    <div style="padding:8px 40px 36px;text-align:center;">
+      <a href="#" style="display:inline-block;background:${accentColor};color:#ffffff;padding:16px 48px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;">
+        ${type === 'Quote' ? 'View & Accept Quote' : 'View &amp; Pay Invoice'}
+      </a>
+    </div>
+
+    <!-- Divider -->
+    <div style="margin:0 40px;height:1px;background:#f1f5f9;"></div>
+
+    <!-- Footer -->
+    <div style="padding:24px 40px 32px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#1e293b;">Indus Pvt Ltd</p>
+        <p style="margin:0;font-size:12px;color:#94a3b8;">contact@induspvtltd.in</p>
+      </div>
+      <p style="margin:0;font-size:11px;color:#cbd5e1;text-align:right;">This is an automated email.<br/>Please do not reply directly.</p>
+    </div>
+
+  </div>
+</div>`;
+    };
+
     useEffect(() => {
         if (isOpen && documentData) {
-            const email = documentData.Customer?.email || documentData.customerEmail || "";
+            const email = documentData.Customer?.email || documentData.customerEmail || '';
             setCustomerEmail(email);
-            setCcEmail("finance@induspvtltd.in");
-
-            const defaultSub = documentType === 'Quote' 
+            setCcEmails(['finance@induspvtltd.in']);
+            setCcInput('');
+            const defaultSub = documentType === 'Quote'
                 ? `Quote Estimate ${documentData.number} from Indus Pvt Ltd`
                 : `${documentType} - ${documentData.number} from Indus Pvt Ltd`;
             setSubject(defaultSub);
-
-            // Build Itemized Table if items exist
-            const itemsTable = (documentData.items && documentData.items.length > 0) ? `
-                <div style="margin: 30px 0;">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
-                        <thead>
-                            <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
-                                <th style="padding: 10px; font-weight: bold; color: #475569;">Item</th>
-                                <th style="padding: 10px; font-weight: bold; color: #475569; text-align: right;">Qty</th>
-                                <th style="padding: 10px; font-weight: bold; color: #475569; text-align: right;">Rate</th>
-                                <th style="padding: 10px; font-weight: bold; color: #475569; text-align: right;">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${documentData.items.map(item => `
-                                <tr style="border-bottom: 1px solid #e2e8f0;">
-                                    <td style="padding: 10px; color: #334155;">${item.itemDetails || item.name || ''}</td>
-                                    <td style="padding: 10px; color: #334155; text-align: right;">${item.quantity || 1}</td>
-                                    <td style="padding: 10px; color: #334155; text-align: right;">₹${parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                    <td style="padding: 10px; color: #334155; text-align: right; font-weight: bold;">₹${parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            ` : '';
-
-            // Professional HTML Template
-            const generatedBody = `
-                <div style="font-family: Arial, sans-serif; color: #334155; line-height: 1.6;">
-                    <div style="background-color: ${documentType === 'Quote' ? '#6366f1' : '#3b82f6'}; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-                        <h2 style="margin: 0; font-size: 20px; font-style: italic;">${documentType} #${documentData.number}</h2>
-                    </div>
-                    <div style="padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
-                        <p style="font-weight: bold; font-size: 14px;">Dear ${documentData.customerName || 'Customer'},</p>
-                        <p style="font-size: 14px;">Thank you for your business. Your ${documentType.toLowerCase()} can be viewed, printed and downloaded as PDF from the link below.</p>
-                        
-                        ${itemsTable}
-                        
-                        <div style="background-color: #fffbeb; border: 1px solid #fde68a; padding: 25px; border-radius: 12px; text-align: center; margin: 30px 0;">
-                            <p style="text-transform: uppercase; font-size: 11px; font-weight: 800; color: #92400e; margin: 0; letter-spacing: 0.1em;">${documentType} Amount</p>
-                            <p style="font-size: 32px; font-weight: 900; color: #dc2626; margin: 10px 0;">₹${parseFloat(documentData.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                            
-                            <table style="width: 100%; max-width: 250px; margin: 20px auto; border-collapse: collapse; text-align: left; font-size: 13px;">
-                                <tr>
-                                    <td style="padding: 4px 0; color: #64748b; font-weight: bold;">${documentType} No</td>
-                                    <td style="padding: 4px 0; font-weight: 900; text-align: right;">${documentData.number}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Date</td>
-                                    <td style="padding: 4px 0; font-weight: 900; text-align: right;">${documentData.date || new Date().toLocaleDateString()}</td>
-                                </tr>
-                                ${documentData.expiryDate || documentData.dueDate ? `
-                                <tr>
-                                    <td style="padding: 4px 0; color: #64748b; font-weight: bold;">Expiry/Due Date</td>
-                                    <td style="padding: 4px 0; font-weight: 900; text-align: right;">${documentData.expiryDate || documentData.dueDate}</td>
-                                </tr>` : ''}
-                            </table>
-                            
-                            <a href="#" style="display: inline-block; background-color: #22c55e; color: white; padding: 12px 40px; border-radius: 6px; text-decoration: none; font-weight: 900; font-size: 13px; text-transform: uppercase; margin-top: 10px;">${documentType === 'Quote' ? 'View Quote' : 'Pay Now'}</a>
-                        </div>
-                        
-                        <p style="margin-top: 30px; font-size: 14px; font-weight: bold;">Regards,</p>
-                        <p style="font-size: 14px; margin: 0; font-weight: bold;">Indus Pvt Ltd</p>
-                    </div>
-                </div>
-            `;
-            setBody(generatedBody);
+            setBody(buildEmailBody(documentData, documentType));
             setSentPreview(null);
         }
     }, [isOpen, documentData, documentType]);
 
-    // (state declarations moved to top per React Rules of Hooks)
-
     if (!isOpen) return null;
+
+    // CC tag input handlers
+    const addCcTag = (val) => {
+        const email = val.trim().replace(/,+$/, '');
+        if (email && /\S+@\S+\.\S+/.test(email) && !ccEmails.includes(email)) {
+            setCcEmails(prev => [...prev, email]);
+        }
+        setCcInput('');
+    };
+
+    const handleCcKeyDown = (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addCcTag(ccInput);
+        } else if (e.key === 'Backspace' && ccInput === '' && ccEmails.length > 0) {
+            setCcEmails(prev => prev.slice(0, -1));
+        }
+    };
+
+    const removeCcTag = (email) => setCcEmails(prev => prev.filter(e => e !== email));
 
     const handleSend = async () => {
         if (!customerEmail) {
@@ -110,23 +177,19 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                 subject,
                 body,
                 toEmail: customerEmail,
+                ccEmails: ccEmails.join(','),
                 companyId: documentData.CompanyId || documentData.companyId,
                 ledgerId: documentData.customerLedgerId || documentData.ledgerId || documentData.customerId,
                 type: documentType,
                 documentId: documentData.id
             });
             addNotification('Email sent successfully!', 'success');
-
-            // Transition to Sent Outbox Preview
             setSentPreview({
                 to: customerEmail,
-                cc: ccEmail,
-                subject: subject,
-                body: body,
-                sentAt: new Date().toLocaleString('en-IN', { 
-                    dateStyle: 'long', 
-                    timeStyle: 'medium' 
-                }),
+                cc: ccEmails,
+                subject,
+                body,
+                sentAt: new Date().toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'medium' }),
                 documentNumber: documentData.number,
                 customerName: documentData.customerName
             });
@@ -138,17 +201,20 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
         }
     };
 
-    // ─── SENT OUTBOX PREVIEW VIEW ───
+    // ─── SENT PREVIEW VIEW ───
     if (sentPreview) {
         return (
             <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+                <style>{`
+                    body { overflow: hidden !important; }
+                    html { overflow: hidden !important; }
+                    main { overflow: hidden !important; }
+                `}</style>
                 <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-                <div className="relative bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]" style={{ animation: 'fadeSlideUp 0.4s ease-out' }}>
-                    
-                    {/* Header */}
+                <div className="relative bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]" style={{ animation: 'fadeSlideUp 0.3s ease-out' }}>
                     <div className="bg-gradient-to-r from-emerald-500 to-green-600 px-8 py-5 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                                 <CheckCircle size={26} className="text-white" />
                             </div>
                             <div>
@@ -159,32 +225,25 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                             </div>
                         </div>
                         <button onClick={() => { onSend(); onClose(); }} className="p-2 hover:bg-white/20 rounded-full text-white/80 hover:text-white transition-all">
-                            <X size={20}/>
+                            <X size={20} />
                         </button>
                     </div>
-
-                    {/* Delivery Metadata */}
-                    <div className="px-8 py-5 bg-slate-50/80 border-b border-slate-100">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest">Sent Outbox — Delivery Confirmation</span>
-                        </div>
+                    <div className="px-8 py-5 bg-slate-50 border-b border-slate-100">
                         <div className="grid grid-cols-1 gap-3">
                             <div className="flex items-start gap-3">
                                 <span className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest pt-0.5 shrink-0">To</span>
-                                <div className="flex items-center gap-2">
-                                    <span className="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded-full text-[12px] font-bold flex items-center gap-1.5">
-                                        <Mail size={12} />
-                                        {sentPreview.to}
-                                    </span>
-                                </div>
+                                <span className="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded-full text-[12px] font-bold flex items-center gap-1.5">
+                                    <Mail size={12} /> {sentPreview.to}
+                                </span>
                             </div>
-                            {sentPreview.cc && (
+                            {sentPreview.cc && sentPreview.cc.length > 0 && (
                                 <div className="flex items-start gap-3">
                                     <span className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest pt-0.5 shrink-0">Cc</span>
-                                    <span className="bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1 rounded-full text-[12px] font-medium">
-                                        {sentPreview.cc}
-                                    </span>
+                                    <div className="flex flex-wrap gap-2">
+                                        {sentPreview.cc.map(e => (
+                                            <span key={e} className="bg-slate-100 border border-slate-200 text-slate-600 px-3 py-1 rounded-full text-[12px] font-medium">{e}</span>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                             <div className="flex items-start gap-3">
@@ -195,62 +254,33 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                                 <span className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest pt-0.5 shrink-0">Sent At</span>
                                 <div className="flex items-center gap-2">
                                     <Clock size={13} className="text-slate-400" />
-                                    <span className="text-[12px] font-medium text-slate-500">{sentPreview.sentAt}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <span className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest pt-0.5 shrink-0">Attach</span>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg">
-                                        <FileText size={14} className="text-red-500" />
-                                        <span className="text-[12px] font-bold text-red-700">{sentPreview.documentNumber}.pdf</span>
-                                    </div>
+                                    <span className="text-[12px] text-slate-500">{sentPreview.sentAt}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    {/* Delivered Content Body */}
                     <div className="flex-1 overflow-y-auto no-scrollbar">
                         <div className="px-8 py-4">
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Delivered Content Body</span>
-                                <div className="h-px bg-slate-100 flex-1" />
-                            </div>
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Delivered Content</p>
                             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
-                                <div 
-                                    dangerouslySetInnerHTML={{ __html: sentPreview.body }}
-                                    className="p-8 text-[14px] leading-relaxed"
-                                />
+                                <div dangerouslySetInnerHTML={{ __html: sentPreview.body }} className="p-4 text-[14px] leading-relaxed" />
                             </div>
                         </div>
                     </div>
-
-                    {/* Footer Actions */}
-                    <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 text-emerald-600">
-                                <CheckCircle size={18} />
-                                <span className="text-[12px] font-bold uppercase tracking-widest">Delivery Confirmed</span>
-                            </div>
-                            <span className="text-[11px] text-slate-400 font-medium">• Status updated to Sent</span>
+                    <div className="px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-emerald-600">
+                            <CheckCircle size={18} />
+                            <span className="text-[12px] font-bold uppercase tracking-widest">Delivery Confirmed</span>
                         </div>
-                        <button 
+                        <button
                             onClick={() => { onSend(); onClose(); }}
                             className="bg-slate-800 text-white px-8 py-2.5 rounded-lg font-bold text-[13px] hover:bg-slate-900 shadow-lg transition-all flex items-center gap-2 uppercase tracking-widest"
                         >
-                            <ArrowLeft size={16} />
-                            Back to {documentType}s
+                            <ArrowLeft size={16} /> Back to {documentType}s
                         </button>
                     </div>
                 </div>
-
-                <style>{`
-                    @keyframes fadeSlideUp {
-                        from { opacity: 0; transform: translateY(30px) scale(0.97); }
-                        to { opacity: 1; transform: translateY(0) scale(1); }
-                    }
-                `}</style>
+                <style>{`@keyframes fadeSlideUp { from { opacity:0;transform:translateY(30px) scale(0.97); } to { opacity:1;transform:translateY(0) scale(1); } }`}</style>
             </div>
         );
     }
@@ -258,99 +288,157 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
     // ─── COMPOSE VIEW ───
     return (
         <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+            <style>{`
+                body { overflow: hidden !important; }
+                html { overflow: hidden !important; }
+                main { overflow: hidden !important; }
+            `}</style>
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden animate-scale-up flex flex-col max-h-[90vh]">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-slate-800">Email To {documentData.customerName}</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full text-slate-400 transition-all">
-                        <X size={20}/>
+            <div className="relative bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+
+                {/* Header */}
+                <div className="px-7 py-5 border-b border-slate-100 flex items-center justify-between bg-white">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
+                            <Mail size={18} className="text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-[16px] font-bold text-slate-900 leading-tight">Email To {documentData.customerName}</h2>
+                            <p className="text-[11px] text-slate-400 font-medium">{documentType} #{documentData.number}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-all">
+                        <X size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
-                    <div className="space-y-0.5 border border-slate-100 rounded-xl overflow-hidden">
-                        {/* Fields like From, To, Cc, Subject */}
-                        <div className="flex items-center px-4 py-2 bg-white border-b border-slate-50 group hover:bg-slate-50/50 transition-colors">
-                            <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">From</label>
-                            <input readOnly value="Indus Pvt Ltd <contact@induspvtltd.in>" className="flex-1 bg-transparent border-none outline-none text-[13px] font-medium text-slate-600 cursor-default" />
-                        </div>
-                        <div className="flex items-center px-4 py-2 bg-white border-b border-slate-50 group hover:bg-slate-50/50 transition-colors">
-                            <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Send To</label>
-                            <input value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} className="flex-1 bg-transparent border-none outline-none text-[13px] font-bold text-blue-600" />
-                            <button className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Bcc</button>
-                        </div>
-                        <div className="flex items-center px-4 py-2 bg-white border-b border-slate-50 group hover:bg-slate-50/50 transition-colors">
-                            <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Cc</label>
-                            <div className="flex-1 flex flex-wrap gap-2 items-center">
-                                <div className="bg-slate-100 px-2 py-1 rounded text-[12px] font-medium text-slate-700 flex items-center gap-1">
-                                    {ccEmail} <X size={12} className="cursor-pointer" onClick={() => setCcEmail('')} />
+                {/* Fields — static, no scroll */}
+                <div className="border-b border-slate-100 divide-y divide-slate-50 shrink-0">
+                    {/* From */}
+                    <div className="flex items-center px-7 py-3 hover:bg-slate-50/50 transition-colors">
+                        <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">From</label>
+                        <input readOnly value="Indus Pvt Ltd <contact@induspvtltd.in>" className="flex-1 bg-transparent border-none outline-none text-[13px] text-slate-500 cursor-default" />
+                    </div>
+
+                    {/* Send To */}
+                    <div className="flex items-center px-7 py-3 hover:bg-slate-50/50 transition-colors">
+                        <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">To</label>
+                        <input
+                            value={customerEmail}
+                            onChange={e => setCustomerEmail(e.target.value)}
+                            className="flex-1 bg-transparent border-none outline-none text-[13px] font-bold text-blue-600"
+                            placeholder="Recipient email..."
+                        />
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Bcc</span>
+                    </div>
+
+                    {/* CC — working tag input */}
+                    <div
+                        className="flex items-start px-7 py-3 hover:bg-slate-50/50 transition-colors cursor-text"
+                        onClick={() => ccInputRef.current?.focus()}
+                    >
+                        <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0 mt-1.5">Cc</label>
+                        <div className="flex-1 flex flex-wrap gap-1.5 items-center min-h-[28px]">
+                            {ccEmails.map(email => (
+                                <div key={email} className="flex items-center gap-1 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full text-[12px] font-medium text-slate-700">
+                                    {email}
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); removeCcTag(email); }}
+                                        className="ml-0.5 text-slate-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={11} />
+                                    </button>
                                 </div>
-                                <input placeholder="Add more..." className="flex-1 min-w-[100px] bg-transparent border-none outline-none text-[13px] font-medium text-slate-600" />
-                            </div>
+                            ))}
+                            <input
+                                ref={ccInputRef}
+                                value={ccInput}
+                                onChange={e => setCcInput(e.target.value)}
+                                onKeyDown={handleCcKeyDown}
+                                onBlur={() => { if (ccInput.trim()) addCcTag(ccInput); }}
+                                placeholder={ccEmails.length === 0 ? 'Add CC recipients...' : 'Add more...'}
+                                className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-[13px] text-slate-600 placeholder:text-slate-300"
+                            />
                         </div>
-                        <div className="flex items-center px-4 py-2 bg-white group hover:bg-slate-50/50 transition-colors">
-                            <label className="w-20 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Subject</label>
-                            <input value={subject} onChange={e => setSubject(e.target.value)} className="flex-1 bg-transparent border-none outline-none text-[13px] font-bold text-slate-800" />
-                        </div>
+                        {ccInput && (
+                            <button
+                                type="button"
+                                onClick={() => addCcTag(ccInput)}
+                                className="ml-2 flex items-center gap-1 text-[11px] font-bold text-blue-500 hover:text-blue-700 transition-colors mt-1"
+                            >
+                                <Plus size={12} /> Add
+                            </button>
+                        )}
                     </div>
 
-                    {/* Toolbar Mock */}
-                    <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 border border-slate-100 rounded-lg overflow-x-auto no-scrollbar">
-                        <div className="flex items-center gap-2 border-r border-slate-200 pr-4">
-                            <button className="p-1.5 hover:bg-white rounded font-serif font-bold text-slate-600">B</button>
-                            <button className="p-1.5 hover:bg-white rounded font-serif italic text-slate-600">I</button>
-                            <button className="p-1.5 hover:bg-white rounded underline text-slate-600">U</button>
-                        </div>
-                        <div className="flex items-center gap-3 text-[12px] font-bold text-slate-500 border-r border-slate-200 pr-4">
-                            <span>16px</span>
-                            <span>Arial</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                             <div className="w-4 h-4 bg-black rounded cursor-pointer" />
-                             <div className="w-4 h-4 bg-blue-500 rounded cursor-pointer" />
-                        </div>
+                    {/* Subject */}
+                    <div className="flex items-center px-7 py-3 hover:bg-slate-50/50 transition-colors">
+                        <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Subject</label>
+                        <input
+                            value={subject}
+                            onChange={e => setSubject(e.target.value)}
+                            className="flex-1 bg-transparent border-none outline-none text-[13px] font-bold text-slate-800"
+                        />
                     </div>
+                </div>
 
-                    {/* Body (Visual Preview) */}
-                    <div className="border border-slate-100 rounded-xl overflow-hidden min-h-[400px] flex flex-col bg-white shadow-inner">
-                        <div 
+                {/* Email Preview — ONLY this section scrolls */}
+                <div className="flex-1 overflow-hidden flex flex-col px-5 pt-4 pb-2 min-h-0">
+                    <div className="flex items-center gap-2 mb-3 shrink-0">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Email Preview</span>
+                        <div className="flex-1 h-px bg-slate-100" />
+                    </div>
+                    <div className="flex-1 border border-slate-200 rounded-xl overflow-y-auto shadow-sm bg-[#f8fafc] min-h-0">
+                        <div
                             contentEditable
                             onBlur={(e) => setBody(e.currentTarget.innerHTML)}
                             dangerouslySetInnerHTML={{ __html: body }}
-                            className="p-8 outline-none text-[14px] leading-relaxed flex-1"
+                            className="outline-none text-[14px] leading-relaxed"
+                            style={{ minHeight: '100%' }}
                         />
                     </div>
+                    <p className="text-[11px] text-slate-400 mt-2 text-center shrink-0">Click inside to edit · Scroll to see full email</p>
+                </div>
 
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer">
-                            <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600" />
-                            <span className="text-[12px] font-bold text-slate-600 uppercase tracking-tight">Attach Customer Statement</span>
+                {/* Attachment — static, no scroll */}
+                <div className="px-5 py-3 shrink-0 border-t border-slate-100">
+                    <div className="flex items-center gap-3 px-4 py-3 bg-blue-50/60 border border-blue-100 rounded-xl">
+                        <div className="p-2 bg-red-100 text-red-600 rounded-lg">
+                            <FileText size={16} />
                         </div>
-                        <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/50 rounded-xl border border-blue-100 bg-blue-50/20">
-                            <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-slate-300 text-blue-600" />
-                            <div className="flex-1 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-red-100 text-red-600 rounded">
-                                        <FileText size={16}/>
-                                    </div>
-                                    <span className="text-[12px] font-bold text-slate-800">{documentData.number}.pdf</span>
-                                </div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Attachment Size: 1.2 MB</span>
-                            </div>
+                        <div className="flex-1">
+                            <p className="text-[12px] font-bold text-slate-800">{documentData.number}.pdf</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">Auto-attached · ~1.2 MB</p>
+                        </div>
+                        <div className="w-4 h-4 rounded-sm bg-blue-600 flex items-center justify-center">
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-4">
-                    <button onClick={onClose} className="px-6 py-2.5 bg-slate-200 text-slate-600 font-bold text-[13px] rounded-lg hover:bg-slate-300 transition-all uppercase tracking-widest">Cancel</button>
-                    <button 
-                        onClick={handleSend} 
-                        disabled={isSending} 
-                        className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-bold text-[13px] hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center gap-2 disabled:opacity-50 uppercase tracking-widest"
-                    >
-                        {isSending ? <RefreshCw className="animate-spin" size={16}/> : <Send size={16}/>}
-                        {isSending ? 'Sending...' : 'Send Mail'}
-                    </button>
+                {/* Footer Actions */}
+                <div className="px-7 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                    <p className="text-[11px] text-slate-400">
+                        Sending to: <span className="font-bold text-slate-600">{customerEmail || '—'}</span>
+                        {ccEmails.length > 0 && <> + <span className="font-bold text-slate-600">{ccEmails.length} cc</span></>}
+                    </p>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={onClose}
+                            className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-[12px] rounded-lg hover:bg-slate-100 transition-all uppercase tracking-widest"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSend}
+                            disabled={isSending}
+                            className="bg-blue-600 text-white px-7 py-2.5 rounded-lg font-bold text-[12px] hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center gap-2 disabled:opacity-50 uppercase tracking-widest"
+                        >
+                            {isSending ? <RefreshCw className="animate-spin" size={15} /> : <Send size={15} />}
+                            {isSending ? 'Sending...' : 'Send Mail'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

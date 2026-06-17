@@ -2,7 +2,7 @@ const { Voucher, Transaction, Ledger, Company, Group, SalesInvoice, SalesInvoice
 const { Op } = require('sequelize');
 
 // GSTR-1: Sales Report
-exports.getGSTR1 = async (req, res) => {
+exports.getGSTR1 = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -103,12 +103,12 @@ exports.getGSTR1 = async (req, res) => {
     });
   } catch (err) {
     console.error('getGSTR1 error:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // GSTR-2A: Purchases Report (ITC lookup)
-exports.getGSTR2A = async (req, res) => {
+exports.getGSTR2A = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -171,12 +171,12 @@ exports.getGSTR2A = async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // GSTR-3B: Final GST returns calculations
-exports.getGSTR3B = async (req, res) => {
+exports.getGSTR3B = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -257,6 +257,6 @@ exports.getGSTR3B = async (req, res) => {
       netPayable: netGSTPayable
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

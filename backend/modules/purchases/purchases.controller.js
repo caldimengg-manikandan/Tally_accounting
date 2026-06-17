@@ -6,7 +6,7 @@ exports.updateVendor = async (req, res) => res.status(501).json({ error: 'Not im
 exports.deleteVendor = async (req, res) => res.status(501).json({ error: 'Not implemented. Use ledgerAPI.' });
 exports.markOrderAsPaid = async (req, res) => res.status(501).json({ error: 'Not implemented.' });
 
-exports.getVendors = async (req, res) => {
+exports.getVendors = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     // Find vendor-related groups (Sundry Creditors, Creditors, Vendors, etc.)
@@ -87,11 +87,11 @@ exports.getVendors = async (req, res) => {
 
     res.json(vendorsWithCredits);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getOrders = async (req, res) => {
+exports.getOrders = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const orders = await PurchaseOrder.findAll({
@@ -101,11 +101,11 @@ exports.getOrders = async (req, res) => {
     });
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getNextOrderNumber = async (req, res) => {
+exports.getNextOrderNumber = async (req, res, next) => {
     try {
         const { companyId } = req.params;
 
@@ -132,12 +132,12 @@ exports.getNextOrderNumber = async (req, res) => {
         res.json({ nextNumber: formattedNextNum });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
 // ── PDF Preview ───────────────────────────────────────────────────────────
-exports.getPurchaseOrderPdfPreview = async (req, res) => {
+exports.getPurchaseOrderPdfPreview = async (req, res, next) => {
     const path = require('path');
     const fs   = require('fs');
 
@@ -153,6 +153,12 @@ exports.getPurchaseOrderPdfPreview = async (req, res) => {
             ]
         });
         if (!order) return res.status(404).json({ error: 'Record not found or access denied' });
+
+        // BOLA guard
+        const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+        if (requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
 
         // Temp directory for caching PDFs (one per PO)
         const tempDir = path.join(__dirname, '../../uploads/temp');
@@ -179,12 +185,12 @@ exports.getPurchaseOrderPdfPreview = async (req, res) => {
         stream.pipe(res);
     } catch (err) {
         console.error('PDF Preview Error:', err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
 
-exports.createOrder = async (req, res) => {
+exports.createOrder = async (req, res, next) => {
   try {
     const { 
       orderNumber, date, totalAmount, status, notes, supplierLedgerId, companyId, projectId,
@@ -224,17 +230,23 @@ exports.createOrder = async (req, res) => {
     });
     res.status(201).json(order);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateOrder = async (req, res) => {
+exports.updateOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
     const order = await PurchaseOrder.findOne({
       where: { id, CompanyId: req.companyId }
     });
     if (!order) return res.status(404).json({ error: 'Record not found or access denied' });
+    
+    // BOLA guard
+    const requestingCompanyId = req.body.companyId || req.body.CompanyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
     
     const updateData = { ...req.body };
     if (updateData.supplierLedgerId) {
@@ -253,23 +265,31 @@ exports.updateOrder = async (req, res) => {
 
     res.json(order);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteOrder = async (req, res) => {
+exports.deleteOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const deleted = await PurchaseOrder.destroy({ where: { id, CompanyId: req.companyId } });
-    if (!deleted) return res.status(404).json({ error: 'Record not found or access denied' });
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+    const order = await PurchaseOrder.findByPk(id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    
+    // BOLA guard
+    if (requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    await PurchaseOrder.destroy({ where: { id } });
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Bills
-exports.getBills = async (req, res) => {
+exports.getBills = async (req, res, next) => {
     try {
         const { companyId } = req.params;
         const bills = await Voucher.findAll({
@@ -329,7 +349,7 @@ exports.getBills = async (req, res) => {
 
         res.json(mappedBills);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
@@ -473,7 +493,7 @@ const processBillTaxesAndAdjustments = async (companyId, { supplierLedgerId, tax
     }
 };
 
-exports.createBill = async (req, res) => {
+exports.createBill = async (req, res, next) => {
     try {
         const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms, status } = req.body;
         
@@ -622,11 +642,11 @@ exports.createBill = async (req, res) => {
         res.status(201).json(voucher);
     } catch (err) {
         console.error('Error creating bill:', err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.updateBill = async (req, res) => {
+exports.updateBill = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { billNumber, reference, date, totalAmount, notes, supplierLedgerId, companyId, items, projectId, taxAmount, tdsAmount, discountAmount, adjustment, taxRate, tdsRate, tdsName, discount, dueDate, paymentTerms, status } = req.body;
@@ -702,10 +722,14 @@ exports.updateBill = async (req, res) => {
         const voucherNumber = billNumber || `BILL-${Date.now()}`;
 
         // 1. Reverse old stock quantities from current stock
-        const oldVoucher = await Voucher.findOne({
-            where: { id, CompanyId: req.companyId }
-        });
-        if (!oldVoucher) return res.status(404).json({ error: 'Record not found or access denied' });
+        const oldVoucher = await Voucher.findByPk(id);
+        if (!oldVoucher) return res.status(404).json({ error: 'Bill not found' });
+
+        // BOLA guard
+        const requestingCompanyId = companyId || req.user?.CompanyId;
+        if (requestingCompanyId && String(oldVoucher.CompanyId) !== String(requestingCompanyId)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
         
         if (oldVoucher && oldVoucher.narration) {
             try {
@@ -794,12 +818,12 @@ exports.updateBill = async (req, res) => {
         res.json(voucher);
     } catch (err) {
         console.error('Error updating bill:', err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
 // Placeholder for Expenses (Payment Vouchers - simple version)
-exports.getExpenses = async (req, res) => {
+exports.getExpenses = async (req, res, next) => {
     try {
         const { companyId } = req.params;
         const expenses = await Voucher.findAll({
@@ -854,6 +878,6 @@ exports.getExpenses = async (req, res) => {
         res.json(mappedExpenses);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };

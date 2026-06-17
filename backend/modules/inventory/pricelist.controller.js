@@ -2,7 +2,7 @@ const { PriceList, AuditLog } = require('../../models');
 
 const pricelistController = {
   // 1. Create Price List
-  createPriceList: async (req, res) => {
+  createPriceList: async (req, res, next) => {
     try {
       const { 
         name, 
@@ -54,7 +54,7 @@ const pricelistController = {
   },
 
   // 2. Get All Price Lists for a Company
-  getPriceLists: async (req, res) => {
+  getPriceLists: async (req, res, next) => {
     try {
       const { companyId } = req.params;
       const pricelists = await PriceList.findAll({
@@ -69,7 +69,7 @@ const pricelistController = {
   },
 
   // 3. Get Single Price List
-  getPriceListById: async (req, res) => {
+  getPriceListById: async (req, res, next) => {
     try {
       const { id } = req.params;
       const pricelist = await PriceList.findByPk(id);
@@ -82,7 +82,7 @@ const pricelistController = {
   },
 
   // 4. Update Price List
-  updatePriceList: async (req, res) => {
+  updatePriceList: async (req, res, next) => {
     try {
       const { id } = req.params;
       const updates = req.body;
@@ -108,7 +108,7 @@ const pricelistController = {
   },
 
   // 5. Delete Price List
-  deletePriceList: async (req, res) => {
+  deletePriceList: async (req, res, next) => {
     try {
       const { id } = req.params;
       const pricelist = await PriceList.findByPk(id);

@@ -1,0 +1,14 @@
+.env
+.env.*
+certs/
+*.pem
+*.key
+database.sqlite
+backup.sql
+*.dump
+uploads/
+node_modules/
+logs/
+*.log
+scratch/
+

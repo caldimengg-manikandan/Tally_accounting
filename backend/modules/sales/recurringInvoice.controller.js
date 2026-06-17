@@ -1,9 +1,9 @@
-const { RecurringInvoice, TaxInvoice, RetainerInvoice, Company, AuditLog, User } = require('../../models');
+const { RecurringInvoice, TaxInvoice, RetainerInvoice, Company, AuditLog, User, sequelize } = require('../../models');
 const AuditService = require('../../services/AuditService');
 const AccountingService = require('../../services/AccountingService');
 const moment = require('moment');
 
-exports.create = async (req, res) => {
+exports.create = async (req, res, next) => {
   try {
     const data = { ...req.body };
     if (data.items && Array.isArray(data.items)) {
@@ -29,11 +29,11 @@ exports.create = async (req, res) => {
 
     res.status(201).json(template);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getByCompany = async (req, res) => {
+exports.getByCompany = async (req, res, next) => {
   try {
     const templates = await RecurringInvoice.findAll({
       where: { CompanyId: req.params.companyId },
@@ -41,15 +41,21 @@ exports.getByCompany = async (req, res) => {
     });
     res.json(templates);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getById = async (req, res) => {
+exports.getById = async (req, res, next) => {
   try {
     const template = await RecurringInvoice.findByPk(req.params.id);
     if (!template) return res.status(404).json({ error: 'Template not found' });
     
+    // BOLA guard
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(template.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     const templateObj = template.toJSON();
     
     // Convert itemsJson to items array for frontend compatibility
@@ -67,15 +73,21 @@ exports.getById = async (req, res) => {
     res.json(templateObj);
   } catch (err) {
     console.error("Error in getById:", err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.update = async (req, res) => {
+exports.update = async (req, res, next) => {
   try {
     const template = await RecurringInvoice.findByPk(req.params.id);
     if (!template) return res.status(404).json({ error: 'Template not found' });
     
+    // BOLA guard
+    const requestingCompanyId = req.body.CompanyId || req.body.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(template.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     const data = { ...req.body };
     if (data.items && Array.isArray(data.items)) {
       data.itemsJson = JSON.stringify(data.items);
@@ -97,14 +109,21 @@ exports.update = async (req, res) => {
 
     res.json(template);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.delete = async (req, res) => {
+exports.delete = async (req, res, next) => {
    try {
      const template = await RecurringInvoice.findByPk(req.params.id);
      if (!template) return res.status(404).json({ error: 'Template not found' });
+
+     // BOLA guard
+     const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+     if (requestingCompanyId && String(template.CompanyId) !== String(requestingCompanyId)) {
+       return res.status(403).json({ error: 'Access denied' });
+     }
+
      const oldData = { ...template.dataValues };
      const companyId = template.CompanyId;
      await template.destroy();
@@ -121,25 +140,33 @@ exports.delete = async (req, res) => {
 
      res.json({ message: 'Template deleted' });
    } catch (err) {
-     res.status(500).json({ error: err.message });
+     next(err);
    }
 };
 
 // Logic for generating invoices from templates
-exports.processDueInvoices = async (req, res) => {
+exports.processDueInvoices = async (req, res, next) => {
+  const t = await sequelize.transaction();
   try {
     const now = new Date();
     const templates = await RecurringInvoice.findAll({
       where: {
         status: 'Active',
         nextGenerationDate: { [require('sequelize').Op.lte]: now }
-      }
+      },
+      transaction: t,
+      lock: t.LOCK.UPDATE
     });
 
     const results = [];
     const { RetainerAdjustment, Transaction, Voucher, Ledger } = require('../../models');
 
     for (const template of templates) {
+      // Double check lock / idempotency check:
+      // Verify that the template is still active and the nextGenerationDate is still in the past.
+      if (template.status !== 'Active' || (template.nextGenerationDate && new Date(template.nextGenerationDate) > now)) {
+        continue;
+      }
       // Create actual invoice
       const invoiceData = {
         invoiceNumber: `RECUR-${Date.now()}`,
@@ -166,11 +193,14 @@ exports.processDueInvoices = async (req, res) => {
           totalAmount: template.totalAmount,
           status: 'Draft',
           CompanyId: template.CompanyId
-        });
+        }, { transaction: t });
       } else {
         // Find customer ledger ID from name (template should ideally have ledgerId)
         const { Ledger, SalesInvoice, SalesInvoiceItem } = require('../../models');
-        const customer = await Ledger.findOne({ where: { name: template.customerName, CompanyId: template.CompanyId } });
+        const customer = await Ledger.findOne({ 
+          where: { name: template.customerName, CompanyId: template.CompanyId },
+          transaction: t
+        });
         
         createdInvoice = await SalesInvoice.create({
           invoiceNumber: `RECUR-INV-${Date.now()}`,
@@ -183,7 +213,7 @@ exports.processDueInvoices = async (req, res) => {
           status: 'Confirmed', // Default to confirmed/active for recurring, shows as Draft in UI
           CompanyId: template.CompanyId,
           balance: template.totalAmount // Initialize balance
-        });
+        }, { transaction: t });
 
         // Create line items for the invoice
         const items = JSON.parse(template.itemsJson || '[]');
@@ -196,7 +226,7 @@ exports.processDueInvoices = async (req, res) => {
               SalesInvoiceId: createdInvoice.id,
               amount: it.quantity * it.rate
             };
-          }));
+          }), { transaction: t });
 
           // Trigger Accounting Logic
           await AccountingService.recordTaxInvoice({
@@ -207,7 +237,7 @@ exports.processDueInvoices = async (req, res) => {
             items: validItems,
             type: 'Sales',
             userId: null // System generated
-          });
+          }, t);
         }
       }
 
@@ -220,7 +250,8 @@ exports.processDueInvoices = async (req, res) => {
                   status: ['Paid', 'PartiallyApplied'],
                   CompanyId: template.CompanyId
               },
-              order: [['invoiceDate', 'ASC']] // Apply oldest first
+              order: [['invoiceDate', 'ASC']], // Apply oldest first
+              transaction: t
           });
 
           if (availableRetainer) {
@@ -233,17 +264,17 @@ exports.processDueInvoices = async (req, res) => {
                       InvoiceId: createdInvoice.id,
                       amountToAdjust: amountToApply,
                       CompanyId: template.CompanyId
-                  });
+                  }, { transaction: t });
 
                   await availableRetainer.update({
                       amountUsed: parseFloat(availableRetainer.amountUsed) + amountToApply,
                       status: (parseFloat(availableRetainer.amountUsed) + amountToApply >= parseFloat(availableRetainer.totalAmount)) 
                               ? 'FullyApplied' : 'PartiallyApplied'
-                  });
+                  }, { transaction: t });
 
                   // Update invoice status if fully paid
                   if (amountToApply >= parseFloat(template.totalAmount)) {
-                      await createdInvoice.update({ status: 'Paid' });
+                      await createdInvoice.update({ status: 'Paid' }, { transaction: t });
                   }
               }
           }
@@ -266,7 +297,7 @@ exports.processDueInvoices = async (req, res) => {
         updateData.status = 'Expired';
       }
 
-      await template.update(updateData);
+      await template.update(updateData, { transaction: t });
       
       await AuditService.log({
         action: 'INVOICE_GENERATED',
@@ -284,14 +315,16 @@ exports.processDueInvoices = async (req, res) => {
       results.push({ template: template.templateName, invoice: createdInvoice?.invoiceNumber });
     }
 
+    await t.commit();
     res.json({ message: `Processed ${templates.length} templates`, results });
   } catch (err) {
+    if (t) await t.rollback();
     console.error(err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getHistory = async (req, res) => {
+exports.getHistory = async (req, res, next) => {
   try {
     const logs = await AuditLog.findAll({
       where: {
@@ -305,6 +338,6 @@ exports.getHistory = async (req, res) => {
     });
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

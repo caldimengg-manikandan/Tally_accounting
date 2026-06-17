@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -41,7 +42,7 @@ const VendorDetailView = ({ companyId }) => {
   const { addNotification } = useNotificationStore();
 
   const user = useMemo(() => { 
-    try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } 
+    try { return getUser(); } catch { return {}; } 
   }, []);
   
   // Data for tabs

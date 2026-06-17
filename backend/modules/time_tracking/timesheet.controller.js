@@ -1,6 +1,6 @@
 const { Timesheet, Project, ProjectUser, User, ProjectTask } = require('../../models');
 
-exports.logTime = async (req, res) => {
+exports.logTime = async (req, res, next) => {
   try {
     const { 
       date, hours, description, ProjectId, UserId, ProjectTaskId, isBillable 
@@ -22,11 +22,11 @@ exports.logTime = async (req, res) => {
 
     res.status(201).json(timesheet);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getProjectTimesheets = async (req, res) => {
+exports.getProjectTimesheets = async (req, res, next) => {
   try {
     const { projectId } = req.params;
     const timesheets = await Timesheet.findAll({
@@ -39,16 +39,16 @@ exports.getProjectTimesheets = async (req, res) => {
     });
     res.json(timesheets);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteTimesheet = async (req, res) => {
+exports.deleteTimesheet = async (req, res, next) => {
   try {
     const { id } = req.params;
     await Timesheet.destroy({ where: { id } });
     res.json({ message: 'Timesheet entry deleted' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

@@ -2,7 +2,7 @@ const { RetainerInvoice, Company, Ledger } = require('../../models');
 const PDFService = require('../../services/PDFService');
 const nodemailer = require('nodemailer');
 
-exports.sendEmail = async (req, res) => {
+exports.sendEmail = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { subject, body, toEmail } = req.body;
@@ -18,7 +18,10 @@ exports.sendEmail = async (req, res) => {
     }
 
     const items = JSON.parse(retainer.itemsJson || '[]');
-    const pdfBuffer = await PDFService.generateRetainerInvoice(retainer, items);
+
+    // Fetch company data so the PDF shows the correct sender details
+    const company = await Company.findByPk(retainer.CompanyId);
+    const pdfBuffer = await PDFService.generateRetainerInvoice(retainer, items, company ? company.toJSON() : {});
 
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
     const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
@@ -46,7 +49,7 @@ exports.sendEmail = async (req, res) => {
     if (!finalToEmail) return res.status(400).json({ error: 'Recipient email is required' });
 
     const mailOptions = {
-      from: `"Indus CAI" <${fromEmail}>`,
+      from: `"${company?.name || 'CalTally'}" <${fromEmail}>`,
       to: finalToEmail,
       subject: subject || `Retainer Invoice ${retainer.invoiceNumber}`,
       text: body || `Dear Customer,\n\nPlease find attached Retainer Invoice ${retainer.invoiceNumber}.`,
@@ -58,11 +61,11 @@ exports.sendEmail = async (req, res) => {
     res.json({ message: 'Email sent successfully' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to send email: ' + err.message });
+    next(err);
   }
 };
 
-exports.create = async (req, res) => {
+exports.create = async (req, res, next) => {
   try {
     const data = { ...req.body };
     // Convert items array to JSON string for storage if it's an array
@@ -77,7 +80,7 @@ exports.create = async (req, res) => {
   }
 };
 
-exports.getByCompany = async (req, res) => {
+exports.getByCompany = async (req, res, next) => {
   try {
     const retainers = await RetainerInvoice.findAll({
       where: { CompanyId: req.params.companyId },
@@ -90,7 +93,7 @@ exports.getByCompany = async (req, res) => {
   }
 };
 
-exports.getById = async (req, res) => {
+exports.getById = async (req, res, next) => {
   try {
     const { id } = req.params;
     console.log(`[RetainerInvoice] Fetching single info for ID: "${id}"`);
@@ -113,10 +116,15 @@ exports.getById = async (req, res) => {
   }
 };
 
-exports.update = async (req, res) => {
+exports.update = async (req, res, next) => {
   try {
     const retainer = await RetainerInvoice.findByPk(req.params.id);
     if (!retainer) return res.status(404).json({ error: 'Retainer Invoice not found' });
+    // BOLA guard
+    const requestingCompanyId = req.body.CompanyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(retainer.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     
     const data = { ...req.body };
     if (data.items && Array.isArray(data.items)) {
@@ -130,11 +138,16 @@ exports.update = async (req, res) => {
   }
 };
 
-exports.delete = async (req, res) => {
+exports.delete = async (req, res, next) => {
   try {
     const { RetainerAdjustment } = require('../../models');
     const retainer = await RetainerInvoice.findByPk(req.params.id);
     if (!retainer) return res.status(404).json({ error: 'Retainer Invoice not found' });
+    // BOLA guard
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(retainer.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     
     // Safety: Delete related adjustments first if they exist
     await RetainerAdjustment.destroy({ where: { RetainerInvoiceId: req.params.id } });
@@ -146,13 +159,18 @@ exports.delete = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-exports.recordPayment = async (req, res) => {
+exports.recordPayment = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { amountReceived } = req.body;
     
     const retainer = await RetainerInvoice.findByPk(id);
     if (!retainer) return res.status(404).json({ error: 'Retainer not found' });
+    // BOLA guard
+    const requestingCompanyId = req.body.CompanyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(retainer.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     const newReceived = parseFloat(retainer.amountReceived || 0) + parseFloat(amountReceived);
     let status = 'Partial';
@@ -161,11 +179,11 @@ exports.recordPayment = async (req, res) => {
     await retainer.update({ amountReceived: newReceived, status });
     res.json(retainer);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.applyToInvoice = async (req, res) => {
+exports.applyToInvoice = async (req, res, next) => {
   try {
     const { id } = req.params; // Retainer ID
     const { invoiceId, amountToAdjust, CompanyId } = req.body;
@@ -173,6 +191,11 @@ exports.applyToInvoice = async (req, res) => {
 
     const retainer = await RetainerInvoice.findByPk(id);
     if (!retainer) return res.status(404).json({ error: 'Retainer not found' });
+    // BOLA guard
+    const requestingCompanyId = req.body.CompanyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(retainer.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     const available = parseFloat(retainer.amountReceived || 0) - parseFloat(retainer.amountUsed || 0);
     if (available < amountToAdjust) {
@@ -199,6 +222,6 @@ exports.applyToInvoice = async (req, res) => {
     await retainer.update({ amountUsed: newUsed, status });
     res.json({ message: 'Retainer applied successfully', retainer });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

@@ -1,7 +1,7 @@
 const { BankTransaction, Voucher, Transaction, Ledger, Group, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 
-exports.importStatement = async (req, res) => {
+exports.importStatement = async (req, res, next) => {
   try {
     const { companyId, entries } = req.body; // entries: [{ date, description, amount, type }]
     const created = await BankTransaction.bulkCreate(entries.map(e => ({
@@ -10,11 +10,11 @@ exports.importStatement = async (req, res) => {
     })));
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getUnmatched = async (req, res) => {
+exports.getUnmatched = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const unmatched = await BankTransaction.findAll({
@@ -22,11 +22,11 @@ exports.getUnmatched = async (req, res) => {
     });
     res.json(unmatched);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.reconcile = async (req, res) => {
+exports.reconcile = async (req, res, next) => {
   try {
     const { bankTransactionId, voucherId } = req.body;
     const bt = await BankTransaction.findByPk(bankTransactionId);
@@ -35,6 +35,6 @@ exports.reconcile = async (req, res) => {
     await bt.update({ isMatched: true, matchedVoucherId: voucherId });
     res.json({ message: 'Successfully reconciled', bankTransaction: bt });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

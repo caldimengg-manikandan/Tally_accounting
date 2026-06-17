@@ -1,8 +1,8 @@
 const express = require('express'); // Restarted to apply recent DB schema updates
 const cors = require('cors');
+const helmet = require('helmet');
 const dotenv = require('dotenv');
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
 const { sequelize } = require('./models');
 const path = require('path');
 
@@ -23,13 +23,66 @@ if (process.env.DATABASE_URL) {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// 🔐 SECURITY LAYER 1: Helmet Headers (blocks browser-level attacks)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Tighten after testing
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'"],
+      connectSrc: ["'self'", process.env.CLIENT_URL || 'http://localhost:5173'],
+    }
+  },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  xssFilter: true,
+  frameguard: { action: 'deny' }
+}));
+
+// 🔐 SECURITY LAYER 2: CORS (restrict to known origins)
+// Build allowed origins dynamically from env — never hardcode production domains here
+const allowedOrigins = [
+  process.env.CLIENT_URL || 'http://localhost:5173',
+];
+if (process.env.ADDITIONAL_ALLOWED_ORIGINS) {
+  // Support comma-separated list in env: ADDITIONAL_ALLOWED_ORIGINS=https://app.example.com,https://www.example.com
+  allowedOrigins.push(...process.env.ADDITIONAL_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean));
+}
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: Origin '${origin}' not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id', 'X-CSRF-Token'],
+  optionsSuccessStatus: 200
+};
+
+if (!process.env.CLIENT_URL && process.env.NODE_ENV === 'production') {
+  console.error('❌ FATAL: CLIENT_URL not set in production. Refusing to start.');
+  process.exit(1);
+}
+
 // 2. Middleware Strategy
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(require('cookie-parser')()); // Phase 2: needed for httpOnly refresh token cookie
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Add global CSRF Protection
+const { csrfProtection } = require('./middleware/auth.middleware');
+app.use(csrfProtection);
 
 // 3. Authentication Engine (Passport)
 require('./config/passport');
@@ -57,7 +110,6 @@ app.get('/api/auth/callback',
     res.redirect(`${CLIENT_URL}/auth-callback?token=${token}`);
   }
 );
-
 // 4. Modular Hub Routing
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/users', require('./modules/auth/users.routes'));          // User management (ADMIN)
@@ -94,37 +146,39 @@ app.use('/api/credit-notes', require('./modules/sales/creditNote.routes'));
 app.use('/api/projects', require('./modules/time_tracking/project.routes'));
 app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
 
-// Temporary Debug Endpoint for Fixed Assets Database
-app.get('/api/fixed-assets-debug', async (req, res) => {
-  try {
-    const { FixedAsset, DepreciationLog, Ledger } = require('./models');
-    const assets = await FixedAsset.findAll({
-      include: [
-        { model: DepreciationLog },
-        { model: Ledger, as: 'AssetLedger', attributes: ['name'] }
-      ]
-    });
-    res.json({ status: 'ok', count: assets.length, assets });
-  } catch (err) {
-    res.status(500).json({ error: err.message, stack: err.stack });
-  }
-});
+// ⚠️  DEBUG ENDPOINTS — only active in development, removed from production
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/fixed-assets-debug', async (req, res) => {
+    try {
+      const { FixedAsset, DepreciationLog, Ledger } = require('./models');
+      const assets = await FixedAsset.findAll({
+        include: [
+          { model: DepreciationLog },
+          { model: Ledger, as: 'AssetLedger', attributes: ['name'] }
+        ]
+      });
+      res.json({ status: 'ok', count: assets.length, assets });
+    } catch (err) {
+      // Safe in dev — full details only shown in development
+      res.status(500).json({ error: err.message, stack: err.stack });
+    }
+  });
 
-// Temporary Debug Endpoint for tenantAccess logic
-app.get('/api/test-tenant-access', async (req, res) => {
-  try {
-    const { User, Company } = require('./models');
-    const user = await User.findOne({
-      where: { email: 'lokeshwari@gmail.com' },
-      include: [Company]
-    });
-    const companyIdToCheck = '9e2261ae-dd0a-47f9-b14d-5c6fb9dfb505';
-    const hasAccess = user.Companies && user.Companies.some(c => c.id === companyIdToCheck);
-    res.json({ user: user.email, hasAccess, companies: user.Companies });
-  } catch (err) {
-    res.status(500).json({ error: err.message, stack: err.stack });
-  }
-});
+  app.get('/api/test-tenant-access', async (req, res) => {
+    try {
+      const { User, Company } = require('./models');
+      const user = await User.findOne({
+        where: { email: 'lokeshwari@gmail.com' },
+        include: [Company]
+      });
+      const companyIdToCheck = '9e2261ae-dd0a-47f9-b14d-5c6fb9dfb505';
+      const hasAccess = user.Companies && user.Companies.some(c => c.id === companyIdToCheck);
+      res.json({ user: user.email, hasAccess, companies: user.Companies });
+    } catch (err) {
+      res.status(500).json({ error: err.message, stack: err.stack });
+    }
+  });
+}
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
@@ -155,6 +209,37 @@ cron.schedule('0 1 * * *', async () => {
   } catch (err) {
     console.error('--- REFRESH TOKEN CLEANUP FAILED:', err.message);
   }
+});
+
+// 🔐 SECURITY LAYER: Global Error Handler (never expose internal errors)
+app.use((err, req, res, next) => {
+  // Generate error tracking ID
+  const errorId = require('crypto').randomBytes(8).toString('hex');
+  
+  // Log full error server-side for debugging
+  console.error(`[ERROR-${errorId}]`, {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    user: req.user?.id || 'anonymous'
+  });
+
+  // Return generic error to client (never expose internal details)
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    error: 'An error occurred processing your request',
+    errorId: errorId // User can report this ID for support
+  });
+});
+
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found'
+  });
 });
 
 const startServer = async () => {

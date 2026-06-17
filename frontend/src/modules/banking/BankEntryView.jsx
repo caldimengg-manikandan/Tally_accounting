@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ledgerAPI } from '../../services/api';
@@ -13,7 +14,7 @@ const BankEntryView = () => {
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const rawCompanyId = sessionStorage.getItem('companyId');
-  const userStr = sessionStorage.getItem('user');
+  const userStr = JSON.stringify(getUser() || {});
   const userData = userStr ? JSON.parse(userStr) : {};
   const companyId = rawCompanyId || userData.activeCompanyId;
   

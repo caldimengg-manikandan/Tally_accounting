@@ -520,7 +520,7 @@ const QuotesList = ({ quotes, loading, navigate, onDelete, onRefresh, selectedId
                 </div>
             )}
 
-            <div className={`flex-1 overflow-y-auto no-scrollbar relative ${isSplit ? '' : 'p-8'}`}>
+            <div className={`flex-1 overflow-y-auto relative ${isSplit ? '' : 'p-8'}`}>
                 {loading ? (
                     <div className="flex flex-col items-center justify-center h-60 opacity-50">
                         <RefreshCw className="animate-spin text-[#1e61f0] mb-2" size={24} />
@@ -793,7 +793,7 @@ const QuoteDetailView = ({ quoteId, companyId, navigate }) => {
                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Doc-Hash: {quote.id?.substring(0, 12)}...</p>
                          </div>
                          <div className="text-right">
-                             <div className="w-32 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
+                             <div className="w-48 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
                              <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Authorized Signature</p>
                          </div>
                     </div>
@@ -1339,7 +1339,7 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 <button onClick={() => navigate('/quotes')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
             </header>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="flex-1 overflow-y-auto">
                 <div className="max-w-[1000px] mx-auto py-10 px-6">
                     <div className="bg-white rounded border border-slate-200 shadow-sm p-12 space-y-12 animate-fade-in">
                         <div className="space-y-6">
@@ -1690,36 +1690,50 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                                  />
                               </div>
                            </div>
-                           <div className="w-80 space-y-4">
-                              <div className="flex justify-between text-[13px]">
-                                <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
-                                <span className="font-bold text-slate-900 font-mono">{getCurrencyDisplay(customers.find(c => c.id === customerLedgerId)?.currency)} {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                              </div>
-                              <div className="flex justify-between items-center text-[13px]">
-                                <label className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</label>
-                                <div className="flex items-center gap-4">
-                                   <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} className="w-16 h-8 px-2 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all" />
-                                </div>
-                              </div>
-                              <div className="flex justify-between items-center text-[13px]">
-                                <label className="text-slate-500 font-bold uppercase tracking-widest">Tax / GST (%)</label>
-                                <select 
-                                  value={selectedTax} 
-                                  onChange={e => setSelectedTax(e.target.value)}
-                                  className="w-32 h-8 px-2 bg-white border border-slate-200 rounded text-[11px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all"
-                                >
-                                   <option value="">No Tax</option>
-                                   <option value="GST5">GST (5%)</option>
-                                   <option value="GST12">GST (12%)</option>
-                                   <option value="GST18">GST (18%)</option>
-                                   <option value="GST28">GST (28%)</option>
-                                </select>
-                              </div>
-                              <div className="flex justify-between items-center text-[13px]">
-                                <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
-                                <input type="number" value={adjustment} onChange={e => setAdjustment(e.target.value)} className="w-24 h-8 px-2 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all" />
-                              </div>
-                              <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6 rounded-lg">
+                            <div className="w-96 space-y-4">
+                               <div className="flex justify-between items-center text-[13px]">
+                               <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
+                               <div className="flex items-center gap-3">
+                               <div className="w-32" />
+                               <span className="font-bold text-slate-900 font-mono w-24 text-right">{subTotal.toFixed(2)}</span>
+                               </div>
+                               </div>
+                               <div className="flex justify-between items-center text-[13px]">
+                               <span className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</span>
+                               <div className="flex items-center gap-3">
+                               <div className="w-32 flex justify-end">
+                               <input type="number" value={discount} onChange={e => setDiscount(e.target.value)} className="w-16 h-8 px-2 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all" />
+                               </div>
+                               <span className="w-24 text-right font-bold text-slate-600 font-mono">- {discountAmt.toFixed(2)}</span>
+                               </div>
+                               </div>
+                               <div className="flex justify-between items-center text-[13px]">
+                               <span className="text-slate-500 font-bold uppercase tracking-widest">Tax / GST (%)</span>
+                               <div className="flex items-center gap-3">
+                               <select
+                               value={selectedTax}
+                               onChange={e => setSelectedTax(e.target.value)}
+                               className="w-32 h-8 px-2 bg-white border border-slate-200 rounded text-[11px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all"
+                               >
+                               <option value="">No Tax</option>
+                               <option value="GST5">GST (5%)</option>
+                               <option value="GST12">GST (12%)</option>
+                               <option value="GST18">GST (18%)</option>
+                               <option value="GST28">GST (28%)</option>
+                               </select>
+                               <span className="w-24 text-right font-bold text-slate-600 font-mono">+ {taxAmt.toFixed(2)}</span>
+                               </div>
+                               </div>
+                               <div className="flex justify-between items-center text-[13px]">
+                               <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
+                               <div className="flex items-center gap-3">
+                               <div className="w-32 flex justify-end">
+                               <input type="number" value={adjustment} onChange={e => setAdjustment(e.target.value)} className="w-24 h-8 px-2 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all" />
+                               </div>
+                               <span className="w-24 text-right font-bold text-slate-600 font-mono">{parseFloat(adjustment || 0) >= 0 ? '+' : ''}{parseFloat(adjustment || 0).toFixed(2)}</span>
+                               </div>
+                               </div>
+                               <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6 rounded-lg">
                                 <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
                                 <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">{getCurrencyDisplay(customers.find(c => c.id === customerLedgerId)?.currency)} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </div>
@@ -1835,6 +1849,16 @@ const NewQuoteForm = ({ companyId, navigate, editId }) => {
                 type={modalConfig.type}
                 showCancel={modalConfig.showCancel}
                 confirmText={modalConfig.confirmText}
+            />
+            <ManageSalespersonsModal 
+                isOpen={showManageSalespersons}
+                onClose={() => setShowManageSalespersons(false)}
+                salespersons={salespersons}
+                onSave={setSalespersons}
+                onSelect={(name) => {
+                    setSalesperson(name);
+                    setSalespersonSearch(name);
+                }}
             />
         </div>
     );

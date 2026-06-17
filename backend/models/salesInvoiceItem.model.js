@@ -27,12 +27,14 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0
     },
     itemId: DataTypes.UUID,
-    SalesInvoiceId: DataTypes.UUID
+    SalesInvoiceId: DataTypes.UUID,
+    projectId: DataTypes.UUID
   });
 
   SalesInvoiceItem.associate = (models) => {
     SalesInvoiceItem.belongsTo(models.SalesInvoice);
     SalesInvoiceItem.belongsTo(models.Item, { foreignKey: 'itemId' });
+    SalesInvoiceItem.belongsTo(models.Project, { foreignKey: 'projectId', as: 'Project' });
   };
 
   return SalesInvoiceItem;

@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect } from 'react';
 import { 
   Filter, Search, X, AlertTriangle, 
@@ -33,7 +34,7 @@ const BulkUpdateView = ({ showNew }) => {
   const companyId = sessionStorage.getItem('companyId');
   const user = React.useMemo(() => {
     try {
-      return JSON.parse(sessionStorage.getItem('user') || '{}');
+      return getUser();
     } catch {
       return {};
     }

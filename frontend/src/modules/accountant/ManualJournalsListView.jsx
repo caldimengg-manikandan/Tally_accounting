@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -609,7 +610,7 @@ const ManualJournalsListView = ({ companyId: propCompanyId }) => {
   });
   const user = React.useMemo(() => {
     try {
-      return JSON.parse(sessionStorage.getItem('user') || '{}');
+      return getUser();
     } catch {
       return {};
     }
