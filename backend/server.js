@@ -83,6 +83,9 @@ app.use('/api/:companyId/purchases', require('./modules/purchases/purchases.rout
 app.use('/api/mail', require('./modules/mail/mail.routes'));
 app.use('/api/tax/gst', require('./modules/tax/gst.routes'));
 app.use('/api/payroll', require('./modules/payroll/payroll.routes'));
+app.use('/api/attendances', require('./modules/payroll/attendance.routes'));
+app.use('/api/salary', require('./modules/payroll/salary.routes'));
+app.use('/api/salary-slips', require('./modules/payroll/salarySlip.routes'));
 app.use('/api/fixed-assets', require('./modules/fixed_assets/fixedAssets.routes'));
 app.use('/api/manufacturing', require('./modules/manufacturing/manufacturing.routes'));
 app.use('/api/budgets', require('./modules/budgeting/budgeting.routes'));

@@ -217,7 +217,7 @@ const PaymentsMadeListView = ({ companyId }) => {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden animate-fade-in">
+    <div className="flex flex-col h-[calc(100vh-80px)] bg-slate-50 overflow-hidden animate-fade-in relative">
         {/* --- GLOBAL HEADER --- */}
         <div className="flex items-center justify-between px-8 py-4 border-b border-slate-100 bg-white">
             <div className="flex items-center gap-2">

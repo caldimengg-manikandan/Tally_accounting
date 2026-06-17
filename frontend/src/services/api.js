@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://localhost:5000/api');
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://127.0.0.1:5000/api');
 
 const api = axios.create({
   baseURL: API_BASE
@@ -17,15 +17,64 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Handle 401 Unauthorized globally
+// Handle 401 Unauthorized globally by trying to refresh the token
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clear local storage and force login if token is invalid/expired
-      ['token', 'user', 'companyId', 'companyName'].forEach(k => sessionStorage.removeItem(k));
-      if (!window.location.pathname.includes('/auth')) {
-        window.location.href = '/';
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // Do NOT attempt token refresh if the 401 error is from the login endpoint
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/auth/login')) {
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = 'Bearer ' + token;
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { data } = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
+        const newToken = data.token;
+        sessionStorage.setItem('token', newToken);
+        if (data.user && data.user.activeCompanyId) {
+          sessionStorage.setItem('companyId', data.user.activeCompanyId);
+        }
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + newToken;
+        originalRequest.headers.Authorization = 'Bearer ' + newToken;
+        
+        processQueue(null, newToken);
+        return api(originalRequest);
+      } catch (err) {
+        processQueue(err, null);
+        // Clear local storage and force login if refresh fails
+        ['token', 'user', 'companyId', 'companyName'].forEach(k => sessionStorage.removeItem(k));
+        if (!window.location.pathname.includes('/auth')) {
+          window.location.href = '/';
+        }
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
       }
     }
     return Promise.reject(error);
@@ -362,10 +411,13 @@ export const budgetAPI = {
 
 // ─── Payroll ───────────────────────────────────────
 export const payrollAPI = {
-  getEmployees: (companyId) => api.get(`/payroll/employees/${companyId}`),
+  getEmployees: (companyId, params) => api.get(`/payroll/employees/${companyId}`, { params }),
+  getEmployeesFiltered: (params) => api.get('/payroll/employees', { params }),
+  getEmployeeById: (id) => api.get(`/payroll/employees/detail/${id}`),
   createEmployee: (data) => api.post('/payroll/employees', data),
   updateEmployee: (id, data) => api.put(`/payroll/employees/${id}`, data),
   deleteEmployee: (id) => api.delete(`/payroll/employees/${id}`),
+  reactivateEmployee: (id) => api.post(`/payroll/employees/${id}/reactivate`),
   saveSalaryStructure: (data) => api.post('/payroll/salary-structure', data),
   saveAttendance: (data) => api.post('/payroll/attendance', data),
   getAttendance: (companyId) => api.get(`/payroll/attendance/${companyId}`),
@@ -373,6 +425,47 @@ export const payrollAPI = {
   getPayslips: (companyId) => api.get(`/payroll/payslips/${companyId}`),
   getSettings: (companyId) => api.get(`/payroll/${companyId}/settings`),
   saveSettings: (companyId, data) => api.put(`/payroll/${companyId}/settings`, data),
+  validateEmail: (data) => api.post('/payroll/employees/validate/email', data),
+  validatePan: (data) => api.post('/payroll/employees/validate/pan', data),
+  validateAadhaar: (data) => api.post('/payroll/employees/validate/aadhaar', data),
+  uploadPhoto: (id, formData) => api.post(`/payroll/employees/${id}/upload-photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  importEmployees: (csvData) => api.post('/payroll/employees/import', { csvData }),
+  exportEmployees: () => api.get('/payroll/employees/export', { responseType: 'blob' }),
+  exportEmployeePDF: (id) => api.get(`/payroll/employees/${id}/pdf`, { responseType: 'blob' }),
+};
+
+// ─── Attendance ─────────────────────────────────────────────
+export const attendanceAPI = {
+  getAll: (params) => api.get('/attendances', { params }),
+  getById: (id) => api.get(`/attendances/${id}`),
+  create: (data) => api.post('/attendances', data),
+  update: (id, data) => api.put(`/attendances/${id}`, data),
+  remove: (id) => api.delete(`/attendances/${id}`),
+  approve: (id, data) => api.put(`/attendances/${id}/approve`, data),
+  getMonthlySummary: (params) => api.get('/attendances/summary/monthly', { params }),
+  bulkImport: (records) => api.post('/attendances/bulk-import', { records }),
+  exportCSV: (params) => api.get('/attendances/export', { params, responseType: 'blob' }),
+};
+
+// ─── Salary Structures & Assignments ────────────────────────
+export const salaryAPI = {
+  getComponents: () => api.get('/salary/components'),
+  createComponent: (data) => api.post('/salary/components', data),
+  updateComponent: (id, data) => api.put(`/salary/components/${id}`, data),
+  deleteComponent: (id) => api.delete(`/salary/components/${id}`),
+  
+  getStructures: () => api.get('/salary/structures'),
+  getStructureById: (id) => api.get(`/salary/structures/${id}`),
+  createStructure: (data) => api.post('/salary/structures', data),
+  updateStructure: (id, data) => api.put(`/salary/structures/${id}`, data),
+  deleteStructure: (id) => api.delete(`/salary/structures/${id}`),
+  
+  getAssignments: () => api.get('/salary/assignments'),
+  getEmployeeAssignment: (employeeId) => api.get(`/salary/assignments/employee/${employeeId}`),
+  assignSalary: (data) => api.post('/salary/assignments', data),
+  deleteAssignment: (id) => api.delete(`/salary/assignments/${id}`),
+  
+  calculatePreview: (data) => api.post('/salary/calculate-preview', data)
 };
 
 // ─── Indian GST Returns ────────────────────────────
