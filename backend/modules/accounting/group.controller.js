@@ -7,7 +7,7 @@ const { Op } = require('sequelize');
  * and returns { companyId, groups }. Used by the frontend to
  * self-heal a stale localStorage companyId.
  */
-exports.resolveCompanyGroups = async (req, res) => {
+exports.resolveCompanyGroups = async (req, res, next) => {
   try {
     const companyId = req.companyId;
     const company = await Company.findByPk(companyId);
@@ -37,13 +37,13 @@ exports.resolveCompanyGroups = async (req, res) => {
 
     res.json({ companyId: company.id, companyName: company.name, groups });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 
 // Create a group under a company
-exports.createGroup = async (req, res) => {
+exports.createGroup = async (req, res, next) => {
   try {
     const { companyId, CompanyId, name, nature, category, parentId, parent_id } = req.body;
     const targetCompanyId = req.companyId || companyId || CompanyId;
@@ -56,12 +56,12 @@ exports.createGroup = async (req, res) => {
     });
     res.status(201).json(group);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Get all groups for a company (hierarchical)
-exports.getGroups = async (req, res) => {
+exports.getGroups = async (req, res, next) => {
   try {
     const { Ledger, Transaction, sequelize } = require('../../models');
     const { Op } = require('sequelize');
@@ -139,13 +139,13 @@ exports.getGroups = async (req, res) => {
 
     res.json(groups);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 
 // Seed the 24 standard Tally groups for a company
-exports.seedGroups = async (req, res) => {
+exports.seedGroups = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     if (!companyId || companyId === 'null' || companyId === 'undefined') {
@@ -196,12 +196,12 @@ exports.seedGroups = async (req, res) => {
 
     res.status(201).json({ message: `${allGroups.length} groups created.`, groups: allGroups });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Update a group
-exports.updateGroup = async (req, res) => {
+exports.updateGroup = async (req, res, next) => {
   try {
     const { name, nature, category, parentId } = req.body;
     const group = await Group.findByPk(req.params.id);
@@ -210,12 +210,12 @@ exports.updateGroup = async (req, res) => {
     await group.update({ name, nature, category, parent_id: parentId });
     res.json(group);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Delete a group (only if no subgroups or ledgers attached)
-exports.deleteGroup = async (req, res) => {
+exports.deleteGroup = async (req, res, next) => {
   try {
     const { Ledger } = require('../../models');
     const ledgerCount = await Ledger.count({ where: { GroupId: req.params.id } });
@@ -228,6 +228,6 @@ exports.deleteGroup = async (req, res) => {
     await Group.destroy({ where: { id: req.params.id } });
     res.json({ message: 'Group deleted.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

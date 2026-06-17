@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 
 // --- BOM CRUD ---
-exports.createBOM = async (req, res) => {
+exports.createBOM = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { name, finishedGoodItemId, quantity, description, ingredients, companyId } = req.body;
@@ -30,11 +30,11 @@ exports.createBOM = async (req, res) => {
     res.status(201).json(bom);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getBOMs = async (req, res) => {
+exports.getBOMs = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const boms = await BOM.findAll({
@@ -50,23 +50,23 @@ exports.getBOMs = async (req, res) => {
     });
     res.json(boms);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteBOM = async (req, res) => {
+exports.deleteBOM = async (req, res, next) => {
   try {
     const bom = await BOM.findByPk(req.params.id);
     if (!bom) return res.status(404).json({ error: 'BOM not found' });
     await bom.destroy();
     res.json({ message: 'BOM deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // --- Production Order Engine ---
-exports.createProductionOrder = async (req, res) => {
+exports.createProductionOrder = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { productionOrderNumber, BOMId, quantity, date, companyId } = req.body;
@@ -177,11 +177,11 @@ exports.createProductionOrder = async (req, res) => {
   } catch (err) {
     if (t) await t.rollback();
     console.error('Manufacturing Error:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getProductionOrders = async (req, res) => {
+exports.getProductionOrders = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const orders = await ProductionOrder.findAll({
@@ -195,6 +195,6 @@ exports.getProductionOrders = async (req, res) => {
     });
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

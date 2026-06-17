@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Search, Filter, FileText, Download, 
@@ -46,7 +47,7 @@ const DaybookView = () => {
   const handleSendMail = async (e) => {
     e.preventDefault();
     setSendingMail(true);
-    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+    const user = getUser();
     try {
       await mailAPI.send({
         from: user.email,

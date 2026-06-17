@@ -1,6 +1,6 @@
 const { Currency, AuditLog } = require('../../models');
 
-exports.createCurrency = async (req, res) => {
+exports.createCurrency = async (req, res, next) => {
   try {
     const { code, name, symbol, exchangeRate, companyId } = req.body;
     const currency = await Currency.create({
@@ -22,21 +22,21 @@ exports.createCurrency = async (req, res) => {
 
     res.status(201).json(currency);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getCurrencies = async (req, res) => {
+exports.getCurrencies = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const currencies = await Currency.findAll({ where: { CompanyId: companyId } });
     res.json(currencies);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateCurrency = async (req, res) => {
+exports.updateCurrency = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { exchangeRate } = req.body;
@@ -57,11 +57,11 @@ exports.updateCurrency = async (req, res) => {
 
     res.json(currency);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteCurrency = async (req, res) => {
+exports.deleteCurrency = async (req, res, next) => {
   try {
     const { id } = req.params;
     const currency = await Currency.findByPk(id);
@@ -70,6 +70,6 @@ exports.deleteCurrency = async (req, res) => {
     await currency.destroy();
     res.json({ message: 'Currency deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

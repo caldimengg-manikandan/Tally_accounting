@@ -47,7 +47,7 @@ async function findOrCreateGroup(groupName, companyId) {
 }
 
 // Create a Ledger under a Group
-exports.createLedger = async (req, res) => {
+exports.createLedger = async (req, res, next) => {
   console.log('[CREATE_LEDGER] Request Body:', JSON.stringify(req.body, null, 2));
   try {
     const { companyId, CompanyId, groupId, GroupId, name, openingBalance, openingBalanceType, description, address, gstNumber, groupName } = req.body;
@@ -159,7 +159,7 @@ exports.createLedger = async (req, res) => {
 };
 
 
-exports.getLedgers = async (req, res) => {
+exports.getLedgers = async (req, res, next) => {
   try {
     console.log(`[LEDGER_FETCH] Requesting ledgers for companyId: ${req.params.companyId}`);
     const ledgers = await Ledger.findAll({
@@ -181,12 +181,12 @@ exports.getLedgers = async (req, res) => {
     });
     res.json(ledgers);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Get a single Ledger with its computed balance (from transactions)
-exports.getLedgerBalance = async (req, res) => {
+exports.getLedgerBalance = async (req, res, next) => {
   console.log(`[GET_BALANCE] ID: ${req.params.id}`);
   try {
     const ledger = await Ledger.findByPk(req.params.id, {
@@ -225,12 +225,12 @@ exports.getLedgerBalance = async (req, res) => {
       totalCredit: isNaN(totalCredit) ? 0 : totalCredit
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Update a ledger
-exports.updateLedger = async (req, res) => {
+exports.updateLedger = async (req, res, next) => {
   console.log(`[UPDATE_LEDGER] ID: ${req.params.id}, Body:`, JSON.stringify(req.body, null, 2));
   try {
     const { name, groupId, openingBalance, openingBalanceType, description, address, gstNumber, accountNumber, bankName, ifsc, accountCode } = req.body;
@@ -273,12 +273,12 @@ exports.updateLedger = async (req, res) => {
       const errorMessage = err.errors.map(e => e.message).join(', ');
       return res.status(400).json({ error: errorMessage });
     }
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Get all transactions for a specific ledger
-exports.getLedgerTransactions = async (req, res) => {
+exports.getLedgerTransactions = async (req, res, next) => {
   try {
     const transactions = await Transaction.findAll({
       where: { LedgerId: req.params.id },
@@ -291,12 +291,12 @@ exports.getLedgerTransactions = async (req, res) => {
     });
     res.json(transactions);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Delete a Ledger (only if no transactions exist)
-exports.deleteLedger = async (req, res) => {
+exports.deleteLedger = async (req, res, next) => {
   try {
     const txCount = await Transaction.count({ where: { LedgerId: req.params.id } });
     if (txCount > 0) {
@@ -319,6 +319,6 @@ exports.deleteLedger = async (req, res) => {
 
     res.json({ message: 'Ledger deleted.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

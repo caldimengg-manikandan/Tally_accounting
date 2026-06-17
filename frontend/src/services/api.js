@@ -1,15 +1,29 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://localhost:5000/api');
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
-  baseURL: API_BASE
+  baseURL: API_BASE,
+  withCredentials: true // Always send cookies
 });
 
-// Attach JWT token and active company ID to every request
+// Helper to extract a cookie by name
+const getCookie = (name) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+};
+
+// Attach CSRF token and active company ID to every request
 api.interceptors.request.use(config => {
-  const token = sessionStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Add CSRF token for state-changing requests
+  if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
+    const csrfToken = getCookie('csrfToken');
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
   
   const companyId = sessionStorage.getItem('companyId');
   if (companyId) config.headers['x-company-id'] = companyId;
@@ -17,17 +31,109 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Handle 401 Unauthorized globally
+// Token refresh state — prevents duplicate refresh requests
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Handle 401 Unauthorized and 403 CSRF errors globally — auto-refresh before failing
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clear local storage and force login if token is invalid/expired
-      ['token', 'user', 'companyId', 'companyName'].forEach(k => sessionStorage.removeItem(k));
-      if (!window.location.pathname.includes('/auth')) {
-        window.location.href = '/';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // ── CSRF token expired (403) ──────────────────────────────────────
+    // The CSRF cookie can expire independently. When it does, the backend
+    // returns 403 "CSRF validation failed". We silently refresh tokens to
+    // get a fresh CSRF cookie, patch the header, then retry exactly once.
+    const isCsrfError =
+      error.response?.status === 403 &&
+      error.response?.data?.error === 'CSRF validation failed' &&
+      !originalRequest._csrfRetry &&
+      !originalRequest.url?.includes('/auth/');
+
+    if (isCsrfError) {
+      originalRequest._csrfRetry = true;
+      try {
+        await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
+        await new Promise(r => setTimeout(r, 50)); // let browser register new cookie
+        const freshCsrf = getCookie('csrfToken');
+        if (freshCsrf) {
+          originalRequest.headers['X-CSRF-Token'] = freshCsrf;
+        }
+        return api(originalRequest);
+      } catch (_refreshErr) {
+        // Refresh failed — fall through to normal reject
       }
     }
+
+    // ── Access token expired (401) ────────────────────────────────────
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // Don't try to refresh for auth endpoints themselves
+      if (originalRequest.url?.includes('/auth/')) {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        // Queue this request until the refresh completes
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => {
+          const freshCsrf = getCookie('csrfToken');
+          if (freshCsrf) {
+            originalRequest.headers['X-CSRF-Token'] = freshCsrf;
+          }
+          // Retry the original request without needing to manually attach a token
+          return api(originalRequest);
+        }).catch(err => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Refresh token is in httpOnly cookie — sent automatically
+        const refreshRes = await axios.post(
+          `${API_BASE}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+
+        if (refreshRes.data) {
+          // Wait for a short moment to ensure cookies are registered by the browser
+          await new Promise(r => setTimeout(r, 50));
+          const freshCsrf = getCookie('csrfToken');
+          if (freshCsrf) {
+            originalRequest.headers['X-CSRF-Token'] = freshCsrf;
+          }
+          processQueue(null);
+          return api(originalRequest);
+        }
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
+        // Refresh failed — force logout
+        ['companyId', 'companyName'].forEach(k => sessionStorage.removeItem(k));
+        const path = window.location.pathname;
+        const isPublicPath = path === '/' || path === '/login' || path.startsWith('/auth');
+        if (!isPublicPath) {
+          window.location.href = '/';
+        }
+        return Promise.reject(refreshErr);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -37,7 +143,16 @@ export const register = (name, email, password, role) => api.post('/auth/registe
 export const login = (email, password) => api.post('/auth/login', { email, password });
 export const googleLogin = (credential) => api.post('/auth/google-login', { credential });
 
-export const authAPI = { register, login, googleLogin };
+/**
+ * Called by /auth-callback page after OAuth redirect.
+ * The backend set an 'oauthAccessToken' httpOnly cookie containing the access token.
+ * This endpoint validates that cookie and sets the full session cookies.
+ */
+export const exchangeOAuthToken = () => api.post('/auth/oauth-token-exchange', {});
+
+export const getCurrentUser = () => api.get('/auth/me');
+
+export const authAPI = { register, login, googleLogin, exchangeOAuthToken, getCurrentUser };
 
 // ─── Users ─────────────────────────────────────────
 export const usersAPI = {

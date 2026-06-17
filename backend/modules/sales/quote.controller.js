@@ -3,7 +3,7 @@ const PDFService = require('../../services/PDFService');
 const nodemailer = require('nodemailer');
 
 // GET /quotes/:companyId
-exports.getQuotes = async (req, res) => {
+exports.getQuotes = async (req, res, next) => {
   try {
     const quotes = await Quote.findAll({
       where: { CompanyId: req.params.companyId },
@@ -12,25 +12,31 @@ exports.getQuotes = async (req, res) => {
     });
     res.json(quotes);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // GET /quotes/detail/:id
-exports.getQuoteById = async (req, res) => {
+exports.getQuoteById = async (req, res, next) => {
   try {
-    const quote = await Quote.findByPk(req.params.id, {
+    const { id } = req.params;
+    const { companyId } = req.query;
+    const quote = await Quote.findByPk(id, {
       include: [{ model: Ledger, as: 'Customer' }]
     });
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
+    // BOLA guard: ensure quote belongs to the requesting company
+    if (companyId && String(quote.CompanyId) !== String(companyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     res.json(quote);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // POST /quotes
-exports.createQuote = async (req, res) => {
+exports.createQuote = async (req, res, next) => {
   try {
     const {
       companyId, quoteNumber, customerName, customerLedgerId, referenceNumber,
@@ -80,51 +86,66 @@ exports.createQuote = async (req, res) => {
 
     res.status(201).json({ message: 'Quote created successfully.', quote });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    err.statusCode = 400;
+    next(err);
   }
 };
 
 // PUT /quotes/:id
-exports.updateQuote = async (req, res) => {
+exports.updateQuote = async (req, res, next) => {
   try {
-    const quote = await Quote.findByPk(req.params.id);
+    const { id } = req.params;
+    const requestingCompanyId = req.body.companyId || req.user?.CompanyId;
+    const quote = await Quote.findByPk(id);
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
+    // BOLA guard
+    if (requestingCompanyId && String(quote.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     await quote.update({
       ...req.body,
       itemsJson: req.body.items ? JSON.stringify(req.body.items) : quote.itemsJson
     });
     res.json({ message: 'Quote updated.', quote });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    err.statusCode = 400;
+    next(err);
   }
 };
 
 // PATCH /quotes/:id/status
-exports.updateStatus = async (req, res) => {
+exports.updateStatus = async (req, res, next) => {
   try {
     const quote = await Quote.findByPk(req.params.id);
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
     await quote.update({ status: req.body.status });
     res.json({ message: 'Status updated.', quote });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    err.statusCode = 400;
+    next(err);
   }
 };
 
 // DELETE /quotes/:id
-exports.deleteQuote = async (req, res) => {
+exports.deleteQuote = async (req, res, next) => {
   try {
-    const quote = await Quote.findByPk(req.params.id);
+    const { id } = req.params;
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+    const quote = await Quote.findByPk(id);
     if (!quote) return res.status(404).json({ error: 'Quote not found' });
+    // BOLA guard
+    if (requestingCompanyId && String(quote.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     await quote.destroy();
     res.json({ message: 'Quote deleted.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // POST /quotes/send-email/:id
-exports.sendEmail = async (req, res) => {
+exports.sendEmail = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { subject, body, toEmail } = req.body;
@@ -139,19 +160,23 @@ exports.sendEmail = async (req, res) => {
         return res.status(400).json({ error: 'Recipient email is missing. Please provide one or update the customer ledger.' });
     }
 
+    // Fetch company so PDF and email use real company details
+    const company = await Company.findByPk(quote.CompanyId);
+    const companyName = company?.name || 'CalTally';
+
     const items = JSON.parse(quote.itemsJson || '[]');
-    const pdfBuffer = await PDFService.generateQuote(quote, items);
+    const pdfBuffer = await PDFService.generateQuote(quote, items, company ? company.toJSON() : {});
 
     const userEmail = process.env.SMTP_USER || process.env.MAIL_USER;
     const userPass = process.env.SMTP_PASS || process.env.MAIL_PASS;
-    const fromEmail = userEmail || 'contact@induspvtltd.in';
+    const fromEmail = userEmail || process.env.MAIL_USER || 'noreply@caltally.com';
 
     const bodyText = typeof body === 'string' ? body : String(body || '');
 
     const mailOptions = {
-      from: `"Indus Pvt Ltd" <${fromEmail}>`,
+      from: `"${companyName}" <${fromEmail}>`,
       to: finalToEmail,
-      subject: subject || `Quote ${quote.quoteNumber} from Indus Pvt Ltd`,
+      subject: subject || `Quote ${quote.quoteNumber} from ${companyName}`,
       text: bodyText,
       html: bodyText.replace(/\n/g, '<br/>'),
       attachments: [{ filename: `${quote.quoteNumber}.pdf`, content: pdfBuffer }]
@@ -203,6 +228,6 @@ exports.sendEmail = async (req, res) => {
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to send email: ' + err.message });
+    next(err);
   }
 };

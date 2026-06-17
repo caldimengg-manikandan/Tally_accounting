@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -41,7 +42,7 @@ const TrialBalanceView = () => {
     e.preventDefault();
     if (!email) return;
     setSendingMail(true);
-    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+    const user = getUser();
     try {
       await mailAPI.send({
         from: user.email,

@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const AuditService = require('../../services/AuditService');
 
 // Get all users in the active company (ADMIN only)
-exports.getCompanyUsers = async (req, res) => {
+exports.getCompanyUsers = async (req, res, next) => {
   try {
     const company = await Company.findByPk(req.companyId, {
       include: [{
@@ -15,12 +15,12 @@ exports.getCompanyUsers = async (req, res) => {
     if (!company) return res.status(404).json({ error: 'Company not found' });
     res.json({ users: company.Users });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Invite/add a user to the active company (ADMIN only)
-exports.inviteUser = async (req, res) => {
+exports.inviteUser = async (req, res, next) => {
   try {
     const { email, name, password, role } = req.body;
 
@@ -79,12 +79,12 @@ exports.inviteUser = async (req, res) => {
     if (err.name === 'SequelizeUniqueConstraintError') {
       return res.status(400).json({ error: 'Email already registered' });
     }
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Update the role of a user within the active company (ADMIN only)
-exports.updateUserRole = async (req, res) => {
+exports.updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
     const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
@@ -120,12 +120,12 @@ exports.updateUserRole = async (req, res) => {
 
     res.json({ message: 'User role updated', user: { id: user.id, email: user.email, role: user.role } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Remove a user from the active company (ADMIN only)
-exports.removeUser = async (req, res) => {
+exports.removeUser = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -152,6 +152,6 @@ exports.removeUser = async (req, res) => {
 
     res.json({ message: 'User removed from company' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

@@ -4,7 +4,7 @@ const {
 } = require('../../models');
 const AccountingService = require('../../services/AccountingService');
 
-exports.createOrder = async (req, res) => {
+exports.createOrder = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { 
@@ -57,28 +57,28 @@ exports.createOrder = async (req, res) => {
     res.status(201).json(order);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getOrders = async (req, res) => {
+exports.getOrders = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const orders = await SalesOrder.findAll({
       where: { CompanyId: companyId },
       include: [
-        { model: Ledger, as: 'Customer', attributes: ['name', 'currency'] },
+        { model: Ledger, as: 'Customer', attributes: ['name', 'currency', 'state', 'gstNumber', 'billingAddress', 'shippingAddress'] },
         { model: SalesOrderItem, as: 'Items' }
       ],
       order: [['date', 'DESC'], ['createdAt', 'DESC']]
     });
     res.json(orders);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateOrder = async (req, res) => {
+exports.updateOrder = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { orderId } = req.params;
@@ -91,6 +91,12 @@ exports.updateOrder = async (req, res) => {
 
     const order = await SalesOrder.findByPk(orderId);
     if (!order) return res.status(404).json({ error: 'Order not found' });
+    // BOLA guard: the requesting company must own this order
+    const requestingCompanyId = req.body.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+      await t.rollback();
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     await order.update({
       LedgerId: customerId,
@@ -135,11 +141,11 @@ exports.updateOrder = async (req, res) => {
     res.json(order);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.createInvoice = async (req, res) => {
+exports.createInvoice = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { 
@@ -194,11 +200,11 @@ exports.createInvoice = async (req, res) => {
     res.status(201).json(invoice);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getInvoicesByCompany = async (req, res) => {
+exports.getInvoicesByCompany = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const invoices = await SalesInvoice.findAll({
@@ -210,11 +216,11 @@ exports.getInvoicesByCompany = async (req, res) => {
     });
     res.json(invoices);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getInvoiceById = async (req, res) => {
+exports.getInvoiceById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const invoice = await SalesInvoice.findByPk(id, {
@@ -226,11 +232,11 @@ exports.getInvoiceById = async (req, res) => {
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     res.json(invoice);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateInvoice = async (req, res) => {
+exports.updateInvoice = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -245,6 +251,12 @@ exports.updateInvoice = async (req, res) => {
     if (!invoice) {
         await t.rollback();
         return res.status(404).json({ error: 'Invoice not found' });
+    }
+    // BOLA guard: the requesting company must own this invoice
+    const requestingCompanyId = req.body.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(invoice.CompanyId) !== String(requestingCompanyId)) {
+      await t.rollback();
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     // Update main record
@@ -305,31 +317,45 @@ exports.updateInvoice = async (req, res) => {
     res.json(invoice);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteOrder = async (req, res) => {
+exports.deleteOrder = async (req, res, next) => {
   try {
     const { orderId } = req.params;
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+    const order = await SalesOrder.findByPk(orderId);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    // BOLA guard
+    if (requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     await SalesOrder.destroy({ where: { id: orderId } });
     res.json({ message: 'Sales Order deleted.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteInvoice = async (req, res) => {
+exports.deleteInvoice = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+    const invoice = await SalesInvoice.findByPk(id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    // BOLA guard
+    if (requestingCompanyId && String(invoice.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     await SalesInvoice.destroy({ where: { id } });
     res.json({ message: 'Invoice deleted.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getOpenInvoices = async (req, res) => {
+exports.getOpenInvoices = async (req, res, next) => {
   try {
     const { customerId } = req.params;
     const { Op } = require('sequelize');
@@ -343,11 +369,11 @@ exports.getOpenInvoices = async (req, res) => {
     });
     res.json(invoices);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.recordPayment = async (req, res) => {
+exports.recordPayment = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { companyId, customerId, paymentDate, amount, depositToId, reference, invoices, projectId, paymentMode } = req.body;
@@ -388,11 +414,11 @@ exports.recordPayment = async (req, res) => {
     res.json({ message: 'Payment recorded successfully', voucher });
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.applyCredit = async (req, res) => {
+exports.applyCredit = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { companyId, customerId, sourceId, sourceType, invoices } = req.body;
@@ -438,12 +464,12 @@ exports.applyCredit = async (req, res) => {
     res.json({ message: 'Credit applied successfully' });
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 
-exports.getNextNumber = async (req, res) => {
+exports.getNextNumber = async (req, res, next) => {
   try {
     const { companyId, type } = req.params;
     const models = require('../../models');
@@ -502,6 +528,6 @@ exports.getNextNumber = async (req, res) => {
 
     res.json({ nextNumber: lastNumber + '-001' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

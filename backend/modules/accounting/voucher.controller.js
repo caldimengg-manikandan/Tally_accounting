@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 const AuditService = require('../../services/AuditService');
 
-exports.createVoucher = async (req, res) => {
+exports.createVoucher = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { companyId, voucherType, date, narration, entries, referenceNumber, reportingMethod, currency, projectId } = req.body;
@@ -51,11 +51,12 @@ exports.createVoucher = async (req, res) => {
     res.status(201).json({ message: 'Voucher posted successfully.', voucher });
   } catch (err) {
     if (t) await t.rollback();
-    res.status(400).json({ error: err.message });
+    err.statusCode = 400;
+    next(err);
   }
 };
 
-exports.updateVoucher = async (req, res) => {
+exports.updateVoucher = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -100,11 +101,12 @@ exports.updateVoucher = async (req, res) => {
     res.json({ message: 'Voucher updated successfully.', voucher });
   } catch (err) {
     if (t) await t.rollback();
-    res.status(400).json({ error: err.message });
+    err.statusCode = 400;
+    next(err);
   }
 };
 
-exports.getVouchers = async (req, res) => {
+exports.getVouchers = async (req, res, next) => {
   console.log('GET Vouchers for Company:', req.params.companyId);
   try {
     const vouchers = await Voucher.findAll({
@@ -132,11 +134,11 @@ exports.getVouchers = async (req, res) => {
     });
     res.json(vouchers);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getVoucherById = async (req, res) => {
+exports.getVoucherById = async (req, res, next) => {
   try {
     const voucher = await Voucher.findByPk(req.params.id, {
       include: [{
@@ -192,11 +194,11 @@ exports.getVoucherById = async (req, res) => {
 
     res.json(plainVoucher);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteVoucher = async (req, res) => {
+exports.deleteVoucher = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const voucher = await Voucher.findByPk(req.params.id);
@@ -215,11 +217,11 @@ exports.deleteVoucher = async (req, res) => {
     res.json({ message: 'Voucher deleted successfully.' });
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateVoucherNarration = async (req, res) => {
+exports.updateVoucherNarration = async (req, res, next) => {
   try {
     const voucher = await Voucher.findByPk(req.params.id);
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
@@ -230,11 +232,11 @@ exports.updateVoucherNarration = async (req, res) => {
     
     res.json({ message: 'Voucher narration updated successfully', voucher });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.bulkUpdateTransactions = async (req, res) => {
+exports.bulkUpdateTransactions = async (req, res, next) => {
   try {
     const { companyId, transactionIds, targetLedgerId } = req.body;
     if (!transactionIds || !transactionIds.length) {
@@ -253,11 +255,11 @@ exports.bulkUpdateTransactions = async (req, res) => {
 
     res.json({ message: `Successfully updated ${result.updatedCount} transactions.`, result });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getTransactions = async (req, res) => {
+exports.getTransactions = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const transactions = await Transaction.findAll({
@@ -270,11 +272,11 @@ exports.getTransactions = async (req, res) => {
     });
     res.json(transactions);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.approveVoucher = async (req, res) => {
+exports.approveVoucher = async (req, res, next) => {
   try {
     const voucher = await Voucher.findByPk(req.params.id);
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
@@ -285,11 +287,11 @@ exports.approveVoucher = async (req, res) => {
     
     res.json({ message: 'Voucher approved successfully.', voucher });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.cancelVoucher = async (req, res) => {
+exports.cancelVoucher = async (req, res, next) => {
   try {
     const voucher = await Voucher.findByPk(req.params.id);
     if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
@@ -300,7 +302,7 @@ exports.cancelVoucher = async (req, res) => {
     
     res.json({ message: 'Voucher cancelled successfully.', voucher });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 

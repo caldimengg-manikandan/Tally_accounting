@@ -6,7 +6,7 @@ const { Op } = require('sequelize');
  * Lists every ledger with its total debit, total credit, and closing balance.
  * Tally formula: Closing = Opening + TotalDebit - TotalCredit
  */
-exports.getTrialBalance = async (req, res) => {
+exports.getTrialBalance = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -108,7 +108,7 @@ exports.getTrialBalance = async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
@@ -116,7 +116,7 @@ exports.getTrialBalance = async (req, res) => {
  * PROFIT & LOSS STATEMENT
  * Income - Expenses = Net Profit/Loss
  */
-exports.getProfitAndLoss = async (req, res) => {
+exports.getProfitAndLoss = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { from, to } = req.query;
@@ -243,7 +243,7 @@ exports.getProfitAndLoss = async (req, res) => {
       netProfit: totalIncome - totalExpenses
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
@@ -251,7 +251,7 @@ exports.getProfitAndLoss = async (req, res) => {
  * BALANCE SHEET
  * Assets = Liabilities + Equity (Capital)
  */
-exports.getBalanceSheet = async (req, res) => {
+exports.getBalanceSheet = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -410,14 +410,14 @@ exports.getBalanceSheet = async (req, res) => {
       isBalanced: Math.abs(totalAssets - totalLiabilities) < 0.01
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 /**
  * DAYBOOK — All vouchers for a date range
  */
-exports.getDaybook = async (req, res) => {
+exports.getDaybook = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { from, to } = req.query;
@@ -438,11 +438,11 @@ exports.getDaybook = async (req, res) => {
 
     res.json(vouchers);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getAuditLogs = async (req, res) => {
+exports.getAuditLogs = async (req, res, next) => {
   try {
     const { AuditLog, User } = require('../../models');
     const logs = await AuditLog.findAll({
@@ -453,7 +453,7 @@ exports.getAuditLogs = async (req, res) => {
     });
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
@@ -463,7 +463,7 @@ exports.getAuditLogs = async (req, res) => {
  *          cash flow by month, receivables aging, top customers,
  *          top vendors, GST summary, recent activity
  */
-exports.getDashboardStats = async (req, res) => {
+exports.getDashboardStats = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -981,14 +981,14 @@ exports.getDashboardStats = async (req, res) => {
     });
   } catch (err) {
     console.error('Dashboard stats error:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 /**
  * LEDGER STATEMENT — Running balance for a single ledger
  */
-exports.getLedgerStatement = async (req, res) => {
+exports.getLedgerStatement = async (req, res, next) => {
   try {
     const { ledgerId } = req.params;
     const { from, to } = req.query;
@@ -1065,14 +1065,14 @@ exports.getLedgerStatement = async (req, res) => {
       entries
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // ──────────────────────────────────────────────────────────────────
 // CASH FLOW REPORT — Monthly inflow / outflow for last 12 months
 // ──────────────────────────────────────────────────────────────────
-exports.getCashFlow = async (req, res) => {
+exports.getCashFlow = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { from, to } = req.query;
@@ -1152,14 +1152,14 @@ exports.getCashFlow = async (req, res) => {
     });
   } catch (err) {
     console.error('Cash flow error:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // ──────────────────────────────────────────────────────────────────
 // RECEIVABLES REPORT — All open invoices with aging
 // ──────────────────────────────────────────────────────────────────
-exports.getReceivablesReport = async (req, res) => {
+exports.getReceivablesReport = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { status } = req.query; // optional filter
@@ -1336,11 +1336,11 @@ exports.getReceivablesReport = async (req, res) => {
     });
   } catch (err) {
     console.error('Receivables report error:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getPayablesReport = async (req, res) => {
+exports.getPayablesReport = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -1520,11 +1520,11 @@ exports.getPayablesReport = async (req, res) => {
     });
   } catch (err) {
     console.error('Payables report error:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getInventoryReport = async (req, res) => {
+exports.getInventoryReport = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { stockCategoryId, godownId } = req.query;
@@ -1636,12 +1636,12 @@ exports.getInventoryReport = async (req, res) => {
     });
   } catch (err) {
     console.error('Inventory report error:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Group Summary Report
-exports.getGroupSummary = async (req, res) => {
+exports.getGroupSummary = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -1684,12 +1684,12 @@ exports.getGroupSummary = async (req, res) => {
 
     res.json(report);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Stock Aging Report
-exports.getStockAging = async (req, res) => {
+exports.getStockAging = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const items = await Item.findAll({ where: { CompanyId: companyId } });
@@ -1717,12 +1717,12 @@ exports.getStockAging = async (req, res) => {
 
     res.json(report);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Cost Center Report
-exports.getCostCenterReport = async (req, res) => {
+exports.getCostCenterReport = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { CostCenter, CostCenterAllocation, Transaction, Ledger } = require('../../models');
@@ -1777,7 +1777,7 @@ exports.getCostCenterReport = async (req, res) => {
 
     res.json(report);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 

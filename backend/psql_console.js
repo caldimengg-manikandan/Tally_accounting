@@ -7,8 +7,17 @@
 const { Sequelize } = require('sequelize');
 const readline = require('readline');
 
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+  console.error("❌ Error: DATABASE_URL environment variable is missing.");
+  process.exit(1);
+}
+
 const db = new Sequelize(
-  'postgresql://tally_db_9r2n_user:TYvXg4eOwSLjwHH9qhT5qNncQMkNf9HW@dpg-d8h874cvikkc73evmvbg-a.singapore-postgres.render.com/tally_db_9r2n',
+  dbUrl,
   { dialect: 'postgres', dialectOptions: { ssl: { require: true, rejectUnauthorized: false } }, logging: false }
 );
 

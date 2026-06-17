@@ -56,6 +56,24 @@ const setRefreshCookie = (res, rawToken) => {
   });
 };
 
+const setAccessCookie = (res, token) => {
+  res.cookie('accessToken', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 15 * 60 * 1000 // 15 minutes
+  });
+};
+
+const setCsrfCookie = (res, token) => {
+  res.cookie('csrfToken', token, {
+    httpOnly: false, // Frontend needs to read this
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 60 * 60 * 1000 // 1 hour — long enough to outlast the access token, refreshed on every login/refresh
+  });
+};
+
 /**
  * Validate password complexity.
  * Returns an array of unmet criteria strings (empty = valid).
@@ -141,9 +159,12 @@ exports.register = async (req, res) => {
     });
   } catch (err) {
     if (err.name === 'SequelizeValidationError' || err.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ error: err.errors[0].message });
+      const msg = err.errors[0].message;
+      return res.status(400).json({ error: msg });
     }
-    res.status(500).json({ error: err.message });
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[AUTH-REGISTER-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'Registration failed. Please try again.', errorId: eId });
   }
 };
 
@@ -241,7 +262,9 @@ exports.login = async (req, res) => {
     await logAuthEvent('LOGIN_SUCCESS', { userId: user.id, email, ip, userAgent });
     return await _issueTokens(req, res, user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[AUTH-LOGIN-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'Login failed. Please try again.', errorId: eId });
   }
 };
 
@@ -271,10 +294,15 @@ async function _issueTokens(req, res, user, extraFields = {}) {
   // Phase 2: short-lived access token + rotating refresh token
   const accessToken = signAccessToken(user, activeCoId);
   const rawRefreshToken = await issueRefreshToken(user.id);
+  const csrfToken = require('crypto').randomBytes(24).toString('hex');
+  
   setRefreshCookie(res, rawRefreshToken);
+  setAccessCookie(res, accessToken);
+  setCsrfCookie(res, csrfToken);
 
   res.json({
-    token: accessToken,
+    // We no longer return the accessToken in the JSON body.
+    message: 'Authentication successful',
     user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: activeCoId },
     companies: userCompanies,
     ...extraFields
@@ -326,15 +354,21 @@ exports.refresh = async (req, res) => {
 
     const accessToken = signAccessToken(user, user.activeCompanyId);
     const rawNew = await issueRefreshToken(user.id);
+    const csrfToken = require('crypto').randomBytes(24).toString('hex');
+    
     setRefreshCookie(res, rawNew);
+    setAccessCookie(res, accessToken);
+    setCsrfCookie(res, csrfToken);
 
     await logAuthEvent('TOKEN_REFRESHED', { userId: user.id, ip, userAgent });
     res.json({
-      token: accessToken,
+      message: 'Token refreshed',
       user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[AUTH-REFRESH-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'Token refresh failed. Please log in again.', errorId: eId });
   }
 };
 
@@ -351,10 +385,14 @@ exports.logout = async (req, res) => {
       await RefreshToken.destroy({ where: { token: hashed } });
     }
     res.clearCookie('refreshToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+    res.clearCookie('accessToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+    res.clearCookie('csrfToken', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
     await logAuthEvent('LOGOUT', { userId: req.user?.id, ip, userAgent });
     res.json({ message: 'Logged out successfully.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[AUTH-LOGOUT-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'Logout failed. Please try again.', errorId: eId });
   }
 };
 
@@ -395,7 +433,9 @@ exports.switchCompany = async (req, res) => {
       user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[AUTH-SWITCH-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'Company switch failed. Please try again.', errorId: eId });
   }
 };
 
@@ -476,7 +516,9 @@ exports.mfaEnroll = async (req, res) => {
       qrCode: qrCodeDataUrl
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[MFA-ENROLL-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'MFA enrollment failed. Please try again.', errorId: eId });
   }
 };
 
@@ -511,7 +553,9 @@ exports.mfaVerifyEnroll = async (req, res) => {
 
     res.json({ message: 'MFA successfully enrolled and verified.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[MFA-VERIFY-ENROLL-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'MFA verification failed. Please try again.', errorId: eId });
   }
 };
 
@@ -564,7 +608,82 @@ exports.mfaVerify = async (req, res) => {
     await logAuthEvent('LOGIN_SUCCESS', { userId, email: user.email, ip, userAgent, detail: 'MFA verified' });
     return await _issueTokens(req, res, user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[MFA-LOGIN-VERIFY-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'MFA verification failed. Please try again.', errorId: eId });
   }
 };
 
+
+// ── OAuth Token Exchange (Redirect Flow Handshake) ───────────────────────────
+//
+// POST /api/auth/oauth-token-exchange
+// Frontend calls this after being redirected to /auth-callback.
+// The backend previously set httpOnly cookie 'oauthAccessToken' (2-min TTL).
+// This handler: validates that cookie → issues refresh cookie → clears it → returns user data.
+
+exports.oauthTokenExchange = async (req, res) => {
+  try {
+    const oauthToken = req.cookies?.oauthAccessToken;
+    if (!oauthToken) {
+      return res.status(401).json({ error: 'No OAuth token found. Please sign in again.' });
+    }
+
+    // Validate the short-lived access token from the cookie
+    let payload;
+    try {
+      payload = jwt.verify(oauthToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'OAuth token invalid or expired. Please sign in again.' });
+    }
+
+    // Clear the one-time oauthAccessToken cookie immediately
+    res.clearCookie('oauthAccessToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    });
+
+    // Fetch the user and their companies
+    const { Company } = require('../../models');
+    const user = await User.findOne({
+      where: { id: payload.id },
+      include: [{ model: Company, through: { attributes: [] } }]
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    // Issue proper short-lived access token + rotating refresh token cookie
+    return await _issueTokens(req, res, user);
+  } catch (err) {
+    const eId = require('crypto').randomBytes(6).toString('hex');
+    console.error(`[OAUTH-EXCHANGE-${eId}]`, err.message, err.stack);
+    res.status(500).json({ error: 'OAuth token exchange failed. Please try again.', errorId: eId });
+  }
+};
+
+// ── Get Current User (/me) ───────────────────────────────────────────────────
+exports.me = async (req, res) => {
+  try {
+    const { Company } = require('../../models');
+    const user = await User.findOne({
+      where: { id: req.user.id },
+      include: [{ model: Company, through: { attributes: [] } }]
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.json({
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, activeCompanyId: user.activeCompanyId },
+      companies: user.Companies || []
+    });
+  } catch (err) {
+    console.error('Failed to fetch /me:', err);
+    res.status(500).json({ error: 'Failed to fetch user data.' });
+  }
+};

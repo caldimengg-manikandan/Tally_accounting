@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { salesAPI, ledgerAPI, companyAPI, mailAPI } from '../../services/api';
@@ -85,7 +86,7 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
             </div>
 
             {/* Invoices List Content */}
-            <div className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="flex-1 overflow-y-auto">
                 {loading ? (
                     <div className="p-10 text-center space-y-3 opacity-40">
                         <Loader2 size={24} className="animate-spin mx-auto text-blue-600" />
@@ -143,7 +144,7 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
 // ─────────────────────────────────────────────────────────────────────────────
 
 const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
-    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+    const user = getUser();
     const senderName = user.email ? user.email.split('@')[0] : 'Indus CAI Administrator';
     const companyName = company?.name || 'Indus CAI private Ltd';
     const { addNotification } = useNotificationStore();
@@ -224,7 +225,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
                 </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar p-10 flex gap-10">
+            <div className="flex-1 overflow-y-auto p-10 flex gap-10">
                 {/* Editor Panel */}
                 <div className="w-[600px] shrink-0 space-y-6">
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
@@ -753,7 +754,7 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+            <div className="flex-1 overflow-y-auto p-8">
                 {loading ? (
                     <div className="py-24 text-center font-bold text-slate-400 animate-pulse uppercase tracking-widest">Syncing...</div>
                 ) : (

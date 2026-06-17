@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -190,7 +191,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
   const navigate = useNavigate();
   const companyId = propCompanyId || sessionStorage.getItem('companyId');
   const companyName = sessionStorage.getItem('companyName') || 'Dashboard';
-  const user = (() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const user = (() => { try { return getUser(); } catch { return {}; } })();
   const role = (user.role || 'ADMIN').toLowerCase();
   const canCreate = !['viewer'].includes(role);
   const canFileGST = !['viewer', 'data_entry'].includes(role);

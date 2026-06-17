@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Users, Plus, Check, X, AlertCircle, Loader2, RefreshCcw, DollarSign, Calendar, FileText, Settings, UserCheck
 } from 'lucide-react';
@@ -444,7 +445,7 @@ export default function PayrollView() {
       )}
 
       {/* MODAL 1: ADD EMPLOYEE */}
-      {showEmpModal && (
+      {showEmpModal && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
@@ -513,11 +514,12 @@ export default function PayrollView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 2: SETUP SALARY STRUCTURE */}
-      {showStructModal && (
+      {showStructModal && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
@@ -578,11 +580,12 @@ export default function PayrollView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL 3: LOG ATTENDANCE */}
-      {showAttModal && (
+      {showAttModal && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
@@ -622,7 +625,8 @@ export default function PayrollView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

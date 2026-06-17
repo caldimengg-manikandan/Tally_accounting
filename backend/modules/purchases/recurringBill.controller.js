@@ -1,7 +1,7 @@
 const { RecurringBill, RecurringBillItem, Ledger, Company, Voucher, Transaction, sequelize } = require('../../models');
 const moment = require('moment');
 
-exports.create = async (req, res) => {
+exports.create = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { items, companyId, ...rawBillData } = req.body;
@@ -59,11 +59,11 @@ exports.create = async (req, res) => {
     res.status(201).json(completeTemplate);
   } catch (err) {
     await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getByCompany = async (req, res) => {
+exports.getByCompany = async (req, res, next) => {
   try {
     const templates = await RecurringBill.findAll({
       where: { CompanyId: req.params.companyId },
@@ -75,17 +75,27 @@ exports.getByCompany = async (req, res) => {
     });
     res.json(templates);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.update = async (req, res) => {
+exports.update = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { items, ...billData } = req.body;
     const template = await RecurringBill.findByPk(req.params.id);
-    if (!template) return res.status(404).json({ error: 'Template not found' });
+    if (!template) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Template not found' });
+    }
     
+    // BOLA guard
+    const requestingCompanyId = req.body.CompanyId || req.body.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(template.CompanyId) !== String(requestingCompanyId)) {
+      await t.rollback();
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     await template.update(billData, { transaction: t });
     
     if (items) {
@@ -106,22 +116,29 @@ exports.update = async (req, res) => {
     res.json(template);
   } catch (err) {
     await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.delete = async (req, res) => {
+exports.delete = async (req, res, next) => {
   try {
     const template = await RecurringBill.findByPk(req.params.id);
     if (!template) return res.status(404).json({ error: 'Template not found' });
+
+    // BOLA guard
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(template.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     await template.destroy();
     res.json({ message: 'Template deleted' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.processDue = async (req, res) => {
+exports.processDue = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const now = new Date();
@@ -130,12 +147,19 @@ exports.processDue = async (req, res) => {
         status: 'Active',
         nextGenerationDate: { [require('sequelize').Op.lte]: now }
       },
-      include: [{ model: RecurringBillItem, as: 'items' }]
+      include: [{ model: RecurringBillItem, as: 'items' }],
+      transaction: t,
+      lock: t.LOCK.UPDATE
     });
 
     const processed = [];
 
     for (const template of templates) {
+      // Double check lock / idempotency check:
+      // Verify that the template is still active and the nextGenerationDate is still in the past.
+      if (template.status !== 'Active' || (template.nextGenerationDate && new Date(template.nextGenerationDate) > now)) {
+        continue;
+      }
       // 1. Create Voucher (Purchase type)
       const voucher = await Voucher.create({
         voucherNumber: `BILL-REC-${Date.now()}`,
@@ -230,6 +254,6 @@ exports.processDue = async (req, res) => {
   } catch (err) {
     await t.rollback();
     console.error(err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

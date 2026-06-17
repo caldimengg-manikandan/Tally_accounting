@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -87,7 +88,7 @@ const ChatBubble = ({ msg, onActionClick }) => {
 
 const AIAssistantView = () => {
   const navigate = useNavigate();
-  const user = (() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } })();
+  const user = (() => { try { return getUser(); } catch { return {}; } })();
   const role = (user.role || 'ADMIN').toLowerCase();
 
   const [messages, setMessages] = useState([

@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -35,7 +36,7 @@ const LedgersView = ({ showNew }) => {
         name: '', nature: 'Assets', type: 'Ledger', parent_id: '', description: '', openingBalance: '', openingBalanceType: 'Dr'
     });
     const companyId = sessionStorage.getItem('companyId');
-    const user = React.useMemo(() => { try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; } }, []);
+    const user = React.useMemo(() => { try { return getUser(); } catch { return {}; } }, []);
     const role = user.role || 'ADMIN';
     const canCreate = !['VIEWER', 'AUDITOR', 'DATA_ENTRY'].includes(role);
     const canDelete = !['VIEWER', 'AUDITOR', 'DATA_ENTRY'].includes(role); 

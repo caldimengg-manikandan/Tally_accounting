@@ -1,13 +1,13 @@
 const jwt = require('jsonwebtoken');
 
-// 1. verifyToken -> check for Bearer <token> in headers
+// 1. verifyToken -> check for access token in httpOnly cookie
 exports.verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  // Read token from cookies instead of headers
+  const token = req.cookies.accessToken;
+  if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
-  const token = authHeader.split(' ')[1];
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
       return res.status(401).json({ error: 'Failed to authenticate token' });
@@ -15,6 +15,38 @@ exports.verifyToken = (req, res, next) => {
     req.user = decoded; // Contains id, role, companyId (activeCompanyId)
     next();
   });
+};
+
+// 1.5 CSRF Protection Middleware
+exports.csrfProtection = (req, res, next) => {
+  // Only protect state-changing methods
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+
+  // Exclude initial login, registration, refresh, and oauth exchange endpoints from CSRF
+  const publicPaths = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/google-login',
+    '/api/auth/oauth-token-exchange',
+    '/api/auth/refresh',
+    '/api/auth/mfa/verify'
+  ];
+
+  const requestPath = req.path || req.originalUrl || '';
+  if (publicPaths.some(path => requestPath.startsWith(path))) {
+    return next();
+  }
+
+  const csrfCookie = req.cookies.csrfToken;
+  const csrfHeader = req.headers['x-csrf-token'];
+
+  if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+    return res.status(403).json({ error: 'CSRF validation failed' });
+  }
+
+  next();
 };
 
 // 2. authorizeRoles -> check if req.user.role is in the allowed list
@@ -76,7 +108,7 @@ exports.tenantAccess = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied: You do not have access to this company' });
     }
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 
   req.companyId = companyIdToCheck;
@@ -118,6 +150,6 @@ exports.guardLockedVoucher = async (req, res, next) => {
 
     next();
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return next(err);
   }
 };

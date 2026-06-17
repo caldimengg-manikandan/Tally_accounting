@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   X, Send, Loader2, 
@@ -25,12 +26,12 @@ const PurchaseOrderEmailModal = ({
 
   // ── Logged-in user ──────────────────────────────────────────────
   const currentUserEmail = useMemo(() => {
-    try { const u = JSON.parse(sessionStorage.getItem('user') || '{}'); return u?.email || ''; }
+    try { const u = getUser(); return u?.email || ''; }
     catch { return ''; }
   }, []);
 
   const currentUserName = useMemo(() => {
-    try { const u = JSON.parse(sessionStorage.getItem('user') || '{}'); return u?.name || u?.email || 'User'; }
+    try { const u = getUser(); return u?.name || u?.email || 'User'; }
     catch { return 'User'; }
   }, []);
 

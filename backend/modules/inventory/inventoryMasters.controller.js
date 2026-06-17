@@ -1,7 +1,7 @@
 const { StockGroup, StockCategory, UnitOfMeasure, Godown, Item } = require('../../models');
 
 // ─── STOCK GROUPS ─────────────────────────────────────────────────────────────
-exports.getStockGroups = async (req, res) => {
+exports.getStockGroups = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const groups = await StockGroup.findAll({
@@ -10,11 +10,11 @@ exports.getStockGroups = async (req, res) => {
     });
     res.json(groups);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.createStockGroup = async (req, res) => {
+exports.createStockGroup = async (req, res, next) => {
   try {
     const { name, description, companyId, parent_id } = req.body;
     const group = await StockGroup.create({
@@ -25,11 +25,11 @@ exports.createStockGroup = async (req, res) => {
     });
     res.status(201).json(group);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateStockGroup = async (req, res) => {
+exports.updateStockGroup = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, description, parent_id } = req.body;
@@ -43,11 +43,11 @@ exports.updateStockGroup = async (req, res) => {
     });
     res.json(group);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteStockGroup = async (req, res) => {
+exports.deleteStockGroup = async (req, res, next) => {
   try {
     const { id } = req.params;
     // Check if items are attached to this group
@@ -64,12 +64,12 @@ exports.deleteStockGroup = async (req, res) => {
     await StockGroup.destroy({ where: { id } });
     res.json({ message: 'Stock Group deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // ─── STOCK CATEGORIES ─────────────────────────────────────────────────────────
-exports.getStockCategories = async (req, res) => {
+exports.getStockCategories = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const categories = await StockCategory.findAll({
@@ -78,11 +78,11 @@ exports.getStockCategories = async (req, res) => {
     });
     res.json(categories);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.createStockCategory = async (req, res) => {
+exports.createStockCategory = async (req, res, next) => {
   try {
     const { name, description, companyId } = req.body;
     const category = await StockCategory.create({
@@ -92,11 +92,11 @@ exports.createStockCategory = async (req, res) => {
     });
     res.status(201).json(category);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateStockCategory = async (req, res) => {
+exports.updateStockCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
@@ -109,11 +109,11 @@ exports.updateStockCategory = async (req, res) => {
     });
     res.json(category);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteStockCategory = async (req, res) => {
+exports.deleteStockCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
     const itemCount = await Item.count({ where: { stockCategoryId: id } });
@@ -124,12 +124,12 @@ exports.deleteStockCategory = async (req, res) => {
     await StockCategory.destroy({ where: { id } });
     res.json({ message: 'Stock Category deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // ─── UNITS OF MEASURE ────────────────────────────────────────────────────────
-exports.getUnitsOfMeasure = async (req, res) => {
+exports.getUnitsOfMeasure = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const units = await UnitOfMeasure.findAll({
@@ -138,11 +138,11 @@ exports.getUnitsOfMeasure = async (req, res) => {
     });
     res.json(units);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.createUnitOfMeasure = async (req, res) => {
+exports.createUnitOfMeasure = async (req, res, next) => {
   try {
     const { symbol, formalName, decimalPlaces, companyId } = req.body;
     const unit = await UnitOfMeasure.create({
@@ -153,11 +153,11 @@ exports.createUnitOfMeasure = async (req, res) => {
     });
     res.status(201).json(unit);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateUnitOfMeasure = async (req, res) => {
+exports.updateUnitOfMeasure = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { symbol, formalName, decimalPlaces } = req.body;
@@ -171,11 +171,11 @@ exports.updateUnitOfMeasure = async (req, res) => {
     });
     res.json(unit);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteUnitOfMeasure = async (req, res) => {
+exports.deleteUnitOfMeasure = async (req, res, next) => {
   try {
     const { id } = req.params;
     const itemCount = await Item.count({ where: { unitOfMeasureId: id } });
@@ -186,12 +186,12 @@ exports.deleteUnitOfMeasure = async (req, res) => {
     await UnitOfMeasure.destroy({ where: { id } });
     res.json({ message: 'Unit of Measure deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // ─── GODOWNS ──────────────────────────────────────────────────────────────────
-exports.getGodowns = async (req, res) => {
+exports.getGodowns = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const godowns = await Godown.findAll({
@@ -200,11 +200,11 @@ exports.getGodowns = async (req, res) => {
     });
     res.json(godowns);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.createGodown = async (req, res) => {
+exports.createGodown = async (req, res, next) => {
   try {
     const { name, address, companyId } = req.body;
     const godown = await Godown.create({
@@ -214,11 +214,11 @@ exports.createGodown = async (req, res) => {
     });
     res.status(201).json(godown);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateGodown = async (req, res) => {
+exports.updateGodown = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, address } = req.body;
@@ -231,11 +231,11 @@ exports.updateGodown = async (req, res) => {
     });
     res.json(godown);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteGodown = async (req, res) => {
+exports.deleteGodown = async (req, res, next) => {
   try {
     const { id } = req.params;
     const itemCount = await Item.count({ where: { godownId: id } });
@@ -246,6 +246,6 @@ exports.deleteGodown = async (req, res) => {
     await Godown.destroy({ where: { id } });
     res.json({ message: 'Godown deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

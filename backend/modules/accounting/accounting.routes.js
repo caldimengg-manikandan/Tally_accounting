@@ -5,7 +5,7 @@ const { verifyToken, tenantAccess } = require('../../middleware/auth.middleware'
 
 router.use(verifyToken, tenantAccess);
 
-router.post('/calculate-gst', async (req, res) => {
+router.post('/calculate-gst', async (req, res, next) => {
   try {
     const { amount, rate, ledgerId, companyId } = req.body;
     const { Company, Ledger } = require('../../models');
@@ -22,7 +22,7 @@ router.post('/calculate-gst', async (req, res) => {
     
     res.json({ ...result, isInterstate, companyState: company.state, ledgerState: ledger.state });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

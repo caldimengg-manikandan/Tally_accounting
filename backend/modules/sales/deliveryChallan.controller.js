@@ -1,6 +1,6 @@
-const { DeliveryChallan, DeliveryChallanItem, Ledger, Item, sequelize } = require('../../models');
+const { DeliveryChallan, DeliveryChallanItem, Ledger, Item, Company, sequelize } = require('../../models');
 
-exports.createChallan = async (req, res) => {
+exports.createChallan = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { 
@@ -46,11 +46,11 @@ exports.createChallan = async (req, res) => {
     res.status(201).json(challan);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getChallans = async (req, res) => {
+exports.getChallans = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const challans = await DeliveryChallan.findAll({
@@ -62,13 +62,14 @@ exports.getChallans = async (req, res) => {
     });
     res.json(challans);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getChallanById = async (req, res) => {
+exports.getChallanById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { companyId } = req.query;
     const challan = await DeliveryChallan.findByPk(id, {
       include: [
         { model: Ledger, as: 'Customer', attributes: ['name', 'email', 'currency'] },
@@ -76,24 +77,38 @@ exports.getChallanById = async (req, res) => {
       ]
     });
     if (!challan) return res.status(404).json({ error: 'Challan not found' });
+    // BOLA guard
+    if (companyId && String(challan.CompanyId) !== String(companyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     res.json(challan);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateChallan = async (req, res) => {
+exports.updateChallan = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
     const { 
       customerLedgerId, challanNumber, referenceNumber, date, 
       challanType, salesperson, subject, subTotal, discount, 
-      taxAmount, adjustment, totalAmount, status, items, projectId 
+      taxAmount, adjustment, totalAmount, status, items, projectId, companyId
     } = req.body;
 
     const challan = await DeliveryChallan.findByPk(id);
-    if (!challan) return res.status(404).json({ error: 'Challan not found' });
+    if (!challan) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Challan not found' });
+    }
+
+    // BOLA guard
+    const requestingCompanyId = companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(challan.CompanyId) !== String(requestingCompanyId)) {
+      await t.rollback();
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     await challan.update({
       customerLedgerId,
@@ -132,29 +147,51 @@ exports.updateChallan = async (req, res) => {
     res.json(challan);
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteChallan = async (req, res) => {
+exports.deleteChallan = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+
+    const challan = await DeliveryChallan.findByPk(id);
+    if (!challan) return res.status(404).json({ error: 'Challan not found' });
+
+    // BOLA guard
+    if (requestingCompanyId && String(challan.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     await DeliveryChallan.destroy({ where: { id } });
     res.json({ message: 'Delivery Challan deleted.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
+
 const nodemailer = require('nodemailer');
 const PDFService = require('../../services/PDFService');
 
-exports.sendEmail = async (req, res) => {
+exports.sendEmail = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const requestingCompanyId = req.body.companyId || req.user?.CompanyId;
+
     const challan = await DeliveryChallan.findByPk(id, {
         include: [{ model: Ledger, as: 'Customer' }]
     });
     if (!challan) return res.status(404).json({ error: 'Challan not found' });
+
+    // BOLA guard
+    if (requestingCompanyId && String(challan.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Fetch company data so the PDF and email show the correct sender details
+    const company = await Company.findByPk(challan.CompanyId);
+    const companyName = company?.name || 'CalTally';
 
     const items = await DeliveryChallanItem.findAll({ 
         where: { DeliveryChallanId: id },
@@ -163,7 +200,7 @@ exports.sendEmail = async (req, res) => {
 
     const { subject, body, toEmail } = req.body;
 
-    const pdfBuffer = await PDFService.generateDeliveryChallan(challan, items);
+    const pdfBuffer = await PDFService.generateDeliveryChallan(challan, items, company ? company.toJSON() : {});
 
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
     const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
@@ -194,10 +231,10 @@ exports.sendEmail = async (req, res) => {
     }
 
     const mailOptions = {
-      from: `"Indus CAI" <${fromEmail}>`,
+      from: `"${companyName}" <${fromEmail}>`,
       to: finalToEmail,
-      subject: subject || `Delivery Challan ${challan.challanNumber} from Indus CAI`,
-      text: body || `Dear ${challan.Customer?.name || 'Customer'},\n\nPlease find attached Delivery Challan ${challan.challanNumber}.\n\nBest regards,\nIndus CAI Team`,
+      subject: subject || `Delivery Challan ${challan.challanNumber} from ${companyName}`,
+      text: body || `Dear ${challan.Customer?.name || 'Customer'},\n\nPlease find attached Delivery Challan ${challan.challanNumber}.\n\nBest regards,\n${companyName} Team`,
       attachments: [{
         filename: `Challan_${challan.challanNumber}.pdf`,
         content: pdfBuffer

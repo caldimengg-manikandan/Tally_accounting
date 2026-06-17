@@ -1,6 +1,6 @@
 const { FinancialPeriod, AuditLog } = require('../../models');
 
-exports.createFinancialPeriod = async (req, res) => {
+exports.createFinancialPeriod = async (req, res, next) => {
   try {
     const { periodName, startDate, endDate } = req.body;
     const companyId = req.companyId;
@@ -22,20 +22,20 @@ exports.createFinancialPeriod = async (req, res) => {
 
     res.status(201).json(period);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getFinancialPeriods = async (req, res) => {
+exports.getFinancialPeriods = async (req, res, next) => {
   try {
     const periods = await FinancialPeriod.findAll({ where: { CompanyId: req.companyId } });
     res.json(periods);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.togglePeriodLock = async (req, res) => {
+exports.togglePeriodLock = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { isLocked } = req.body;
@@ -66,6 +66,6 @@ exports.togglePeriodLock = async (req, res) => {
 
     res.json(period);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

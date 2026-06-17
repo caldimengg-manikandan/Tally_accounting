@@ -45,9 +45,19 @@ router.post('/google-login',  strictLimiter, authController.googleLogin);
 router.post('/refresh',  looseLimiter, authController.refresh);
 router.post('/logout',   verifyToken,  authController.logout);
 
+/**
+ * POST /api/auth/oauth-token-exchange
+ * Called by the /auth-callback frontend page after the OAuth redirect.
+ * The backend set an httpOnly 'oauthAccessToken' cookie with a 2-minute TTL.
+ * This endpoint validates that cookie, issues a proper refresh token cookie,
+ * and returns the access token + user data as JSON for sessionStorage.
+ * The one-time oauthAccessToken cookie is cleared after exchange.
+ */
+router.post('/oauth-token-exchange', looseLimiter, authController.oauthTokenExchange);
+
 // ── Current User (/me) ────────────────────────────────────────────────────────
-// Returns the decoded JWT payload — useful for frontend "who am I?" checks.
-router.get('/me', looseLimiter, verifyToken, (req, res) => res.json(req.user));
+// Returns the full user payload + companies
+router.get('/me', looseLimiter, verifyToken, authController.me);
 
 // ── Company Context ───────────────────────────────────────────────────────────
 router.post('/switch-company', verifyToken, authController.switchCompany);
@@ -69,18 +79,33 @@ router.get('/google', strictLimiter, passport.authenticate('google', {
 router.get('/callback',
   passport.authenticate('google', {
     session: false,
-    failureRedirect: 'http://localhost:5173/login?error=oauth_refused'
+    failureRedirect: `${process.env.CLIENT_URL || 'http://127.0.0.1:5173'}/login?error=oauth_refused`
   }),
   (req, res) => {
-    // Generate our JWT token for the authenticated user
-    const token = jwt.sign(
-      { id: req.user.id, role: req.user.role, companyId: req.user.activeCompanyId },
-      process.env.JWT_SECRET,
-      { expiresIn: '15m' } // Phase 2: short-lived access token
-    );
+    const CLIENT_URL = process.env.CLIENT_URL || 'http://127.0.0.1:5173';
+    try {
+      // 🔐 SECURITY: Never put JWT in the URL (visible in browser history, server logs, referrer headers)
+      const accessToken = jwt.sign(
+        { id: req.user.id, role: req.user.role, companyId: req.user.activeCompanyId },
+        process.env.JWT_SECRET,
+        { expiresIn: '15m' }
+      );
 
-    // Redirect user back to the frontend with the identity token
-    res.redirect(`http://localhost:5173/auth-callback?token=${token}`);
+      // Store access token in a short-lived httpOnly cookie for the redirect handshake
+      res.cookie('oauthAccessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax', // 'lax' required for cross-site redirect flows
+        maxAge: 2 * 60 * 1000, // 2 minutes — frontend must exchange immediately
+        path: '/'
+      });
+
+      // Redirect without token in URL
+      res.redirect(`${CLIENT_URL}/auth-callback`);
+    } catch (err) {
+      console.error('[OAuth Callback Error]', err.message);
+      res.redirect(`${CLIENT_URL}/login?error=auth_failed`);
+    }
   }
 );
 

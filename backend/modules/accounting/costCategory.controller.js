@@ -1,6 +1,6 @@
 const { CostCategory, AuditLog } = require('../../models');
 
-exports.createCostCategory = async (req, res) => {
+exports.createCostCategory = async (req, res, next) => {
   try {
     const { name, description, companyId, CompanyId } = req.body;
     const finalCompanyId = req.companyId || companyId || CompanyId;
@@ -22,21 +22,21 @@ exports.createCostCategory = async (req, res) => {
 
     res.status(201).json(category);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getCostCategories = async (req, res) => {
+exports.getCostCategories = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const categories = await CostCategory.findAll({ where: { CompanyId: companyId } });
     res.json(categories);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteCostCategory = async (req, res) => {
+exports.deleteCostCategory = async (req, res, next) => {
   try {
     const category = await CostCategory.findByPk(req.params.id);
     if (!category) return res.status(404).json({ error: 'Cost Category not found' });
@@ -44,6 +44,6 @@ exports.deleteCostCategory = async (req, res) => {
     await category.destroy();
     res.json({ message: 'Cost Category deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

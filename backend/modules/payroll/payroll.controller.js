@@ -3,16 +3,16 @@ const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 
 // --- Employee CRUD ---
-exports.createEmployee = async (req, res) => {
+exports.createEmployee = async (req, res, next) => {
   try {
     const employee = await Employee.create({ ...req.body, CompanyId: req.body.companyId });
     res.status(201).json(employee);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getEmployees = async (req, res) => {
+exports.getEmployees = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const employees = await Employee.findAll({ 
@@ -21,34 +21,34 @@ exports.getEmployees = async (req, res) => {
     });
     res.json(employees);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.updateEmployee = async (req, res) => {
+exports.updateEmployee = async (req, res, next) => {
   try {
     const employee = await Employee.findByPk(req.params.id);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
     await employee.update(req.body);
     res.json(employee);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.deleteEmployee = async (req, res) => {
+exports.deleteEmployee = async (req, res, next) => {
   try {
     const employee = await Employee.findByPk(req.params.id);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
     await employee.destroy();
     res.json({ message: 'Employee deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // --- Salary Structure ---
-exports.saveSalaryStructure = async (req, res) => {
+exports.saveSalaryStructure = async (req, res, next) => {
   try {
     const { employeeId, basic, hra, da, incentives, pfDeduction, esiDeduction, profTaxDeduction, companyId } = req.body;
     let struct = await SalaryStructure.findOne({ where: { EmployeeId: employeeId } });
@@ -61,12 +61,12 @@ exports.saveSalaryStructure = async (req, res) => {
     }
     res.json(struct);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // --- Attendance Log ---
-exports.saveAttendance = async (req, res) => {
+exports.saveAttendance = async (req, res, next) => {
   try {
     const { employeeId, date, status, remarks, companyId } = req.body;
     let attendance = await Attendance.findOne({ where: { EmployeeId: employeeId, date } });
@@ -79,11 +79,11 @@ exports.saveAttendance = async (req, res) => {
     }
     res.json(attendance);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getAttendanceRange = async (req, res) => {
+exports.getAttendanceRange = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const { startDate, endDate } = req.query;
@@ -95,12 +95,12 @@ exports.getAttendanceRange = async (req, res) => {
     });
     res.json(attendance);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // --- Payroll Processing Engine ---
-exports.processPayroll = async (req, res) => {
+exports.processPayroll = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { companyId, month, year, paymentLedgerId, date } = req.body;
@@ -274,11 +274,11 @@ exports.processPayroll = async (req, res) => {
   } catch (err) {
     if (t) await t.rollback();
     console.error('Error processing payroll:', err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
-exports.getPayslips = async (req, res) => {
+exports.getPayslips = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const payslips = await Payslip.findAll({
@@ -287,6 +287,6 @@ exports.getPayslips = async (req, res) => {
     });
     res.json(payslips);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

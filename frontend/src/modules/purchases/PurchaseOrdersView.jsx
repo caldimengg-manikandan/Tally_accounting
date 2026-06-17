@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -30,7 +31,7 @@ const PurchaseOrdersView = ({ companyId }) => {
 
   const currentUserEmail = useMemo(() => {
     try {
-      const u = JSON.parse(sessionStorage.getItem('user') || '{}');
+      const u = getUser();
       return u?.email || '';
     } catch (e) {
       return '';

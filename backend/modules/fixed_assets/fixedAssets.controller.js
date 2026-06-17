@@ -39,7 +39,7 @@ const resolveAccumulatedDepreciationLedger = async (asset, transaction) => {
 };
 
 // Create Asset
-exports.createAsset = async (req, res) => {
+exports.createAsset = async (req, res, next) => {
   try {
     const { name, purchaseDate, purchaseValue, depreciationMethod, usefulLife, scrapValue, assetLedgerId, depreciationLedgerId, companyId, depreciationRate, accumulatedDepreciationLedgerId, usefulLifeYears } = req.body;
     
@@ -97,12 +97,12 @@ exports.createAsset = async (req, res) => {
 
     res.status(201).json(asset);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // List Assets
-exports.getAssets = async (req, res) => {
+exports.getAssets = async (req, res, next) => {
   try {
     const { companyId } = req.params;
     const assets = await FixedAsset.findAll({
@@ -115,36 +115,36 @@ exports.getAssets = async (req, res) => {
     res.json(assets);
   } catch (err) {
     console.error("GET_ASSETS_ERROR:", err);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Update Asset
-exports.updateAsset = async (req, res) => {
+exports.updateAsset = async (req, res, next) => {
   try {
     const asset = await FixedAsset.findOne({ where: { id: req.params.id, CompanyId: req.companyId } });
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
     await asset.update(req.body);
     res.json(asset);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Delete Asset
-exports.deleteAsset = async (req, res) => {
+exports.deleteAsset = async (req, res, next) => {
   try {
     const asset = await FixedAsset.findOne({ where: { id: req.params.id, CompanyId: req.companyId } });
     if (!asset) return res.status(404).json({ error: 'Asset not found' });
     await asset.destroy();
     res.json({ message: 'Asset deleted successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Run Depreciation Calculation & Post Journal Voucher
-exports.depreciateAsset = async (req, res) => {
+exports.depreciateAsset = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -260,12 +260,12 @@ exports.depreciateAsset = async (req, res) => {
     res.status(201).json({ message: 'Depreciation posted successfully', log, asset });
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Asset Disposal Endpoint
-exports.disposeAsset = async (req, res) => {
+exports.disposeAsset = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { id } = req.params;
@@ -331,12 +331,12 @@ exports.disposeAsset = async (req, res) => {
     res.json({ message: 'Asset disposed successfully', voucher, gainLoss });
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };
 
 // Run Batch Depreciation for all active assets of a company
-exports.depreciateBatch = async (req, res) => {
+exports.depreciateBatch = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
     const { companyId } = req.params;
@@ -455,6 +455,6 @@ exports.depreciateBatch = async (req, res) => {
     res.status(201).json({ message: 'Batch depreciation posted successfully', count: results.length, details: results });
   } catch (err) {
     if (t) await t.rollback();
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 };

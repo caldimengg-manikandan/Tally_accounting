@@ -431,7 +431,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
             </header>
 
             {/* Main Content Area */}
-            <div className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="flex-1 overflow-y-auto">
                 <div className="max-w-[1000px] mx-auto py-10 px-6">
                     <div className="bg-white rounded border border-slate-200 shadow-sm p-12 space-y-12 animate-fade-in">
                     <ManageSalespersonsModal
@@ -659,14 +659,38 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                 <textarea value={formData.termsConditions} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, termsConditions: val})); }} className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-600 outline-none focus:bg-white focus:border-blue-500 transition-all resize-none shadow-sm" />
                             </div>
                         </div>
-                        <div className="w-80 space-y-4">
-                            <div className="flex justify-between text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Sub Total</span><span>{totals.subTotal.toFixed(2)}</span></div>
-                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Discount (%)</span><input type="number" value={formData.discount} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, discount: val})); }} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
-                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Tax (GST %)</span><input type="number" value={formData.taxPercent} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, taxPercent: val})); }} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
-                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest"><span>Adjustment</span><input type="number" value={formData.adjustment} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, adjustment: val})); }} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold" /></div>
-                            <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
+                        <div className="w-96 space-y-4">
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest">
+                                <span>Sub Total</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-20" />
+                                    <span className="w-24 text-right tabular-nums text-slate-900 font-mono">{totals.subTotal.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest">
+                                <span>Discount (%)</span>
+                                <div className="flex items-center gap-3">
+                                    <input type="number" value={formData.discount} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, discount: val})); }} className="w-20 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 focus:bg-white transition-all" />
+                                    <span className="w-24 text-right tabular-nums text-slate-600 font-mono">- {totals.discountAmt.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest">
+                                <span>Tax (GST %)</span>
+                                <div className="flex items-center gap-3">
+                                    <input type="number" value={formData.taxPercent} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, taxPercent: val})); }} className="w-20 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 focus:bg-white transition-all" />
+                                    <span className="w-24 text-right tabular-nums text-slate-600 font-mono">+ {totals.taxAmt.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center text-[13px] font-bold text-slate-500 uppercase tracking-widest">
+                                <span>Adjustment</span>
+                                <div className="flex items-center gap-3">
+                                    <input type="number" value={formData.adjustment} onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, adjustment: val})); }} className="w-20 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 focus:bg-white transition-all" />
+                                    <span className="w-24 text-right tabular-nums text-slate-600 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : ''}{parseFloat(formData.adjustment || 0).toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6 rounded-lg">
                                 <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Total Amount</span>
-                                <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter">{getCurrencyDisplay(customers.find(c => c.name === formData.customerName)?.currency)} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">{getCurrencyDisplay(customers.find(c => c.name === formData.customerName)?.currency)} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>
                     </div>

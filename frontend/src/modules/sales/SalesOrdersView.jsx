@@ -938,44 +938,60 @@ const SalesOrdersView = ({ companyId }) => {
                              <div className="w-96 space-y-4">
                                     <div className="flex justify-between items-center text-[13px]">
                                         <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
-                                        <span className="font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                                    </div>
-
-                                    <div className="flex justify-between items-center text-[13px]">
-                                        <label className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</label>
-                                        <input type="number" value={formData.discount} onChange={e => setFormData({ ...formData, discount: parseFloat(e.target.value) })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
-                                    </div>
-
-                                    <div className="flex justify-between items-center text-[13px]">
-                                        <label className="text-slate-500 font-bold uppercase tracking-widest">Tax (GST)</label>
-                                        <div className="relative w-36">
-                                            <select 
-                                                    value={formData.taxPercent} 
-                                                    onChange={e => {
-                                                        const rate = parseFloat(e.target.value) || 0;
-                                                        setFormData(p => ({ ...p, taxPercent: rate, tax: p.subTotal * (rate/100) }));
-                                                    }}
-                                                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[12px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none"
-                                            >
-                                                    <option value="0">GST (0%)</option>
-                                                    <option value="5">GST (5%)</option>
-                                                    <option value="12">GST (12%)</option>
-                                                    <option value="18">GST (18%)</option>
-                                                    <option value="28">GST (28%)</option>
-                                            </select>
-                                            <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-36" />
+                                            <span className="w-24 text-right font-bold text-slate-900 font-mono">{formData.subTotal.toFixed(2)}</span>
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
-                                        <input type="number" value={formData.adjustment} onChange={e => setFormData({ ...formData, adjustment: e.target.value })} className="w-32 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
+                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Discount (%)</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-36 flex justify-end">
+                                                <input type="number" value={formData.discount} onChange={e => setFormData({ ...formData, discount: parseFloat(e.target.value) || 0 })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
+                                            </div>
+                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">- {(formData.subTotal * (parseFloat(formData.discount || 0) / 100)).toFixed(2)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-[13px]">
+                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Tax (GST)</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative w-36">
+                                                <select 
+                                                        value={formData.taxPercent} 
+                                                        onChange={e => {
+                                                            const rate = parseFloat(e.target.value) || 0;
+                                                            setFormData(p => ({ ...p, taxPercent: rate, tax: p.subTotal * (rate/100) }));
+                                                        }}
+                                                        className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[12px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none"
+                                                >
+                                                        <option value="0">GST (0%)</option>
+                                                        <option value="5">GST (5%)</option>
+                                                        <option value="12">GST (12%)</option>
+                                                        <option value="18">GST (18%)</option>
+                                                        <option value="28">GST (28%)</option>
+                                                </select>
+                                                <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                            </div>
+                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">+ {formData.taxAmount.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-[13px]">
+                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Adjustment</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-36 flex justify-end">
+                                                <input type="number" value={formData.adjustment} onChange={e => setFormData({ ...formData, adjustment: e.target.value })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
+                                            </div>
+                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : ''}{parseFloat(formData.adjustment || 0).toFixed(2)}</span>
+                                        </div>
                                     </div>
 
                                     <div className="pt-6 mt-6 border-t border-slate-200">
                                         <div className="flex justify-between items-center">
                                             <span className="text-[15px] font-bold text-slate-900 uppercase tracking-widest">Total Amount</span>
-                                            <span className="text-[24px] font-bold text-blue-600 tabular-nums">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {formData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <span className="text-[24px] font-bold text-blue-600 font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerId)?.currency)} {formData.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                     <div className="text-right">

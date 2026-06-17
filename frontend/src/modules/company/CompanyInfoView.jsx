@@ -1,3 +1,4 @@
+import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, Save, Upload, CheckCircle2, AlertCircle, Loader2, HelpCircle, 
@@ -106,7 +107,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, userId: null });
   const [inviteData, setInviteData] = useState({ name: '', email: '', password: '', role: 'EMPLOYEE' });
-  const userObj = JSON.parse(sessionStorage.getItem('user') || '{}');
+  const userObj = getUser();
   const isAdmin = userObj.role === 'ADMIN' || userObj.role === 'SUPER_ADMIN';
 
   const [companies, setCompanies] = useState([]);

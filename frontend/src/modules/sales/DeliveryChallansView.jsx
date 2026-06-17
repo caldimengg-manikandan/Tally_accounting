@@ -533,7 +533,7 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                 <button onClick={() => navigate('/delivery-challans')} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={24} /></button>
             </header>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="flex-1 overflow-y-auto">
                 <div className="max-w-[1000px] mx-auto py-10 px-6">
                     <div className="bg-white rounded border border-slate-200 shadow-sm p-12 space-y-12 animate-fade-in">
                   
@@ -771,29 +771,42 @@ const DeliveryChallanForm = ({ companyId, navigate, editId }) => {
                         </div>
                      </div>
 
-                     <div className="w-80 space-y-4">
-                        <div className="flex justify-between text-[13px]">
-                          <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
-                           <span className="font-bold text-slate-900 font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {totals.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                        </div>
-
+                     <div className="w-96 space-y-4">
                         <div className="flex justify-between items-center text-[13px]">
-                          <label className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</label>
-                          <div className="flex items-center gap-4">
-                             <input type="number" value={formData.discount} onChange={e => setFormData({...formData, discount: e.target.value})} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none" />
-                          </div>
+                        <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
+                        <div className="flex items-center gap-3">
+                        <div className="w-24" />
+                        <span className="font-bold text-slate-900 font-mono w-24 text-right">{totals.subTotal.toFixed(2)}</span>
                         </div>
-
+                        </div>
+                        
                         <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500 font-bold uppercase tracking-widest">Tax (GST 18%)</span>
-                           <span className="text-slate-900 font-bold font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {totals.taxAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <span className="text-slate-500 font-bold uppercase tracking-widest">Discount (%)</span>
+                        <div className="flex items-center gap-3">
+                        <div className="w-24 flex justify-end">
+                        <input type="number" value={formData.discount} onChange={e => setFormData({...formData, discount: e.target.value})} className="w-16 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 focus:bg-white transition-all" />
                         </div>
-
+                        <span className="w-24 text-right font-bold text-slate-600 font-mono">- {totals.discountAmt.toFixed(2)}</span>
+                        </div>
+                        </div>
+                        
                         <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
-                          <input type="number" value={formData.adjustment} onChange={e => setFormData({...formData, adjustment: e.target.value})} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none" />
+                        <span className="text-slate-500 font-bold uppercase tracking-widest">Tax (GST 18%)</span>
+                        <div className="flex items-center gap-3">
+                        <div className="w-24" />
+                        <span className="text-slate-900 font-bold font-mono w-24 text-right">+ {totals.taxAmt.toFixed(2)}</span>
                         </div>
-
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-[13px]">
+                        <span className="text-slate-500 font-bold uppercase tracking-widest">Adjustment</span>
+                        <div className="flex items-center gap-3">
+                        <div className="w-24 flex justify-end">
+                        <input type="number" value={formData.adjustment} onChange={e => setFormData({...formData, adjustment: e.target.value})} className="w-24 h-8 px-2 bg-slate-50 border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 focus:bg-white transition-all" />
+                        </div>
+                        <span className="w-24 text-right font-bold text-slate-600 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : ''}{parseFloat(formData.adjustment || 0).toFixed(2)}</span>
+                        </div>
+                        </div>
                         <div className="pt-6 border-t border-slate-200 flex justify-between items-center bg-slate-50 -mx-8 px-8 py-4 mt-6">
                           <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">Challan Total</span>
                            <span className="text-[24px] font-bold text-[#1e61f0] tracking-tighter font-mono">{getCurrencyDisplay(customers.find(c => c.id === formData.customerLedgerId)?.currency)} {totals.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -1154,7 +1167,7 @@ const DeliveryChallansView = ({ companyId }) => {
                         />
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+                <div className="flex-1 overflow-y-auto py-2">
                     {filtered.map(c => (
                         <div 
                             key={c.id}

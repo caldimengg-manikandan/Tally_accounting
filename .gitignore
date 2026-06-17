@@ -7,3 +7,12 @@ dist/
 .idea/
 .vscode/
 build/
+
+# Secrets and Databases
+certs/
+*.pem
+*.key
+backup.sql
+*.sql
+*.dump
+uploads/

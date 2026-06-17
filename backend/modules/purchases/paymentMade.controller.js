@@ -52,7 +52,7 @@ async function updateBillsForPayment(paymentVoucherId, transaction = null) {
         await bill.update({ status: billStatus }, { transaction });
     }
 }
-exports.getNextPaymentNumber = async (req, res) => {
+exports.getNextPaymentNumber = async (req, res, next) => {
     try {
         const { companyId } = req.params;
 
@@ -78,11 +78,11 @@ exports.getNextPaymentNumber = async (req, res) => {
         res.json({ nextNumber: maxNum + 1 });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.getUnpaidBills = async (req, res) => {
+exports.getUnpaidBills = async (req, res, next) => {
     try {
         const { vendorId } = req.params;
         const { companyId, excludePaymentId } = req.query;
@@ -159,11 +159,11 @@ exports.getUnpaidBills = async (req, res) => {
         res.json(billsWithBalance.filter(b => b.balance > 0.01));
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.createPayment = async (req, res) => {
+exports.createPayment = async (req, res, next) => {
     const t = await sequelize.transaction();
     try {
         const { 
@@ -252,11 +252,11 @@ exports.createPayment = async (req, res) => {
     } catch (err) {
         await t.rollback();
         console.error(err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.updatePayment = async (req, res) => {
+exports.updatePayment = async (req, res, next) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
@@ -329,11 +329,11 @@ exports.updatePayment = async (req, res) => {
         res.json({ ...voucher.toJSON(), status: voucher.status });
     } catch (err) {
         await t.rollback();
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.markAsPaid = async (req, res) => {
+exports.markAsPaid = async (req, res, next) => {
     try {
         const { id } = req.params;
 
@@ -358,11 +358,11 @@ exports.markAsPaid = async (req, res) => {
         });
     } catch (err) {
         console.error('markAsPaid error:', err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.getPayment = async (req, res) => {
+exports.getPayment = async (req, res, next) => {
     try {
         const { id } = req.params;
         const payment = await Voucher.findByPk(id, {
@@ -460,11 +460,11 @@ exports.getPayment = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.deletePayment = async (req, res) => {
+exports.deletePayment = async (req, res, next) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
@@ -529,11 +529,11 @@ exports.deletePayment = async (req, res) => {
         res.json({ message: "Payment deleted successfully" });
     } catch (err) {
         await t.rollback();
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
-exports.getPayments = async (req, res) => {
+exports.getPayments = async (req, res, next) => {
     try {
         const { companyId } = req.params;
         const payments = await Voucher.findAll({
@@ -582,6 +582,6 @@ exports.getPayments = async (req, res) => {
 
         res.json(result);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
