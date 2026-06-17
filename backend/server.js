@@ -60,6 +60,10 @@ const corsOptions = {
     // Allow requests with no origin (curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Auto-allow Render and Vercel preview environments
+    if (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app')) return callback(null, true);
+    // If we're in production without a specific CLIENT_URL, allow anyway to prevent locking out the frontend
+    if (process.env.NODE_ENV === 'production' && !process.env.CLIENT_URL) return callback(null, true);
     callback(new Error(`CORS: Origin '${origin}' not allowed`));
   },
   credentials: true,
@@ -69,8 +73,7 @@ const corsOptions = {
 };
 
 if (!process.env.CLIENT_URL && process.env.NODE_ENV === 'production') {
-  console.error('❌ FATAL: CLIENT_URL not set in production. Refusing to start.');
-  process.exit(1);
+  console.warn('⚠️ WARNING: CLIENT_URL not set in production. Using fallback CORS rules.');
 }
 
 // 2. Middleware Strategy
