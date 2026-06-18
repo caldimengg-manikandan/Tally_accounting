@@ -78,7 +78,7 @@ import ManualJournalEntryView from './modules/accountant/ManualJournalEntryView'
 import ManualJournalsListView from './modules/accountant/ManualJournalsListView';
 
 // ── APIs ─────────────────────────────────────────────────────────
-import { companyAPI, reportsAPI, voucherAPI, exchangeOAuthToken, getCurrentUser } from './services/api';
+import { companyAPI, reportsAPI, voucherAPI, exchangeOAuthToken, getCurrentUser, authAPI } from './services/api';
 
 // ── Icons ─────────────────────────────────────────────────────────
 import {
@@ -592,7 +592,12 @@ function AuthenticatedApp() {
   const [companies, setCompanies] = useState([]);
   const [companyId, setCompanyId] = useState(sessionStorage.getItem('companyId'));
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    try {
+      await authAPI.logout();
+    } catch (e) {
+      console.error('Logout API failed', e);
+    }
     ['token', 'companyId', 'companyName', 'user'].forEach(k => sessionStorage.removeItem(k));
     window.location.reload();
   }, []);

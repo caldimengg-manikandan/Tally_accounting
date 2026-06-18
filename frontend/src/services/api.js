@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://127.0.0.1:5000/api');
+const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? 'https://tally-backend-wfml.onrender.com/api' : 'http://localhost:5000/api');
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -148,10 +148,10 @@ export const googleLogin = (credential) => api.post('/auth/google-login', { cred
  * This endpoint validates that cookie and sets the full session cookies.
  */
 export const exchangeOAuthToken = () => api.post('/auth/oauth-token-exchange', {});
-
 export const getCurrentUser = () => api.get('/auth/me');
+export const logout = () => api.post('/auth/logout');
 
-export const authAPI = { register, login, googleLogin, exchangeOAuthToken, getCurrentUser };
+export const authAPI = { register, login, logout, googleLogin, exchangeOAuthToken, getCurrentUser };
 
 // ─── Users ─────────────────────────────────────────
 export const usersAPI = {
