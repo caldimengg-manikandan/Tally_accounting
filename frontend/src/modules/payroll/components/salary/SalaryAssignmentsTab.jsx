@@ -180,7 +180,41 @@ export default function SalaryAssignmentsTab() {
     try {
       const res = await salaryAPI.getEmployeeAssignment(employeeId);
       if (res.data && res.data.success) {
-        setViewDetails(res.data.data);
+        const raw = res.data.data;
+        const annualCtc = parseFloat(raw.annualCtc) || 0;
+        
+        // 1. Set the calculation engine base to: Monthly Gross = Annual CTC / 12
+        const monthlyGross = annualCtc / 12;
+        
+        // 2. Update the breakdown loop rendering values
+        const basic = monthlyGross * 0.50; // 50% of Gross
+        const hra = basic * 0.50;          // 50% of Basic
+        const fixed = monthlyGross - basic - hra; // Remaining spillover
+        
+        // Statutory Deductions
+        const pf = Math.min(basic * 0.12, 1800);
+        const pt = 200;
+        const totalDeductions = pf + pt;
+        const netPay = monthlyGross - totalDeductions;
+        
+        // Ensure components list has the calculated values
+        const updatedComponents = raw.components?.map(c => {
+          let amount = 0;
+          if (c.code === 'BASIC') amount = basic;
+          else if (c.code === 'HRA') amount = hra;
+          else if (c.code === 'FIXED') amount = fixed;
+          else if (c.code === 'PF_EMP' || c.code === 'PF') amount = pf;
+          else if (c.code === 'PT') amount = pt;
+          return { ...c, monthlyAmount: amount };
+        }) || [];
+
+        setViewDetails({
+          ...raw,
+          grossEarnings: monthlyGross,
+          totalDeductions,
+          netPay,
+          components: updatedComponents
+        });
       }
     } catch (err) {
       alert(err.response?.data?.error || 'Could not load salary breakdown details');
