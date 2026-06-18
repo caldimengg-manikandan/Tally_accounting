@@ -95,7 +95,7 @@ router.get('/callback',
       res.cookie('oauthAccessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax', // 'lax' required for cross-site redirect flows
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'lax' required for cross-site redirect flows locally, 'none' in prod
         maxAge: 2 * 60 * 1000, // 2 minutes — frontend must exchange immediately
         path: '/'
       });

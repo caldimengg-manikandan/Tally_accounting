@@ -51,7 +51,7 @@ const setRefreshCookie = (res, rawToken) => {
   res.cookie('refreshToken', rawToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
 };
@@ -60,7 +60,7 @@ const setAccessCookie = (res, token) => {
   res.cookie('accessToken', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     maxAge: 15 * 60 * 1000 // 15 minutes
   });
 };
@@ -69,7 +69,7 @@ const setCsrfCookie = (res, token) => {
   res.cookie('csrfToken', token, {
     httpOnly: false, // Frontend needs to read this
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     maxAge: 60 * 60 * 1000 // 1 hour — long enough to outlast the access token, refreshed on every login/refresh
   });
 };
@@ -384,9 +384,9 @@ exports.logout = async (req, res) => {
       const hashed = hashToken(rawToken);
       await RefreshToken.destroy({ where: { token: hashed } });
     }
-    res.clearCookie('refreshToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
-    res.clearCookie('accessToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
-    res.clearCookie('csrfToken', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+    res.clearCookie('refreshToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict' });
+    res.clearCookie('accessToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict' });
+    res.clearCookie('csrfToken', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict' });
     await logAuthEvent('LOGOUT', { userId: req.user?.id, ip, userAgent });
     res.json({ message: 'Logged out successfully.' });
   } catch (err) {
@@ -641,7 +641,7 @@ exports.oauthTokenExchange = async (req, res) => {
     res.clearCookie('oauthAccessToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/'
     });
 
