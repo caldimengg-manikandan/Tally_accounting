@@ -67,11 +67,12 @@ const setAccessCookie = (res, token) => {
 
 const setCsrfCookie = (res, token) => {
   res.cookie('csrfToken', token, {
-    httpOnly: false, // Frontend needs to read this
+    httpOnly: false, // Frontend needs to read this locally
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-    maxAge: 60 * 60 * 1000 // 1 hour — long enough to outlast the access token, refreshed on every login/refresh
+    maxAge: 60 * 60 * 1000 // 1 hour
   });
+  res.setHeader('X-CSRF-Token', token); // For cross-domain frontend access
 };
 
 /**
