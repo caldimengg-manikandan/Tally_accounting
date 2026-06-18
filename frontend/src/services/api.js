@@ -7,6 +7,10 @@ const api = axios.create({
   withCredentials: true // Always send cookies
 });
 
+// In-memory fallback for cross-domain setups (Vercel -> Render)
+// where document.cookie cannot read cross-domain cookies
+let memoryCsrfToken = null;
+
 // Helper to extract a cookie by name
 const getCookie = (name) => {
   const value = `; ${document.cookie}`;
@@ -15,11 +19,25 @@ const getCookie = (name) => {
   return null;
 };
 
+// Intercept responses to aggressively capture any new CSRF tokens from headers
+api.interceptors.response.use((response) => {
+  const headerCsrf = response.headers['x-csrf-token'];
+  if (headerCsrf) {
+    memoryCsrfToken = headerCsrf;
+  }
+  return response;
+}, (error) => {
+  if (error.response?.headers?.['x-csrf-token']) {
+    memoryCsrfToken = error.response.headers['x-csrf-token'];
+  }
+  return Promise.reject(error);
+});
+
 // Attach CSRF token and active company ID to every request
 api.interceptors.request.use(config => {
   // Add CSRF token for state-changing requests
   if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
-    const csrfToken = getCookie('csrfToken');
+    const csrfToken = getCookie('csrfToken') || memoryCsrfToken;
     if (csrfToken) {
       config.headers['X-CSRF-Token'] = csrfToken;
     }
@@ -61,20 +79,20 @@ api.interceptors.response.use(
       !originalRequest._csrfRetry &&
       !originalRequest.url?.includes('/auth/');
 
-    if (isCsrfError) {
-      originalRequest._csrfRetry = true;
-      try {
-        await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
-        await new Promise(r => setTimeout(r, 50)); // let browser register new cookie
-        const freshCsrf = getCookie('csrfToken');
-        if (freshCsrf) {
-          originalRequest.headers['X-CSRF-Token'] = freshCsrf;
+      if (isCsrfError) {
+        originalRequest._csrfRetry = true;
+        try {
+          const refreshRes = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
+          const freshCsrf = refreshRes.headers['x-csrf-token'] || getCookie('csrfToken') || memoryCsrfToken;
+          if (freshCsrf) {
+            memoryCsrfToken = freshCsrf;
+            originalRequest.headers['X-CSRF-Token'] = freshCsrf;
+          }
+          return api(originalRequest);
+        } catch (_refreshErr) {
+          // Refresh failed — fall through to normal reject
         }
-        return api(originalRequest);
-      } catch (_refreshErr) {
-        // Refresh failed — fall through to normal reject
       }
-    }
 
     // ── Access token expired (401) ────────────────────────────────────
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -86,13 +104,13 @@ api.interceptors.response.use(
       if (isRefreshing) {
         // Queue this request until the refresh completes
         return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(() => {
-          const freshCsrf = getCookie('csrfToken');
+          failedQueue.push({ resolve, reject, config: originalRequest });
+        }).then((token) => {
+          // Retry the original request without needing to manually attach a token
+          const freshCsrf = getCookie('csrfToken') || memoryCsrfToken;
           if (freshCsrf) {
             originalRequest.headers['X-CSRF-Token'] = freshCsrf;
           }
-          // Retry the original request without needing to manually attach a token
           return api(originalRequest);
         }).catch(err => Promise.reject(err));
       }
@@ -101,18 +119,12 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Refresh token is in httpOnly cookie — sent automatically
-        const refreshRes = await axios.post(
-          `${API_BASE}/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
-
+        const refreshRes = await axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true });
+        
         if (refreshRes.data) {
-          // Wait for a short moment to ensure cookies are registered by the browser
-          await new Promise(r => setTimeout(r, 50));
-          const freshCsrf = getCookie('csrfToken');
+          const freshCsrf = refreshRes.headers['x-csrf-token'] || getCookie('csrfToken') || memoryCsrfToken;
           if (freshCsrf) {
+            memoryCsrfToken = freshCsrf;
             originalRequest.headers['X-CSRF-Token'] = freshCsrf;
           }
           processQueue(null);
