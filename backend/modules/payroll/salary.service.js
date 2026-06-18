@@ -118,10 +118,28 @@ class SalaryService {
 
     // Step 4: Calculate Deductions (PF, ESI, PT)
     let totalDeductionsAmount = 0;
-    deductions.sort((a, b) => a.displayOrder - b.displayOrder);
+    
+    // Auto-inject mandatory PF if not present
+    const hasPf = deductions.some(d => d.code === 'PF' || d.code === 'PF_EMP');
+    if (!hasPf) {
+      deductions.push({
+        id: 'mandatory-pf',
+        name: 'Provident Fund (EPF)',
+        code: 'PF_EMP',
+        type: 'Deduction',
+        calculationType: 'Percentage',
+        calculationBase: 'BASIC',
+        calculationValue: 12,
+        isStatutory: true,
+        displayOrder: 1,
+        monthlyAmount: 0
+      });
+    }
+
+    deductions.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
     deductions.forEach(d => {
-      if (d.code === 'PF_EMP') {
+      if (d.code === 'PF_EMP' || d.code === 'PF') {
         // Employee PF: 12% of Basic, capped at 1800
         const basic = breakdown['BASIC'] || 0;
         const computedPf = (basic * d.calculationValue) / 100;
