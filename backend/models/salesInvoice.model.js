@@ -24,7 +24,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     dueDate: DataTypes.DATE,
     status: {
-      type: DataTypes.ENUM('Draft', 'Confirmed', 'Sent', 'Partially Paid', 'Paid', 'Void', 'Overdue'),
+      type: DataTypes.ENUM('Draft', 'Confirmed', 'Sent', 'Partially Paid', 'Paid', 'Void', 'Overdue', 'Overpaid'),
       defaultValue: 'Draft'
     },
     amountPaid: {
@@ -76,6 +76,42 @@ module.exports = (sequelize, DataTypes) => {
     ProjectId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    paymentStatus: {
+      type: DataTypes.STRING,
+      defaultValue: 'pending',
+      field: 'payment_status'
+    },
+    paymentGatewayId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'payment_gateway_id'
+    },
+    paymentLink: {
+      type: DataTypes.STRING(1024),
+      allowNull: true,
+      field: 'payment_link'
+    },
+    paymentReference: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'payment_reference'
+    },
+    paymentDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'payment_date'
+    },
+    shareToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+      field: 'share_token'
+    },
+    shareExpiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'share_expires_at'
     }
   });
 
@@ -83,6 +119,8 @@ module.exports = (sequelize, DataTypes) => {
     SalesInvoice.hasMany(models.SalesInvoiceItem, { as: 'items', foreignKey: 'SalesInvoiceId' });
     SalesInvoice.belongsTo(models.Company);
     SalesInvoice.belongsTo(models.Ledger, { as: 'CustomerLedger', foreignKey: 'customerLedgerId' });
+    SalesInvoice.hasMany(models.InvoicePayment, { as: 'payments', foreignKey: 'invoiceId' });
+    SalesInvoice.belongsTo(models.PaymentGateway, { as: 'PaymentGateway', foreignKey: 'paymentGatewayId' });
   };
 
   return SalesInvoice;

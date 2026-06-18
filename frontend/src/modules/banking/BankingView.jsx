@@ -52,10 +52,11 @@ const BankingView = () => {
     if (!companyId) return;
     setLoading(true);
     try {
-      // 1. Fetch Bank Accounts (Ledgers)
+      // 1. Fetch Bank Accounts (Ledgers) and Payment Gateway Clearing Account
       const res = await ledgerAPI.getByCompany(companyId);
       const accounts = res.data.filter(ledger => 
-        ['Bank Accounts', 'Cash-in-hand', 'Bank OCC A/c', 'Bank OD A/c'].includes(ledger.groupName)
+        ['Bank Accounts', 'Cash-in-hand', 'Bank OCC A/c', 'Bank OD A/c'].includes(ledger.groupName) ||
+        ledger.name === 'Payment Gateway Clearing Account'
       );
       setBankAccounts(accounts);
 
@@ -141,6 +142,12 @@ const BankingView = () => {
              <span className="text-[12px] text-blue-600 font-medium hover:underline cursor-pointer">Auto-upload bank statements from email</span>
              <button className="px-4 py-1.5 bg-white border border-slate-300 rounded text-slate-700 text-[13px] font-medium hover:bg-slate-50 transition-all">
                 Import Statement
+             </button>
+             <button 
+               onClick={() => navigate('/banking/gateways')}
+               className="px-4 py-1.5 bg-emerald-600 text-white rounded text-[13px] font-medium hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-1.5"
+             >
+               <CreditCard size={14} /> Gateway Settlements
              </button>
              <button 
                onClick={() => navigate('/banking/new')}
@@ -288,23 +295,33 @@ const BankingView = () => {
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-3">
                            <div className="w-9 h-9 rounded-lg border border-slate-100 bg-slate-50/50 flex items-center justify-center text-slate-500">
-                              {['Bank Accounts', 'Bank OCC A/c', 'Bank OD A/c'].includes(account.groupName) ? <Building2 size={18} strokeWidth={1.5} /> : <Wallet size={18} strokeWidth={1.5} />}
+                              {account.name === 'Payment Gateway Clearing Account' ? (
+                                 <CreditCard size={18} strokeWidth={1.5} className="text-emerald-600" />
+                              ) : ['Bank Accounts', 'Bank OCC A/c', 'Bank OD A/c'].includes(account.groupName) ? (
+                                 <Building2 size={18} strokeWidth={1.5} />
+                              ) : (
+                                 <Wallet size={18} strokeWidth={1.5} />
+                              )}
                            </div>
                            <div>
                               <div 
-                                onClick={() => navigate(`/banking/view/${account.id}`)}
+                                onClick={() => navigate(account.name === 'Payment Gateway Clearing Account' ? '/banking/gateways' : `/banking/view/${account.id}`)}
                                 className="text-[13px] font-medium text-[#408DFB] hover:underline cursor-pointer"
                               >
                                 {account.name}
                               </div>
                               <div className="text-[11px] text-slate-400 font-medium">
-                                {account.accountNumber ? `xxxx${account.accountNumber.slice(-4)}` : (account.bankName || 'Direct Ledger')}
+                                {account.name === 'Payment Gateway Clearing Account' 
+                                  ? 'Online Client Clearing Account' 
+                                  : account.accountNumber 
+                                    ? `xxxx${account.accountNumber.slice(-4)}` 
+                                    : (account.bankName || 'Direct Ledger')}
                               </div>
                            </div>
                         </div>
                       </td>
                       <td className="px-6 py-3.5 text-right text-[13px] text-slate-600">
-                        {unreconciledCount > 0 && account.groupName !== 'Cash-in-hand' ? (
+                        {unreconciledCount > 0 && account.groupName !== 'Cash-in-hand' && account.name !== 'Payment Gateway Clearing Account' ? (
                           <span className="bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full text-[11px] font-bold">
                             {unreconciledCount}
                           </span>
@@ -332,27 +349,49 @@ const BankingView = () => {
                         {activeDropdown === account.id && (
                           <div className={`absolute right-6 w-48 bg-white rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-slate-100 z-[100] py-1 animate-fade-in-down
                             ${bankAccounts.indexOf(account) >= bankAccounts.length - 2 && bankAccounts.length > 2 ? 'bottom-full mb-1' : 'top-10'}`}>
-                            {[
-                              { label: 'Edit Account', icon: <Edit size={14} />, onClick: () => navigate(`/banking/edit/${account.id}`) },
-                              { label: 'View Transactions', icon: <FileText size={14} />, onClick: () => navigate(`/banking/view/${account.id}`) },
-                              { label: 'Import Statement', icon: <Upload size={14} /> },
-                              { label: 'Mark as Inactive', icon: <XCircle size={14} />, divider: true }
-                            ].map((opt, idx) => (
-                              <React.Fragment key={idx}>
-                                {opt.divider && <div className="h-[1px] bg-slate-100 my-1" />}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveDropdown(null);
-                                    opt.onClick && opt.onClick();
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-[13px] font-medium flex items-center gap-3 transition-colors hover:bg-blue-600 hover:text-white text-slate-600 group/opt"
-                                >
-                                  <span className="opacity-50 group-hover/opt:opacity-100">{opt.icon}</span>
-                                  {opt.label}
-                                </button>
-                              </React.Fragment>
-                            ))}
+                            {account.name === 'Payment Gateway Clearing Account' ? (
+                              [
+                                { label: 'Gateway Settlements', icon: <CreditCard size={14} />, onClick: () => navigate('/banking/gateways') },
+                                { label: 'View Transactions', icon: <FileText size={14} />, onClick: () => navigate(`/banking/view/${account.id}`) }
+                              ].map((opt, idx) => (
+                                <React.Fragment key={idx}>
+                                  {opt.divider && <div className="h-[1px] bg-slate-100 my-1" />}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveDropdown(null);
+                                      opt.onClick && opt.onClick();
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-[13px] font-medium flex items-center gap-3 transition-colors hover:bg-blue-600 hover:text-white text-slate-600 group/opt"
+                                  >
+                                    <span className="opacity-50 group-hover/opt:opacity-100">{opt.icon}</span>
+                                    {opt.label}
+                                  </button>
+                                </React.Fragment>
+                              ))
+                            ) : (
+                              [
+                                { label: 'Edit Account', icon: <Edit size={14} />, onClick: () => navigate(`/banking/edit/${account.id}`) },
+                                { label: 'View Transactions', icon: <FileText size={14} />, onClick: () => navigate(`/banking/view/${account.id}`) },
+                                { label: 'Import Statement', icon: <Upload size={14} /> },
+                                { label: 'Mark as Inactive', icon: <XCircle size={14} />, divider: true }
+                              ].map((opt, idx) => (
+                                <React.Fragment key={idx}>
+                                  {opt.divider && <div className="h-[1px] bg-slate-100 my-1" />}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveDropdown(null);
+                                      opt.onClick && opt.onClick();
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-[13px] font-medium flex items-center gap-3 transition-colors hover:bg-blue-600 hover:text-white text-slate-600 group/opt"
+                                  >
+                                    <span className="opacity-50 group-hover/opt:opacity-100">{opt.icon}</span>
+                                    {opt.label}
+                                  </button>
+                                </React.Fragment>
+                              ))
+                            )}
                           </div>
                         )}
                       </td>

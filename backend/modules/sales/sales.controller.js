@@ -223,10 +223,12 @@ exports.getInvoicesByCompany = async (req, res, next) => {
 exports.getInvoiceById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { InvoicePayment, PaymentTransaction } = require('../../models');
     const invoice = await SalesInvoice.findByPk(id, {
       include: [
         { model: SalesInvoiceItem, as: 'items', include: [{ model: Item }] },
-        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'email', 'billingAddress', 'address', 'currency'] }
+        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'email', 'billingAddress', 'address', 'currency'] },
+        { model: InvoicePayment, as: 'payments', include: [{ model: PaymentTransaction }] }
       ]
     });
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
@@ -527,6 +529,45 @@ exports.getNextNumber = async (req, res, next) => {
     }
 
     res.json({ nextNumber: lastNumber + '-001' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getPublicInvoiceByShareToken = async (req, res, next) => {
+  try {
+    const { share_token } = req.params;
+    const { Op } = require('sequelize');
+    const { Company } = require('../../models');
+
+    const invoice = await SalesInvoice.findOne({
+      where: {
+        shareToken: share_token,
+        shareExpiresAt: { [Op.gt]: new Date() }
+      },
+      include: [
+        { model: SalesInvoiceItem, as: 'items', include: [{ model: Item }] },
+        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'displayName', 'email', 'billingAddress', 'address', 'currency', 'mobile', 'workPhone'] },
+        { model: Company, attributes: ['name', 'gstNumber', 'address', 'email', 'state'] }
+      ]
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found or link has expired.' });
+    }
+
+    // Self-healing payment link generation on-the-fly
+    if (!invoice.paymentLink && parseFloat(invoice.balance || invoice.totalAmount) > 0) {
+      const PaymentService = require('../../services/PaymentService');
+      try {
+        const linkResult = await PaymentService.generateInvoicePaymentLink(invoice.id, invoice.CompanyId);
+        invoice.paymentLink = linkResult.paymentLink;
+      } catch (err) {
+        console.warn('Failed to auto-generate link during public fetch:', err.message);
+      }
+    }
+
+    res.json(invoice);
   } catch (err) {
     next(err);
   }

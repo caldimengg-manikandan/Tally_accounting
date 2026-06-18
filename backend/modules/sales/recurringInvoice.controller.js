@@ -341,3 +341,130 @@ exports.getHistory = async (req, res, next) => {
     next(err);
   }
 };
+
+// ─── Get all child invoices generated from a recurring template ───────────────
+exports.getChildInvoices = async (req, res, next) => {
+  try {
+    const { SalesInvoice, SalesInvoiceItem, Ledger } = require('../../models');
+    const { Op } = require('sequelize');
+
+    const template = await RecurringInvoice.findByPk(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+
+    // BOLA guard
+    const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(template.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Find invoices linked by templateId field (set during processDueInvoices)
+    // Also find by invoiceNumber pattern as fallback
+    const invoices = await SalesInvoice.findAll({
+      where: {
+        CompanyId: template.CompanyId,
+        [Op.or]: [
+          { invoiceNumber: { [Op.like]: 'RECUR-INV-%' } },
+        ]
+      },
+      include: [
+        { model: SalesInvoiceItem, as: 'items' },
+        { model: Ledger, as: 'CustomerLedger', attributes: ['name', 'email', 'workPhone', 'mobile'] }
+      ],
+      order: [['date', 'DESC']],
+      limit: 50
+    });
+
+    // Filter to only those that match this customer
+    const filtered = invoices.filter(inv => {
+      const ledgerName = inv.CustomerLedger?.name || '';
+      return ledgerName === template.customerName;
+    });
+
+    // Calculate unpaid total
+    const unpaidTotal = filtered
+      .filter(inv => !['Paid'].includes(inv.status))
+      .reduce((sum, inv) => sum + parseFloat(inv.balance || 0), 0);
+
+    res.json({ invoices: filtered, unpaidTotal });
+  } catch (err) {
+    console.error('getChildInvoices error:', err);
+    next(err);
+  }
+};
+
+// ─── Manually create one invoice from a template right now ───────────────────
+exports.createManualInvoice = async (req, res, next) => {
+  const t = await sequelize.transaction();
+  try {
+    const { SalesInvoice, SalesInvoiceItem, Ledger } = require('../../models');
+
+    const template = await RecurringInvoice.findByPk(req.params.id);
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+
+    // BOLA guard
+    const requestingCompanyId = req.body.CompanyId || req.body.companyId || req.user?.CompanyId;
+    if (requestingCompanyId && String(template.CompanyId) !== String(requestingCompanyId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const now = new Date();
+
+    // Find the customer ledger by name
+    const customer = await Ledger.findOne({
+      where: { name: template.customerName, CompanyId: template.CompanyId },
+      transaction: t
+    });
+
+    const invoiceNumber = `RECUR-INV-MAN-${Date.now()}`;
+    const createdInvoice = await SalesInvoice.create({
+      invoiceNumber,
+      date: now,
+      dueDate: moment().add(30, 'days').toDate(),
+      customerLedgerId: customer?.id || null,
+      totalAmount: template.totalAmount,
+      subTotal: template.subTotal,
+      gstAmount: template.taxAmount,
+      status: 'Draft',
+      CompanyId: template.CompanyId,
+      balance: template.totalAmount
+    }, { transaction: t });
+
+    const items = JSON.parse(template.itemsJson || '[]');
+    const validItems = items.filter(it => it.itemId && it.itemId !== '');
+    if (validItems.length > 0) {
+      await SalesInvoiceItem.bulkCreate(validItems.map(it => {
+        const { id, ...itemData } = it;
+        return {
+          ...itemData,
+          SalesInvoiceId: createdInvoice.id,
+          amount: it.quantity * it.rate
+        };
+      }), { transaction: t });
+    }
+
+    // Update template: increment manually created count, update last generated
+    await template.update({
+      lastGeneratedDate: now
+    }, { transaction: t });
+
+    await AuditService.log({
+      action: 'INVOICE_GENERATED',
+      tableName: 'RecurringInvoice',
+      recordId: template.id,
+      newData: {
+        message: `Manually created invoice ${invoiceNumber} from template`,
+        invoiceNumber,
+        date: now
+      },
+      companyId: template.CompanyId,
+      userId: req.user?.id
+    });
+
+    await t.commit();
+    res.status(201).json({ message: 'Invoice created successfully', invoice: createdInvoice });
+  } catch (err) {
+    if (t) await t.rollback();
+    console.error('createManualInvoice error:', err);
+    next(err);
+  }
+};

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
     Search, 
@@ -121,7 +121,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
 
                     <div className="flex justify-between items-start mb-24">
                         <div className="space-y-4">
-                            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-2xl">
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl">
                                 {sessionStorage.getItem('companyName')?.charAt(0) || 'M'}
                             </div>
                             <div className="space-y-1">
@@ -139,7 +139,7 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
                     </div>
 
                     {/* Receipt Core Information */}
-                    <div className="bg-slate-900 rounded-[2.5rem] p-12 mb-16 text-white flex justify-between items-center shadow-2xl shadow-slate-200 relative overflow-hidden">
+                    <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-12 mb-16 text-white flex justify-between items-center shadow-xl shadow-blue-500/10 relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-transparent pointer-events-none" />
                         <div className="relative z-10 space-y-2">
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">Total Amount Received</p>
@@ -219,6 +219,111 @@ const PaymentReceiptDetail = ({ id, navigate, companyId }) => {
 // PAYMENT ENTRY FORM (STANDALONE CARD STYLE)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CUSTOMER SEARCH SELECTOR (WITH NEW CUSTOMER ACTION)
+// ─────────────────────────────────────────────────────────────────────────────
+const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNewCustomer, onRefreshCustomers }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filtered = (customers || []).filter(c => {
+        if (!c) return false;
+        return (c.displayName || c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+               (c.companyName || '').toLowerCase().includes(search.toLowerCase());
+    });
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between cursor-pointer hover:bg-slate-100/30 focus-within:bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-50 transition-all appearance-none shadow-sm"
+            >
+                <div className="flex-1 overflow-hidden flex items-center gap-2.5">
+                    <User size={16} className="text-slate-400 shrink-0" />
+                    {value ? (
+                        <div className="text-[14px] font-bold text-slate-800 tracking-tight truncate">{value}</div>
+                    ) : (
+                        <div className="text-[14px] font-bold text-slate-400">{placeholder}</div>
+                    )}
+                </div>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-xl z-[200] overflow-hidden flex flex-col animate-fade-in">
+                    <div className="p-3 border-b border-slate-50 bg-slate-50/50 flex items-center gap-2">
+                        <div className="relative flex-1">
+                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input 
+                                autoFocus
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search customers..."
+                                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-[13px] outline-none focus:border-blue-500 transition-all font-medium text-slate-700"
+                            />
+                        </div>
+                        {onRefreshCustomers && (
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onRefreshCustomers(); }}
+                                className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-blue-600 shadow-sm transition-all"
+                                title="Refresh List"
+                            >
+                                <RefreshCw size={14} />
+                            </button>
+                        )}
+                    </div>
+                    <div className="max-h-[250px] overflow-y-auto no-scrollbar py-1">
+                        {filtered.length > 0 ? (
+                            filtered.map(c => (
+                                <div 
+                                    key={c.id}
+                                    onClick={() => { onChange(c); setIsOpen(false); setSearch(''); }}
+                                    className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors group mx-1 rounded-lg flex items-center gap-3"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                        <User size={14} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <div className="text-[14px] font-bold text-slate-800 tracking-tight">{c.displayName || c.name}</div>
+                                        {c.companyName && c.companyName !== (c.displayName || c.name) && (
+                                            <div className="text-[11px] text-slate-400 font-medium">{c.companyName}</div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="py-8 text-center flex flex-col items-center justify-center">
+                                <User size={20} className="text-slate-300 mb-2" />
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">No customers found</p>
+                            </div>
+                        )}
+                    </div>
+                    <div className="border-t border-slate-100 p-2 bg-slate-50 shrink-0">
+                        <button 
+                            onClick={() => { setIsOpen(false); onNewCustomer(); }}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 text-[#1e61f0] font-bold text-[13px] hover:bg-blue-600 hover:text-white rounded transition-all uppercase tracking-widest"
+                        >
+                            <Plus size={16} strokeWidth={3} /> New Customer
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAYMENT ENTRY FORM (STANDALONE CARD STYLE)
+// ─────────────────────────────────────────────────────────────────────────────
 const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [customers, setCustomers] = useState([]);
@@ -234,16 +339,55 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
     const [allocation, setAllocation] = useState({}); // invoiceId: amount
     const { addNotification } = useNotificationStore();
 
-    useEffect(() => {
-        ledgerAPI.getByCompany(companyId).then(res => {
+    const fetchCustomersAndLedgers = async (isManual = false) => {
+        try {
+            const res = await ledgerAPI.getByCompany(companyId);
             const groups = res.data;
             const custs = groups.filter(l => l.Group?.name?.includes('Sundry Debtors') || l.groupName?.includes('Sundry Debtors'));
             const banks = groups.filter(l => l.Group?.name?.includes('Bank') || l.Group?.name?.includes('Cash') || l.groupName?.includes('Bank') || l.groupName?.includes('Cash'));
             setCustomers(custs);
             setBankLedgers(banks);
-            if (banks.length > 0) setDepositTo(banks[0].id);
-        });
+            if (banks.length > 0 && !depositTo) {
+                setDepositTo(banks[0].id);
+            }
+            if (isManual) {
+                addNotification('Ledger lists refreshed', 'success');
+            }
+        } catch (err) {
+            console.error(err);
+            if (isManual) addNotification('Failed to update lists', 'error');
+        }
+    };
+
+    useEffect(() => {
+        if (companyId) {
+            fetchCustomersAndLedgers(false);
+        }
     }, [companyId]);
+
+    // Restore draft if any
+    useEffect(() => {
+        const draftStr = localStorage.getItem('payment_draft');
+        if (draftStr && customers.length > 0) {
+            try {
+                const draft = JSON.parse(draftStr);
+                if (draft.amount) setAmount(draft.amount);
+                if (draft.paymentDate) setPaymentDate(draft.paymentDate);
+                if (draft.depositTo) setDepositTo(draft.depositTo);
+                if (draft.reference) setReference(draft.reference);
+                if (draft.paymentMode) setPaymentMode(draft.paymentMode);
+                if (draft.customerId) {
+                    const cust = customers.find(c => c.id === draft.customerId);
+                    if (cust) {
+                        setSelectedCustomer(cust);
+                    }
+                }
+                localStorage.removeItem('payment_draft');
+            } catch (e) {
+                console.error('Failed to parse payment draft', e);
+            }
+        }
+    }, [customers]);
 
     useEffect(() => {
         if (selectedCustomer) {
@@ -295,16 +439,28 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
         }
     };
 
+    const handleNewCustomer = () => {
+        localStorage.setItem('payment_draft', JSON.stringify({
+            customerId: selectedCustomer?.id || '',
+            amount,
+            paymentDate,
+            depositTo,
+            reference,
+            paymentMode
+        }));
+        window.open('/ledger/new', '_blank');
+    };
+
     return (
-        <div className="flex flex-col h-full bg-[#f8fafc] relative">
+        <div className="flex flex-col h-full bg-[#f8fafc] relative font-sans">
             {/* Form Header */}
             <header className="sticky top-0 bg-white border-b border-slate-100 px-12 py-4 flex items-center justify-between z-20 shadow-[0_2px_15px_rgba(0,0,0,0.02)] shrink-0">
               <div className="flex items-center gap-6">
                 <button 
                   onClick={() => navigate('/payments')}
-                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-[#1e61f0] transition-all"
+                  className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-[#1e61f0] transition-all"
                 >
-                  <ArrowLeft size={22} />
+                  <ArrowLeft size={20} />
                 </button>
                 <div>
                   <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">Record Payment</h2>
@@ -312,65 +468,68 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Settings size={20}/></button>
+                <button className="p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 rounded-xl transition-all"><Settings size={20}/></button>
                 <div className="w-px h-6 bg-slate-200" />
-                <button onClick={() => navigate('/payments')} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                  <X size={24} />
+                <button onClick={() => navigate('/payments')} className="p-2 text-slate-400 hover:text-red-500 rounded-xl transition-colors">
+                  <X size={22} />
                 </button>
               </div>
             </header>
 
             <div className="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
               <div className="max-w-[1000px] mx-auto py-10 px-6">
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-12 space-y-12 animate-fade-in">
+                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-[0_30px_70px_rgba(30,41,59,0.04)] p-10 md:p-12 space-y-10 relative overflow-hidden animate-fade-in">
                   
                   {/* Form Section: Primary Data */}
-                  <div className="grid grid-cols-2 gap-x-12 gap-y-8">
-                    <div className="space-y-2.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div className="space-y-2">
                       <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Customer Selection*</label>
-                      <div className="relative group">
-                        <select 
-                          value={selectedCustomer?.id || ''}
-                          onChange={e => setSelectedCustomer(customers.find(c => c.id === e.target.value))}
-                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
-                        >
-                          <option value="">Select a customer...</option>
-                          {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2.5">
-                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Amount Received ({getCurrencyDisplay(selectedCustomer?.currency)})*</label>
-                      <input 
-                        type="number"
-                        value={amount}
-                        onChange={e => { setAmount(e.target.value); handleAutoAllocation(e.target.value); }}
-                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[18px] font-bold text-[#1e61f0] outline-none focus:bg-white focus:border-blue-500 transition-all"
+                      <CustomerSearchSelector 
+                        value={selectedCustomer ? (selectedCustomer.displayName || selectedCustomer.name) : ''}
+                        onChange={setSelectedCustomer}
+                        customers={customers}
+                        placeholder="Search or select customer..."
+                        onNewCustomer={handleNewCustomer}
+                        onRefreshCustomers={() => fetchCustomersAndLedgers(true)}
                       />
                     </div>
 
-                    <div className="space-y-2.5">
-                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Payment Date*</label>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Amount Received ({getCurrencyDisplay(selectedCustomer?.currency)})*</label>
                       <div className="relative">
-                        <Calendar size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold text-[14px]">
+                          {getCurrencyDisplay(selectedCustomer?.currency)}
+                        </span>
                         <input 
-                          type="date" 
-                          value={paymentDate} 
-                          onChange={e => setPaymentDate(e.target.value)}
-                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all pr-12"
+                          type="number"
+                          value={amount}
+                          onChange={e => { setAmount(e.target.value); handleAutoAllocation(e.target.value); }}
+                          className="w-full h-11 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-[16px] font-bold text-[#1e61f0] outline-none hover:bg-slate-100/30 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Payment Date*</label>
+                      <div className="relative">
+                        <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input 
+                          type="date" 
+                          value={paymentDate} 
+                          onChange={e => setPaymentDate(e.target.value)}
+                          className="w-full h-11 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none hover:bg-slate-100/30 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
                       <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Deposit To*</label>
-                      <div className="relative group">
+                      <div className="relative">
+                        <Banknote size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <select 
                           value={depositTo} 
                           onChange={e => setDepositTo(e.target.value)}
-                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
+                          className="w-full h-11 pl-12 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none hover:bg-slate-100/30 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all appearance-none"
                         >
                           <option value="">Select Account</option>
                           {bankLedgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
@@ -379,13 +538,14 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                       </div>
                     </div>
 
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest ml-1">Payment Mode*</label>
-                      <div className="relative group">
+                      <div className="relative">
+                        <CreditCard size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <select 
                           value={paymentMode} 
                           onChange={e => setPaymentMode(e.target.value)}
-                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all appearance-none"
+                          className="w-full h-11 pl-12 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none hover:bg-slate-100/30 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all appearance-none"
                         >
                           <option value="Bank Transfer">Bank Transfer</option>
                           <option value="Cash">Cash</option>
@@ -396,15 +556,18 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                       </div>
                     </div>
 
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                       <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Reference / Transaction ID</label>
-                      <input 
-                        type="text" 
-                        value={reference} 
-                        onChange={e => setReference(e.target.value)}
-                        placeholder="e.g. CHQ-9921 or TXN-8821"
-                        className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all"
-                      />
+                      <div className="relative">
+                        <Hash size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input 
+                          type="text" 
+                          value={reference} 
+                          onChange={e => setReference(e.target.value)}
+                          placeholder="e.g. CHQ-9921 or TXN-8821"
+                          className="w-full h-11 pl-12 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-[14px] font-bold text-slate-700 outline-none hover:bg-slate-100/30 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -412,33 +575,36 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                   <div className="space-y-6 pt-4">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                       <h3 className="text-[14px] font-bold text-slate-900 uppercase tracking-tight">Invoice Allocation</h3>
-                      {selectedCustomer && <span className="text-[11px] font-bold text-[#1e61f0] bg-blue-50 px-3 py-1 rounded-full uppercase tracking-widest border border-blue-100 animate-pulse">Auto-Allocating FIFO</span>}
+                      {selectedCustomer && openInvoices.length > 0 && <span className="text-[10px] font-extrabold text-[#1e61f0] bg-blue-50/80 px-3 py-1 rounded-full uppercase tracking-wider border border-blue-100 animate-pulse">Auto-Allocated (FIFO)</span>}
                     </div>
 
                     {loadingInvoices ? (
-                      <div className="py-20 text-center space-y-4">
-                        <Loader2 size={32} className="animate-spin text-blue-200 mx-auto" />
+                      <div className="py-16 text-center space-y-4">
+                        <Loader2 size={36} className="animate-spin text-blue-500 mx-auto opacity-70" />
                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Scanning Outstanding Bills...</p>
                       </div>
                     ) : openInvoices.length === 0 ? (
-                      <div className="py-20 text-center bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
-                         <Info size={32} className="text-slate-200 mx-auto mb-4" />
-                         <p className="text-[13px] font-bold text-slate-400 uppercase tracking-widest">No unpaid invoices found for this customer</p>
+                      <div className="py-16 text-center bg-gradient-to-br from-slate-50 to-slate-100/40 rounded-[2rem] border border-dashed border-slate-200/80 p-8 flex flex-col items-center justify-center">
+                        <div className="w-14 h-14 bg-blue-50/80 rounded-2xl flex items-center justify-center text-[#1e61f0] mb-4 border border-blue-100 shadow-sm">
+                            <Info size={26} />
+                        </div>
+                        <p className="text-[14px] font-bold text-slate-800">No Outstanding Invoices</p>
+                        <p className="text-[12px] text-slate-400 font-medium mt-1 max-w-[280px]">There are no unpaid invoices linked to this customer account at this time.</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-4">
                         {openInvoices.map(inv => (
-                          <div key={inv.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100 group hover:bg-white hover:border-blue-200 transition-all hover:shadow-xl hover:shadow-slate-200/50">
-                            <div className="flex items-center gap-6">
-                                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-400 border border-slate-100 group-hover:border-blue-100 group-hover:text-blue-500 transition-colors shadow-sm">
-                                    <FileText size={20} />
+                          <div key={inv.id} className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-100 hover:bg-white hover:border-blue-300 transition-all hover:shadow-[0_15px_30px_rgba(30,41,59,0.03)]">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100 shadow-inner">
+                                    <FileText size={18} />
                                 </div>
                                 <div>
-                                    <h4 className="text-[15px] font-bold text-slate-800 tracking-tight">{inv.invoiceNumber}</h4>
-                                    <div className="flex items-center gap-3 mt-0.5">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date: {new Date(inv.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                                        <span className="text-slate-200">|</span>
-                                        <span className="text-[10px] font-bold text-[#1e61f0] uppercase tracking-widest">Due: {getCurrencyDisplay(selectedCustomer?.currency)} {parseFloat(inv.balance).toLocaleString()}</span>
+                                    <h4 className="text-[14px] font-bold text-slate-800">{inv.invoiceNumber}</h4>
+                                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                        <span>Issued: {new Date(inv.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                        <span>•</span>
+                                        <span className="text-[#1e61f0]">Due: {getCurrencyDisplay(selectedCustomer?.currency)} {parseFloat(inv.balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             </div>
@@ -448,7 +614,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                                     type="number"
                                     value={allocation[inv.id] || ''}
                                     onChange={e => setAllocation({...allocation, [inv.id]: parseFloat(e.target.value || 0)})}
-                                    className="w-48 h-12 pl-8 pr-4 bg-white border border-slate-200 rounded-xl text-right font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-50 transition-all"
+                                    className="w-44 h-11 pl-8 pr-4 bg-white border border-slate-200 rounded-xl text-right font-bold text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all"
                                 />
                             </div>
                           </div>
@@ -459,19 +625,19 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
 
                   {/* Summary Section */}
                   <div className="flex justify-end pt-12 border-t border-slate-100">
-                     <div className="w-80 space-y-4 bg-slate-50 p-8 rounded-[2rem] border border-slate-100 shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-blue-600 opacity-20" />
-                        <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500 font-bold uppercase tracking-widest">Total Received</span>
-                          <span className="text-slate-900 font-bold font-mono">{getCurrencyDisplay(selectedCustomer?.currency)} {parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                     <div className="w-full md:w-96 space-y-4 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 p-8 rounded-[2rem] border border-blue-100 shadow-xl shadow-blue-500/5 relative overflow-hidden text-slate-800">
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
+                        <div className="flex justify-between items-center text-[12px]">
+                          <span className="font-bold uppercase tracking-wider text-slate-500">Total Received</span>
+                          <span className="font-bold font-mono text-slate-900">{getCurrencyDisplay(selectedCustomer?.currency)} {parseFloat(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
-                        <div className="flex justify-between items-center text-[13px]">
-                          <span className="text-slate-500 font-bold uppercase tracking-widest">Allocated</span>
-                          <span className="text-emerald-600 font-bold font-mono">- {getCurrencyDisplay(selectedCustomer?.currency)} {Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <div className="flex justify-between items-center text-[12px]">
+                          <span className="font-bold uppercase tracking-wider text-slate-500">Allocated</span>
+                          <span className="text-emerald-600 font-bold font-mono">- {getCurrencyDisplay(selectedCustomer?.currency)} {Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="pt-6 border-t border-slate-200 flex justify-between items-center mt-4">
-                          <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Excess Fund</span>
-                          <span className="text-[20px] font-bold text-slate-900 tracking-tighter font-mono">{getCurrencyDisplay(selectedCustomer?.currency)} {(parseFloat(amount || 0) - Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-[12px] font-bold uppercase tracking-wider text-slate-400">Excess Fund</span>
+                          <span className="text-[22px] font-black tracking-tight font-mono text-[#1e61f0]">{getCurrencyDisplay(selectedCustomer?.currency)} {(parseFloat(amount || 0) - Object.values(allocation).reduce((s, v) => s + (parseFloat(v) || 0), 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                      </div>
                   </div>
@@ -488,14 +654,14 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={() => navigate('/payments')}
-                        className="px-6 py-2.5 text-slate-500 text-[13px] font-bold hover:bg-slate-100 rounded transition-all"
+                        className="px-6 py-3 border border-slate-200 text-slate-500 text-[13px] font-bold hover:bg-slate-50 hover:text-slate-700 rounded-xl transition-all"
                     >
                         Discard
                     </button>
                     <button 
                         onClick={handleSave} 
                         disabled={saving}
-                        className="px-10 py-2.5 bg-slate-900 text-white rounded font-bold text-[13px] hover:bg-black shadow-xl shadow-slate-200 transition-all uppercase tracking-widest flex items-center gap-2"
+                        className="px-8 py-3 bg-[#1e61f0] text-white rounded-xl font-bold text-[13px] uppercase tracking-wider hover:bg-[#1a54d1] shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-2"
                     >
                         {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                         {saving ? 'Processing...' : 'Record Payment'}

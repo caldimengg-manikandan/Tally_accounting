@@ -1,4 +1,4 @@
-const { Ledger, Group, Transaction, Voucher, Project, SalesInvoice, Item, sequelize } = require('../../models');
+const { Ledger, Group, Transaction, Voucher, Project, SalesInvoice, SalesInvoiceItem, Item, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 
 /**
@@ -1230,6 +1230,13 @@ exports.getReceivablesReport = async (req, res, next) => {
 
     const invoices = await SalesInvoice.findAll({
       where: invoiceWhere,
+      include: [
+        {
+          model: SalesInvoiceItem,
+          as: 'items',
+          include: [{ model: Item }]
+        }
+      ],
       order: [['dueDate', 'ASC'], ['date', 'DESC']]
     });
 
@@ -1275,7 +1282,13 @@ exports.getReceivablesReport = async (req, res, next) => {
         status:        inv.status,
         daysOverdue:   Math.max(0, daysOverdue),
         agingBucket,
-        isPseudo:      false
+        isPseudo:      false,
+        items:         inv.items ? inv.items.map((it, idx) => ({
+          seq: idx + 1,
+          description: it.description || it.Item?.name || '—',
+          amount: parseFloat(it.amount || 0),
+          glAccount: it.Item?.salesAccount || 'Sales'
+        })) : []
       });
     });
 

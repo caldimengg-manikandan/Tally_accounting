@@ -250,6 +250,7 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
         adjustment: 0,
         taxPercent: 0, 
         salesperson: '',
+        subject: '',
         customerNotes: 'Thanks for your business.',
         termsConditions: '',
         repeatEvery: 1
@@ -583,6 +584,8 @@ const RecurringInvoiceForm = ({ companyId, navigate, editId }) => {
                                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Subject</label>
                                 <input 
                                     type="text" 
+                                    value={formData.subject}
+                                    onChange={e => { const val = e.target.value; setFormData(prev => ({...prev, subject: val})); }}
                                     placeholder="What is this automation for?"
                                     className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" 
                                 />
@@ -749,18 +752,102 @@ class DetailErrorBoundary extends React.Component {
     }
 }
 
-const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
+const RecurringInvoiceDetailContent = ({ id, navigate, companyId, onRefresh }) => {
+    const { addNotification } = useNotificationStore();
     const [template, setTemplate] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('Overview');
+    const [customerLedger, setCustomerLedger] = useState(null);
+    const [childInvoices, setChildInvoices] = useState([]);
+    const [unpaidTotal, setUnpaidTotal] = useState(0);
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [showMoreDropdown, setShowMoreDropdown] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
+    const moreRef = useRef(null);
 
-    useEffect(() => {
+    const fetchTemplateData = async () => {
         if (!id) return;
         setLoading(true);
-        recurringInvoiceAPI.getById(id)
-            .then(res => { setTemplate(res.data); setLoading(false); })
-            .catch((err) => { console.error(err); setLoading(false); });
-    }, [id]);
+        try {
+            const res = await recurringInvoiceAPI.getById(id);
+            const tpl = res.data;
+            setTemplate(tpl);
+            try {
+                const childRes = await recurringInvoiceAPI.getChildInvoices(id, companyId);
+                setChildInvoices(childRes.data.invoices || []);
+                setUnpaidTotal(childRes.data.unpaidTotal || 0);
+            } catch (e) { console.warn('Could not fetch child invoices', e); }
+            if (tpl?.customerName && companyId) {
+                try {
+                    const { ledgerAPI } = await import('../../services/api');
+                    const ledRes = await ledgerAPI.getByCompany(companyId);
+                    const ledger = (ledRes.data || []).find(l => l.name === tpl.customerName);
+                    setCustomerLedger(ledger || null);
+                } catch (e) { console.warn('Could not fetch customer ledger', e); }
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchTemplateData(); }, [id]);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (moreRef.current && !moreRef.current.contains(e.target)) setShowMoreDropdown(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        if (activeTab !== 'Recent Activities' || !id) return;
+        recurringInvoiceAPI.getHistory(id)
+            .then(res => setActivityLogs(res.data || []))
+            .catch(e => console.warn('Could not fetch history', e));
+    }, [activeTab, id]);
+
+    const handleCreateInvoice = async () => {
+        if (actionLoading) return;
+        setActionLoading(true);
+        try {
+            await recurringInvoiceAPI.createManualInvoice(id, { CompanyId: companyId });
+            addNotification('Invoice created successfully as Draft', 'success');
+            await fetchTemplateData();
+        } catch (err) {
+            addNotification('Failed to create invoice: ' + (err.response?.data?.error || err.message), 'error');
+        } finally { setActionLoading(false); }
+    };
+
+    const handleStatusChange = async (newStatus) => {
+        setShowMoreDropdown(false);
+        if (actionLoading) return;
+        setActionLoading(true);
+        try {
+            await recurringInvoiceAPI.update(id, { status: newStatus, CompanyId: companyId });
+            addNotification(`Subscription ${newStatus === 'Active' ? 'resumed' : 'paused'}`, 'success');
+            await fetchTemplateData();
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            addNotification('Failed to update status: ' + (err.response?.data?.error || err.message), 'error');
+        } finally { setActionLoading(false); }
+    };
+
+    const handleDelete = async () => {
+        setShowMoreDropdown(false);
+        if (!window.confirm('Are you sure you want to delete this recurring subscription? This cannot be undone.')) return;
+        setActionLoading(true);
+        try {
+            await recurringInvoiceAPI.delete(id);
+            addNotification('Subscription deleted', 'success');
+            navigate('/recurring-invoices');
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            addNotification('Failed to delete: ' + (err.response?.data?.error || err.message), 'error');
+        } finally { setActionLoading(false); }
+    };
 
     if (loading) return <div className="p-20 text-center font-bold text-slate-300 animate-pulse uppercase tracking-widest">Syncing Automation...</div>;
     if (!template) return <div className="p-20 text-center text-slate-300 font-bold text-2xl opacity-20 uppercase">Not Found</div>;
@@ -783,8 +870,48 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
                     <h2 className="text-[20px] font-medium text-slate-800 tracking-tight">{template.templateName || 'Unnamed Profile'}</h2>
                     <div className="flex items-center gap-2">
                         <button onClick={() => navigate(`/recurring-invoices/edit/${template.id}`)} className="p-1.5 border border-slate-300 rounded hover:bg-slate-50 transition-colors text-slate-600"><Edit2 size={15}/></button>
-                        <button className="px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-50 transition-colors text-slate-800 text-[13px] font-medium">Create Invoice</button>
-                        <button className="px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-50 transition-colors text-slate-800 text-[13px] font-medium flex items-center gap-1">More <ChevronDown size={14}/></button>
+                        <button
+                            onClick={handleCreateInvoice}
+                            disabled={actionLoading}
+                            className="px-3 py-1.5 border border-slate-300 rounded hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-colors text-slate-800 text-[13px] font-medium flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                            {actionLoading ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                            Create Invoice
+                        </button>
+                        <div className="relative" ref={moreRef}>
+                            <button
+                                onClick={() => setShowMoreDropdown(v => !v)}
+                                className="px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-50 transition-colors text-slate-800 text-[13px] font-medium flex items-center gap-1"
+                            >
+                                More <ChevronDown size={14}/>
+                            </button>
+                            {showMoreDropdown && (
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-[200] w-48 overflow-hidden">
+                                    {template.status === 'Active' ? (
+                                        <button
+                                            onClick={() => handleStatusChange('Paused')}
+                                            className="w-full px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2 transition-colors"
+                                        >
+                                            <Pause size={14}/> Pause Subscription
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleStatusChange('Active')}
+                                            className="w-full px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-green-50 hover:text-green-700 flex items-center gap-2 transition-colors"
+                                        >
+                                            <Play size={14}/> Resume Subscription
+                                        </button>
+                                    )}
+                                    <div className="border-t border-slate-100" />
+                                    <button
+                                        onClick={handleDelete}
+                                        className="w-full px-4 py-2.5 text-left text-[13px] font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                                    >
+                                        <Trash2 size={14}/> Delete Subscription
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <button onClick={() => navigate('/recurring-invoices')} className="ml-2 p-1 text-slate-400 hover:text-slate-800 transition-colors"><X size={20}/></button>
                     </div>
                 </div>
@@ -817,8 +944,8 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
                                 </div>
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-[14px] font-medium text-blue-600 cursor-pointer hover:underline">{template.customerName || 'Unknown Customer'}</span>
-                                    <span className="text-[12px] text-slate-500 font-medium">customer@example.com</span>
-                                    <span className="text-[12px] text-slate-500 font-medium flex items-center gap-1 mt-0.5"><Phone size={10}/> +91-0000000000</span>
+                                    <span className="text-[12px] text-slate-500 font-medium">{customerLedger?.email || 'No email on file'}</span>
+                                    <span className="text-[12px] text-slate-500 font-medium flex items-center gap-1 mt-0.5"><Phone size={10}/> {customerLedger?.workPhone || customerLedger?.mobile || 'No phone on file'}</span>
                                 </div>
                             </div>
 
@@ -844,7 +971,7 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
                                     </div>
                                     <div className="grid grid-cols-[160px_1fr] items-center text-[13px]">
                                         <span className="text-slate-500">Manually Created Invoices:</span>
-                                        <span className="text-slate-800 font-medium">0</span>
+                                        <span className="text-slate-800 font-medium">{childInvoices.filter(inv => inv.invoiceNumber?.includes('-MAN-')).length}</span>
                                     </div>
                                 </div>
                                 
@@ -862,11 +989,11 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
                                 <div className="space-y-4">
                                     <div>
                                         <h4 className="text-[13px] text-slate-800 font-medium mb-1">Billing Address</h4>
-                                        <p className="text-[13px] text-slate-500 leading-tight">No address provided.</p>
+                                        <p className="text-[13px] text-slate-500 leading-tight whitespace-pre-line">{customerLedger?.billingAddress || customerLedger?.address || 'No address provided.'}</p>
                                     </div>
                                     <div>
                                         <h4 className="text-[13px] text-slate-800 font-medium mb-1">Shipping Address</h4>
-                                        <p className="text-[13px] text-slate-500 leading-tight">No address provided.</p>
+                                        <p className="text-[13px] text-slate-500 leading-tight whitespace-pre-line">{customerLedger?.shippingAddress || 'No address provided.'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -902,37 +1029,107 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId }) => {
                                     <button className="flex items-center gap-1 text-[15px] font-medium text-slate-800 hover:text-blue-600 transition-colors">
                                         All Child Invoices <ChevronDown size={16} className="text-blue-600" />
                                     </button>
-                                    <span className="text-[13px] text-slate-500 font-medium">Unpaid Invoices : <span className="text-slate-900 font-semibold">{getCurrencyDisplay(template.Customer?.currency)} 0.00</span></span>
+                                    <span className="text-[13px] text-slate-500 font-medium">Unpaid Invoices : <span className="text-slate-900 font-semibold">{getCurrencyDisplay(customerLedger?.currency)} {parseFloat(unpaidTotal).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></span>
                                 </div>
 
-                                <div className="space-y-3 mt-4">
-                                    <div className="p-4 border-b border-slate-100 flex justify-between items-center group hover:bg-slate-50 transition-colors">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[13px] font-medium text-slate-800">{template.customerName}</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[13px] text-blue-600 hover:underline cursor-pointer font-medium">INV-000001</span>
-                                                <span className="text-[13px] text-slate-500">{startDate}</span>
+                                <div className="space-y-2 mt-4">
+                                    {childInvoices.length === 0 ? (
+                                        <div className="py-8 text-center text-slate-400 text-[13px] font-medium italic">
+                                            No invoices generated yet. Click "Create Invoice" to generate one.
+                                        </div>
+                                    ) : (
+                                        childInvoices.map(inv => (
+                                            <div key={inv.id} className="p-4 border-b border-slate-100 flex justify-between items-center group hover:bg-slate-50 transition-colors">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[13px] font-medium text-slate-800">{template.customerName}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[13px] text-blue-600 hover:underline cursor-pointer font-medium" onClick={() => navigate(`/invoices/${inv.id}`)}>{inv.invoiceNumber}</span>
+                                                        <span className="text-[13px] text-slate-500">{inv.date ? new Date(inv.date).toLocaleDateString('en-GB') : '—'}</span>
+                                                    </div>
+                                                    <span className="text-[11px] text-slate-500 flex items-center gap-1 italic"><Clock size={10}/> {inv.invoiceNumber?.includes('-MAN-') ? 'Manually Created' : 'Auto-Generated'}</span>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className="text-[13px] font-medium text-slate-900">{getCurrencyDisplay(customerLedger?.currency)} {parseFloat(inv.totalAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                    <span className={`text-[10px] font-semibold tracking-widest uppercase ${inv.status === 'Paid' ? 'text-emerald-600' : inv.status === 'Draft' ? 'text-slate-500' : inv.status === 'Confirmed' ? 'text-blue-600' : 'text-amber-600'}`}>{inv.status}</span>
+                                                    {inv.status !== 'Paid' && (
+                                                        <button onClick={() => navigate(`/invoices/${inv.id}`)} className="px-3 py-1 bg-blue-500 text-white text-[12px] font-medium rounded hover:bg-blue-600 transition-colors mt-1 shadow-sm">
+                                                            Record Payment
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <span className="text-[11px] text-slate-500 flex items-center gap-1 italic"><Clock size={10}/> Manually Added</span>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            <span className="text-[13px] font-medium text-slate-900">{getCurrencyDisplay(template.Customer?.currency)} {safeTotal}</span>
-                                            <span className="text-[10px] font-semibold text-slate-500 tracking-widest uppercase">DRAFT</span>
-                                            <button className="px-3 py-1 bg-blue-500 text-white text-[12px] font-medium rounded hover:bg-blue-600 transition-colors mt-1 shadow-sm">
-                                                Record Payment
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* Placeholder for empty state if needed */}
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
                 
-                {activeTab !== 'Overview' && (
-                    <div className="p-12 text-center text-slate-400 font-medium">
-                        This section is currently under development.
+                {activeTab === 'Next Invoice' && (
+                    <div className="p-8 space-y-6">
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 flex items-start gap-4">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                                <Calendar size={18} className="text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="text-[13px] font-bold text-slate-800 mb-1">Next Invoice Scheduled</p>
+                                <p className="text-[24px] font-black text-blue-600 tracking-tight">{safeDate}</p>
+                                <p className="text-[12px] text-slate-500 mt-1 font-medium">Repeats {template.frequency} — {template.status === 'Active' ? 'Auto-generation is active' : `Status: ${template.status}`}</p>
+                            </div>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-xl p-6">
+                            <h3 className="text-[13px] font-bold text-slate-700 uppercase tracking-widest mb-4">Preview of Next Invoice</h3>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-[13px]">
+                                    <span className="text-slate-500">Customer</span>
+                                    <span className="font-medium text-slate-800">{template.customerName}</span>
+                                </div>
+                                <div className="flex justify-between text-[13px]">
+                                    <span className="text-slate-500">Invoice Date</span>
+                                    <span className="font-medium text-slate-800">{safeDate}</span>
+                                </div>
+                                <div className="flex justify-between text-[13px]">
+                                    <span className="text-slate-500">Frequency</span>
+                                    <span className="font-medium text-slate-800">{template.frequency}</span>
+                                </div>
+                                <div className="border-t border-slate-100 my-3" />
+                                <div className="flex justify-between text-[14px] font-bold">
+                                    <span className="text-slate-700">Total Amount</span>
+                                    <span className="text-[#1e61f0]">{getCurrencyDisplay(customerLedger?.currency)} {safeTotal}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'Recent Activities' && (
+                    <div className="p-8">
+                        {activityLogs.length === 0 ? (
+                            <div className="py-16 text-center text-slate-400 text-[13px] font-medium italic">
+                                No activity recorded yet.
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {activityLogs.map((log, idx) => (
+                                    <div key={log.id || idx} className="flex gap-4 items-start">
+                                        <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 shrink-0" />
+                                        <div className="flex-1 border-b border-slate-50 pb-3">
+                                            <div className="flex justify-between items-start">
+                                                <p className="text-[13px] font-bold text-slate-800">{log.action?.replace(/_/g, ' ')}</p>
+                                                <span className="text-[11px] text-slate-400 font-medium">{new Date(log.createdAt).toLocaleString('en-GB')}</span>
+                                            </div>
+                                            {log.User && (
+                                                <p className="text-[11px] text-slate-500 mt-0.5">by {log.User.name || log.User.email}</p>
+                                            )}
+                                            {log.newData?.message && (
+                                                <p className="text-[12px] text-slate-500 mt-1 italic">{typeof log.newData === 'string' ? JSON.parse(log.newData)?.message : log.newData?.message}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -950,12 +1147,46 @@ const RecurringInvoiceDetail = (props) => (
 // RECURRING INVOICES TABLE VIEW (LANDSCAPE)
 // ─────────────────────────────────────────────────────────────────────────────
 const RecurringInvoicesTableView = ({ templates, loading, onSelect, navigate, fetchTemplates }) => {
+    const { addNotification } = useNotificationStore();
     const [searchQuery, setSearchQuery] = useState('');
-    
-    const filtered = templates.filter(t => 
-        t.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.templateName?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [showFilter, setShowFilter] = useState(false);
+    const filterRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (filterRef.current && !filterRef.current.contains(e.target)) setShowFilter(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filtered = templates.filter(t => {
+        const matchesSearch = t.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            t.templateName?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    const handleExportCSV = () => {
+        const headers = ['Profile Name', 'Customer', 'Frequency', 'Status', 'Next Invoice', 'Amount'];
+        const rows = filtered.map(t => [
+            t.templateName || '',
+            t.customerName || '',
+            t.frequency || '',
+            t.status || '',
+            t.nextGenerationDate ? new Date(t.nextGenerationDate).toLocaleDateString('en-GB') : '—',
+            parseFloat(t.totalAmount || 0).toFixed(2)
+        ]);
+        const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `recurring_invoices_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
     return (
         <div className="flex-1 flex flex-col h-full bg-white animate-fade-in overflow-hidden">
@@ -1002,12 +1233,31 @@ const RecurringInvoicesTableView = ({ templates, loading, onSelect, navigate, fe
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 text-slate-500 text-[13px] font-bold hover:text-slate-900 transition-colors uppercase tracking-widest">
-                        <Filter size={14} /> Filter
-                    </button>
+                    <div className="relative" ref={filterRef}>
+                        <button
+                            onClick={() => setShowFilter(v => !v)}
+                            className={`flex items-center gap-2 text-[13px] font-bold transition-colors uppercase tracking-widest ${statusFilter !== 'All' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-900'}`}
+                        >
+                            <Filter size={14} /> Filter {statusFilter !== 'All' ? `(${statusFilter})` : ''}
+                        </button>
+                        {showFilter && (
+                            <div className="absolute right-0 top-full mt-2 bg-white border border-slate-200 rounded-lg shadow-xl z-50 w-44 overflow-hidden">
+                                {['All', 'Active', 'Paused', 'Expired'].map(s => (
+                                    <button
+                                        key={s}
+                                        onClick={() => { setStatusFilter(s); setShowFilter(false); }}
+                                        className={`w-full px-4 py-2.5 text-left text-[13px] font-medium transition-colors ${statusFilter === s ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-50'}`}
+                                    >{s}</button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <div className="w-px h-4 bg-slate-200 mx-2" />
-                    <button className="h-10 px-5 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">
-                        <Download size={14} /> Export
+                    <button
+                        onClick={handleExportCSV}
+                        className="h-10 px-5 flex items-center gap-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        <Download size={14} /> Export CSV
                     </button>
                 </div>
             </div>
@@ -1098,6 +1348,13 @@ const RecurringInvoicesTableView = ({ templates, loading, onSelect, navigate, fe
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!window.confirm('Delete this recurring subscription?')) return;
+                                                        recurringInvoiceAPI.delete(t.id)
+                                                            .then(() => { addNotification('Subscription deleted', 'success'); fetchTemplates(); })
+                                                            .catch(err => addNotification('Delete failed: ' + (err.response?.data?.error || err.message), 'error'));
+                                                    }}
                                                     className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-100"
                                                 >
                                                     <Trash2 size={16} />

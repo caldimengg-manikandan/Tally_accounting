@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 
 // ── Components ───────────────────────────────────────────────────
 import Notification from './components/Notification';
+import NotificationBell from './components/NotificationBell';
 import { setUser, getUser } from './stores/authStore';
 import AuthPage from './modules/auth/AuthPage';
 import LandingPage from './modules/landing/LandingPage';
@@ -71,6 +72,9 @@ import ChartOfAccountsView from './modules/accounting/ChartOfAccountsView';
 import JournalEntriesView from './modules/accounting/JournalEntriesView';
 import FixedAssetsView from './modules/fixed_assets/FixedAssetsView';
 import ProjectsView from './modules/time_tracking/ProjectsView';
+import PaymentGatewaysSettings from './modules/settings/PaymentGatewaysSettings';
+import SharedInvoiceView from './modules/sales/SharedInvoiceView';
+import GatewaySettlementView from './modules/banking/GatewaySettlementView';
 
 import BulkUpdateView from './modules/accountant/BulkUpdateView';
 import CurrencyAdjustmentsView from './modules/accountant/CurrencyAdjustmentsView';
@@ -88,7 +92,7 @@ import {
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
   PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
-  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders
+  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders, CreditCard
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -106,7 +110,8 @@ const NAV = [
     group: 'Setup',
     icon: Settings,
     items: [
-      { label: 'Company Settings', path: '/settings/company', icon: Building2 }
+      { label: 'Company Settings', path: '/settings/company', icon: Building2 },
+      { label: 'Payment Gateways', path: '/settings/payment-gateways', icon: CreditCard }
     ]
   },
   {
@@ -561,9 +566,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
                {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
             <div className="flex items-center gap-2">
-               <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 cursor-pointer hover:bg-gray-100">
-                  <Bell size={16} />
-               </div>
+               <NotificationBell />
                <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">
                   {user.email?.substring(0, 1).toUpperCase() || 'A'}
                </div>
@@ -785,7 +788,7 @@ function AuthenticatedApp() {
       <Route path="/quotes/edit/:id"    element={shell(QuotesView)} />
       <Route path="/quotes/view/:id"    element={shell(QuotesView)} />
       <Route path="/sales-orders"       element={shell(SalesOrdersView)} />
-            <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
+      <Route path="/sales-orders/new"   element={shell(SalesOrdersView)} />
       <Route path="/sales-invoices"     element={shell(SalesInvoicesView)} />
       <Route path="/sales-invoices/:id" element={shell(SalesInvoicesView)} />
       <Route path="/sales-invoices/new"  element={shell(ProfessionalInvoiceView)} />
@@ -850,6 +853,9 @@ function AuthenticatedApp() {
 
       {/* Settings */}
       <Route path="/settings/company"   element={shell(CompanyInfoView, { setActiveTab: () => {} })} />
+      <Route path="/settings/payment-gateways" element={shell(PaymentGatewaysSettings)} />
+      <Route path="/banking/gateways" element={shell(GatewaySettlementView)} />
+      <Route path="/shared/invoice/:share_token" element={<SharedInvoiceView />} />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
@@ -905,6 +911,7 @@ export default function App() {
         } />
         {/* OAuth redirect landing page — exchanges httpOnly cookie for session */}
         <Route path="/auth-callback" element={<OAuthCallbackPage onSuccess={() => setAuthed(true)} />} />
+        <Route path="/shared/invoice/:share_token" element={<SharedInvoiceView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

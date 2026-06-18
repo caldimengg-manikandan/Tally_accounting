@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  RefreshCcw, Printer, Mail, Download, AlertCircle, ChevronDown, ChevronRight, Users, Clock, Mail as MailIcon, Phone
-} from 'lucide-react';
+import { RefreshCcw, Printer, AlertCircle } from 'lucide-react';
 import { reportsAPI } from '../../services/api';
 
 const ReceivablesReportView = () => {
@@ -10,8 +8,8 @@ const ReceivablesReportView = () => {
   const [customers, setCustomers] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [expandedCustomer, setExpandedCustomer] = useState(null);
   const companyId = sessionStorage.getItem('companyId');
+  const companyName = sessionStorage.getItem('companyName') || 'Company';
 
   const fetchReport = async () => {
     if (!companyId) return;
@@ -27,15 +25,12 @@ const ReceivablesReportView = () => {
     }
   };
 
-  useEffect(() => {
-    fetchReport();
-  }, [companyId]);
+  useEffect(() => { fetchReport(); }, [companyId]);
 
-  const toggleCustomer = (id) => {
-    setExpandedCustomer(expandedCustomer === id ? null : id);
-  };
-
-  const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  const fmt = (v) => Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+  const now = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  const reportDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
   if (!companyId) {
     return (
@@ -52,172 +47,168 @@ const ReceivablesReportView = () => {
     );
   }
 
+  // Grand totals
+  const grandAmount    = customers.reduce((s, c) => s + c.invoices.reduce((ss, inv) => ss + parseFloat(inv.totalAmount || inv.balance || 0), 0), 0);
+  const grandApplied   = customers.reduce((s, c) => s + c.invoices.reduce((ss, inv) => ss + parseFloat((inv.totalAmount || 0) - (inv.balance || 0)), 0), 0);
+  const grandUnpaid    = customers.reduce((s, c) => s + c.invoices.reduce((ss, inv) => ss + parseFloat(inv.balance || 0), 0), 0);
+
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] animate-fade-in font-sans overflow-hidden">
-      
-      {/* ── HEADER ─────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-40 no-print shrink-0">
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col">
-            <h1 className="text-[18px] font-bold text-slate-900 tracking-tight leading-none">Receivables Aging Report</h1>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Outstanding Invoice Tracker</p>
-          </div>
+    <div className="flex flex-col h-full bg-white font-sans overflow-hidden">
+
+      {/* ── TOOLBAR (screen only) ─────────────────────────────── */}
+      <header className="bg-white border-b border-slate-200 px-8 py-3 flex items-center justify-between sticky top-0 z-40 no-print shrink-0">
+        <div>
+          <h1 className="text-[17px] font-bold text-slate-900 tracking-tight leading-none">Unpaid Invoice Report</h1>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">By Customer · Report Date: {reportDate}</p>
         </div>
-        
         <div className="flex items-center gap-3">
-           <button onClick={fetchReport} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
-             <RefreshCcw size={18} className={loading ? 'animate-spin' : ''}/>
-           </button>
-           <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
-             <Printer size={16}/> Print
-           </button>
-           <button className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
-             <Download size={16}/> Export PDF
-           </button>
+          <button onClick={fetchReport} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
+            <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-700 transition-all">
+            <Printer size={14} /> Print / PDF
+          </button>
         </div>
       </header>
 
-      {/* ── TOOLBAR ────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-100 px-8 py-3 flex items-center justify-between no-print shrink-0">
-         <div className="flex items-center gap-2 text-slate-500 text-[11px] font-bold">
-            <Users size={14} className="text-slate-400" />
-            <span>Outstanding for {customers.length} Customers</span>
-         </div>
-         <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Grand Total Outstanding: </span>
-            <span className="text-[12px] font-black text-rose-600">{fmt(summary?.grandTotal)}</span>
-         </div>
-      </div>
+      {/* ── PRINT AREA ────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-[960px] mx-auto px-8 py-6">
 
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-        <div className="max-w-[1400px] mx-auto space-y-8">
-          
-          {/* ══ AGING SUMMARY CARDS ════════════════════════════════════ */}
-          {summary?.agingSummary && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {[
-                { label: 'Current',     value: summary.agingSummary['Current'],   color: 'text-emerald-600', bg: 'bg-emerald-50/50' },
-                { label: '1 - 30 Days', value: summary.agingSummary['1-30 Days'], color: 'text-amber-600',   bg: 'bg-amber-50/50'   },
-                { label: '31 - 60 Days',value: summary.agingSummary['31-60 Days'],color: 'text-orange-600',  bg: 'bg-orange-50/50'  },
-                { label: '61 - 90 Days',value: summary.agingSummary['61-90 Days'],color: 'text-rose-600',    bg: 'bg-rose-50/50'    },
-                { label: '90+ Days',    value: summary.agingSummary['90+ Days'],  color: 'text-red-700',     bg: 'bg-red-50/50'     },
-              ].map((bucket) => (
-                <div key={bucket.label} className={`p-4 rounded-xl border border-slate-100 shadow-sm ${bucket.bg}`}>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{bucket.label}</p>
-                  <h3 className={`text-[16px] font-extrabold mt-1.5 ${bucket.color}`}>{fmt(bucket.value)}</h3>
-                </div>
-              ))}
+          {/* Page header */}
+          <div className="flex items-start justify-between mb-1">
+            <div className="text-[12px] font-semibold text-slate-700">{companyName}</div>
+            <div className="text-center flex-1">
+              <div className="text-[13px] font-bold text-slate-900">Unpaid Invoice Report - by Customer Number</div>
+              <div className="text-[11px] text-slate-600">Report Date: {reportDate}</div>
             </div>
-          )}
-
-          {/* ══ CUSTOMER DETAILS LIST ══════════════════════════════════ */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-             <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50/50 text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100">
-                  <tr>
-                    <th className="px-8 py-4 w-10"></th>
-                    <th className="px-6 py-4">Customer Name</th>
-                    <th className="px-4 py-4 text-center">Contact</th>
-                    <th className="px-4 py-4 text-right">Current (₹)</th>
-                    <th className="px-4 py-4 text-right">Overdue (₹)</th>
-                    <th className="px-8 py-4 text-right">Total Outstanding (₹)</th>
-                  </tr>
-                </thead>
-                <tbody className="text-[12px] text-slate-600">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-12">
-                        <div className="w-8 h-8 border-4 border-slate-100 border-t-[#1e61f0] rounded-full animate-spin mx-auto" />
-                      </td>
-                    </tr>
-                  ) : customers.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-12 text-slate-400">No outstanding receivables</td>
-                    </tr>
-                  ) : (
-                    customers.map((c) => {
-                      const isExpanded = expandedCustomer === c.customerId;
-                      const overdueTotal = (c.aging['1-30 Days'] || 0) + (c.aging['31-60 Days'] || 0) + (c.aging['61-90 Days'] || 0) + (c.aging['90+ Days'] || 0);
-                      return (
-                        <React.Fragment key={c.customerId}>
-                          <tr 
-                            onClick={() => toggleCustomer(c.customerId)}
-                            className={`hover:bg-slate-50/80 transition-all cursor-pointer border-b border-slate-50 last:border-0 ${isExpanded ? 'bg-slate-50/40' : ''}`}
-                          >
-                            <td className="px-8 py-4.5 text-center">
-                              {isExpanded ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
-                            </td>
-                            <td className="px-6 py-4.5 font-bold text-slate-900">
-                              <div className="flex flex-col">
-                                <span>{c.customerName}</span>
-                                <span className="text-[10px] text-slate-400 font-normal">{c.invoices.length} outstanding invoice(s)</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4.5 text-center">
-                              <div className="flex items-center justify-center gap-3 text-slate-400">
-                                {c.email && <MailIcon size={14} title={c.email} className="hover:text-slate-600" />}
-                                {c.phone && <Phone size={14} title={c.phone} className="hover:text-slate-600" />}
-                                {!c.email && !c.phone && <span className="text-slate-300">—</span>}
-                              </div>
-                            </td>
-                            <td className="px-4 py-4.5 text-right font-medium text-slate-600">{fmt(c.aging['Current'])}</td>
-                            <td className="px-4 py-4.5 text-right font-bold text-rose-600">{fmt(overdueTotal)}</td>
-                            <td className="px-8 py-4.5 text-right font-black text-slate-900">{fmt(c.total)}</td>
-                          </tr>
-
-                          {/* Collapse details */}
-                          {isExpanded && (
-                            <tr className="bg-slate-50/20 border-b border-slate-50">
-                              <td colSpan={6} className="px-12 py-4">
-                                <div className="border border-slate-100 rounded-xl overflow-hidden bg-white shadow-inner max-w-4xl">
-                                  <table className="w-full text-left text-[11.5px]">
-                                    <thead className="bg-slate-50 text-[9px] font-bold uppercase text-slate-400 border-b border-slate-100">
-                                      <tr>
-                                        <th className="px-6 py-2.5">Invoice #</th>
-                                        <th className="px-4 py-2.5">Date</th>
-                                        <th className="px-4 py-2.5">Due Date</th>
-                                        <th className="px-4 py-2.5 text-center">Status</th>
-                                        <th className="px-4 py-2.5 text-right">Age (Days)</th>
-                                        <th className="px-6 py-2.5 text-right">Balance Due (₹)</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50 text-slate-600">
-                                      {c.invoices.map((inv) => (
-                                        <tr key={inv.id} className="hover:bg-slate-50/50">
-                                          <td className="px-6 py-2.5 font-bold text-[#1e61f0] hover:underline" onClick={() => navigate(`/sales-invoices/${inv.id}`)}>
-                                            {inv.invoiceNumber}
-                                          </td>
-                                          <td className="px-4 py-2.5">{inv.date ? new Date(inv.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                                          <td className="px-4 py-2.5">{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                                          <td className="px-4 py-2.5 text-center">
-                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                                              inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' :
-                                              inv.status === 'Partially Paid' ? 'bg-amber-50 text-amber-600' :
-                                              inv.status === 'Overdue' ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-600'
-                                            }`}>
-                                              {inv.status}
-                                            </span>
-                                          </td>
-                                          <td className="px-4 py-2.5 text-right font-bold text-slate-500">{inv.daysOverdue > 0 ? `${inv.daysOverdue} days` : 'Current'}</td>
-                                          <td className="px-6 py-2.5 text-right font-bold text-slate-900">{fmt(inv.balance)}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })
-                  )}
-                </tbody>
-             </table>
+            <div className="text-right text-[11px] text-slate-600">
+              <div>Page: 1</div>
+              <div>{now}</div>
+            </div>
           </div>
 
+          <div className="border-t border-b border-slate-800 mb-3 mt-2" />
+
+          {/* ── TABLE ─────────────────────────────────────────── */}
+          {loading ? (
+            <div className="py-16 flex justify-center">
+              <div className="w-8 h-8 border-4 border-slate-100 border-t-slate-700 rounded-full animate-spin" />
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 text-[13px]">No outstanding unpaid invoices.</div>
+          ) : (
+            <table className="w-full border-collapse text-[12px] text-slate-800">
+              {/* Column headers */}
+              <thead>
+                <tr className="border-b border-slate-400">
+                  <th className="text-left py-1 pr-3 font-semibold w-[90px]">Invoice<br/>Number</th>
+                  <th className="text-left py-1 pr-3 font-semibold w-[30px]">Seq</th>
+                  <th className="text-left py-1 pr-3 font-semibold">Description</th>
+                  <th className="text-left py-1 pr-3 font-semibold w-[82px]">Date</th>
+                  <th className="text-left py-1 pr-3 font-semibold w-[82px]">Due Date</th>
+                  <th className="text-right py-1 pr-3 font-semibold w-[80px]">Amount</th>
+                  <th className="text-right py-1 pr-3 font-semibold w-[80px]">Applied<br/>Amount</th>
+                  <th className="text-right py-1 pr-3 font-semibold w-[80px]">Unpaid<br/>Amount</th>
+                  <th className="text-right py-1 font-semibold w-[80px]">GL Account<br/>Number</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {customers.map((c) => {
+                  // Per-customer totals
+                  const custAmount  = c.invoices.reduce((s, inv) => s + parseFloat(inv.totalAmount || inv.balance || 0), 0);
+                  const custApplied = c.invoices.reduce((s, inv) => s + parseFloat((inv.totalAmount || 0) - (inv.balance || 0)), 0);
+                  const custUnpaid  = c.invoices.reduce((s, inv) => s + parseFloat(inv.balance || 0), 0);
+
+                  return (
+                    <React.Fragment key={c.customerId}>
+                      {/* Customer heading row */}
+                      <tr>
+                        <td colSpan={9} className="pt-4 pb-1">
+                          <span className="font-bold text-[12px] text-slate-900">
+                            {c.customerName}{c.customerCode ? ` (${c.customerCode})` : ''}
+                          </span>
+                        </td>
+                      </tr>
+
+                      {/* Invoice rows grouped by invoice number */}
+                      {c.invoices.map((inv, invIdx) => {
+                        const invAmount  = parseFloat(inv.totalAmount || inv.balance || 0);
+                        const invApplied = parseFloat((inv.totalAmount || 0) - (inv.balance || 0));
+                        const invUnpaid  = parseFloat(inv.balance || 0);
+                        const items = (inv.items && inv.items.length > 0) ? inv.items : [{ seq: 1, description: inv.description || inv.invoiceNumber, glAccount: '' }];
+
+                        return (
+                          <React.Fragment key={inv.id || invIdx}>
+                            {items.map((item, itemIdx) => (
+                              <tr key={itemIdx} className="hover:bg-slate-50">
+                                <td className="py-0.5 pr-3 text-blue-700 font-medium cursor-pointer hover:underline"
+                                  onClick={() => navigate(`/sales-invoices/${inv.id}`)}>
+                                  {itemIdx === 0 ? inv.invoiceNumber : ''}
+                                </td>
+                                <td className="py-0.5 pr-3 text-center">{item.seq ?? itemIdx + 1}</td>
+                                <td className="py-0.5 pr-3">{item.description || inv.description || '—'}</td>
+                                <td className="py-0.5 pr-3">{itemIdx === 0 ? fmtDate(inv.date) : ''}</td>
+                                <td className="py-0.5 pr-3">{itemIdx === 0 ? fmtDate(inv.dueDate) : ''}</td>
+                                <td className="py-0.5 pr-3 text-right">{itemIdx === 0 ? fmt(invAmount) : ''}</td>
+                                <td className="py-0.5 pr-3 text-right">{itemIdx === 0 ? fmt(invApplied) : ''}</td>
+                                <td className="py-0.5 pr-3 text-right">{itemIdx === 0 ? fmt(invUnpaid) : ''}</td>
+                                <td className="py-0.5 text-right text-slate-500">{item.glAccount || ''}</td>
+                              </tr>
+                            ))}
+
+                            {/* Invoice subtotal row */}
+                            <tr className="border-t border-slate-200">
+                              <td colSpan={5} className="py-0.5 pr-3 text-[11px] text-slate-600 font-semibold">
+                                Total {inv.invoiceNumber}:
+                              </td>
+                              <td className="py-0.5 pr-3 text-right font-semibold">{fmt(invAmount)}</td>
+                              <td className="py-0.5 pr-3 text-right font-semibold">{fmt(invApplied)}</td>
+                              <td className="py-0.5 pr-3 text-right font-semibold">{fmt(invUnpaid)}</td>
+                              <td />
+                            </tr>
+                            <tr><td colSpan={9} className="py-1" /></tr>
+                          </React.Fragment>
+                        );
+                      })}
+
+                      {/* Customer total row */}
+                      <tr className="border-t border-slate-400 bg-slate-50">
+                        <td colSpan={5} className="py-1 pr-3 font-bold text-[12px]">
+                          Total {c.customerName}{c.customerCode ? ` (${c.customerCode})` : ''}:
+                        </td>
+                        <td className="py-1 pr-3 text-right font-bold">{fmt(custAmount)}</td>
+                        <td className="py-1 pr-3 text-right font-bold">{fmt(custApplied)}</td>
+                        <td className="py-1 pr-3 text-right font-bold">{fmt(custUnpaid)}</td>
+                        <td />
+                      </tr>
+                      <tr><td colSpan={9} className="py-2 border-b border-dashed border-slate-300" /></tr>
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Grand Total */}
+                <tr className="border-t-2 border-slate-800 bg-slate-100">
+                  <td colSpan={5} className="py-2 pr-3 font-extrabold text-[12px] uppercase tracking-wide">Grand Total:</td>
+                  <td className="py-2 pr-3 text-right font-extrabold">{fmt(grandAmount)}</td>
+                  <td className="py-2 pr-3 text-right font-extrabold">{fmt(grandApplied)}</td>
+                  <td className="py-2 pr-3 text-right font-extrabold">{fmt(grandUnpaid)}</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
+
+      {/* Print styles */}
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: white; }
+        }
+      `}</style>
     </div>
   );
 };

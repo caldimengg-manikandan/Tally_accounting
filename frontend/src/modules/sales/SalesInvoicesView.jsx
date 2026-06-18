@@ -1,14 +1,14 @@
 import { getUser } from '../../stores/authStore';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { salesAPI, ledgerAPI, companyAPI, mailAPI } from '../../services/api';
+import { salesAPI, ledgerAPI, companyAPI, mailAPI, paymentAPI } from '../../services/api';
 import { 
   Plus, Search, Edit2, Trash2, 
   ChevronDown, MoreHorizontal, FileText,
   Check, AlertCircle, File, Mail, Printer,
   Share2, History, X, ChevronRight, Download,
   Send, Loader2, ArrowLeft, DollarSign, Clock,
-  Tag, Info, Paperclip, Sparkles
+  Tag, Info, Paperclip, Sparkles, CreditCard
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
@@ -363,6 +363,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
     const [loading, setLoading] = useState(true);
     const [currentView, setCurrentView] = useState('detail'); // 'detail' or 'email'
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [generatingLink, setGeneratingLink] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -372,6 +373,23 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
     }, [id]);
+
+    const handleGenerateLink = async () => {
+        setGeneratingLink(true);
+        try {
+            const res = await paymentAPI.generateLink(id);
+            addNotification('Payment link generated successfully!', 'success');
+            // Refresh invoice data
+            const refreshed = await salesAPI.getById(id);
+            setInvoice(refreshed.data);
+            onRefresh();
+        } catch (err) {
+            console.error(err);
+            addNotification(err.response?.data?.error || 'Failed to generate payment link', 'error');
+        } finally {
+            setGeneratingLink(false);
+        }
+    };
 
     const handleDelete = async () => {
         try {
@@ -434,6 +452,15 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                  <button onClick={() => setCurrentView('email')} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><Send size={14}/> Send Email</button>
                  <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">PDF/Print <ChevronDown size={14}/></button>
                  <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><DollarSign size={14}/> Record Payment</button>
+                 {parseFloat(invoice.balance || invoice.totalAmount) > 0 && invoice.status !== 'Draft' && (
+                     <button 
+                         onClick={handleGenerateLink}
+                         disabled={generatingLink}
+                         className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-500 text-white rounded text-[12px] font-bold transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"
+                     >
+                         {generatingLink ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14}/>} Generate Payment Link
+                     </button>
+                 )}
             </div>
 
             {/* What's Next Banner */}
@@ -465,11 +492,11 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             )}
 
             {/* Document Scrolling Area */}
-            <div className="flex-1 overflow-y-auto bg-slate-50 p-16 flex flex-col items-center no-scrollbar print:p-0 print:bg-white custom-document-container">
+            <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
                  {/* Main Scrollable Invoice Document */}
-                 <div className="bg-white shadow-[0_25px_60px_rgba(0,0,0,0.1)] rounded-md w-full max-w-4xl p-16 relative border border-slate-100 min-h-[1050px] animate-fade-up">
+                 <div id="printable-invoice" className="bg-white w-full max-w-[820px] mx-auto mb-20 border border-slate-300 shadow-xl relative" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px'}} >
                     
-                    {/* Status Ribbon */}
+                    {/* Status Ribbon (no-print) */}
                     {(() => {
                         const badge = getStatusBadge(invoice);
                         const ribbonColor = badge.label.includes('OVERDUE') ? 'bg-rose-600' : 
@@ -482,157 +509,281 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         );
                     })()}
 
-                    {/* Header */}
-                    <div className="flex justify-between items-start mb-16">
-                        <div className="space-y-4">
-                            <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl">
-                                {company?.name?.[0]?.toUpperCase() || 'C'}
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-900 tracking-tight uppercase">{company?.name || 'Indus CAI private Ltd'}</h3>
-                                <p className="text-[12px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tamil Nadu, India</p>
-                                <p className="text-[12px] text-blue-600 font-bold lowercase tracking-wide mt-0.5">{company?.email || 'support@induscai.com'}</p>
-                            </div>
-                        </div>
-                        <div className="text-right pt-6">
-                            <h1 className="text-5xl font-bold text-slate-900 tracking-tight uppercase opacity-90 italic">TAX INVOICE</h1>
-                            <div className="h-1.5 w-32 bg-blue-600 ml-auto mt-4 rounded-full"></div>
-                        </div>
-                    </div>
+                    {/* ─── TALLY-STYLE HEADER ─── */}
+                    <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'2px solid #000'}} >
+                        <tbody>
+                            <tr>
+                                <td style={{padding:'10px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
+                                    <div style={{fontWeight:'bold', fontSize:'15px'}} >{company?.name || 'N/A'}</div>
+                                    <div style={{fontSize:'11px', color:'#333', marginTop:'2px'}} >
+                                        {company?.state || 'Tamil Nadu'}, India
+                                    </div>
+                                    {company?.email && <div style={{fontSize:'11px', color:'#555', marginTop:'2px'}} >Email: {company.email}</div>}
+                                </td>
+                                <td style={{padding:'10px 14px', verticalAlign:'top', width:'50%', textAlign:'center'}} >
+                                    <div style={{fontWeight:'bold', fontSize:'16px', letterSpacing:'1px', marginBottom:'4px'}} >TAX INVOICE</div>
+                                    <div style={{fontSize:'11px', color:'#555'}} >Invoice No: <strong>{invoice.invoiceNumber}</strong></div>
+                                    <div style={{fontSize:'11px', color:'#555'}} >Date: <strong>{new Date(invoice.date).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</strong></div>
+                                    {invoice.orderNumber && <div style={{fontSize:'11px', color:'#555'}} >Order No: <strong>{invoice.orderNumber}</strong></div>}
+                                    {invoice.dueDate && <div style={{fontSize:'11px', color:'#555'}} >Due Date: <strong>{new Date(invoice.dueDate).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</strong></div>}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                    {/* Metadata Grid */}
-                    <div className="grid grid-cols-12 gap-10 mb-16 border-y border-slate-100 py-10">
-                        <div className="col-span-7 space-y-6">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Bill To</p>
-                                <h4 className="text-[18px] font-bold text-blue-600 leading-tight">
-                                    {invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name || 'Customer Name'}
-                                </h4>
-                                <div className="text-[12px] text-slate-500 font-medium leading-relaxed max-w-[320px] whitespace-pre-wrap">
-                                    {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-span-5 flex flex-col items-end gap-3 text-right">
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-3 w-fit">
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Invoice Number</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {invoice.invoiceNumber}</span>
-                                
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Invoice Date</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                                
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Terms</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {invoice.terms || 'Due on Receipt'}</span>
-                                
-                                <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest pt-1">Due Date</span>
-                                <span className="text-[14px] font-bold text-slate-900">: {new Date(invoice.dueDate || invoice.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                            </div>
-                        </div>
-                    </div>
+                    {/* ─── BUYER / CONSIGNEE SECTION ─── */}
+                    <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'1px solid #000'}} >
+                        <tbody>
+                            <tr>
+                                <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
+                                    <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Buyer (Bill To):</div>
+                                    <div style={{fontWeight:'bold'}} >{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</div>
+                                    <div style={{fontSize:'11px', color:'#333'}} >
+                                        {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
+                                    </div>
+                                    {invoice.CustomerLedger?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {invoice.CustomerLedger.gstNumber}</div>}
+                                    {invoice.CustomerLedger?.state && <div style={{fontSize:'11px'}} >State: {invoice.CustomerLedger.state}</div>}
+                                </td>
+                                <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
+                                    <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Consignee (Ship To):</div>
+                                    <div style={{fontWeight:'bold'}} >{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</div>
+                                    <div style={{fontSize:'11px', color:'#333'}} >
+                                        {formatAddress(invoice.CustomerLedger?.shippingAddress || invoice.CustomerLedger?.address) || 'No shipping address provided.'}
+                                    </div>
+                                    {invoice.CustomerLedger?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {invoice.CustomerLedger.gstNumber}</div>}
+                                    {invoice.CustomerLedger?.state && <div style={{fontSize:'11px'}} >State: {invoice.CustomerLedger.state}</div>}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                    {/* Table */}
-                    <div className="mb-10 overflow-hidden border border-slate-200 rounded-sm">
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="bg-slate-900 text-[10px] font-bold text-white uppercase tracking-widest">
-                                    <th className="py-4 px-4 w-12 text-center">#</th>
-                                    <th className="py-4 px-4 text-left">Item & Description</th>
-                                    <th className="py-4 px-4 w-24 text-center">Qty</th>
-                                    <th className="py-4 px-4 w-32 text-right">Rate ({getCurrencyDisplay(invoice.CustomerLedger?.currency)})</th>
-                                    <th className="py-4 px-4 w-32 text-right">Amount ({getCurrencyDisplay(invoice.CustomerLedger?.currency)})</th>
+                    {/* ─── LINE ITEMS TABLE ─── */}
+                    <table style={{width:'100%', borderCollapse:'collapse'}} >
+                        <thead>
+                            <tr style={{background:'#f0f0f0'}} >
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'40px'}} >Sl. No.</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'left'}} >Description of Goods</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'90px'}} >HSN/SAC</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'80px'}} >Quantity</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'90px'}} >Rate</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'50px'}} >per</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'100px'}} >Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items.length === 0 && (
+                                <tr><td colSpan="7" style={{border:'1px solid #000', padding:'20px', textAlign:'center', color:'#999'}} >No items</td></tr>
+                            )}
+                            {items.map((it, idx) => (
+                                <tr key={idx} >
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{idx + 1}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', verticalAlign:'top'}} >
+                                        <div style={{fontWeight:'bold'}} >{it.Item?.name || 'Service Item'}</div>
+                                        {it.description && <div style={{fontSize:'11px', color:'#555', marginTop:'2px'}} >{it.description}</div>}
+                                    </td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.Item?.hsnCode || ''}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{parseFloat(it.quantity || 1).toFixed(2)}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top'}} >{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.Item?.unit || 'Nos'}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top', fontWeight:'bold'}} >{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {items.map((it, idx) => (
-                                    <tr key={idx} className="text-[12px] font-medium text-slate-700 hover:bg-slate-50 transition-colors">
-                                        <td className="p-4 text-center font-bold text-slate-400 border-r border-slate-50">{idx + 1}</td>
-                                        <td className="p-4 border-r border-slate-50">
-                                            <p className="font-bold text-slate-900 text-[13px]">{it.Item?.name || 'Service Component'}</p>
-                                            <p className="text-[11px] text-slate-400 mt-0.5">{it.description}</p>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            {/* Sub Total row */}
+                            <tr style={{background:'#f9f9f9'}} >
+                                <td colSpan="3" style={{border:'1px solid #000', padding:'6px 8px', fontWeight:'bold', textAlign:'right'}} >Total</td>
+                                <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', fontWeight:'bold'}} >
+                                    {items.reduce((s, it) => s + parseFloat(it.quantity || 0), 0).toFixed(2)}
+                                </td>
+                                <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
+                                <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
+                                <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
+                                    {parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                </td>
+                            </tr>
+                            {/* GST row */}
+                            {parseFloat(invoice.gstAmount || 0) > 0 && (
+                                <tr>
+                                    <td colSpan="6" style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right'}} >
+                                        GST (18%)
+                                    </td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
+                                        {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                    </td>
+                                </tr>
+                            )}
+                            {/* Grand Total row */}
+                            <tr style={{background:'#e8e8e8'}} >
+                                <td colSpan="6" style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >Grand Total</td>
+                                <td style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >
+                                    {getCurrencyDisplay(invoice.CustomerLedger?.currency)}{' '}
+                                    {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    {/* ─── NOTES & TERMS ─── */}
+                    {(invoice.customerNotes || invoice.termsConditions) && (
+                        <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
+                            <tbody>
+                                <tr>
+                                    {invoice.customerNotes && (
+                                        <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight: invoice.termsConditions ? '1px solid #000' : 'none'}} >
+                                            <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Customer Notes:</div>
+                                            <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{invoice.customerNotes}</div>
                                         </td>
-                                        <td className="p-4 text-center font-bold border-r border-slate-50">{parseFloat(it.quantity).toFixed(2)}</td>
-                                        <td className="p-4 text-right font-bold text-slate-500 border-r border-slate-50">{parseFloat(it.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                        <td className="p-4 text-right font-bold text-slate-900">{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                    </tr>
-                                ))}
-                                {/* Fillers */}
-                                {[...Array(Math.max(0, 3 - items.length))].map((_, i) => (
-                                    <tr key={i} className="h-10">
-                                        <td colSpan={5}></td>
-                                    </tr>
-                                ))}
+                                    )}
+                                    {invoice.termsConditions && (
+                                        <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
+                                            <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Terms & Conditions:</div>
+                                            <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{invoice.termsConditions}</div>
+                                        </td>
+                                    )}
+                                </tr>
                             </tbody>
                         </table>
-                    </div>
+                    )}
 
-                    {/* Summary and Finals Grid */}
-                    <div className="flex justify-between gap-16">
-                        {/* Info Block */}
-                        <div className="flex-1 space-y-10 pt-4">
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-px w-6 bg-slate-200" />
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Notes</span>
-                                </div>
-                                <p className="text-[12px] text-slate-500 italic max-w-sm pl-9">{invoice.customerNotes || 'Thanks for your business.'}</p>
-                            </div>
+                    {/* ─── SIGNATURE BLOCK ─── */}
+                    <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
+                        <tbody>
+                            <tr>
+                                <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', borderRight:'1px solid #000'}} >
+                                    <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >Receiver's Signature & Stamp</div>
+                                    <div style={{borderTop:'1px solid #000', width:'70%', marginTop:'32px'}} ></div>
+                                </td>
+                                <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', textAlign:'right'}} >
+                                    <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >For Authorized Signatory</div>
+                                    <div style={{borderTop:'1px solid #000', width:'60%', marginTop:'32px', marginLeft:'auto'}} ></div>
+                                    <div style={{fontSize:'11px', marginTop:'4px', textAlign:'right', fontWeight:'bold'}} >{invoice.salesperson || company?.name || 'Authorized Signatory'}</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                 </div>
 
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-px w-6 bg-slate-200" />
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Terms & Conditions</span>
-                                </div>
-                                <p className="text-[11px] text-slate-400 italic leading-relaxed pl-9">{invoice.termsConditions || 'Standard business terms apply. Please pay within the due date.'}</p>
-                            </div>
-                        </div>
+                 {/* Online Payments & Settlement Panel (no-print) */}
+                 <div className="w-full max-w-[820px] mx-auto bg-white border border-slate-200 rounded-2xl shadow-md p-6 space-y-6 no-print mt-8">
+                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                         <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                             <CreditCard className="text-blue-600" size={18} /> Online Payments & Portal Link
+                         </h3>
+                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+                             ${invoice.status === 'Paid' 
+                                 ? 'bg-blue-50 text-blue-700 border border-blue-100' 
+                                 : invoice.status === 'Partially Paid' 
+                                     ? 'bg-amber-50 text-amber-700 border border-amber-100' 
+                                     : 'bg-slate-50 text-slate-500 border border-slate-150'}`}>
+                             {invoice.status || 'Pending Checkout'}
+                         </span>
+                     </div>
 
-                        {/* Totals Block */}
-                        <div className="w-[340px] bg-slate-50/50 border border-slate-100 rounded-[2rem] overflow-hidden shadow-2xl relative">
-                            <div className="p-8 space-y-4">
-                                <div className="flex justify-between items-center text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <span>Sub Total</span>
-                                    <span className="text-slate-900 font-bold">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-[12px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <span>GST (18%)</span>
-                                    <span className="text-slate-900 font-bold">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                                
-                                <div className="pt-8 mt-4 border-t border-slate-200 flex flex-col items-end">
-                                    <div className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.3em] mb-1">Grand Total</div>
-                                    <div className="text-4xl font-bold text-slate-900 italic tracking-tight">
-                                        {getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </div>
-                                    <div className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mt-1">{invoice.CustomerLedger?.currency || 'INR'} ({getCurrencyDisplay(invoice.CustomerLedger?.currency)}) / Total Payable</div>
-                                </div>
-                                
-                                <div className="pt-6">
-                                    <div className="bg-white/80 p-5 rounded-2xl border border-blue-50 flex justify-between items-center">
-                                         <div className="space-y-0.5">
-                                            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Balance Due</p>
-                                            <p className="text-[14px] font-bold text-blue-600 italic tracking-tight">AVAILABLE</p>
-                                         </div>
-                                         <span className="text-[20px] font-bold text-blue-600 italic">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Footer Area */}
-                    <div className="mt-20 pt-10 border-t border-slate-50 flex justify-between items-end">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         {/* Secure Portal Link Sharing */}
                          <div className="space-y-3">
-                             <p className="text-[11px] font-bold text-slate-900 italic uppercase">Scan to Pay</p>
-                             <div className="w-24 h-24 bg-slate-50 border border-slate-100 rounded-lg flex items-center justify-center text-[8px] font-bold text-slate-300 p-2 text-center uppercase">
-                                UPI QR<br/>SECURE GATEWAY
+                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                 Secure Client Portal Link
+                             </label>
+                             <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                                 Share this secure, unauthenticated checkout link with the client. It expires in 30 days.
+                             </p>
+                             {invoice.shareToken ? (
+                                 <div className="flex gap-2">
+                                     <input 
+                                         type="text" 
+                                         readOnly 
+                                         value={`${window.location.origin}/shared/invoice/${invoice.shareToken}`}
+                                         className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-600 outline-none select-all"
+                                     />
+                                     <button 
+                                         onClick={() => {
+                                             navigator.clipboard.writeText(`${window.location.origin}/shared/invoice/${invoice.shareToken}`);
+                                             addNotification('Copied client checkout link to clipboard!', 'success');
+                                         }}
+                                         className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-lg text-xs font-bold transition-all"
+                                     >
+                                         Copy Link
+                                     </button>
+                                 </div>
+                             ) : (
+                                 <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-amber-800 text-[11px] font-medium leading-relaxed">
+                                     No secure public link generated yet. Click "Generate Payment Link" in the toolbar to create one.
+                                 </div>
+                             )}
+                         </div>
+
+                         {/* Active Gateway Link & Reconciliation details */}
+                         <div className="space-y-3">
+                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                 Gateway Redirect Link
+                             </label>
+                             <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                                 Direct checkout page on Razorpay payment gateway.
+                             </p>
+                             {invoice.paymentLink ? (
+                                 <div className="flex gap-2">
+                                     <input 
+                                         type="text" 
+                                         readOnly 
+                                         value={invoice.paymentLink}
+                                         className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-600 outline-none select-all"
+                                     />
+                                     <a 
+                                         href={invoice.paymentLink} 
+                                         target="_blank" 
+                                         rel="noopener noreferrer"
+                                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold text-center transition-all flex items-center justify-center"
+                                     >
+                                         Open Link
+                                     </a>
+                                 </div>
+                             ) : (
+                                 <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 text-[11px] text-center font-medium leading-relaxed">
+                                     Payment gateway link has not been generated for this invoice.
+                                 </div>
+                             )}
+                         </div>
+                     </div>
+
+                     {/* Installment History list */}
+                     <div className="pt-4 border-t border-slate-100 space-y-3">
+                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                             Installment & Payment History
+                         </label>
+                         {invoice.payments && invoice.payments.length > 0 ? (
+                             <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100">
+                                 {invoice.payments.map((p, idx) => (
+                                     <div key={p.id || idx} className="px-4 py-3 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors">
+                                         <div className="flex items-center gap-3">
+                                             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-[10px] uppercase tracking-wider shadow-inner">
+                                                 Rec
+                                             </div>
+                                             <div>
+                                                 <div className="font-bold text-slate-800">
+                                                     Payment Received via {p.paymentMode || 'Gateway'}
+                                                 </div>
+                                                 <div className="text-[10px] text-slate-400 font-medium">
+                                                     {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'} 
+                                                     {p.reference && ` • Ref: ${p.reference}`}
+                                                 </div>
+                                             </div>
+                                         </div>
+                                         <div className="text-right">
+                                             <p className="font-extrabold text-emerald-600 font-mono">
+                                                 + {getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(p.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                             </p>
+                                         </div>
+                                     </div>
+                                 ))}
                              </div>
-                         </div>
-                         <div className="text-right">
-                             <div className="w-56 ml-auto h-1 border-b border-slate-200 border-dashed mb-6"></div>
-                             <p className="text-[12px] font-bold text-slate-900 uppercase tracking-widest">{company?.name || 'Authorized Signatory'}</p>
-                             <p className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest">Authorized Signatory</p>
-                         </div>
-                    </div>
+                         ) : (
+                             <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 text-xs text-center font-medium leading-relaxed">
+                                 No payment captures or installments recorded yet.
+                             </div>
+                         )}
+                     </div>
                  </div>
 
                  <div className="mt-8 mb-20 text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] flex items-center gap-3 no-print opacity-50">

@@ -60,6 +60,10 @@ const BudgetItem = require('./budgetItem.model')(sequelize, DataTypes);
 const CostCenterAllocation = require('./costCenterAllocation.model')(sequelize, DataTypes);
 const RefreshToken = require('./refreshToken.model')(sequelize, DataTypes);
 const MfaSecret = require('./mfaSecret.model')(sequelize, DataTypes);
+const PaymentGateway = require('./paymentGateway.model')(sequelize, DataTypes);
+const PaymentTransaction = require('./paymentTransaction.model')(sequelize, DataTypes);
+const InvoicePayment = require('./invoicePayment.model')(sequelize, DataTypes);
+const PaymentWebhookLog = require('./paymentWebhookLog.model')(sequelize, DataTypes);
 const StockMovement = require('./stockMovement.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
@@ -208,6 +212,29 @@ SalesInvoice.belongsTo(Company, { foreignKey: 'CompanyId' });
 Company.hasMany(SalesInvoice, { foreignKey: 'CompanyId' });
 SalesInvoice.belongsTo(Ledger, { as: 'CustomerLedger', foreignKey: 'customerLedgerId' });
 SalesInvoiceItem.belongsTo(Item, { foreignKey: 'itemId' });
+
+// Payment Gateway Associations
+Company.hasMany(PaymentGateway, { foreignKey: 'companyId' });
+PaymentGateway.belongsTo(Company, { foreignKey: 'companyId' });
+
+Company.hasMany(PaymentTransaction, { foreignKey: 'companyId' });
+PaymentTransaction.belongsTo(Company, { foreignKey: 'companyId' });
+SalesInvoice.hasMany(PaymentTransaction, { foreignKey: 'invoiceId' });
+PaymentTransaction.belongsTo(SalesInvoice, { foreignKey: 'invoiceId' });
+PaymentGateway.hasMany(PaymentTransaction, { foreignKey: 'gatewayId' });
+PaymentTransaction.belongsTo(PaymentGateway, { foreignKey: 'gatewayId' });
+
+Company.hasMany(InvoicePayment, { foreignKey: 'companyId' });
+InvoicePayment.belongsTo(Company, { foreignKey: 'companyId' });
+SalesInvoice.hasMany(InvoicePayment, { as: 'payments', foreignKey: 'invoiceId' });
+InvoicePayment.belongsTo(SalesInvoice, { foreignKey: 'invoiceId' });
+PaymentTransaction.hasMany(InvoicePayment, { foreignKey: 'transactionId' });
+InvoicePayment.belongsTo(PaymentTransaction, { foreignKey: 'transactionId' });
+Voucher.hasMany(InvoicePayment, { foreignKey: 'voucherId' });
+InvoicePayment.belongsTo(Voucher, { foreignKey: 'voucherId' });
+
+PaymentGateway.hasMany(PaymentWebhookLog, { foreignKey: 'gatewayId' });
+PaymentWebhookLog.belongsTo(PaymentGateway, { foreignKey: 'gatewayId' });
 
 // 12. System Mails
 Company.hasMany(SystemMail, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -493,6 +520,10 @@ module.exports = {
   CostCenterAllocation,
   RefreshToken,
   MfaSecret,
+  PaymentGateway,
+  PaymentTransaction,
+  InvoicePayment,
+  PaymentWebhookLog,
   StockMovement
 };
 

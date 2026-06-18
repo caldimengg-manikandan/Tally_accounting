@@ -571,7 +571,6 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
               </div>
 
               {/* Earnings Section */}
->>>>>>> origin/main
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="h-6 w-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">

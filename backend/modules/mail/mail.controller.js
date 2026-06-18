@@ -104,8 +104,37 @@ exports.sendEmail = async (req, res, next) => {
         }
     }
 
+    if (type === 'Sales Order') {
+        const { SalesOrder, SalesOrderItem, Ledger, Company, Item } = require('../../models');
+        const PDFService = require('../../services/PDFService');
+        const { documentId } = req.body;
 
-    // 2. Configure Transport
+        if (documentId) {
+            const order = await SalesOrder.findByPk(documentId, {
+                include: [
+                    { model: Ledger, as: 'Customer' },
+                    { model: Company },
+                    { model: SalesOrderItem, as: 'Items', include: [{ model: Item }] }
+                ]
+            });
+            if (order) {
+                // BOLA guard
+                const requestingCompanyId = companyId || req.companyId || req.user?.CompanyId;
+                if (requestingCompanyId && String(order.CompanyId) !== String(requestingCompanyId)) {
+                    return res.status(403).json({ error: 'Access denied: Sales Order does not belong to your company' });
+                }
+                const items = order.Items || [];
+                const companyObj = order.Company ? order.Company.toJSON() : {};
+                const pdfBuffer = await PDFService.generateSalesOrder(order.toJSON(), items.map(i => i.toJSON()), companyObj);
+                attachments.push({
+                    filename: `SalesOrder_${order.orderNumber}.pdf`,
+                    content: pdfBuffer
+                });
+            }
+        }
+    }
+
+
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
     const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
     const userEmail = process.env.SMTP_USER || process.env.MAIL_USER;
@@ -180,6 +209,15 @@ exports.sendEmail = async (req, res, next) => {
         const { documentId } = req.body;
         if (documentId) {
             await PurchaseOrder.update({ status: 'issued', billed_status: 'yet_to_be_billed' }, { where: { id: documentId } });
+        }
+    }
+
+    // 5. If Sales Order, update status to Sent
+    if (type === 'Sales Order' && (mailStatus === 'Sent' || mailStatus === 'Sent (Mock)')) {
+        const { SalesOrder } = require('../../models');
+        const { documentId } = req.body;
+        if (documentId) {
+            await SalesOrder.update({ status: 'Sent' }, { where: { id: documentId } });
         }
     }
 

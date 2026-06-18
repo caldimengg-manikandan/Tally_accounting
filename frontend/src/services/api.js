@@ -356,6 +356,18 @@ export const salesAPI = {
   getNextNumber: (companyId, type) => api.get(`/sales/next-number/${companyId}/${type}`)
 };
 
+export const paymentAPI = {
+  getGateways: () => api.get('/payment/gateways'),
+  saveGateway: (data) => api.post('/payment/gateways', data),
+  updateGatewayStatus: (id, isActive) => api.put(`/payment/gateways/${id}/status`, { isActive }),
+  testConnection: (data) => api.post('/payment/gateways/test', data),
+  generateLink: (invoiceId) => api.post(`/payment/invoices/${invoiceId}/link`),
+  getTransactions: (invoiceId) => api.get(`/payment/invoices/${invoiceId}/transactions`),
+  getPublicInvoice: (shareToken) => api.get(`/sales/public/invoices/${shareToken}`),
+  recordSettlement: (data) => api.post('/payment/settlements/reconcile', data),
+  getUnsettledTransactions: () => api.get('/payment/settlements/unsettled')
+};
+
 // ─── Quotes ────────────────────────────────────────
 export const quoteAPI = {
   create: (data) => api.post('/quotes', data),
@@ -384,7 +396,9 @@ export const recurringInvoiceAPI = {
   update: (id, data) => api.put(`/recurring-invoices/${id}`, data),
   delete: (id) => api.delete(`/recurring-invoices/${id}`),
   getHistory: (id) => api.get(`/recurring-invoices/history/${id}`),
-  processDue: () => api.post('/recurring-invoices/process-due')
+  processDue: () => api.post('/recurring-invoices/process-due'),
+  getChildInvoices: (id, companyId) => api.get(`/recurring-invoices/child-invoices/${id}`, { params: { companyId } }),
+  createManualInvoice: (id, data) => api.post(`/recurring-invoices/create-manual/${id}`, data),
 };
 
 export const deliveryChallanAPI = {
@@ -553,5 +567,3 @@ export const gstAPI = {
 };
 
 export default api;
-
-

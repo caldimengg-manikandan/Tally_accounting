@@ -4,6 +4,7 @@ import useNotificationStore from '../store/notificationStore';
 
 const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, apiFunc }) => {
     const addNotification = useNotificationStore(state => state.addNotification);
+    const addActivity = useNotificationStore(state => state.addActivity);
     const [customerEmail, setCustomerEmail] = useState('');
     const [ccEmails, setCcEmails] = useState(['finance@induspvtltd.in']);
     const [ccInput, setCcInput] = useState('');
@@ -183,16 +184,17 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                 type: documentType,
                 documentId: documentData.id
             });
-            addNotification('Email sent successfully!', 'success');
-            setSentPreview({
-                to: customerEmail,
-                cc: ccEmails,
-                subject,
-                body,
-                sentAt: new Date().toLocaleString('en-IN', { dateStyle: 'long', timeStyle: 'medium' }),
-                documentNumber: documentData.number,
-                customerName: documentData.customerName
+            addNotification(`Email sent successfully to ${customerEmail}!`, 'success');
+            // Log to activity bell
+            addActivity({
+                type: 'email',
+                module: documentType,
+                title: `Email sent to ${customerEmail}`,
+                detail: `${documentType} #${documentData.number} — ${documentData.customerName || ''}`,
             });
+            // Close the modal immediately — no need to stay on the sent preview screen
+            onClose?.();
+            onSend?.();
         } catch (err) {
             console.error(err);
             addNotification('Failed to send email: ' + (err.response?.data?.error || err.message), 'error');
@@ -329,7 +331,6 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                             className="flex-1 bg-transparent border-none outline-none text-[13px] font-bold text-blue-600"
                             placeholder="Recipient email..."
                         />
-                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Bcc</span>
                     </div>
 
                     {/* CC — working tag input */}

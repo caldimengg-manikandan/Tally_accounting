@@ -3,6 +3,9 @@ const router = express.Router();
 const salesController = require('./sales.controller');
 const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/auth.middleware');
 
+// Public shared route for customer checkout — bypasses auth token requirement
+router.get('/public/invoices/:share_token', salesController.getPublicInvoiceByShareToken);
+
 router.use(verifyToken, tenantAccess);
 
 // Create orders & invoices — ACCOUNTANT and above

@@ -79,7 +79,12 @@ if (!process.env.CLIENT_URL && process.env.NODE_ENV === 'production') {
 
 // 2. Middleware Strategy
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(require('cookie-parser')()); // Phase 2: needed for httpOnly refresh token cookie
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -115,6 +120,7 @@ app.get('/api/auth/callback',
   }
 );
 // 4. Modular Hub Routing
+app.use('/api/payment', require('./modules/payment/payment.routes'));
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/users', require('./modules/auth/users.routes'));          // User management (ADMIN)
 app.use('/api/companies', require('./modules/company/company.routes'));

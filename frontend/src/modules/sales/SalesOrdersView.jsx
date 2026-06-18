@@ -4,10 +4,11 @@ import {
   Plus, Search, Filter, Download, Columns, Rows, ChevronLeft, ChevronRight, ChevronDown,
   Settings, X, HelpCircle, Package, User, Calendar, FileText, Trash2,
   ArrowLeft, Save, Send, Clock, MoreHorizontal, CheckCircle2, AlertCircle, Loader2, Edit2, RefreshCw, ShieldCheck,
-  Printer, History, Share2, Bold, Italic, Underline, ArrowUp, ArrowDown
+  Printer, History, Share2, Bold, Italic, Underline, ArrowUp, ArrowDown, Mail
 } from 'lucide-react';
-import { salesAPI, ledgerAPI, inventoryAPI, companyAPI, projectAPI } from '../../services/api';
+import { salesAPI, ledgerAPI, inventoryAPI, companyAPI, projectAPI, mailAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
+import EmailSendModal from '../../components/EmailSendModal';
 import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
 
@@ -310,6 +311,7 @@ const SalesOrdersView = ({ companyId }) => {
     const [salespersons, setSalespersons] = useState([]);
     const [isSalespersonModalOpen, setIsSalespersonModalOpen] = useState(false);
     const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const { addNotification } = useNotificationStore();
 
     // List view states moved to top level
@@ -339,7 +341,10 @@ const SalesOrdersView = ({ companyId }) => {
     });
 
     const fetchData = async () => {
-        if (!companyId) return;
+        if (!companyId) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const [oRes, cRes, iRes, projRes] = await Promise.all([
@@ -459,6 +464,19 @@ const SalesOrdersView = ({ companyId }) => {
     };
 
     const resetForm = async () => {
+        // Restore a stashed draft if navigated back from project creation
+        const stashed = localStorage.getItem('so_draft_form');
+        if (stashed) {
+            try {
+                const draft = JSON.parse(stashed);
+                localStorage.removeItem('so_draft_form');
+                setFormData(draft);
+                return;
+            } catch (e) {
+                localStorage.removeItem('so_draft_form');
+            }
+        }
+
         let nextNo = `SO-${String(orders.length + 1).padStart(5, '0')}`;
         try {
             const nextRes = await salesAPI.getNextNumber(companyId, 'order');
@@ -522,6 +540,7 @@ const SalesOrdersView = ({ companyId }) => {
                 resetForm();
                 setView('form');
             }
+            setLoading(false);
         } else if (location.pathname === '/sales-orders') {
             setView('list');
         }
@@ -837,11 +856,20 @@ const SalesOrdersView = ({ companyId }) => {
                                 <div className="flex-1 max-w-2xl relative group">
                                     <select 
                                         value={formData.projectId} 
-                                        onChange={e => setFormData(p => ({ ...p, projectId: e.target.value }))}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            if (val === '__create_new_project__') {
+                                                localStorage.setItem('so_draft_form', JSON.stringify(formData));
+                                                navigate('/time-tracking/projects/new', { state: { returnTo: '/sales-orders/new' } });
+                                            } else {
+                                                setFormData(p => ({ ...p, projectId: val }));
+                                            }
+                                        }}
                                         className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-900 outline-none focus:border-blue-400 transition-all appearance-none"
                                     >
                                         <option value="">Select or associate project</option>
                                         {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        <option value="__create_new_project__">+ Create New Project</option>
                                     </select>
                                     <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                 </div>
@@ -878,7 +906,7 @@ const SalesOrdersView = ({ companyId }) => {
                                                         placeholder="Type to select item..."
                                                         onChange={(it) => handleItemUpdate(line.id, 'itemId', it.id)}
                                                         onNewItem={() => {
-                                                            localStorage.setItem('so_draft', JSON.stringify(formData));
+                                                            localStorage.setItem('so_draft_form', JSON.stringify(formData));
                                                             window.open('/inventory/new', '_blank');
                                                         }}
                                                     />
@@ -1070,116 +1098,197 @@ const SalesOrdersView = ({ companyId }) => {
                     <div className="flex items-center gap-1">
                         <button onClick={() => openForm(order)} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold border border-transparent hover:border-slate-100 transition-all"><Edit2 size={14}/> Modify</button>
                         <button onClick={() => window.print()} className="px-3 py-1.5 text-slate-600 hover:bg-slate-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold transition-all"><Printer size={14}/> PDF / Print</button>
+                        <button onClick={() => setIsEmailModalOpen(true)} className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-none flex items-center gap-1.5 text-[12px] font-bold border border-transparent hover:border-blue-100 transition-all"><Mail size={14}/> Send Email</button>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 md:p-12 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-50/50">
-                    <div id="printable-order" className="bg-white shadow-[0_40px_100px_-20px_rgba(0,0,0,0.08)] rounded-none min-h-[842px] w-full max-w-[800px] mx-auto p-8 md:p-20 relative overflow-hidden border border-slate-100 mb-20 group">
-                        <div className="absolute top-16 right-16 rotate-[12deg] opacity-[0.03] no-print pointer-events-none select-none">
-                            <div className="border-[12px] border-slate-900 text-slate-900 px-12 py-6 text-7xl font-bold uppercase tracking-[0.2em] rounded-none">ORDER</div>
-                        </div>
+                <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
+                    <div id="printable-order" className="bg-white w-full max-w-[820px] mx-auto mb-20 border border-slate-300" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px'}} >
 
-                        <div className="flex justify-between items-start mb-16 border-b border-slate-900 pb-12">
-                            <div className="flex gap-4 items-start max-w-[65%]">
-                                <div className="w-12 h-12 bg-slate-900 flex items-center justify-center text-white font-bold text-xl shrink-0 rounded-none">M</div>
-                                <div className="space-y-1 min-w-0">
-                                    <h2 className="text-[18px] font-bold text-slate-900 tracking-tight uppercase leading-tight">OFFICIAL SUPPLY CHAIN</h2>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Fulfillment & Operations</p>
-                                </div>
-                            </div>
-                            <div className="text-right">
-                                <h1 className="text-[18px] font-bold text-slate-900 tracking-[0.2em] uppercase leading-none mb-3">SALES ORDER</h1>
-                                <div className="space-y-1">
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Order Ref #</p>
-                                    <p className="text-[15px] font-bold text-slate-900 tracking-tight uppercase">{order.orderNumber}</p>
-                                </div>
-                            </div>
-                        </div>
+                        {/* ─── TALLY-STYLE HEADER ─── */}
+                        <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'2px solid #000'}} >
+                            <tbody>
+                                <tr>
+                                    <td style={{padding:'10px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
+                                        <div style={{fontWeight:'bold', fontSize:'15px'}} >{order.Customer?.companyName || order.Customer?.name || 'N/A'}</div>
+                                        <div style={{fontSize:'11px', color:'#333', marginTop:'2px'}} >
+                                            {(() => {
+                                                try {
+                                                    const addr = order.Customer?.billingAddress;
+                                                    if (!addr) return '';
+                                                    const p = typeof addr === 'string' ? JSON.parse(addr) : addr;
+                                                    return [p.street1, p.street2, p.city, p.state, p.pinCode].filter(Boolean).join(', ');
+                                                } catch (e) { return order.Customer?.billingAddress || ''; }
+                                            })()}
+                                        </div>
+                                        {order.Customer?.gstNumber && <div style={{marginTop:'4px', fontSize:'11px'}} >GSTIN: {order.Customer.gstNumber}</div>}
+                                        {order.Customer?.state && <div style={{fontSize:'11px'}} >State: {order.Customer.state}</div>}
+                                    </td>
+                                    <td style={{padding:'10px 14px', verticalAlign:'top', width:'50%', textAlign:'center'}} >
+                                        <div style={{fontWeight:'bold', fontSize:'16px', letterSpacing:'1px', marginBottom:'4px'}} >SALES ORDER</div>
+                                        <div style={{fontSize:'11px', color:'#555'}} >Order No: <strong>{order.orderNumber}</strong></div>
+                                        <div style={{fontSize:'11px', color:'#555'}} >Date: <strong>{new Date(order.date).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</strong></div>
+                                        {order.referenceNumber && <div style={{fontSize:'11px', color:'#555'}} >Ref: <strong>{order.referenceNumber}</strong></div>}
+                                        {order.expectedShipmentDate && <div style={{fontSize:'11px', color:'#555'}} >Shipment Date: <strong>{new Date(order.expectedShipmentDate).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</strong></div>}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
 
-                        <div className="grid grid-cols-2 gap-20 mb-16">
-                            <div className="space-y-4">
-                                <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Bill To Entity</h5>
-                                <div className="space-y-1">
-                                    <p className="text-[15px] font-bold text-slate-900 leading-tight uppercase">{order.Customer?.name}</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">{order.Customer?.email}</p>
-                                </div>
-                            </div>
-                            <div className="text-right space-y-6">
-                                <div>
-                                    <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Issue Date</h5>
-                                    <p className="text-[15px] font-bold text-slate-900 uppercase">{new Date(order.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-                                </div>
-                                {order.expectedShipmentDate && (
-                                    <div>
-                                        <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Target Delivery</h5>
-                                        <p className="text-[15px] font-bold text-blue-600 uppercase">{new Date(order.expectedShipmentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-                                    </div>
+                        {/* ─── BUYER / CONSIGNEE SECTION ─── */}
+                        <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'1px solid #000'}} >
+                            <tbody>
+                                <tr>
+                                    <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
+                                        <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Buyer (Bill To):</div>
+                                        <div style={{fontWeight:'bold'}} >{order.Customer?.displayName || order.Customer?.name}</div>
+                                        <div style={{fontSize:'11px', color:'#333'}} >
+                                            {(() => {
+                                                try {
+                                                    const addr = order.Customer?.billingAddress;
+                                                    if (!addr) return '';
+                                                    const p = typeof addr === 'string' ? JSON.parse(addr) : addr;
+                                                    return [p.street1, p.street2, p.city, p.state, p.pinCode, p.country].filter(Boolean).join(', ');
+                                                } catch (e) { return ''; }
+                                            })()}
+                                        </div>
+                                        {order.Customer?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {order.Customer.gstNumber}</div>}
+                                        {order.Customer?.state && <div style={{fontSize:'11px'}} >State: {order.Customer.state}</div>}
+                                    </td>
+                                    <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
+                                        <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Consignee (Ship To):</div>
+                                        <div style={{fontWeight:'bold'}} >{order.Customer?.displayName || order.Customer?.name}</div>
+                                        <div style={{fontSize:'11px', color:'#333'}} >
+                                            {(() => {
+                                                try {
+                                                    const addr = order.Customer?.shippingAddress || order.Customer?.billingAddress;
+                                                    if (!addr) return '';
+                                                    const p = typeof addr === 'string' ? JSON.parse(addr) : addr;
+                                                    return [p.street1, p.street2, p.city, p.state, p.pinCode, p.country].filter(Boolean).join(', ');
+                                                } catch (e) { return ''; }
+                                            })()}
+                                        </div>
+                                        {order.Customer?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {order.Customer.gstNumber}</div>}
+                                        {order.Customer?.state && <div style={{fontSize:'11px'}} >State: {order.Customer.state}</div>}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        {/* ─── LINE ITEMS TABLE ─── */}
+                        <table style={{width:'100%', borderCollapse:'collapse'}} >
+                            <thead>
+                                <tr style={{background:'#f0f0f0'}} >
+                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'40px'}} >Sl. No.</th>
+                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'left'}} >Description of Goods</th>
+                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'90px'}} >HSN/SAC</th>
+                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'90px'}} >Due on</th>
+                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'80px'}} >Quantity</th>
+                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'90px'}} >Rate</th>
+                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'50px'}} >per</th>
+                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'100px'}} >Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {itemsList.length === 0 && (
+                                    <tr><td colSpan="8" style={{border:'1px solid #000', padding:'20px', textAlign:'center', color:'#999'}} >No items</td></tr>
                                 )}
-                            </div>
-                        </div>
-
-                        <div className="relative mb-20">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b-[3px] border-slate-900 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-900">
-                                        <th className="py-6 text-left pb-4">Material / Service Specification</th>
-                                        <th className="py-6 text-right w-24 pb-4">Qty</th>
-                                        <th className="py-6 text-right w-32 pb-4">Rate</th>
-                                        <th className="py-6 text-right w-40 pb-4">Amount</th>
+                                {itemsList.map((it, idx) => (
+                                    <tr key={idx} >
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{idx + 1}</td>
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', verticalAlign:'top'}} >
+                                            <div style={{fontWeight:'bold'}} >{it.detail}</div>
+                                            {it.description && <div style={{fontSize:'11px', color:'#555', marginTop:'2px'}} >{it.description}</div>}
+                                        </td>
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.hsnCode || ''}</td>
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >
+                                            {order.expectedShipmentDate ? new Date(order.expectedShipmentDate).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'}) : order.paymentTerms || ''}
+                                        </td>
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.quantity}</td>
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top'}} >{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >Nos</td>
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top', fontWeight:'bold'}} >{parseFloat(it.amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {itemsList.map((it, idx) => (
-                                        <tr key={idx} className="group/row hover:bg-slate-50/50 transition-colors">
-                                            <td className="py-8">
-                                                <div className="flex items-start gap-4">
-                                                    <div className="w-10 h-10 bg-slate-50 flex items-center justify-center text-slate-400 group-hover/row:text-slate-900 font-bold text-[12px] rounded-none border border-transparent group-hover/row:border-slate-200 transition-all">{idx + 1}</div>
-                                                    <div>
-                                                        <p className="text-[16px] font-bold text-slate-900 tracking-tight mb-1 uppercase leading-none">{it.detail}</p>
-                                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed mt-1">{it.description || 'Standard Fulfillment Unit'}</p>
-                                                    </div>
-                                                </div>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                {/* Sub Total row */}
+                                <tr style={{background:'#f9f9f9'}} >
+                                    <td colSpan="4" style={{border:'1px solid #000', padding:'6px 8px', fontWeight:'bold', textAlign:'right'}} >Total</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', fontWeight:'bold'}} >
+                                        {itemsList.reduce((s, it) => s + parseFloat(it.quantity || 0), 0)}
+                                    </td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
+                                        {parseFloat(order.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                    </td>
+                                </tr>
+                                {/* Tax row */}
+                                {parseFloat(order.tax || order.taxAmount || 0) > 0 && (
+                                    <tr>
+                                        <td colSpan="7" style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right'}} >
+                                            GST ({order.taxPercent || 18}%)
+                                        </td>
+                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
+                                            {parseFloat(order.tax || order.taxAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                        </td>
+                                    </tr>
+                                )}
+                                {/* Grand Total row */}
+                                <tr style={{background:'#e8e8e8'}} >
+                                    <td colSpan="7" style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >Grand Total</td>
+                                    <td style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >
+                                        {getCurrencyDisplay(order.Customer?.currency)}{' '}
+                                        {parseFloat(order.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        {/* ─── NOTES & TERMS ─── */}
+                        {(order.customerNotes || order.termsConditions) && (
+                            <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
+                                <tbody>
+                                    <tr>
+                                        {order.customerNotes && (
+                                            <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight: order.termsConditions ? '1px solid #000' : 'none'}} >
+                                                <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Customer Notes:</div>
+                                                <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{order.customerNotes}</div>
                                             </td>
-                                            <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums uppercase">{it.quantity} units</td>
-                                            <td className="py-8 text-right text-[15px] font-bold text-slate-500 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(it.rate).toLocaleString()}</td>
-                                            <td className="py-8 text-right text-[16px] font-bold text-slate-900 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(it.amount).toLocaleString()}</td>
-                                        </tr>
-                                    ))}
+                                        )}
+                                        {order.termsConditions && (
+                                            <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
+                                                <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Terms & Conditions:</div>
+                                                <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{order.termsConditions}</div>
+                                            </td>
+                                        )}
+                                    </tr>
                                 </tbody>
                             </table>
-                        </div>
+                        )}
 
-                        <div className="flex justify-end pt-12 border-t-2 border-slate-900">
-                            <div className="w-full max-w-md space-y-6">
-                                <div className="flex justify-between items-center px-2">
-                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Net Subtotal</span>
-                                    <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.subTotal).toLocaleString()}</span>
-                                </div>
-                                {parseFloat(order.taxAmount || 0) > 0 && (
-                                    <div className="flex justify-between items-center px-2">
-                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tax Levy</span>
-                                        <span className="text-[16px] font-bold text-slate-600 tabular-nums">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.taxAmount).toLocaleString()}</span>
-                                    </div>
-                                )}
-                                <div className="bg-slate-900 text-white p-6 md:p-8 shadow-2xl relative overflow-hidden rounded-none">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-none blur-[60px] opacity-20"></div>
-                                    <div className="flex justify-between items-center relative z-10">
-                                        <span className="text-[11px] font-bold text-blue-300 uppercase tracking-[0.2em]">Order Total</span>
-                                        <span className="text-[24px] md:text-[32px] font-bold text-white tracking-tight tabular-nums leading-none">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.totalAmount).toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        {/* ─── SIGNATURE BLOCK ─── */}
+                        <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
+                            <tbody>
+                                <tr>
+                                    <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', borderRight:'1px solid #000'}} >
+                                        <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >Receiver's Signature & Stamp</div>
+                                        <div style={{borderTop:'1px solid #000', width:'70%', marginTop:'32px'}} ></div>
+                                    </td>
+                                    <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', textAlign:'right'}} >
+                                        <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >For Authorized Signatory</div>
+                                        <div style={{borderTop:'1px solid #000', width:'60%', marginTop:'32px', marginLeft:'auto'}} ></div>
+                                        <div style={{fontSize:'11px', marginTop:'4px', textAlign:'right', fontWeight:'bold'}} >{order.salesperson || 'Authorized Signatory'}</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
 
-                        <div className="mt-32 flex justify-between items-end opacity-40">
-                             <div className="space-y-1">
-                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Validated Order Status: {order.status}</p>
-                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Hash ID: {order.id?.substring(0, 16)}</p>
-                             </div>
-                             <div className="text-right">
-                                 <div className="w-32 h-0.5 bg-slate-900 mb-2 ml-auto"></div>
-                                 <p className="text-[10px] font-bold uppercase tracking-[0.2em]">Authorized Signatory</p>
-                             </div>
+                        {/* ─── STATUS FOOTER ─── */}
+                        <div style={{padding:'6px 14px', background:'#f5f5f5', borderTop:'1px solid #ccc', fontSize:'10px', color:'#888', display:'flex', justifyContent:'space-between'}} >
+                            <span>Status: {order.status}</span>
+                            <span>Order ID: {order.id?.substring(0, 16)}</span>
                         </div>
                     </div>
                 </div>
@@ -1207,6 +1316,40 @@ const SalesOrdersView = ({ companyId }) => {
                 title="CONFIRM ORDER DELETION"
                 message="Are you sure you want to permanently delete this sales order? This action cannot be reversed and all history will be lost."
             />
+
+            {selectedOrder && (
+                <EmailSendModal
+                    isOpen={isEmailModalOpen}
+                    onClose={() => setIsEmailModalOpen(false)}
+                    documentType="Sales Order"
+                    documentData={{
+                        number: selectedOrder.orderNumber,
+                        date: new Date(selectedOrder.date).toLocaleDateString('en-IN'),
+                        customerName: selectedOrder.Customer?.displayName || selectedOrder.Customer?.name || '',
+                        customerEmail: selectedOrder.Customer?.email || '',
+                        items: (selectedOrder.Items || []).map(it => ({
+                            name: it.detail,
+                            quantity: it.quantity,
+                            rate: it.rate,
+                            amount: it.amount
+                        })),
+                        subTotal: selectedOrder.subTotal,
+                        taxAmount: selectedOrder.tax || selectedOrder.taxAmount,
+                        total: selectedOrder.totalAmount
+                    }}
+                    apiFunc={(_id, payload) => mailAPI.send({
+                        ...payload,
+                        companyId,
+                        ledgerId: selectedOrder.LedgerId,
+                        type: 'Sales Order',
+                        documentId: selectedOrder.id
+                    })}
+                    onSend={() => {
+                        addNotification('Email sent successfully!', 'success');
+                        setIsEmailModalOpen(false);
+                    }}
+                />
+            )}
         </div>
     );
 };
