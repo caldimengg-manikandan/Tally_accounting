@@ -139,8 +139,10 @@ export default function SalaryStructuresTab() {
     setError(null);
     setSuccess(null);
 
-    if (!formData.name.trim() || !formData.code.trim() || !formData.effectiveFrom) {
-      setError('Name, Code, and Effective From date are required');
+    const derivedCode = formData.name.trim().toUpperCase().replace(/\s+/g, '_');
+
+    if (!formData.name.trim() || !formData.effectiveFrom) {
+      setError('Name and Effective From date are required');
       return;
     }
 
@@ -159,9 +161,8 @@ export default function SalaryStructuresTab() {
     try {
       const payload = {
         name: formData.name,
-        code: formData.code.toUpperCase(),
+        code: derivedCode,
         description: formData.description,
-        gradeLevel: formData.gradeLevel,
         effectiveFrom: formData.effectiveFrom,
         components: selectedComps
       };
@@ -324,7 +325,7 @@ export default function SalaryStructuresTab() {
             )}
 
             {/* General Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Structure/Grade Name *</label>
                 <input
@@ -333,43 +334,6 @@ export default function SalaryStructuresTab() {
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g. Senior Software Engineer Grade"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Structure Code *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.code}
-                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase().replace(/\s+/g, '_') }))}
-                  placeholder="e.g. SR_ENG_GRADE"
-                  disabled={formMode === 'edit'}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all font-mono uppercase text-xs disabled:bg-slate-50 disabled:text-slate-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Grade Level / Band</label>
-                <input
-                  type="text"
-                  value={formData.gradeLevel}
-                  onChange={(e) => setFormData(prev => ({ ...prev, gradeLevel: e.target.value }))}
-                  placeholder="e.g. L4, Band B"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Description of who matches this pay structure..."
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
                 />
               </div>
@@ -382,6 +346,19 @@ export default function SalaryStructuresTab() {
                   value={formData.effectiveFrom}
                   onChange={(e) => setFormData(prev => ({ ...prev, effectiveFrom: e.target.value }))}
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all font-semibold"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description</label>
+                <input
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Description of who matches this pay structure..."
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
                 />
               </div>
             </div>
