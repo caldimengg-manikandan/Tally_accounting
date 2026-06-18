@@ -399,233 +399,261 @@ export default function SalaryAssignmentsTab() {
         </div>
       )}
 
-      {/* Assignment Form Modal */}
+      {/* Assignment Form Full Page View */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-base">
-                Assign Salary Structure to Employee
-              </h3>
+        <div className="fixed inset-0 bg-slate-50 z-50 flex flex-col overflow-hidden animation-fade-in">
+          {/* Top Header Bar */}
+          <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+            <div className="flex items-center gap-4">
               <button 
                 onClick={() => setShowModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-medium text-lg cursor-pointer"
+                className="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
               >
-                &times;
+                &lt;
               </button>
-            </div>
-
-            {/* Modal Body with 2 Columns (Form left, Live breakdown right) */}
-            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-              {/* Form Input Columns */}
-              <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 border-r border-slate-100 text-slate-700">
-                {error && (
-                  <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center gap-2">
-                    <AlertCircle className="text-rose-600 flex-shrink-0" size={16} />
-                    <span className="text-xs font-semibold">{error}</span>
-                  </div>
-                )}
-
-                {/* Employee Select */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Select Employee *</label>
-                  <select
-                    name="employeeId"
-                    required
-                    value={formData.employeeId}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all bg-white"
-                  >
-                    <option value="">-- Select Employee --</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.employeeId} - {emp.designation})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Structure Select */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Salary Template Structure *</label>
-                  <select
-                    name="salaryStructureId"
-                    required
-                    value={formData.salaryStructureId}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all bg-white"
-                  >
-                    <option value="">-- Select Structure --</option>
-                    {structures.map(struct => (
-                      <option key={struct.id} value={struct.id}>
-                        {struct.name} (Grade: {struct.gradeLevel || 'N/A'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Grid: CTC and Basic Override */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Annual CTC Amount *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-slate-450 font-bold text-xs">₹</span>
-                      <input
-                        type="number"
-                        name="ctcAmount"
-                        required
-                        value={formData.ctcAmount}
-                        onChange={handleInputChange}
-                        placeholder="e.g. 600000"
-                        className="w-full pl-6 pr-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all font-bold text-slate-800"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Annual Basic Override</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-slate-450 font-bold text-xs">₹</span>
-                      <input
-                        type="number"
-                        name="basicAmount"
-                        value={formData.basicAmount}
-                        onChange={handleInputChange}
-                        placeholder="e.g. 300000"
-                        className="w-full pl-6 pr-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all font-bold text-slate-800"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Grid: Date & Remarks */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Effective From *</label>
-                    <input
-                      type="date"
-                      name="effectiveFrom"
-                      required
-                      value={formData.effectiveFrom}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Remarks / Notes</label>
-                    <input
-                      type="text"
-                      name="remarks"
-                      value={formData.remarks}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Annual Appraisal Hike"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-600/10 transition-all cursor-pointer"
-                  >
-                    Save Assignment
-                  </button>
-                </div>
-              </form>
-
-              {/* Live Preview Calculation Column */}
-              <div className="w-full md:w-80 bg-slate-50 p-6 overflow-y-auto flex flex-col justify-between">
-                <div>
-                  <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2 mb-4">
-                    <Calculator className="text-blue-500" size={15} />
-                    Salary Breakdown Preview
-                  </h4>
-
-                  {previewLoading && (
-                    <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                      <span className="text-[10px] font-bold uppercase">Calculating...</span>
-                    </div>
-                  )}
-
-                  {previewError && (
-                    <div className="text-center py-6 text-rose-500">
-                      <AlertCircle className="mx-auto mb-1" size={24} />
-                      <span className="text-xs font-bold block">{previewError}</span>
-                    </div>
-                  )}
-
-                  {!previewLoading && !previewError && !previewData && (
-                    <div className="text-center py-12 text-slate-450 border border-dashed border-slate-300 rounded-xl bg-white p-4">
-                      <Calculator className="mx-auto mb-2 text-slate-350" size={32} />
-                      <span className="text-xs font-bold block">No preview available</span>
-                      <span className="text-[10px] mt-1 block leading-normal text-slate-400">Enter a target CTC amount and select a template to review the monthly gross and take-home.</span>
-                    </div>
-                  )}
-
-                  {!previewLoading && !previewError && previewData && (
-                    <div className="space-y-4">
-                      {/* Summary Badges */}
-                      <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2.5 shadow-sm">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-400 font-bold uppercase">Monthly CTC</span>
-                          <span className="font-mono font-bold text-slate-750">
-                            ₹{parseFloat(previewData.monthlyCtc).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-400 font-bold uppercase">Gross Monthly</span>
-                          <span className="font-mono font-extrabold text-slate-800">
-                            ₹{parseFloat(previewData.grossEarnings).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-400 font-bold uppercase">Deductions</span>
-                          <span className="font-mono font-bold text-rose-600">
-                            - ₹{parseFloat(previewData.totalDeductions).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                        <div className="border-t border-slate-100 pt-2.5 flex justify-between items-center text-xs">
-                          <span className="text-indigo-600 font-extrabold uppercase">Net Take-Home</span>
-                          <span className="font-mono font-extrabold text-indigo-750 text-sm">
-                            ₹{parseFloat(previewData.netPay).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Small Components List */}
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                        {previewData.components?.map(c => (
-                          <div key={c.code} className="flex justify-between items-center text-[11px] bg-white border border-slate-150 p-2 rounded">
-                            <div>
-                              <span className="font-bold text-slate-850 block">{c.name}</span>
-                              <span className="text-[9px] text-slate-400 font-bold uppercase">{c.code}</span>
-                            </div>
-                            <span className={`font-mono font-extrabold ${c.type === 'Earning' ? 'text-slate-700' : 'text-rose-600'}`}>
-                              {c.type === 'Earning' ? '+' : '-'}₹{parseFloat(c.monthlyAmount).toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer notes */}
-                <div className="text-[10px] text-slate-400 mt-4 leading-normal flex items-start gap-1 bg-blue-50/30 p-2.5 rounded-lg border border-blue-100/30">
-                  <Info className="flex-shrink-0 text-blue-500" size={12} />
-                  <span>Statutory caps (PF cap ₹1,800, ESI limits &lt;= ₹21k, PT slabs) are simulated in real time.</span>
-                </div>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+                  <UserCheck className="text-blue-500" size={20} />
+                  Assign Salary Structure to Employee
+                </h2>
               </div>
             </div>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="assign-salary-form"
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-md shadow-blue-600/20 transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
+              >
+                <Check size={16} />
+                Save Assignment
+              </button>
+            </div>
+          </div>
+
+          {/* Form Body */}
+          <div className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10">
+            <form id="assign-salary-form" onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-6">
+              {error && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center gap-2 mb-6 shadow-sm">
+                  <AlertCircle className="text-rose-600 flex-shrink-0" size={16} />
+                  <span className="text-sm font-semibold">{error}</span>
+                </div>
+              )}
+
+              {/* Assignment Information Card */}
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                  <div className="p-1.5 bg-blue-50 text-blue-600 rounded">
+                    <UserCheck size={16} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-base">Assignment Information</h3>
+                </div>
+                
+                <div className="p-6 flex flex-col lg:flex-row gap-8">
+                  {/* Left Side: Form Fields */}
+                  <div className="flex-1 space-y-6">
+                    {/* Select Employee */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Employee <span className="text-red-500">*</span></label>
+                      <select
+                        name="employeeId"
+                        required
+                        value={formData.employeeId}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all bg-white text-sm shadow-sm"
+                      >
+                        <option value="">-- Select Employee --</option>
+                        {employees.map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.employeeId} - {emp.designation})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Salary Template Structure */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Salary Template Structure <span className="text-red-500">*</span></label>
+                      <select
+                        name="salaryStructureId"
+                        required
+                        value={formData.salaryStructureId}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all bg-white text-sm shadow-sm"
+                      >
+                        <option value="">-- Select Structure --</option>
+                        {structures.map(struct => (
+                          <option key={struct.id} value={struct.id}>
+                            {struct.name} (Grade: {struct.gradeLevel || 'N/A'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Grid: CTC and Basic Override */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Annual CTC Amount <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">₹</span>
+                          <input
+                            type="number"
+                            name="ctcAmount"
+                            required
+                            value={formData.ctcAmount}
+                            onChange={handleInputChange}
+                            placeholder="e.g. 600000"
+                            className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all font-bold text-slate-800 text-sm shadow-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Annual Basic Override</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">₹</span>
+                          <input
+                            type="number"
+                            name="basicAmount"
+                            value={formData.basicAmount}
+                            onChange={handleInputChange}
+                            placeholder="e.g. 300000"
+                            className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all font-bold text-slate-800 text-sm shadow-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Live Preview */}
+                  <div className="w-full lg:w-96 flex-shrink-0">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Salary Breakdown Preview</label>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 h-full min-h-[350px] flex flex-col justify-center relative shadow-inner">
+                      {previewLoading && (
+                        <div className="flex flex-col items-center justify-center text-slate-400 gap-2 absolute inset-0 bg-slate-50/80 backdrop-blur-sm z-10 rounded-xl">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mt-2">Calculating Live...</span>
+                        </div>
+                      )}
+
+                      {previewError && (
+                        <div className="text-center text-rose-500">
+                          <AlertCircle className="mx-auto mb-2" size={32} />
+                          <span className="text-sm font-bold block">{previewError}</span>
+                        </div>
+                      )}
+
+                      {!previewLoading && !previewError && !previewData && (
+                        <div className="text-center text-slate-400 border-2 border-dashed border-slate-300 rounded-xl bg-white p-8 py-14 shadow-sm transition-all hover:border-blue-300">
+                          <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Calculator size={28} />
+                          </div>
+                          <span className="text-sm font-bold block text-slate-700">No preview available</span>
+                          <span className="text-xs mt-2 block leading-relaxed text-slate-500">Enter a target CTC amount and select a template to generate a real-time preview of the monthly gross and net take-home salary.</span>
+                        </div>
+                      )}
+
+                      {!previewLoading && !previewError && previewData && (
+                        <div className="space-y-4 h-full flex flex-col justify-start">
+                          {/* Summary Badges */}
+                          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-500 font-medium">Monthly CTC</span>
+                                <span className="font-mono font-bold text-slate-800">
+                                  ₹{parseFloat(previewData.monthlyCtc).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-500 font-medium">Gross Monthly</span>
+                                <span className="font-mono font-extrabold text-slate-800">
+                                  ₹{parseFloat(previewData.grossEarnings).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-slate-500 font-medium">Total Deductions</span>
+                                <span className="font-mono font-bold text-rose-600">
+                                  - ₹{parseFloat(previewData.totalDeductions).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="border-t border-slate-100 mt-4 pt-4 flex justify-between items-center">
+                              <span className="text-indigo-600 font-extrabold text-sm uppercase tracking-wide">Net Take-Home</span>
+                              <span className="font-mono font-extrabold text-indigo-700 text-xl bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
+                                ₹{parseFloat(previewData.netPay).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Small Components List */}
+                          <div className="space-y-2 max-h-52 overflow-y-auto pr-2 flex-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                            {previewData.components?.map(c => (
+                              <div key={c.code} className="flex justify-between items-center text-xs bg-white border border-slate-150 p-3 rounded-lg shadow-sm hover:border-slate-300 transition-colors">
+                                <div>
+                                  <span className="font-semibold text-slate-800 block">{c.name}</span>
+                                </div>
+                                <span className={`font-mono font-bold ${c.type === 'Earning' ? 'text-slate-700' : 'text-rose-600'}`}>
+                                  {c.type === 'Earning' ? '+' : '-'} ₹{parseFloat(c.monthlyAmount).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <div className="text-[10.5px] text-slate-500 mt-auto leading-normal flex items-start gap-2 bg-blue-50/80 p-3.5 rounded-lg border border-blue-100">
+                            <Info className="flex-shrink-0 text-blue-500 mt-0.5" size={14} />
+                            <span>Statutory caps (PF cap ₹1,800, ESI limits &lt;= ₹21k, PT slabs) are automatically simulated in real time based on component rules.</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Information Card (like Sales Information in image 2) */}
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden relative">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2 pl-8">
+                  <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded">
+                    <Calendar size={16} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-base">Timeline & Remarks</h3>
+                </div>
+                
+                <div className="p-6 pl-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Effective From <span className="text-red-500">*</span></label>
+                      <input
+                        type="date"
+                        name="effectiveFrom"
+                        required
+                        value={formData.effectiveFrom}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all font-semibold text-sm shadow-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Remarks / Notes</label>
+                      <textarea
+                        name="remarks"
+                        value={formData.remarks}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Annual Appraisal Hike. Enter details here..."
+                        rows="3"
+                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all text-sm shadow-sm resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
