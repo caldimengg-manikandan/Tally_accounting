@@ -193,80 +193,77 @@ export default function SalaryComponentsTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs uppercase tracking-wider">
-                  <th className="px-6 py-4">Display Order</th>
-                  <th className="px-6 py-4">Name / Code</th>
-                  <th className="px-6 py-4">Type</th>
-                  <th className="px-6 py-4">Calculation Basis</th>
-                  <th className="px-6 py-4">Value</th>
-                  <th className="px-6 py-4">Tax / Statutory</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                <tr className="bg-white border-b border-slate-200 text-black font-bold text-[11px] uppercase tracking-wider">
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Earning Type</th>
+                  <th className="px-4 py-3">Calculation Type</th>
+                  <th className="px-4 py-3">Consider for EPF</th>
+                  <th className="px-4 py-3">Consider for ESI</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700 text-sm font-medium">
-                {components.map((comp) => (
-                  <tr key={comp.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 text-slate-500 font-semibold text-xs">{comp.displayOrder}</td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <span className="font-bold text-slate-800 block">{comp.name}</span>
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{comp.code}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
-                        comp.type === 'Earning' 
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                          : comp.type === 'Deduction'
-                            ? 'bg-rose-50 text-rose-700 border border-rose-100'
-                            : 'bg-amber-50 text-amber-700 border border-amber-100'
-                      }`}>
-                        {comp.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <span className="font-semibold">{comp.calculationType}</span>
-                        {comp.calculationBase && (
-                          <span className="text-xs font-bold text-slate-400 block uppercase">Base: {comp.calculationBase}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-bold text-slate-800">
-                      {comp.calculationType === 'Percentage' ? `${parseFloat(comp.calculationValue)}%` : `₹${parseFloat(comp.calculationValue).toLocaleString()}`}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${comp.isTaxable ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-slate-100 text-slate-500'}`}>
-                          {comp.isTaxable ? 'Taxable' : 'Tax-Exempt'}
+              <tbody className="divide-y divide-slate-100 text-slate-600 text-sm font-medium bg-white">
+                {components.map((comp) => {
+                  let epf = 'No';
+                  let esi = 'No';
+                  let earningType = comp.name;
+                  const lowerName = comp.name.toLowerCase();
+
+                  // EPF Logic
+                  if (lowerName === 'basic') epf = 'Yes';
+                  else if (['conveyance allowance', 'children education allowance', 'transport allowance', 'travelling allowance', 'fixed allowance'].includes(lowerName)) {
+                    epf = 'Yes (If PF Wage < 15k)';
+                  }
+
+                  // ESI Logic
+                  if (['basic', 'house rent allowance', 'children education allowance', 'transport allowance', 'fixed allowance', 'overtime allowance', 'commission'].includes(lowerName)) {
+                    esi = 'Yes';
+                  }
+
+                  // Earning Type Override
+                  if (lowerName === 'hold salary') earningType = 'Hold Salary (Non Taxable)';
+
+                  // Calculation Type Text
+                  let calcText = '';
+                  if (comp.calculationType === 'Percentage') {
+                    calcText = `Fixed; ${parseFloat(comp.calculationValue)}% of ${comp.calculationBase === 'CTC' ? 'CTC' : 'Basic'}`;
+                  } else if (comp.calculationType === 'Fixed') {
+                    calcText = comp.calculationValue && parseFloat(comp.calculationValue) > 0 
+                      ? `Fixed; Flat amount of ${parseFloat(comp.calculationValue)}`
+                      : `Fixed; Flat Amount`;
+                  } else {
+                    calcText = `Variable; Flat Amount`;
+                  }
+
+                  return (
+                    <tr key={comp.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-4 text-blue-500 cursor-pointer hover:underline font-medium" onClick={() => handleOpenEdit(comp)}>
+                        {comp.name}
+                      </td>
+                      <td className="px-4 py-4">{earningType}</td>
+                      <td className="px-4 py-4">{calcText}</td>
+                      <td className="px-4 py-4">{epf}</td>
+                      <td className="px-4 py-4">{esi}</td>
+                      <td className="px-4 py-4">
+                        <span className={`font-semibold ${comp.isActive !== false ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {comp.isActive !== false ? 'Active' : 'Inactive'}
                         </span>
-                        {comp.isStatutory && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100">
-                            Statutory
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(comp)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
-                          title="Edit Component"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(comp.id)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
-                          title="Delete Component"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end">
+                          <button
+                            onClick={() => handleOpenEdit(comp)}
+                            className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-300 hover:text-blue-500 hover:border-blue-200 transition-all cursor-pointer bg-white"
+                            title="Edit"
+                          >
+                            <span className="leading-none pb-2 text-sm">...</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
