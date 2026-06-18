@@ -1,4 +1,5 @@
-const { Item, AuditLog, User } = require('../../models');
+const { Item, AuditLog, User, StockMovement } = require('../../models');
+const { Op } = require('sequelize');
 const AuditService = require('../../services/AuditService');
 const fs = require('fs');
 const path = require('path');
@@ -19,6 +20,20 @@ exports.createItem = async (req, res, next) => {
       hsnCode, gstRate, itemCode
     } = req.body;
     
+    const conditions = [{ name }];
+    if (itemCode) conditions.push({ itemCode });
+    
+    const existing = await Item.findOne({
+      where: {
+        CompanyId: companyId,
+        [Op.or]: conditions
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'An item with this name or SKU already exists.' });
+    }
+
     const item = await Item.create({
       name,
       unit,
@@ -56,6 +71,18 @@ exports.createItem = async (req, res, next) => {
       userId: req.user?.id,
       req
     });
+
+    if (item.openingStock > 0) {
+      await StockMovement.create({
+        movementType: 'OPENING',
+        quantity: item.openingStock,
+        rate: item.costPrice || 0,
+        amount: item.openingStock * (item.costPrice || 0),
+        date: new Date(),
+        ItemId: item.id,
+        CompanyId: item.CompanyId
+      });
+    }
 
     res.status(201).json(item);
   } catch (err) {
@@ -127,6 +154,21 @@ exports.updateItem = async (req, res, next) => {
       reorderLevel, stockGroupId, stockCategoryId, unitOfMeasureId, godownId,
       hsnCode, gstRate, itemCode
     } = req.body;
+
+    const conditions = [{ name }];
+    if (itemCode) conditions.push({ itemCode });
+    
+    const existing = await Item.findOne({
+      where: {
+        CompanyId: item.CompanyId,
+        id: { [Op.ne]: item.id },
+        [Op.or]: conditions
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'An item with this name or SKU already exists.' });
+    }
 
     await item.update({
       name, unit, type,

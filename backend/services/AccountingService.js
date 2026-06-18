@@ -335,7 +335,7 @@ class AccountingService {
   static async recordTaxInvoice({
     companyId, customerLedgerId, date, narration, items, type = 'Sales', userId, projectId
   }, dbTransaction = null) {
-    const { Item } = require('../models');
+    const { Item, StockMovement } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
 
     let totalTaxableValue = 0;
@@ -468,8 +468,16 @@ class AccountingService {
     // 5. Update Inventory & Metadata Linkage
     for (const pItem of processedItems) {
       const item = pItem.item;
-      item.currentStock = parseFloat(item.currentStock) - parseFloat(pItem.quantity);
-      await item.save(options);
+      
+      // Automatic stock calculation handled by StockMovement hook
+      await StockMovement.create({
+        movementType: type === 'Sales' ? 'SALE' : 'PURCHASE',
+        quantity: type === 'Sales' ? -pItem.quantity : pItem.quantity,
+        rate: pItem.rate,
+        amount: pItem.taxable,
+        date: date || new Date(),
+        ItemId: item.id
+      }, options);
 
       // Link Item metadata to the Sales Transaction line
       await Transaction.update({

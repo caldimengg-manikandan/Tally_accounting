@@ -184,6 +184,47 @@ const TopRankedList = ({ title, items, valueKey, navigate, path, loading }) => (
   </div>
 );
 
+// ── Inventory Mini Table ───────────────────────────────────────────
+const InventoryMiniTable = ({ items, navigate, path, loading, darkMode }) => (
+  <div className={`rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.08)] border p-5 ${darkMode ? 'bg-[#2A2A3E] border-slate-700' : 'bg-white border-slate-100'}`}>
+    <div className="flex items-center justify-between mb-4">
+      <h3 className={`text-[13px] font-bold ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>Recommended Dashboard</h3>
+      <button onClick={() => navigate(path)} className="text-[11px] font-semibold text-[#1A73E8] hover:underline flex items-center gap-0.5">
+        View All <ChevronRight size={12} />
+      </button>
+    </div>
+    {loading ? (
+      <div className="flex items-center justify-center h-24"><Loader size={20} className="text-blue-400 animate-spin" /></div>
+    ) : items.length === 0 ? (
+      <p className="text-[12px] text-slate-400 text-center py-6">No data yet</p>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-[11px]">
+          <thead className={`border-b ${darkMode ? 'text-slate-400 border-slate-700' : 'text-slate-500 border-slate-100'}`}>
+            <tr>
+              <th className="pb-2 font-semibold">Product</th>
+              <th className="pb-2 font-semibold text-right">Purchased</th>
+              <th className="pb-2 font-semibold text-right">Sold</th>
+              <th className="pb-2 font-semibold text-right">Available</th>
+            </tr>
+          </thead>
+          <tbody className={`divide-y ${darkMode ? 'divide-slate-700/50 text-slate-300' : 'divide-slate-50 text-slate-700'}`}>
+            {items.map((item, idx) => (
+              <tr key={item.id || idx} className="group">
+                <td className="py-2.5 font-medium truncate max-w-[80px]">{item.name}</td>
+                <td className="py-2.5 text-right font-medium text-emerald-600">{item.purchases || 0}</td>
+                <td className="py-2.5 text-right font-medium text-rose-600">{item.sales || 0}</td>
+                <td className="py-2.5 text-right font-bold">{item.currentStock || 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+);
+
+
 // ══════════════════════════════════════════════════════════════════
 // MAIN DASHBOARD VIEW
 // ══════════════════════════════════════════════════════════════════
@@ -198,6 +239,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
 
   const [data, setData]       = useState(null);
   const [vouchers, setVouchers] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError]     = useState(null);
@@ -214,14 +256,18 @@ const DashboardView = ({ companyId: propCompanyId }) => {
     isRefresh ? setRefreshing(true) : setLoading(true);
     setError(null);
     try {
-      const [dashRes, vouchRes] = await Promise.allSettled([
+      const [dashRes, vouchRes, invRes] = await Promise.allSettled([
         reportsAPI.dashboard(companyId),
         voucherAPI.getByCompany(companyId),
+        reportsAPI.inventoryReport(companyId),
       ]);
       if (dashRes.status === 'fulfilled') setData(dashRes.value.data);
       else setError('Could not load dashboard data.');
       if (vouchRes.status === 'fulfilled' && Array.isArray(vouchRes.value.data)) {
         setVouchers(vouchRes.value.data.slice(0, 8));
+      }
+      if (invRes.status === 'fulfilled' && Array.isArray(invRes.value.data)) {
+        setInventory(invRes.value.data.slice(0, 5));
       }
     } catch (err) {
       setError('Network error. Please refresh.');
@@ -618,7 +664,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
           <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
             <TopRankedList title="Top Customers" items={topCustomers} valueKey="revenue"   navigate={navigate} path="/customers" loading={loading} />
             <TopRankedList title="Top Vendors"   items={topVendors}   valueKey="purchases" navigate={navigate} path="/vendors"   loading={loading} />
-            <TopRankedList title="Top Products"  items={topProducts}  valueKey="revenue"   navigate={navigate} path="/inventory" loading={loading} />
+            <InventoryMiniTable items={inventory} navigate={navigate} path="/inventory" loading={loading} darkMode={darkMode} />
           </div>
 
           {/* Recent Activity */}
