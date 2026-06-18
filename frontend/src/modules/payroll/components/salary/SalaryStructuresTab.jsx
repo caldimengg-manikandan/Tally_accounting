@@ -148,10 +148,7 @@ export default function SalaryStructuresTab() {
     const selectedComps = formData.componentsList
       .filter(c => c.checked)
       .map(c => ({
-        SalaryComponentId: c.SalaryComponentId,
-        overrideCalculationType: c.overrideCalculationType || null,
-        overrideCalculationValue: c.overrideCalculationValue !== '' ? parseFloat(c.overrideCalculationValue) : null,
-        displayOrder: parseInt(c.displayOrder) || 0
+        SalaryComponentId: c.SalaryComponentId
       }));
 
     if (selectedComps.length === 0) {
@@ -400,9 +397,6 @@ export default function SalaryStructuresTab() {
                         <th className="px-6 py-4 w-12 text-center">Include</th>
                         <th className="px-6 py-4">Component</th>
                         <th className="px-6 py-4">Default Rules</th>
-                        <th className="px-6 py-4">Override Calculation Type</th>
-                        <th className="px-6 py-4 w-32">Override Value</th>
-                        <th className="px-6 py-4 w-28">Display Order</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 text-sm font-medium">
@@ -425,39 +419,6 @@ export default function SalaryStructuresTab() {
                           <td className="px-6 py-4 text-xs font-semibold">
                             <span className="text-slate-500 uppercase block">{item.type}</span>
                             <span className="text-slate-400">{item.defaultCalcType}: {item.defaultCalcType === 'Percentage' ? `${item.defaultCalcValue}%` : `₹${item.defaultCalcValue}`}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <select
-                              disabled={!item.checked}
-                              value={item.overrideCalculationType}
-                              onChange={(e) => handleComponentOverrideChange(index, 'overrideCalculationType', e.target.value)}
-                              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white disabled:bg-slate-50 disabled:text-slate-400 outline-none"
-                            >
-                              <option value="">(No Override)</option>
-                              <option value="Fixed">Fixed Amount</option>
-                              <option value="Percentage">Percentage (%)</option>
-                              <option value="Formula">Formula</option>
-                            </select>
-                          </td>
-                          <td className="px-6 py-4">
-                            <input
-                              type="number"
-                              step="0.01"
-                              disabled={!item.checked}
-                              value={item.overrideCalculationValue}
-                              onChange={(e) => handleComponentOverrideChange(index, 'overrideCalculationValue', e.target.value)}
-                              placeholder="Default"
-                              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs w-full font-bold text-slate-850 disabled:bg-slate-50 disabled:text-slate-400 outline-none"
-                            />
-                          </td>
-                          <td className="px-6 py-4">
-                            <input
-                              type="number"
-                              disabled={!item.checked}
-                              value={item.displayOrder}
-                              onChange={(e) => handleComponentOverrideChange(index, 'displayOrder', e.target.value)}
-                              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs w-full text-center font-bold disabled:bg-slate-50 disabled:text-slate-400 outline-none"
-                            />
                           </td>
                         </tr>
                       ))}
