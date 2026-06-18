@@ -270,249 +270,106 @@ export default function SalaryComponentsTab() {
         </div>
       )}
 
-      {/* Add/Edit Modal - Professional Full Layout */}
+      {/* Add/Edit Modal - Simplified Layout */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-100 z-50 flex flex-col animation-fade-in overflow-hidden">
-          {/* Top Header Bar */}
-          <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
-            <div className="flex items-center gap-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-base">
+                {modalMode === 'add' ? 'Add Salary Component' : 'Edit Salary Component'}
+              </h3>
               <button 
                 onClick={() => setShowModal(false)}
-                className="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                className="text-slate-400 hover:text-slate-600 font-medium text-lg cursor-pointer"
               >
-                &lt;
+                &times;
               </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-5 flex-1 text-sm text-slate-700">
+              {error && (
+                <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center gap-2">
+                  <AlertCircle className="text-rose-600 flex-shrink-0" size={16} />
+                  <span className="text-xs font-semibold">{error}</span>
+                </div>
+              )}
+
+              {/* 1. Component Name */}
               <div>
-                <h2 className="text-xl font-semibold text-slate-800">
-                  {modalMode === 'add' ? 'Add Earning' : 'Edit Earning'}
-                </h2>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Component Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Basic Salary"
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all shadow-sm"
+                />
               </div>
-            </div>
-            <button 
-              onClick={() => setShowModal(false)}
-              className="text-slate-500 hover:text-slate-700 text-sm font-medium flex items-center gap-2"
-            >
-              Close Settings &times;
-            </button>
-          </div>
 
-          {/* Modal Body */}
-          <div className="flex-1 overflow-y-auto bg-white">
-            <div className="max-w-6xl mx-auto p-8">
-              <form onSubmit={handleSubmit} className="space-y-8">
-                {error && (
-                  <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center gap-2">
-                    <AlertCircle className="text-rose-600 flex-shrink-0" size={16} />
-                    <span className="text-sm font-medium">{error}</span>
-                  </div>
-                )}
+              {/* 2. Calculation Type */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Calculation Type</label>
+                <select
+                  name="calculationType"
+                  value={formData.calculationType === 'Fixed' ? 'Fixed' : 'Percentage'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, calculationType: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all bg-white shadow-sm"
+                >
+                  <option value="Percentage">Percentage (%)</option>
+                  <option value="Fixed">Flat Amount (₹)</option>
+                </select>
+              </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                  
-                  {/* Left Column */}
-                  <div className="space-y-6">
-                    {/* Earning Type */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Earning Type <span className="text-red-500">*</span></label>
-                      <div className="flex gap-4 items-start">
-                        <input
-                          type="text"
-                          disabled
-                          value={formData.type === 'Earning' ? formData.name || 'Basic' : formData.type}
-                          className="w-1/2 px-3 py-2 rounded border border-slate-200 bg-slate-50 text-slate-500 text-sm focus:outline-none"
-                        />
-                        <div className="w-1/2 bg-blue-50/50 text-blue-800 text-xs px-3 py-2 rounded flex items-start gap-2">
-                          <Info size={14} className="mt-0.5 flex-shrink-0" />
-                          <span>Fixed amount paid at the end of every month.</span>
-                        </div>
-                      </div>
-                    </div>
+              {/* 3. Value */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Value</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="calculationValue"
+                  required
+                  value={formData.calculationValue}
+                  onChange={handleInputChange}
+                  placeholder="Enter amount or percentage"
+                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all font-semibold text-slate-800 shadow-sm"
+                />
+              </div>
 
-                    {/* Earning Name */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Earning Name <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        name="name"
-                        required
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="w-full max-w-md px-3 py-2 rounded border border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm shadow-sm"
-                      />
-                    </div>
+              {/* 4. Tax Status */}
+              <div className="pt-2 pb-4">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    name="isTaxable"
+                    checked={formData.isTaxable}
+                    onChange={handleInputChange}
+                    className="rounded text-blue-600 focus:ring-blue-500 border-slate-300 w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-slate-800">This earning is subject to Income Tax</span>
+                </label>
+              </div>
 
-                    {/* Name in Payslip */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Name in Payslip <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        name="code"
-                        required
-                        value={formData.code}
-                        onChange={handleInputChange}
-                        className="w-full max-w-md px-3 py-2 rounded border border-slate-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm shadow-sm"
-                      />
-                    </div>
-
-                    {/* Calculation Type */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-3">Calculation Type <span className="text-red-500">*</span></label>
-                      <div className="space-y-3">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="calculationType"
-                            value="Fixed"
-                            checked={formData.calculationType === 'Fixed'}
-                            onChange={handleInputChange}
-                            className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-slate-700">Flat Amount</span>
-                        </label>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="calculationType"
-                            value="Percentage"
-                            checked={formData.calculationType === 'Percentage'}
-                            onChange={handleInputChange}
-                            className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-slate-700">Percentage of CTC</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Amount / Percentage Input */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        {formData.calculationType === 'Percentage' ? 'Enter Percentage' : 'Enter Amount'}
-                      </label>
-                      <div className="flex items-center max-w-[200px]">
-                        {formData.calculationType === 'Fixed' && (
-                          <span className="px-3 py-2 border border-r-0 border-slate-200 bg-slate-50 text-slate-500 rounded-l text-sm">₹</span>
-                        )}
-                        <input
-                          type="number"
-                          step="0.01"
-                          name="calculationValue"
-                          required
-                          value={formData.calculationValue}
-                          onChange={handleInputChange}
-                          className={`w-full px-3 py-2 border border-slate-200 focus:border-blue-400 outline-none text-sm shadow-sm ${formData.calculationType === 'Fixed' ? 'rounded-r border-l-0' : 'rounded-l border-r-0'}`}
-                        />
-                        {formData.calculationType === 'Percentage' && (
-                          <span className="px-3 py-2 border border-l-0 border-slate-200 bg-slate-50 text-slate-500 rounded-r text-sm">%</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Active Checkbox */}
-                    <div className="pt-2">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="isActive"
-                          checked={true} // Hardcoded active toggle for UI mockup
-                          onChange={() => {}}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-sm font-medium text-slate-700">Mark this as Active</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Other Configurations */}
-                  <div>
-                    <h3 className="text-base font-medium text-slate-800 mb-6">Other Configurations</h3>
-                    <div className="space-y-6">
-                      
-                      <label className="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" defaultChecked className="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
-                        <div>
-                          <span className="text-sm text-slate-700 block">Make this earning a part of the employee's salary structure</span>
-                        </div>
-                      </label>
-
-                      <label className="flex items-start gap-3 cursor-pointer">
-                        <input 
-                          type="checkbox" 
-                          name="isTaxable"
-                          checked={formData.isTaxable}
-                          onChange={handleInputChange}
-                          className="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" 
-                        />
-                        <div>
-                          <span className="text-sm text-slate-700 font-medium block mb-1">This is a taxable earning</span>
-                          <span className="text-xs text-slate-500 block">The income tax amount will be divided equally and deducted every month across the financial year.</span>
-                        </div>
-                      </label>
-
-                      <label className="flex items-start gap-3 cursor-pointer">
-                        <input type="checkbox" defaultChecked className="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
-                        <div>
-                          <span className="text-sm text-slate-700 font-medium block mb-1">Calculate on pro-rata basis</span>
-                          <span className="text-xs text-slate-500 block">Pay will be adjusted based on employee working days.</span>
-                        </div>
-                      </label>
-
-                      <div className="space-y-3">
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
-                          <span className="text-sm text-slate-700 font-medium">Consider for EPF Contribution</span>
-                        </label>
-                        <div className="pl-7 space-y-2">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input type="radio" name="epfRule" value="Always" className="w-4 h-4 text-slate-300 border-slate-300 focus:ring-blue-500" disabled />
-                            <span className="text-sm text-slate-400">Always</span>
-                          </label>
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input type="radio" name="epfRule" value="Conditional" defaultChecked className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" />
-                            <span className="text-sm text-slate-700 flex items-center gap-1">
-                              Only when PF Wage is less than ₹ 15,000
-                              <Info size={14} className="text-slate-400" />
-                            </span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
-                        <span className="text-sm text-slate-700 font-medium">Consider for ESI Contribution</span>
-                      </label>
-
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500" />
-                        <span className="text-sm text-slate-700 font-medium">Show this component in payslip</span>
-                      </label>
-
-                    </div>
-                  </div>
-                </div>
-
-                {/* Warning Note */}
-                <div className="mt-12 bg-amber-50/50 border border-amber-100 p-4 rounded text-sm text-slate-700">
-                  <span className="font-semibold text-amber-800">Note:</span> As you've already associated this component with one or more employees, you can only edit the Name and Amount/Percentage. The changes made to Amount/Percentage will apply only to new employees.
-                </div>
-
-                {/* Footer Buttons */}
-                <div className="pt-6 pb-12 flex gap-4">
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded shadow-sm transition-colors"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-6 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium rounded shadow-sm transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
+              {/* Footer Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-all cursor-pointer shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md shadow-blue-600/20 transition-all cursor-pointer uppercase tracking-wider"
+                >
+                  Update Component
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
