@@ -628,13 +628,18 @@ exports.createBill = async (req, res, next) => {
 
         // Update inventory stock quantities
         if (items && Array.isArray(items) && items.length > 0) {
+            const { StockMovement } = require('../../models');
             for (const itemData of items) {
-                if (itemData.itemId && parseFloat(itemData.quantity) > 0) {
-                    const dbItem = await Item.findByPk(itemData.itemId);
-                    if (dbItem) {
-                        dbItem.currentStock = parseFloat(dbItem.currentStock || 0) + parseFloat(itemData.quantity);
-                        await dbItem.save();
-                    }
+                const qty = itemData.quantity || itemData.qty;
+                if (itemData.itemId && parseFloat(qty) > 0) {
+                    await StockMovement.create({
+                        movementType: 'PURCHASE',
+                        quantity: parseFloat(qty),
+                        rate: parseFloat(itemData.rate || 0),
+                        amount: parseFloat(itemData.amount || 0),
+                        date: date || new Date(),
+                        ItemId: itemData.itemId
+                    });
                 }
             }
         }
@@ -733,15 +738,20 @@ exports.updateBill = async (req, res, next) => {
         
         if (oldVoucher && oldVoucher.narration) {
             try {
+                const { StockMovement } = require('../../models');
                 const parsed = JSON.parse(oldVoucher.narration);
                 if (parsed && Array.isArray(parsed.items)) {
                     for (const oldItem of parsed.items) {
-                        if (oldItem.itemId && parseFloat(oldItem.quantity) > 0) {
-                            const dbItem = await Item.findByPk(oldItem.itemId);
-                            if (dbItem) {
-                                dbItem.currentStock = parseFloat(dbItem.currentStock || 0) - parseFloat(oldItem.quantity);
-                                await dbItem.save();
-                            }
+                        const oldQty = oldItem.quantity || oldItem.qty;
+                        if (oldItem.itemId && parseFloat(oldQty) > 0) {
+                            await StockMovement.create({
+                                movementType: 'PURCHASE',
+                                quantity: -parseFloat(oldQty),
+                                rate: parseFloat(oldItem.rate || 0),
+                                amount: -parseFloat(oldItem.amount || 0),
+                                date: date || new Date(),
+                                ItemId: oldItem.itemId
+                            });
                         }
                     }
                 }
@@ -778,13 +788,18 @@ exports.updateBill = async (req, res, next) => {
 
         // 3. Increment stock with new quantities
         if (items && Array.isArray(items) && items.length > 0) {
+            const { StockMovement } = require('../../models');
             for (const itemData of items) {
-                if (itemData.itemId && parseFloat(itemData.quantity) > 0) {
-                    const dbItem = await Item.findByPk(itemData.itemId);
-                    if (dbItem) {
-                        dbItem.currentStock = parseFloat(dbItem.currentStock || 0) + parseFloat(itemData.quantity);
-                        await dbItem.save();
-                    }
+                const qty = itemData.quantity || itemData.qty;
+                if (itemData.itemId && parseFloat(qty) > 0) {
+                    await StockMovement.create({
+                        movementType: 'PURCHASE',
+                        quantity: parseFloat(qty),
+                        rate: parseFloat(itemData.rate || 0),
+                        amount: parseFloat(itemData.amount || 0),
+                        date: date || new Date(),
+                        ItemId: itemData.itemId
+                    });
                 }
             }
         }

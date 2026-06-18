@@ -60,6 +60,7 @@ const BudgetItem = require('./budgetItem.model')(sequelize, DataTypes);
 const CostCenterAllocation = require('./costCenterAllocation.model')(sequelize, DataTypes);
 const RefreshToken = require('./refreshToken.model')(sequelize, DataTypes);
 const MfaSecret = require('./mfaSecret.model')(sequelize, DataTypes);
+const StockMovement = require('./stockMovement.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -115,6 +116,11 @@ Item.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID 
 
 Item.hasMany(Transaction, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
 Transaction.belongsTo(Item, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+
+Item.hasMany(StockMovement, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+StockMovement.belongsTo(Item, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+Company.hasMany(StockMovement, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+StockMovement.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
 // 5. Orders & Reconciliation
 Company.hasMany(SalesOrder, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -486,6 +492,7 @@ module.exports = {
   BudgetItem,
   CostCenterAllocation,
   RefreshToken,
-  MfaSecret
+  MfaSecret,
+  StockMovement
 };
 

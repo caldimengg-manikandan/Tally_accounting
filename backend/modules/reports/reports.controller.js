@@ -1538,54 +1538,36 @@ exports.getInventoryReport = async (req, res, next) => {
       order: [['name', 'ASC']]
     });
 
-    const salesTx = await Transaction.findAll({
-      where: { ItemId: { [Op.ne]: null } },
-      include: [{
-        model: Voucher,
-        where: { CompanyId: companyId }
-      }]
+    const { StockMovement } = require('../../models');
+
+    // Fetch all stock movements for these items
+    const stockMovements = await StockMovement.findAll({
+      where: { ItemId: { [Op.in]: items.map(i => i.id) } },
+      attributes: ['ItemId', 'movementType', [sequelize.fn('SUM', sequelize.col('quantity')), 'totalQty']],
+      group: ['ItemId', 'movementType'],
+      raw: true
     });
 
-    const salesQtyMap = {};
-    salesTx.forEach(t => {
-      const itemId = t.ItemId;
-      const qty = parseFloat(t.quantity || 0);
-      salesQtyMap[itemId] = (salesQtyMap[itemId] || 0) + qty;
-    });
-
-    const purchaseVouchers = await Voucher.findAll({
-      where: { CompanyId: companyId, voucherType: 'Purchase' }
-    });
-
-    const purchaseQtyMap = {};
-    purchaseVouchers.forEach(v => {
-      try {
-        const parsed = JSON.parse(v.narration || '{}');
-        const vItems = parsed.items || [];
-        vItems.forEach(it => {
-          const qty = parseFloat(it.quantity || it.qty || 0);
-          if (qty > 0) {
-            if (it.itemId) {
-              purchaseQtyMap[it.itemId] = (purchaseQtyMap[it.itemId] || 0) + qty;
-            } else if (it.itemName) {
-              const nameKey = it.itemName.trim().toLowerCase();
-              purchaseQtyMap[nameKey] = (purchaseQtyMap[nameKey] || 0) + qty;
-            }
-          }
-        });
-      } catch (e) {}
+    const movementMap = {};
+    stockMovements.forEach(sm => {
+      if (!movementMap[sm.ItemId]) movementMap[sm.ItemId] = { purchases: 0, sales: 0 };
+      if (sm.movementType === 'PURCHASE') {
+        movementMap[sm.ItemId].purchases += parseFloat(sm.totalQty || 0);
+      } else if (sm.movementType === 'SALE') {
+        // Sales movements might have negative quantity, we need absolute
+        movementMap[sm.ItemId].sales += Math.abs(parseFloat(sm.totalQty || 0));
+      }
     });
 
     let totalValue = 0, lowStockCount = 0, outOfStockCount = 0;
 
     const report = items.map(item => {
       const opening = parseFloat(item.openingStock || 0);
-      const sales = salesQtyMap[item.id] || 0;
-      const purchaseById = purchaseQtyMap[item.id] || 0;
-      const purchaseByName = purchaseQtyMap[item.name.trim().toLowerCase()] || 0;
-      const purchases = purchaseById + (purchaseById > 0 ? 0 : purchaseByName);
+      const purchases = movementMap[item.id]?.purchases || 0;
+      const sales = movementMap[item.id]?.sales || 0;
 
-      const stock = opening + purchases - sales;
+      // Use the accurately maintained currentStock from DB
+      const stock = parseFloat(item.currentStock || 0);
 
       const costPrice = parseFloat(item.costPrice || item.purchasePrice || 0);
       const sellPrice = parseFloat(item.sellingPrice || item.salesPrice || 0);

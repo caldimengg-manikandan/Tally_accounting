@@ -395,6 +395,7 @@ const BillEntryView = ({ companyId }) => {
           if (itemsList && itemsList.length > 0) {
             setItems(itemsList.map((item, idx) => ({
               id: item.id || Date.now() + idx,
+              itemId: item.itemId || item.ItemId || '',
               itemName: item.itemName || '',
               account: item.account || '',
               qty: item.qty || 1,
@@ -427,6 +428,7 @@ const BillEntryView = ({ companyId }) => {
       if (it.id === rowId) {
         return {
           ...it,
+          itemId: invItem.id,
           itemName: invItem.name,
           rate: invItem.costPrice || invItem.sellingPrice || 0,
           account: invItem.purchaseAccount || it.account || 'Cost of Goods Sold',

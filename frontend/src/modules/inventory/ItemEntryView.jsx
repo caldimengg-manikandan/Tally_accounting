@@ -459,6 +459,41 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
                 </div>
               </div>
 
+              {/* Advanced Inventory Details */}
+              <div className="grid grid-cols-3 gap-6 pt-4 border-t border-slate-100">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">SKU / Item Code</label>
+                  <input 
+                    value={newItem.itemCode} 
+                    onChange={e => setNewItem({...newItem, itemCode: e.target.value})}
+                    placeholder="e.g. TSHIRT-BLU-L"
+                    className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Opening Stock</label>
+                  <input 
+                    type="number"
+                    value={newItem.openingStock} 
+                    onChange={e => setNewItem({...newItem, openingStock: e.target.value})}
+                    placeholder="0.00"
+                    disabled={isEditMode}
+                    title={isEditMode ? "Opening stock can only be set during creation" : ""}
+                    className={`w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none transition-all ${isEditMode ? 'opacity-60 cursor-not-allowed' : 'focus:bg-white focus:border-blue-500'}`} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Reorder Level</label>
+                  <input 
+                    type="number"
+                    value={newItem.reorderLevel} 
+                    onChange={e => setNewItem({...newItem, reorderLevel: e.target.value})}
+                    placeholder="0.00"
+                    className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-bold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all" 
+                  />
+                </div>
+              </div>
+
 
             </div>
 
