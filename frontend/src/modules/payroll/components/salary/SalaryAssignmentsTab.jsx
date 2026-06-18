@@ -437,23 +437,7 @@ export default function SalaryAssignmentsTab() {
                 </h2>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="text-slate-500 hover:text-slate-700 text-sm font-medium transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="assign-salary-form"
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-md shadow-blue-600/20 transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
-              >
-                <Check size={16} />
-                Save Assignment
-              </button>
-            </div>
+
           </div>
 
           {/* Form Body */}
@@ -621,42 +605,21 @@ export default function SalaryAssignmentsTab() {
                 </div>
               </div>
 
-              {/* Additional Information Card (like Sales Information in image 2) */}
-              <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden relative">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2 pl-8">
-                  <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded">
-                    <Calendar size={16} />
-                  </div>
-                  <h3 className="font-bold text-slate-800 text-base">Timeline & Remarks</h3>
-                </div>
-                
-                <div className="p-6 pl-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Effective From <span className="text-red-500">*</span></label>
-                      <input
-                        type="date"
-                        name="effectiveFrom"
-                        required
-                        value={formData.effectiveFrom}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all font-semibold text-sm shadow-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Remarks / Notes</label>
-                      <textarea
-                        name="remarks"
-                        value={formData.remarks}
-                        onChange={handleInputChange}
-                        placeholder="e.g. Annual Appraisal Hike. Enter details here..."
-                        rows="3"
-                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all text-sm shadow-sm resize-none"
-                      />
-                    </div>
-                  </div>
-                </div>
+              {/* Form Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 mt-8">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-600/10 transition-all cursor-pointer"
+                >
+                  Save
+                </button>
               </div>
             </form>
           </div>
