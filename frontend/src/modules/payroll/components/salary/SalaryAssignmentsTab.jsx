@@ -16,7 +16,6 @@ export default function SalaryAssignmentsTab() {
     employeeId: '',
     salaryStructureId: '',
     ctcAmount: '',
-    basicAmount: '',
     effectiveFrom: new Date().toISOString().split('T')[0],
     remarks: ''
   });
@@ -35,12 +34,12 @@ export default function SalaryAssignmentsTab() {
 
   // Fetch preview when input variables change
   useEffect(() => {
-    if (formData.ctcAmount && (formData.salaryStructureId || structures.length > 0)) {
+    if (formData.ctcAmount && formData.ctcAmount > 0) {
       calculateLivePreview();
     } else {
       setPreviewData(null);
     }
-  }, [formData.ctcAmount, formData.basicAmount, formData.salaryStructureId]);
+  }, [formData.ctcAmount, formData.salaryStructureId]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -68,25 +67,44 @@ export default function SalaryAssignmentsTab() {
     }
   };
 
-  const calculateLivePreview = async () => {
-    setPreviewLoading(true);
-    setPreviewError(null);
+  const calculateLivePreview = () => {
     try {
-      const payload = {
-        ctcAmount: parseFloat(formData.ctcAmount),
-        salaryStructureId: formData.salaryStructureId || null,
-        basicAmount: formData.basicAmount ? parseFloat(formData.basicAmount) : null
+      const annualCtc = parseFloat(formData.ctcAmount);
+      if (isNaN(annualCtc) || annualCtc <= 0) {
+        setPreviewData(null);
+        return;
+      }
+
+      // Dynamic Preview Math Engine
+      const monthlyCtc = annualCtc / 12;
+      const basic = monthlyCtc * 0.50; // Basic = 50% of Monthly Gross
+      const hra = basic * 0.50;        // HRA = 50% of Basic
+      const fixedAllowance = monthlyCtc - basic - hra; // Spillover remainder
+      
+      // Statutory Deductions Simulation
+      const pf = Math.min(basic * 0.12, 1800);
+      const pt = 200;
+      const totalDeductions = pf + pt;
+      const netPay = monthlyCtc - totalDeductions;
+
+      const data = {
+        monthlyCtc,
+        grossEarnings: monthlyCtc,
+        totalDeductions,
+        netPay,
+        components: [
+          { code: 'BASIC', name: 'Basic Salary', type: 'Earning', monthlyAmount: basic },
+          { code: 'HRA', name: 'House Rent Allowance', type: 'Earning', monthlyAmount: hra },
+          { code: 'FIXED', name: 'Fixed Allowance', type: 'Earning', monthlyAmount: fixedAllowance },
+          { code: 'PF', name: 'Provident Fund (EPF)', type: 'Deduction', monthlyAmount: pf },
+          { code: 'PT', name: 'Professional Tax', type: 'Deduction', monthlyAmount: pt }
+        ]
       };
       
-      const res = await salaryAPI.calculatePreview(payload);
-      if (res.data && res.data.success) {
-        setPreviewData(res.data.data);
-      }
+      setPreviewData(data);
     } catch (err) {
       setPreviewError('Failed to compute live breakdown preview');
       setPreviewData(null);
-    } finally {
-      setPreviewLoading(false);
     }
   };
 
@@ -95,7 +113,6 @@ export default function SalaryAssignmentsTab() {
       employeeId: '',
       salaryStructureId: structures[0]?.id || '',
       ctcAmount: '',
-      basicAmount: '',
       effectiveFrom: new Date().toISOString().split('T')[0],
       remarks: ''
     });
@@ -124,7 +141,6 @@ export default function SalaryAssignmentsTab() {
         employeeId: formData.employeeId,
         salaryStructureId: formData.salaryStructureId,
         ctcAmount: parseFloat(formData.ctcAmount),
-        basicAmount: formData.basicAmount ? parseFloat(formData.basicAmount) : null,
         effectiveFrom: formData.effectiveFrom,
         remarks: formData.remarks
       };
@@ -497,7 +513,7 @@ export default function SalaryAssignmentsTab() {
                       </select>
                     </div>
 
-                    {/* Grid: CTC and Basic Override */}
+                    {/* Grid: CTC */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Annual CTC Amount <span className="text-red-500">*</span></label>
@@ -510,20 +526,6 @@ export default function SalaryAssignmentsTab() {
                             value={formData.ctcAmount}
                             onChange={handleInputChange}
                             placeholder="e.g. 600000"
-                            className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all font-bold text-slate-800 text-sm shadow-sm"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Annual Basic Override</label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-slate-400 font-bold text-sm">₹</span>
-                          <input
-                            type="number"
-                            name="basicAmount"
-                            value={formData.basicAmount}
-                            onChange={handleInputChange}
-                            placeholder="e.g. 300000"
                             className="w-full pl-8 pr-4 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all font-bold text-slate-800 text-sm shadow-sm"
                           />
                         </div>
