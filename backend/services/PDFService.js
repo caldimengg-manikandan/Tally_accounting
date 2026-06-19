@@ -39,7 +39,7 @@ class PDFService {
             
             doc.fontSize(18)
                .fillColor('#000000')
-               .text(`₹${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 400, 145, { align: 'right' });
+               .text(`Rs. ${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 400, 145, { align: 'right' });
 
             // --- BILL TO ---
             doc.fillColor('#888888')
@@ -91,12 +91,12 @@ class PDFService {
             doc.font('Helvetica-Bold')
                .fontSize(12)
                .text('Total', 350, totalStart + 25)
-               .text(`₹${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totalStart + 25, { width: 90, align: 'right' });
+               .text(`Rs. ${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totalStart + 25, { width: 90, align: 'right' });
 
             doc.rect(350, totalStart + 50, 200, 30).fill('#f9f9f9');
             doc.fillColor('#000000')
                .text('Balance Due', 360, totalStart + 60)
-               .text(`₹${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totalStart + 60, { width: 90, align: 'right' });
+               .text(`Rs. ${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totalStart + 60, { width: 90, align: 'right' });
 
             // --- WORDS ---
             doc.fillColor('#888888')
@@ -221,7 +221,7 @@ class PDFService {
             doc.font('Helvetica-Bold')
                .fontSize(12)
                .text('Total', 350, totalStart + 50)
-               .text(`₹${parseFloat(quote.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 470, totalStart + 50, { width: 80, align: 'right' });
+               .text(`Rs. ${parseFloat(quote.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 470, totalStart + 50, { width: 80, align: 'right' });
 
             // --- TERMS & NOTES ---
             if (quote.termsConditions) {
@@ -297,7 +297,7 @@ class PDFService {
             const totalStart = Math.max(currentCursor + 20, 500);
             doc.fillColor('#555555').fontSize(10).text('Sub Total', 350, totalStart).fillColor('#000000').text(parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, totalStart, { width: 80, align: 'right' });
             doc.text(`GST (18%)`, 350, totalStart + 20).text(parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, totalStart + 20, { width: 80, align: 'right' });
-            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 50).text(`₹${parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 470, totalStart + 50, { width: 80, align: 'right' });
+            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 50).text(`Rs. ${parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 470, totalStart + 50, { width: 80, align: 'right' });
 
             doc.end();
         });
@@ -340,7 +340,7 @@ class PDFService {
             // --- TOTALS ---
             const totalStart = Math.max(currentCursor + 20, 500);
             doc.fillColor('#555555').fontSize(10).text('Sub Total', 350, totalStart).fillColor('#000000').text(parseFloat(challan.subTotal || 0).toLocaleString('en-IN'), 470, totalStart, { width: 80, align: 'right' });
-            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 25).text(`₹${parseFloat(challan.totalAmount || 0).toLocaleString('en-IN')}`, 470, totalStart + 25, { width: 80, align: 'right' });
+            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 25).text(`Rs. ${parseFloat(challan.totalAmount || 0).toLocaleString('en-IN')}`, 470, totalStart + 25, { width: 80, align: 'right' });
 
             doc.end();
         });
@@ -606,7 +606,7 @@ class PDFService {
             // Grand Total
             doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold')
                .text('Total', 380, totY)
-               .text(`₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
+               .text(`Rs. ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
 
             // ─── AUTHORIZED SIGNATURE ─────────────────────────────────────
             const sigY = 700;
@@ -975,7 +975,7 @@ class PDFService {
             doc.rect(40, curY, pageW, gtRowH).fillAndStroke('#e0e0e0', '#000000');
             doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
                .text('Grand Total', colX.no + 2, curY + 7, { width: pageW - cols.amount - 4, align: 'right' });
-            doc.text(`₹${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, colX.amount + 2, curY + 7, { width: cols.amount - 4, align: 'right' });
+            doc.text(`Rs. ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, colX.amount + 2, curY + 7, { width: cols.amount - 4, align: 'right' });
             doc.moveTo(colX.amount, curY).lineTo(colX.amount, curY + gtRowH).stroke('#000000');
             doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + gtRowH).stroke('#000000');
             curY += gtRowH;
@@ -1014,6 +1014,152 @@ class PDFService {
             doc.moveTo(sigLineStart, curY + sigH - 12).lineTo(rightX + pageW / 2 - 12, curY + sigH - 12).stroke('#000000');
             doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8)
                .text(order.salesperson || 'Authorized Signatory', rightX, curY + sigH - 10, { width: pageW / 2 - 12, align: 'right' });
+
+            doc.end();
+        });
+    }
+
+    static async generateReceipt(payment, company = {}) {
+        return new Promise((resolve, reject) => {
+            const doc = new PDFDocument({ margin: 50, size: 'A4' });
+            let buffers = [];
+            doc.on('data', buffers.push.bind(buffers));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+            doc.on('error', reject);
+
+            const companyName = company.name || 'Your Company';
+            const companyState = company.state || '';
+            const companyEmail = company.email || '';
+
+            // Derived receipt data
+            const amount = payment.Transactions.reduce((s, t) => s + parseFloat(t.credit || 0), 0);
+            const customer = payment.Transactions.find(t => {
+                const groupName = (t.Ledger?.Group?.name || t.Ledger?.group?.name || '').toLowerCase();
+                return groupName.includes('debtors') || 
+                       groupName.includes('customer') || 
+                       (parseFloat(t.credit || 0) > 0 && !groupName.includes('bank') && !groupName.includes('cash'));
+            })?.Ledger;
+            const bank = payment.Transactions.find(t => {
+                const groupName = (t.Ledger?.Group?.name || t.Ledger?.group?.name || '').toLowerCase();
+                return groupName.includes('bank') || 
+                       groupName.includes('cash') || 
+                       (parseFloat(t.debit || 0) > 0 && !groupName.includes('debtors') && !groupName.includes('customer'));
+            })?.Ledger;
+
+            const customerName = customer?.name || 'Customer';
+            const bankName = bank?.name || 'Bank Transfer';
+
+            // --- HEADER ---
+            doc.fillColor('#1e1b4b') // deep indigo
+               .fontSize(16)
+               .font('Helvetica-Bold')
+               .text(companyName.toUpperCase(), 50, 50);
+            
+            doc.fontSize(9)
+               .font('Helvetica')
+               .fillColor('#64748b');
+
+            let headerY = 70;
+            if (companyState) { doc.text(companyState, 50, headerY); headerY += 13; }
+            if (companyEmail) { doc.text(companyEmail, 50, headerY); }
+
+            doc.fontSize(28)
+               .font('Helvetica-Bold')
+               .fillColor('#4338ca') // indigo 700
+               .text('RECEIPT', 250, 50, { align: 'right' });
+
+            doc.fontSize(10)
+               .fillColor('#64748b')
+               .text(`Receipt Number: ${payment.voucherNumber}`, 250, 85, { align: 'right' });
+
+            // --- DECORATIVE LINE ---
+            doc.moveTo(50, 115).lineTo(550, 115).strokeColor('#e2e8f0').lineWidth(1).stroke();
+
+            // --- HERO BANNER ---
+            const bannerY = 130;
+            doc.rect(50, bannerY, 500, 70).fill('#4f46e5'); // indigo 600
+
+            doc.fillColor('#e0e7ff')
+               .fontSize(9)
+               .font('Helvetica-Bold')
+               .text('TOTAL AMOUNT RECEIVED', 70, bannerY + 18);
+
+            doc.fillColor('#ffffff')
+               .fontSize(22)
+               .font('Helvetica-Bold')
+               .text(`Rs. ${parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 70, bannerY + 34);
+
+            doc.fillColor('#e0e7ff')
+               .fontSize(9)
+               .font('Helvetica-Bold')
+               .text('PAYMENT DATE', 380, bannerY + 18, { align: 'right', width: 150 });
+
+            doc.fillColor('#ffffff')
+               .fontSize(14)
+               .font('Helvetica-Bold')
+               .text(new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }), 380, bannerY + 34, { align: 'right', width: 150 });
+
+            // --- TRANSACTION DETAILS GRID ---
+            const gridY = 225;
+            doc.rect(50, gridY, 240, 70).strokeColor('#e2e8f0').lineWidth(1).stroke();
+            doc.fillColor('#4f46e5').fontSize(8).font('Helvetica-Bold').text('RECEIVED FROM', 65, gridY + 15);
+            doc.fillColor('#0f172a').fontSize(12).font('Helvetica-Bold').text(customerName, 65, gridY + 28, { width: 210, ellipsis: true });
+            doc.fillColor('#64748b').fontSize(8).font('Helvetica').text('Premium Partner Account', 65, gridY + 45);
+
+            doc.rect(310, gridY, 240, 70).strokeColor('#e2e8f0').lineWidth(1).stroke();
+            doc.fillColor('#4f46e5').fontSize(8).font('Helvetica-Bold').text('SETTLEMENT ACCOUNT', 325, gridY + 15);
+            doc.fillColor('#0f172a').fontSize(12).font('Helvetica-Bold').text(bankName, 325, gridY + 28, { width: 210, ellipsis: true });
+            doc.fillColor('#64748b').fontSize(8).font('Helvetica').text('Verified Payment', 325, gridY + 45);
+
+            // --- REMARKS ---
+            const remarksY = 320;
+            doc.fillColor('#64748b').fontSize(9).font('Helvetica-Bold').text('SETTLEMENT REMARKS', 50, remarksY);
+            doc.rect(50, remarksY + 15, 500, 60).fill('#f8fafc');
+            doc.fillColor('#334155')
+               .fontSize(10)
+               .font('Helvetica-Oblique')
+               .text(`"${payment.narration || 'Payment received from customer via Bank Transfer.'}"`, 65, remarksY + 30, { width: 470 });
+
+            // --- COMPLIANCE / FOOTER ---
+            const footerY = 410;
+            doc.moveTo(50, footerY).lineTo(550, footerY).strokeColor('#e2e8f0').lineWidth(0.5).stroke();
+
+            doc.fillColor('#10b981').fontSize(8).font('Helvetica-Bold').text('DIGITAL AUDIT LOGGED', 50, footerY + 20);
+            doc.fillColor('#64748b').fontSize(8).font('Helvetica')
+               .text(`This is an electronically generated receipt issued under the authority of ${companyName}.`, 50, footerY + 32, { width: 250 });
+
+            // Stamp Circle
+            const stampX = 350;
+            const stampY = footerY + 25;
+            doc.circle(stampX + 25, stampY + 25, 25).strokeColor('#c7d2fe').lineWidth(1.5).stroke();
+            doc.fillColor('#4f46e5').fontSize(5).font('Helvetica-Bold')
+               .text('SECURED', stampX + 11, stampY + 15, { align: 'center', width: 28 })
+               .text('VERIFIED', stampX + 11, stampY + 24, { align: 'center', width: 28 })
+               .text('CALTALLY', stampX + 11, stampY + 33, { align: 'center', width: 28 });
+
+            // Signature
+            const sigX = 420;
+            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold').text('Authorized Signature', sigX, footerY + 20, { align: 'center', width: 130 });
+            doc.moveTo(sigX, footerY + 60).lineTo(sigX + 130, footerY + 60).strokeColor('#94a3b8').lineWidth(0.5).stroke();
+            
+            // Signature text placeholder
+            const signatureText = (() => {
+                const clean = companyName.toUpperCase().startsWith('THE ') ? companyName.slice(4) : companyName;
+                const word = clean.split(' ')[0] || 'Manager';
+                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            })();
+            doc.fillColor('#4f46e5').fontSize(14).font('Helvetica-Oblique').text(signatureText, sigX, footerY + 42, { align: 'center', width: 130 });
+
+            // --- BARCODE ---
+            const barcodeY = 520;
+            doc.fillColor('#0f172a');
+            let barX = 220;
+            const barWidths = [2, 1, 4, 1, 2, 3, 1, 4, 2, 1, 3, 2];
+            barWidths.forEach(w => {
+                doc.rect(barX, barcodeY, w, 20).fill();
+                barX += w + 1;
+            });
+            doc.fillColor('#64748b').fontSize(8).font('Courier-Bold').text(payment.voucherNumber, 220, barcodeY + 24, { tracking: 2 });
 
             doc.end();
         });

@@ -109,7 +109,7 @@ const SharedInvoiceView = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 flex flex-col lg:flex-row gap-8 items-start">
         
         {/* LEFT PANEL: The Tally-style Invoice document */}
-        <div className="flex-1 w-full bg-white border border-slate-300 shadow-xl relative overflow-hidden" style={{ minHeight: '600px' }}>
+        <div className="flex-1 w-full bg-white border border-slate-300 shadow-2xl relative overflow-hidden" style={{ minHeight: '600px' }}>
           
           {/* Status badge in shared view */}
           <div className="absolute top-6 right-6 no-print">

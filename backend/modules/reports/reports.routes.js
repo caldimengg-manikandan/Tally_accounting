@@ -16,6 +16,7 @@ router.get('/daybook/:companyId', authorizeRoles(...ALL_ROLES), reportsControlle
 router.get('/dashboard/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getDashboardStats);
 router.get('/ledger-statement/:ledgerId', authorizeRoles(...ALL_ROLES), reportsController.getLedgerStatement);
 router.get('/cash-flow/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getCashFlow);
+router.get('/:companyId/cash-flow', authorizeRoles(...ALL_ROLES), reportsController.getCashFlow);
 router.get('/receivables-report/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getReceivablesReport);
 router.get('/payables-report/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getPayablesReport);
 router.get('/inventory-report/:companyId', authorizeRoles(...ALL_ROLES), reportsController.getInventoryReport);

@@ -6,6 +6,8 @@ import {
   Printer, MoreHorizontal, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { reportsAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 
 export default function AuditReportView() {
@@ -52,6 +54,51 @@ export default function AuditReportView() {
     return 'bg-slate-50 text-slate-700 border-slate-100';
   };
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('AUDIT TRAILS LOG', 14, 22);
+    
+    // Sub-header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Filter action: ${filterAction} | Search: ${searchTerm || 'None'}`, 14, 33);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 38);
+    
+    // Draw line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 42, 196, 42);
+    
+    // Table rows
+    const logRows = filteredLogs.map(log => [
+      `${new Date(log.createdAt).toLocaleDateString('en-IN')} ${new Date(log.createdAt).toLocaleTimeString()}`,
+      log.User?.name || 'Administrator',
+      log.action,
+      log.tableName,
+      JSON.stringify(log.newData || log.oldData || {}).substring(0, 60),
+      (log.recordId || 'GEN-01').toString().substring(0, 8)
+    ]);
+    
+    autoTable(doc, {
+      startY: 48,
+      head: [['Timestamp', 'Operator', 'Action Type', 'Target Module', 'Key Metadata', 'Record ID']],
+      body: logRows,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 8, cellPadding: 2 }
+    });
+    
+    // Save PDF
+    doc.save(`Audit_Report_${companyName.replace(/\s+/g, '_')}.pdf`);
+  };
+
   if (!companyId) {
     return (
       <div className="py-20 flex flex-col items-center gap-4 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200 m-8">
@@ -88,10 +135,10 @@ export default function AuditReportView() {
           <button onClick={fetchLogs} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
             <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
             <Printer size={16} /> Print
           </button>
-          <button className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
+          <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
             <Download size={16} /> Export PDF
           </button>
         </div>

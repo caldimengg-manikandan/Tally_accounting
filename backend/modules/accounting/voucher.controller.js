@@ -1,4 +1,4 @@
-const { Voucher, Transaction, Ledger, CostCenterAllocation, CostCenter, sequelize } = require('../../models');
+const { Voucher, Transaction, Ledger, CostCenterAllocation, CostCenter, Group, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 const AuditService = require('../../services/AuditService');
@@ -119,7 +119,8 @@ exports.getVouchers = async (req, res, next) => {
             attributes: [
               'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
               'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
-            ] 
+            ],
+            include: [{ model: Group, attributes: ['id', 'name'] }]
           },
           {
             model: CostCenterAllocation,
@@ -149,7 +150,8 @@ exports.getVoucherById = async (req, res, next) => {
             attributes: [
               'id', 'name', 'currency', 'billingAddress', 'shippingAddress', 
               'address', 'gstNumber', 'pan', 'email', 'phone', 'mobile', 'workPhone'
-            ] 
+            ],
+            include: [{ model: Group, attributes: ['id', 'name'] }]
           },
           {
             model: CostCenterAllocation,

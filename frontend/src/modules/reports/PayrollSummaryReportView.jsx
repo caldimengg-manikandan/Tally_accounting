@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Loader2, DollarSign, Users, Briefcase } from 'lucide-react';
+import { FileText, Loader2, DollarSign, Users, Briefcase, Printer, Download } from 'lucide-react';
 import { payrollAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
@@ -62,14 +64,89 @@ export default function PayrollSummaryReport({ companyId }) {
   const totalNet = rows.reduce((s, r) => s + r.net, 0);
   const totalDed = rows.reduce((s, r) => s + r.deductions, 0);
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('PAYROLL SUMMARY REPORT', 14, 22);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Total Periods: ${rows.length}`, 14, 33);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 38);
+
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 42, 196, 42);
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Overall Payroll Summary', 14, 50);
+
+    autoTable(doc, {
+      startY: 54,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Gross Salary', fmt(totalGross)],
+        ['Total Deductions (PF + ESI + PT)', fmt(totalDed)],
+        ['Total Net Payout', fmt(totalNet)],
+      ],
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold' } }
+    });
+
+    const tableRows = rows.map(r => [
+      r.period,
+      String(r.employeeCount),
+      fmt(r.gross),
+      fmt(r.pf),
+      fmt(r.esi),
+      fmt(r.pt),
+      fmt(r.deductions),
+      fmt(r.net)
+    ]);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 12,
+      head: [['Pay Period', 'Employees', 'Gross Salary', 'PF', 'ESI', 'PT', 'Total Deductions', 'Net Payable']],
+      body: tableRows,
+      foot: [['Grand Total', '', fmt(totalGross), '', '', '', fmt(totalDed), fmt(totalNet)]],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59] },
+      footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+      styles: { fontSize: 8.5, cellPadding: 2.5 }
+    });
+
+    doc.save(`Payroll_Summary_${companyName.replace(/\s+/g, '_')}.pdf`);
+  };
+
   return (
     <div className="p-8 max-w-[1400px] mx-auto animate-fade-in space-y-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-          <Briefcase className="text-blue-600" size={32} />
-          Payroll Summary Report
-        </h1>
-        <p className="text-sm font-bold text-slate-400">Aggregated monthly payroll expenditures and tax liabilities</p>
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+            <Briefcase className="text-blue-600" size={32} />
+            Payroll Summary Report
+          </h1>
+          <p className="text-sm font-bold text-slate-400">Aggregated monthly payroll expenditures and tax liabilities</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+            <Printer size={18} />
+            Print
+          </button>
+          <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-4 py-2 bg-[#1e61f0] text-white rounded-xl font-bold hover:bg-[#1a54d1] transition-colors shadow-lg shadow-blue-500/20">
+            <Download size={18} />
+            Export PDF
+          </button>
+        </div>
       </div>
 
       {loading ? (

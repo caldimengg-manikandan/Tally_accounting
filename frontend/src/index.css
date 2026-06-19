@@ -204,6 +204,15 @@ body {
   .no-print {
     display: none !important;
   }
+  body, html, #root, main, .flex-1, .overflow-y-auto, .overflow-x-auto, [style*="overflow: hidden"], [style*="overflow-y: auto"], [style*="height: 100vh"], [style*="height: 100%"] {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+  tr, .card, .bg-white {
+    page-break-inside: avoid;
+  }
 }
 
 @keyframes fadeInUp {

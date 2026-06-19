@@ -494,7 +494,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             {/* Document Scrolling Area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
                  {/* Main Scrollable Invoice Document */}
-                 <div id="printable-invoice" className="bg-white w-full max-w-[820px] mx-auto mb-20 border border-slate-300 shadow-xl relative" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px'}} >
+                 <div id="printable-invoice" className="bg-white w-full max-w-[820px] mx-auto mb-20 border border-slate-300 shadow-2xl relative" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px', minHeight: '600px'}} >
                     
                     {/* Status Ribbon (no-print) */}
                     {(() => {

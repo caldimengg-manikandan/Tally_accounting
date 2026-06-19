@@ -1,4 +1,5 @@
 const { Voucher, Transaction, Ledger, sequelize } = require('../models');
+const cacheService = require('./cacheService');
 
 class AccountingService {
   /**
@@ -128,6 +129,11 @@ class AccountingService {
         UserId: userId
       }, options);
     }
+
+    // Invalidate reports cache
+    cacheService.publishCacheInvalidation(companyId).catch(err => {
+      console.warn('Failed to publish cache invalidation on recordJournalEntry:', err.message);
+    });
 
     return voucher;
   }
@@ -270,6 +276,11 @@ class AccountingService {
       }, options);
     }
 
+    // Invalidate reports cache
+    cacheService.publishCacheInvalidation(companyId).catch(err => {
+      console.warn('Failed to publish cache invalidation on updateJournalEntry:', err.message);
+    });
+
     return voucher;
   }
 
@@ -324,6 +335,11 @@ class AccountingService {
         UserId: userId
       }, options);
     }
+
+    // Invalidate reports cache
+    cacheService.publishCacheInvalidation(companyId).catch(err => {
+      console.warn('Failed to publish cache invalidation on deleteJournalEntry:', err.message);
+    });
 
     return true;
   }
@@ -557,6 +573,11 @@ class AccountingService {
       }
 
       return { updatedCount, targetAccount: targetLedger.name };
+    });
+
+    // Invalidate reports cache
+    cacheService.publishCacheInvalidation(companyId).catch(err => {
+      console.warn('Failed to publish cache invalidation on bulkUpdateTransactions:', err.message);
     });
 
     return result;

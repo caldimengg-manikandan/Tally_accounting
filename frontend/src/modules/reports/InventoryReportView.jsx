@@ -4,6 +4,8 @@ import {
   RefreshCcw, Printer, Mail, Download, AlertCircle, Package, Layers, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import { reportsAPI, inventoryAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const InventoryReportView = () => {
   const navigate = useNavigate();
@@ -60,6 +62,77 @@ const InventoryReportView = () => {
 
   const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('INVENTORY VALUATION SUMMARY', 14, 22);
+    
+    // Sub-header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Filter status: ${filterStatus} | Category: ${selectedCategory ? 'Filtered' : 'All'} | Godown: ${selectedGodown ? 'Filtered' : 'All'}`, 14, 33);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 38);
+    
+    // Draw line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 42, 196, 42);
+    
+    // Summary Metrics
+    if (summary) {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Inventory Status Summary', 14, 50);
+      
+      const summaryData = [
+        ['Total Items Count', String(summary.totalItems)],
+        ['Total Valuation', fmt(summary.totalValue)],
+        ['In Stock / Low Stock / Out of Stock', `${summary.inStockCount} / ${summary.lowStockCount} / ${summary.outOfStockCount}`]
+      ];
+      
+      autoTable(doc, {
+        startY: 54,
+        head: [['Metric', 'Value']],
+        body: summaryData,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 0: { fontStyle: 'bold' } }
+      });
+    }
+    
+    // Table rows
+    const itemRows = filteredItems.map(item => [
+      `${item.name}\nSKU: ${item.sku}`,
+      item.category,
+      item.reorderPoint > 0 ? `${item.reorderPoint} ${item.unit}` : '—',
+      `${item.currentStock} ${item.unit}`,
+      fmt(item.costPrice),
+      fmt(item.sellingPrice),
+      item.stockStatus,
+      fmt(item.stockValue)
+    ]);
+    
+    autoTable(doc, {
+      startY: doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 54,
+      head: [['Item Name / SKU', 'Category', 'Reorder Pt', 'Current Stock', 'Cost (INR)', 'Price (INR)', 'Status', 'Value (INR)']],
+      body: itemRows,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 8, cellPadding: 2 }
+    });
+    
+    // Save PDF
+    doc.save(`Inventory_Report_${companyName.replace(/\s+/g, '_')}.pdf`);
+  };
+
   const filteredItems = React.useMemo(() => {
     if (filterStatus === 'All') return items;
     return items.filter(item => item.stockStatus === filterStatus);
@@ -99,7 +172,7 @@ const InventoryReportView = () => {
            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
              <Printer size={16}/> Print
            </button>
-           <button className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
+           <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
              <Download size={16}/> Export PDF
            </button>
         </div>

@@ -4,6 +4,8 @@ import {
   RefreshCcw, Printer, Mail, Download, AlertCircle, ChevronDown, ChevronRight, Users, Clock
 } from 'lucide-react';
 import { reportsAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const PayablesReportView = () => {
   const navigate = useNavigate();
@@ -36,6 +38,77 @@ const PayablesReportView = () => {
   };
 
   const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('PAYABLES AGING REPORT', 14, 22);
+    
+    // Sub-header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Outstanding for ${vendors.length} Vendors`, 14, 33);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 38);
+    
+    // Draw line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 42, 196, 42);
+    
+    // Aging Summary Cards Table
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Aging Summary by Buckets', 14, 50);
+    
+    const summaryRows = [[
+      fmt(agingSummary['Current']),
+      fmt(agingSummary['1-30 Days']),
+      fmt(agingSummary['31-60 Days']),
+      fmt(agingSummary['61-90 Days']),
+      fmt(agingSummary['90+ Days'])
+    ]];
+    
+    autoTable(doc, {
+      startY: 54,
+      head: [['Current', '1-30 Days', '31-60 Days', '61-90 Days', '90+ Days']],
+      body: summaryRows,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      styles: { fontSize: 9, cellPadding: 3, halign: 'right' }
+    });
+    
+    // Detail Table
+    const detailRows = vendors.map(v => {
+      const overdueTotal = (v.aging['1-30 Days'] || 0) + (v.aging['31-60 Days'] || 0) + (v.aging['61-90 Days'] || 0) + (v.aging['90+ Days'] || 0);
+      return [
+        v.vendorName,
+        fmt(v.aging['Current']),
+        fmt(overdueTotal),
+        fmt(v.total)
+      ];
+    });
+    
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 12,
+      head: [['Vendor Name', 'Current', 'Overdue', 'Total Payable']],
+      body: detailRows,
+      foot: [['Grand Total', '', '', fmt(summary?.grandTotal)]],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59] },
+      footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 }
+    });
+    
+    // Save PDF
+    doc.save(`Payables_Report_${companyName.replace(/\s+/g, '_')}.pdf`);
+  };
 
   // Generate vendor aging buckets totals dynamically
   const agingSummary = React.useMemo(() => {
@@ -84,7 +157,7 @@ const PayablesReportView = () => {
            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
              <Printer size={16}/> Print
            </button>
-           <button className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
+           <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
              <Download size={16}/> Export PDF
            </button>
         </div>

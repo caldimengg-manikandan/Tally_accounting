@@ -1090,7 +1090,7 @@ const SalesOrdersView = ({ companyId }) => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
-                    <div id="printable-order" className="bg-white w-full max-w-[820px] mx-auto mb-20 border border-slate-300" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px'}} >
+                    <div id="printable-order" className="bg-white w-full max-w-[820px] mx-auto mb-20 border border-slate-300 shadow-2xl relative" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px', minHeight: '600px'}} >
 
                         {/* ─── TALLY-STYLE HEADER ─── */}
                         <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'2px solid #000'}} >

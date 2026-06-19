@@ -7,6 +7,8 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import { reportsAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const CashFlowView = () => {
   const navigate = useNavigate();
@@ -41,6 +43,74 @@ const CashFlowView = () => {
   };
 
   const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+
+  const handleDownloadPDF = () => {
+    if (!data) return;
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('CASH FLOW STATEMENT', 14, 22);
+    
+    // Sub-header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Filter range: ${from || 'Start'} to ${to || 'End'}`, 14, 33);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 38);
+    
+    // Draw line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 42, 196, 42);
+    
+    // Summary Metrics Box
+    if (summary) {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Reconciliation Summary', 14, 50);
+      
+      const summaryData = [
+        ['Total Cash Inflow', fmt(summary.totalInflow)],
+        ['Total Cash Outflow', fmt(summary.totalOutflow)],
+        ['Net Cash Flow Change', fmt(summary.netCashFlow)]
+      ];
+      
+      autoTable(doc, {
+        startY: 54,
+        head: [['Metric', 'Value']],
+        body: summaryData,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 0: { fontStyle: 'bold' } }
+      });
+    }
+    
+    // Table rows
+    const flowRows = data.map(row => [
+      row.label,
+      row.inflow > 0 ? fmt(row.inflow) : '—',
+      row.outflow > 0 ? fmt(row.outflow) : '—',
+      fmt(row.net)
+    ]);
+    
+    autoTable(doc, {
+      startY: doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 54,
+      head: [['Period / Month', 'Inflow', 'Outflow', 'Net Flow']],
+      body: flowRows,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 9, cellPadding: 3 }
+    });
+    
+    // Save PDF
+    doc.save(`Cash_Flow_${companyName.replace(/\s+/g, '_')}.pdf`);
+  };
   const fmtK = (v) => {
     const n = Number(v || 0);
     if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`;
@@ -83,7 +153,7 @@ const CashFlowView = () => {
            <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
              <Printer size={16}/> Print
            </button>
-           <button className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
+           <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
              <Download size={16}/> Export PDF
            </button>
         </div>

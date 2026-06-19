@@ -13,6 +13,29 @@ import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
 
+const formatAddress = (address) => {
+  if (!address) return '';
+  try {
+    if (typeof address === 'string' && (address.startsWith('{') || address.startsWith('['))) {
+      const parsed = JSON.parse(address);
+      if (typeof parsed === 'object') {
+        return [
+          parsed.attention,
+          parsed.street1,
+          parsed.street2,
+          parsed.city,
+          parsed.state,
+          parsed.country,
+          parsed.pinCode
+        ].filter(Boolean).join(', ');
+      }
+    }
+    return address;
+  } catch (e) {
+    return address;
+  }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ITEM SEARCH SELECTOR (FOR TABLE CELLS)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -989,11 +1012,11 @@ const RecurringInvoiceDetailContent = ({ id, navigate, companyId, onRefresh }) =
                                 <div className="space-y-4">
                                     <div>
                                         <h4 className="text-[13px] text-slate-800 font-medium mb-1">Billing Address</h4>
-                                        <p className="text-[13px] text-slate-500 leading-tight whitespace-pre-line">{customerLedger?.billingAddress || customerLedger?.address || 'No address provided.'}</p>
+                                        <p className="text-[13px] text-slate-500 leading-tight whitespace-pre-line">{formatAddress(customerLedger?.billingAddress || customerLedger?.address) || 'No address provided.'}</p>
                                     </div>
                                     <div>
                                         <h4 className="text-[13px] text-slate-800 font-medium mb-1">Shipping Address</h4>
-                                        <p className="text-[13px] text-slate-500 leading-tight whitespace-pre-line">{customerLedger?.shippingAddress || 'No address provided.'}</p>
+                                        <p className="text-[13px] text-slate-500 leading-tight whitespace-pre-line">{formatAddress(customerLedger?.shippingAddress) || 'No address provided.'}</p>
                                     </div>
                                 </div>
                             </div>

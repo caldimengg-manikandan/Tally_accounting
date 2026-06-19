@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { reportsAPI, mailAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const BalanceSheetView = () => {
   const navigate = useNavigate();
@@ -65,6 +67,105 @@ const BalanceSheetView = () => {
 
   const fmt = (v) => v === 0 ? '₹0.00' : `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
+  const handleDownloadPDF = () => {
+    if (!data) return;
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59); // slate-800
+    doc.text('BALANCE SHEET', 14, 22);
+    
+    // Sub-header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Basis: ${basis} Basis`, 14, 33);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 14, 38);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 43);
+    
+    // Draw line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 47, 196, 47);
+    
+    // Summary Metrics
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.text('Financial Summary', 14, 55);
+    
+    const isBalanced = Math.abs(data.totalAssets - data.totalLiabilities) < 0.01;
+    const summaryData = [
+      ['Total Assets', fmt(data.totalAssets)],
+      ['Total Equity & Liabilities', fmt(data.totalLiabilities)],
+      ['Status', isBalanced ? 'Books Balanced ✓' : 'Imbalance Detected']
+    ];
+    
+    autoTable(doc, {
+      startY: 59,
+      head: [['Metric', 'Value']],
+      body: summaryData,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      styles: { fontSize: 9, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold' } }
+    });
+    
+    let yStart = doc.lastAutoTable.finalY + 12;
+    
+    // Table 1: Liabilities
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Equity & Liabilities', 14, yStart);
+    
+    const liabilityRows = data.liabilities.map(item => [
+      item.ledgerName, 
+      fmt(item.balance)
+    ]);
+    
+    autoTable(doc, {
+      startY: yStart + 4,
+      head: [['Account Head', 'Balance']],
+      body: liabilityRows,
+      foot: [['Total Liabilities', fmt(data.totalLiabilities)]],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 64, 175] }, // blue-800
+      footStyles: { fillColor: [239, 246, 255], textColor: [30, 58, 138], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 }
+    });
+    
+    yStart = doc.lastAutoTable.finalY + 12;
+    
+    // Table 2: Assets
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Assets', 14, yStart);
+    
+    const assetRows = data.assets.map(item => [
+      item.ledgerName, 
+      fmt(item.balance)
+    ]);
+    
+    autoTable(doc, {
+      startY: yStart + 4,
+      head: [['Account Head', 'Balance']],
+      body: assetRows,
+      foot: [['Total Assets', fmt(data.totalAssets)]],
+      theme: 'striped',
+      headStyles: { fillColor: [4, 120, 87] }, // emerald-700
+      footStyles: { fillColor: [236, 253, 245], textColor: [6, 95, 70], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 3 }
+    });
+    
+    // Save PDF
+    doc.save(`Balance_Sheet_${companyName.replace(/\s+/g, '_')}.pdf`);
+  };
+
   if (!companyId) {
     return (
       <div className="py-20 flex flex-col items-center gap-4 text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200 m-8">
@@ -101,10 +202,10 @@ const BalanceSheetView = () => {
            <button onClick={fetchBS} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
              <RefreshCcw size={18} className={loading ? 'animate-spin' : ''}/>
            </button>
-           <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+           <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
              <Printer size={16}/> Print
            </button>
-           <button className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
+           <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
              <Download size={16}/> Export PDF
            </button>
         </div>

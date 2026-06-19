@@ -134,6 +134,42 @@ exports.sendEmail = async (req, res, next) => {
         }
     }
 
+    if (type === 'Receipt') {
+        const { Voucher, Transaction, Ledger, Group, Company } = require('../../models');
+        const PDFService = require('../../services/PDFService');
+        const { documentId } = req.body;
+
+        if (documentId) {
+            const payment = await Voucher.findByPk(documentId, {
+                include: [
+                    {
+                        model: Transaction,
+                        include: [
+                            {
+                                model: Ledger,
+                                include: [{ model: Group }]
+                            }
+                        ]
+                    },
+                    { model: Company }
+                ]
+            });
+            if (payment) {
+                // BOLA guard
+                const requestingCompanyId = companyId || req.companyId || req.user?.CompanyId;
+                if (requestingCompanyId && String(payment.CompanyId) !== String(requestingCompanyId)) {
+                    return res.status(403).json({ error: 'Access denied: Payment does not belong to your company' });
+                }
+
+                const pdfBuffer = await PDFService.generateReceipt(payment, payment.Company);
+                attachments.push({
+                    filename: `Receipt_${payment.voucherNumber}.pdf`,
+                    content: pdfBuffer
+                });
+            }
+        }
+    }
+
 
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
     const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;

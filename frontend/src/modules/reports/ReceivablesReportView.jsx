@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCcw, Printer, AlertCircle } from 'lucide-react';
+import { RefreshCcw, Printer, AlertCircle, Download } from 'lucide-react';
 import { reportsAPI } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const ReceivablesReportView = () => {
   const navigate = useNavigate();
@@ -31,6 +33,84 @@ const ReceivablesReportView = () => {
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
   const now = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
   const reportDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const companyName = sessionStorage.getItem('companyName') || 'CalTally Company';
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('RECEIVABLES UNPAID INVOICES', 14, 22);
+    
+    // Sub-header
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Report Date: ${reportDate}`, 14, 33);
+    doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 14, 38);
+    
+    // Draw line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 42, 196, 42);
+    
+    // Summary table
+    const summaryRows = [[
+      `₹${fmt(grandAmount)}`,
+      `₹${fmt(grandApplied)}`,
+      `₹${fmt(grandUnpaid)}`
+    ]];
+    
+    autoTable(doc, {
+      startY: 46,
+      head: [['Total Invoice Amount', 'Total Applied Amount', 'Total Unpaid Amount']],
+      body: summaryRows,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] },
+      styles: { fontSize: 9, cellPadding: 3, halign: 'right' }
+    });
+    
+    // Detail rows
+    let tableRows = [];
+    customers.forEach(c => {
+      // Customer heading row
+      tableRows.push([
+        { content: `${c.customerName}${c.customerCode ? ' (' + c.customerCode + ')' : ''}`, colSpan: 3, styles: { fontStyle: 'bold', textColor: [30, 97, 240] } },
+        '', '', '', '', ''
+      ]);
+      
+      c.invoices.forEach(inv => {
+        const invAmount  = parseFloat(inv.totalAmount || inv.balance || 0);
+        const invApplied = parseFloat((inv.totalAmount || 0) - (inv.balance || 0));
+        const invUnpaid  = parseFloat(inv.balance || 0);
+        
+        tableRows.push([
+          inv.invoiceNumber,
+          inv.description || '—',
+          fmtDate(inv.date),
+          `₹${fmt(invAmount)}`,
+          `₹${fmt(invApplied)}`,
+          `₹${fmt(invUnpaid)}`
+        ]);
+      });
+    });
+    
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 12,
+      head: [['Invoice Number', 'Description', 'Date', 'Amount', 'Applied Amount', 'Unpaid Amount']],
+      body: tableRows,
+      foot: [['Grand Total', '', '', `₹${fmt(grandAmount)}`, `₹${fmt(grandApplied)}`, `₹${fmt(grandUnpaid)}`]],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 41, 59] },
+      footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+      styles: { fontSize: 8.5, cellPadding: 2.5 }
+    });
+    
+    // Save PDF
+    doc.save(`Receivables_Report_${companyName.replace(/\s+/g, '_')}.pdf`);
+  };
 
   if (!companyId) {
     return (
@@ -63,10 +143,13 @@ const ReceivablesReportView = () => {
         </div>
         <div className="flex items-center gap-3">
           <button onClick={fetchReport} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
-            <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-700 transition-all">
-            <Printer size={14} /> Print / PDF
+          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+            <Printer size={16}/> Print
+          </button>
+          <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
+            <Download size={16}/> Export PDF
           </button>
         </div>
       </header>
