@@ -64,6 +64,7 @@ const PaymentGateway = require('./paymentGateway.model')(sequelize, DataTypes);
 const PaymentTransaction = require('./paymentTransaction.model')(sequelize, DataTypes);
 const InvoicePayment = require('./invoicePayment.model')(sequelize, DataTypes);
 const PaymentWebhookLog = require('./paymentWebhookLog.model')(sequelize, DataTypes);
+const StockMovement = require('./stockMovement.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -119,6 +120,11 @@ Item.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID 
 
 Item.hasMany(Transaction, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
 Transaction.belongsTo(Item, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+
+Item.hasMany(StockMovement, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+StockMovement.belongsTo(Item, { foreignKey: { name: 'ItemId', type: DataTypes.UUID } });
+Company.hasMany(StockMovement, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
+StockMovement.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
 // 5. Orders & Reconciliation
 Company.hasMany(SalesOrder, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -517,6 +523,7 @@ module.exports = {
   PaymentGateway,
   PaymentTransaction,
   InvoicePayment,
-  PaymentWebhookLog
+  PaymentWebhookLog,
+  StockMovement
 };
 

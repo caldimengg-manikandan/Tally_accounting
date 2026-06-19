@@ -278,14 +278,10 @@ const InventoryReportView = () => {
              <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/50 text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-100">
                   <tr>
-                    <th className="px-8 py-4">Item Name / SKU</th>
-                    <th className="px-4 py-4">Category</th>
-                    <th className="px-4 py-4 text-right font-medium">Reorder Pt</th>
-                    <th className="px-4 py-4 text-right font-medium">Current Stock</th>
-                    <th className="px-4 py-4 text-right">Purchase Price (₹)</th>
-                    <th className="px-4 py-4 text-right">Sales Price (₹)</th>
-                    <th className="px-4 py-4 text-center">Status</th>
-                    <th className="px-8 py-4 text-right">Inventory Value (₹)</th>
+                    <th className="px-8 py-4">Product</th>
+                    <th className="px-4 py-4 text-right font-medium">Purchased</th>
+                    <th className="px-4 py-4 text-right font-medium">Sold</th>
+                    <th className="px-4 py-4 text-right font-medium">Available</th>
                   </tr>
                 </thead>
                 <tbody className="text-[12px] text-slate-600">
@@ -297,7 +293,7 @@ const InventoryReportView = () => {
                     </tr>
                   ) : filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center py-12 text-slate-400">No inventory items found matching this filter</td>
+                      <td colSpan={4} className="text-center py-12 text-slate-400">No inventory items found matching this filter</td>
                     </tr>
                   ) : (
                     filteredItems.map((item) => (
@@ -312,21 +308,9 @@ const InventoryReportView = () => {
                             <span className="text-[10px] text-slate-400 font-normal">SKU: {item.sku}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-4 uppercase tracking-tight text-[10px] font-medium text-slate-500">{item.category}</td>
-                        <td className="px-4 py-4 text-right text-slate-500">{item.reorderPoint > 0 ? `${item.reorderPoint} ${item.unit}` : '—'}</td>
+                        <td className="px-4 py-4 text-right font-medium">{item.purchases} {item.unit}</td>
+                        <td className="px-4 py-4 text-right font-medium">{item.sales} {item.unit}</td>
                         <td className="px-4 py-4 text-right font-bold text-slate-700">{item.currentStock} {item.unit}</td>
-                        <td className="px-4 py-4 text-right font-medium text-slate-500">{fmt(item.costPrice)}</td>
-                        <td className="px-4 py-4 text-right font-medium text-slate-500">{fmt(item.sellingPrice)}</td>
-                        <td className="px-4 py-4 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${
-                            item.stockStatus === 'In Stock' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
-                            item.stockStatus === 'Low Stock' ? 'bg-amber-50 border-amber-200 text-amber-600' :
-                            'bg-rose-50 border-rose-200 text-rose-600'
-                          }`}>
-                            {item.stockStatus}
-                          </span>
-                        </td>
-                        <td className="px-8 py-4 text-right font-black text-slate-900">{fmt(item.stockValue)}</td>
                       </tr>
                     ))
                   )}

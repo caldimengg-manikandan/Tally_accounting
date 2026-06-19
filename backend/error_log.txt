@@ -1,0 +1,27 @@
+2026-06-16T12:36:42.902Z - CREATE_LEDGER_ERROR: column "tdsApplicable" does not exist
+Error
+    at Query.run (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.select (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async Ledger.findAll (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async Ledger.findOne (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1240:12)
+    at async exports.createLedger (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\modules\accounting\ledger.controller.js:109:24)
+
+2026-06-16T12:37:30.897Z - CREATE_LEDGER_ERROR: column "tdsApplicable" does not exist
+Error
+    at Query.run (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.select (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async Ledger.findAll (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async Ledger.findOne (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1240:12)
+    at async exports.createLedger (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\modules\accounting\ledger.controller.js:109:24)
+
+2026-06-16T12:37:56.905Z - CREATE_LEDGER_ERROR: column "tdsApplicable" does not exist
+Error
+    at Query.run (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.select (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async Ledger.findAll (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async Ledger.findOne (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1240:12)
+    at async exports.createLedger (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\modules\accounting\ledger.controller.js:109:24)
+
