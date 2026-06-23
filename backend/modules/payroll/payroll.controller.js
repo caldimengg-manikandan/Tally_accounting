@@ -1,7 +1,8 @@
-const { Employee, Attendance, SalaryStructure, EmployeeSalaryAssignment, SalaryStructureComponent, SalaryComponent, Payslip, Ledger, Group, Voucher, Transaction, PayrollSettings, Company, sequelize } = require('../../models');
+const { Employee, Attendance, SalaryStructure, EmployeeSalaryAssignment, SalaryStructureComponent, SalaryComponent, SalarySlip, Ledger, Group, Voucher, Transaction, PayrollSettings, Company, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 const PDFService = require('../../services/PDFService');
+const SalaryService = require('./salary.service');
 
 // --- Helper: Generate Employee ID code ---
 const generateEmployeeCode = async (companyId) => {
@@ -500,29 +501,7 @@ exports.exportEmployees = async (req, res) => {
 };
 
 // --- Salary Structure ---
-exports.saveSalaryStructure = async (req, res, next) => {
-  try {
-    const { employeeId, annualCtc, companyId, monthlyBasic, monthlyFixedAllowance, annualBasic, annualFixedAllowance, hraMonthly, hraAnnual } = req.body;
-    
-    const ctc = parseFloat(annualCtc || 0);
 
-    const [struct] = await SalaryStructure.upsert({
-      EmployeeId: employeeId,
-      CompanyId: companyId || req.params.companyId,
-      annualCtc: ctc,
-      monthlyBasic: monthlyBasic || 0,
-      monthlyFixedAllowance: monthlyFixedAllowance || 0,
-      annualBasic: annualBasic || 0,
-      annualFixedAllowance: annualFixedAllowance || 0,
-      monthlyHra: hraMonthly || 0,
-      annualHra: hraAnnual || 0
-    });
-
-    res.json(struct);
-  } catch (err) {
-    next(err);
-  }
-};
 
 // --- Attendance Log ---
 exports.saveAttendance = async (req, res, next) => {
@@ -676,10 +655,10 @@ exports.processPayroll = async (req, res, next) => {
     const { companyId, month, year, paymentLedgerId, date } = req.body;
 
     const employees = await Employee.findAll({
-      where: { CompanyId: companyId, active: true },
+      where: { CompanyId: companyId, status: 'Active' },
       include: [{
         model: EmployeeSalaryAssignment,
-        where: { isCurrent: true },
+        where: { isActive: true },
         required: false,
         include: [{
           model: SalaryStructure,
@@ -747,36 +726,21 @@ exports.processPayroll = async (req, res, next) => {
       }, { transaction: t });
     }
 
-    let settings = await PayrollSettings.findOne({ where: { CompanyId: companyId }, transaction: t });
-    if (!settings) {
-      settings = { pfEmployeeRate: 12.00, esiEmployeeRate: 0.75, ptMonthlyAmount: 200.00 };
-    }
-
     let totalGrossSalary = 0;
     let totalNetSalary = 0;
     let totalPF = 0;
     let totalESI = 0;
     let totalPT = 0;
 
-    const payslips = [];
+    const salarySlips = [];
+
+    const daysInMonth = new Date(year, new Date(`${month} 1, ${year}`).getMonth() + 1, 0).getDate();
+    const startDate = `${year}-${String(new Date(`${month} 1, ${year}`).getMonth() + 1).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(new Date(`${month} 1, ${year}`).getMonth() + 1).padStart(2, '0')}-${daysInMonth}`;
 
     for (const emp of employees) {
-      // Navigate the new association: Employee → EmployeeSalaryAssignment → SalaryStructure → Components
       const assignment = emp.EmployeeSalaryAssignments && emp.EmployeeSalaryAssignments[0];
       if (!assignment || !assignment.structure) continue;
-
-      const struct = assignment.structure;
-      const structComponents = struct.components || [];
-
-      // Extract component amounts from the structure's components
-      const getComponentAmount = (code) => {
-        const comp = structComponents.find(sc => sc.component && sc.component.code === code);
-        return comp ? parseFloat(comp.amount || comp.defaultAmount || 0) : 0;
-      };
-
-      const daysInMonth = new Date(year, new Date(`${month} 1, ${year}`).getMonth() + 1, 0).getDate();
-      const startDate = `${year}-${String(new Date(`${month} 1, ${year}`).getMonth() + 1).padStart(2, '0')}-01`;
-      const endDate = `${year}-${String(new Date(`${month} 1, ${year}`).getMonth() + 1).padStart(2, '0')}-${daysInMonth}`;
 
       const absentCount = await Attendance.count({
         where: {
@@ -787,55 +751,59 @@ exports.processPayroll = async (req, res, next) => {
         transaction: t
       });
 
-      // Get amounts from salary components by code
-      const basic = getComponentAmount('BASIC');
-      const absentDeduction = absentCount > 0 ? (basic / daysInMonth) * absentCount : 0;
-      const actualBasic = Math.max(0, basic - absentDeduction);
+      const prorationFactor = daysInMonth > 0 ? (daysInMonth - absentCount) / daysInMonth : 1.0;
 
-      const hra = getComponentAmount('HRA');
-      const actualHra = Math.max(0, hra - (absentCount > 0 ? (hra / daysInMonth) * absentCount : 0));
-      
-      // Sum up all other earnings (DA, Special Allowance, etc.)
-      let otherEarnings = 0;
-      for (const sc of structComponents) {
-        if (sc.component && sc.component.type === 'Earning' && !['BASIC', 'HRA'].includes(sc.component.code)) {
-          otherEarnings += parseFloat(sc.amount || sc.defaultAmount || 0);
-        }
-      }
-      const actualOtherEarnings = Math.max(0, otherEarnings - (absentCount > 0 ? (otherEarnings / daysInMonth) * absentCount : 0));
+      const structureComponents = assignment.structure.components || [];
+      const breakdown = await SalaryService.calculateSalaryBreakdown(
+        Number(assignment.ctcAmount),
+        structureComponents,
+        assignment.basicAmount ? Number(assignment.basicAmount) : null,
+        companyId,
+        prorationFactor
+      );
 
-      const gross = actualBasic + actualHra + actualOtherEarnings;
-      
-      const pf = Math.round(actualBasic * (parseFloat(settings.pfEmployeeRate) / 100));
-      const esi = Math.round(gross * (parseFloat(settings.esiEmployeeRate) / 100));
-      const pt = parseFloat(settings.ptMonthlyAmount || 0);
+      const basic = breakdown.breakdown['BASIC'] || 0;
+      const hra = breakdown.breakdown['HRA'] || 0;
+      const specialAllowance = breakdown.breakdown['SPECIAL_ALLOWANCE'] || 0;
+      const da = breakdown.breakdown['DA'] || 0;
 
-      const deductions = pf + esi + pt;
-      const net = Math.max(0, gross - deductions);
+      const pf = breakdown.breakdown['PF_EMP'] || breakdown.breakdown['PF'] || 0;
+      const esi = breakdown.breakdown['ESI_EMP'] || breakdown.breakdown['ESI'] || 0;
+      const pt = breakdown.breakdown['PT'] || 0;
+      const tds = breakdown.breakdown['TDS'] || breakdown.tds || 0;
 
-      totalGrossSalary += gross;
+      const actualGross = breakdown.grossEarnings;
+      const actualDeductions = breakdown.totalDeductions + tds;
+      const net = breakdown.netPay - tds;
+
+      totalGrossSalary += actualGross;
       totalNetSalary += net;
       totalPF += pf;
       totalESI += esi;
       totalPT += pt;
 
-      const payslip = await Payslip.create({
-        EmployeeId: emp.id,
-        month,
-        year: parseInt(year),
-        basic: actualBasic,
-        hra: actualHra,
-        da: actualOtherEarnings,
-        incentives: 0,
-        pf,
-        esi,
-        profTax: pt,
+      const slip = await SalarySlip.create({
+        companyId: companyId,
+        employeeId: emp.id,
+        slipNumber: `SLIP-${emp.id.substring(0,4).toUpperCase()}-${month.substring(0,3).toUpperCase()}-${year}`,
+        salaryMonth: startDate,
+        salaryYear: parseInt(year),
+        basicSalary: basic,
+        hra: hra,
+        da: da,
+        specialAllowance: specialAllowance,
+        grossSalary: actualGross,
+        pfEmployeeContribution: pf,
+        esiEmployeeContribution: esi,
+        professionalTax: pt,
+        incomeTax: tds,
+        totalDeductions: actualDeductions,
         netSalary: net,
-        status: 'Processed',
-        CompanyId: companyId
+        slipStatus: 'Processed',
+        createdBy: req.user?.id
       }, { transaction: t });
 
-      payslips.push(payslip);
+      salarySlips.push(slip);
     }
 
     if (totalNetSalary <= 0) {
@@ -862,17 +830,17 @@ exports.processPayroll = async (req, res, next) => {
       companyId,
       date: date || new Date(),
       voucherType: 'Payment',
-      narration: `Salary processed for the month of ${month} ${year}. Total Employees: ${payslips.length}`,
+      narration: `Salary processed for the month of ${month} ${year}. Total Employees: ${salarySlips.length}`,
       entries: journalEntries,
       userId: req.user?.id
     }, t);
 
-    for (const ps of payslips) {
-      await ps.update({ VoucherId: voucher.id, status: 'Paid' }, { transaction: t });
+    for (const ps of salarySlips) {
+      await ps.update({ journalEntryId: voucher.id, slipStatus: 'PAID' }, { transaction: t });
     }
 
     await t.commit();
-    res.status(201).json({ message: 'Payroll processed and posted successfully', voucher, payslips });
+    res.status(201).json({ message: 'Payroll processed and posted successfully', voucher, payslips: salarySlips });
   } catch (err) {
     if (t) await t.rollback();
     console.error('Error processing payroll:', err);
@@ -883,13 +851,28 @@ exports.processPayroll = async (req, res, next) => {
 exports.getPayslips = async (req, res, next) => {
   try {
     const { companyId } = req.params;
-    const payslips = await Payslip.findAll({
+    const payslips = await SalarySlip.findAll({
+      where: { companyId: companyId },
       include: [{ 
         model: Employee,
         where: { CompanyId: companyId }
       }]
     });
-    res.json(payslips);
+    // Transform fields to match the old frontend response temporarily, or we could update the frontend
+    // but looking at PayrollView: slip.basic, slip.hra, slip.Employee.name, slip.Employee.employeeId
+    const mapped = payslips.map(s => {
+      const data = s.toJSON();
+      data.basic = data.basicSalary;
+      data.incentives = data.specialAllowance;
+      data.pf = data.pfEmployeeContribution;
+      data.esi = data.esiEmployeeContribution;
+      data.profTax = data.professionalTax;
+      data.status = data.slipStatus;
+      data.month = new Date(data.salaryMonth).toLocaleString('default', { month: 'long' });
+      data.year = data.salaryYear;
+      return data;
+    });
+    res.json(mapped);
   } catch (err) {
     next(err);
   }

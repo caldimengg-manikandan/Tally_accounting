@@ -25,7 +25,7 @@ export default function ProcessPayrollForm({ companyId, onComplete }) {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get(`/salary-slips/${companyId}/employees-selection?status=ACTIVE`);
+      const { data } = await api.get(`/payroll/${companyId}/employees-selection?status=ACTIVE`);
       setEmployees(data.employees || []);
       // Auto-select all by default
       setSelectedEmpIds((data.employees || []).map(e => e.id));
@@ -54,7 +54,7 @@ export default function ProcessPayrollForm({ companyId, onComplete }) {
       const selected = getFilteredEmployees();
       const results = [];
       for (const emp of selected) {
-        const { data } = await api.post(`/salary-slips/${companyId}/calculate-single`, {
+        const { data } = await api.post(`/payroll/${companyId}/calculate-single`, {
           employeeId: emp.id
         });
         results.push(data);

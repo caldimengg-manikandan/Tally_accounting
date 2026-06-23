@@ -14,7 +14,7 @@ export default function ProcessingProgress({ calculations, month, companyId, onC
 
     const processBatch = async () => {
       try {
-        const { data } = await api.post(`/salary-slips/${companyId}/process-month`, {
+        const { data } = await api.post(`/payroll/${companyId}/process-month`, {
           salary_month: `${month}-01`,
           employees: calculations.map(c => c.employee_id),
           calculations

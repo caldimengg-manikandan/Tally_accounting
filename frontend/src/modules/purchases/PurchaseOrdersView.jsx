@@ -268,6 +268,25 @@ const PurchaseOrdersView = ({ companyId }) => {
     }
   };
 
+  const getDueDaysText = (dateString, status, billed_status) => {
+    if (!dateString) return null;
+    
+    // Don't show due text if already received/cancelled
+    const s = String(status || '').toLowerCase();
+    if (['received', 'cancelled'].includes(s)) return null;
+
+    const due = new Date(dateString);
+    const today = new Date();
+    due.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    const diffTime = due - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 0) return <span className="text-[11px] font-medium text-blue-500 block mt-0.5 tracking-wide">Due in {diffDays} days</span>;
+    if (diffDays === 0) return <span className="text-[11px] font-medium text-amber-600 block mt-0.5 tracking-wide">Due today</span>;
+    return <span className="text-[11px] font-medium text-red-500 block mt-0.5 tracking-wide">Overdue by {Math.abs(diffDays)} days</span>;
+  };
+
   const handleDownloadPDF = () => {
     if (!selectedOrder) return;
     const doc = new jsPDF();
@@ -367,20 +386,65 @@ const PurchaseOrdersView = ({ companyId }) => {
     });
     
     // Totals
-    const finalY = doc.lastAutoTable.finalY + 10;
+    let finalY = doc.lastAutoTable.finalY + 10;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 116, 139);
-    doc.text('Sub Total', 130, finalY);
+    doc.text('Sub Total', 115, finalY);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(15, 23, 42);
     doc.text(`Rs ${parseFloat(selectedOrder.subtotal || selectedOrder.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
     
+    if (parseFloat(selectedOrder.discountAmount || 0) > 0) {
+      finalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Discount (${selectedOrder.discount || 0}%)`, 115, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(239, 68, 68);
+      doc.text(`- Rs ${parseFloat(selectedOrder.discountAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    }
+
+    if (parseFloat(selectedOrder.taxAmount || 0) > 0) {
+      finalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Tax (${selectedOrder.taxRate || 0}%)`, 115, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`+ Rs ${parseFloat(selectedOrder.taxAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    }
+
+    if (parseFloat(selectedOrder.tdsAmount || 0) > 0) {
+      finalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      let tdsLabel = `TDS (${selectedOrder.tdsName || 'TDS'} - ${selectedOrder.tdsRate || 0}%)`;
+      if (tdsLabel.length > 22) {
+        tdsLabel = tdsLabel.substring(0, 19) + '...)';
+      }
+      doc.text(tdsLabel, 115, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(239, 68, 68);
+      doc.text(`- Rs ${parseFloat(selectedOrder.tdsAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    }
+
+    if (parseFloat(selectedOrder.adjustment || 0) !== 0) {
+      finalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Adjustment', 115, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      const adjVal = parseFloat(selectedOrder.adjustment || 0);
+      doc.text(`${adjVal > 0 ? '+' : ''} Rs ${adjVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    }
+    
     doc.setFillColor(15, 23, 42);
-    doc.rect(125, finalY + 5, 70, 12, 'F');
+    doc.rect(110, finalY + 5, 85, 12, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text('Total', 130, finalY + 13);
+    doc.text('Total', 115, finalY + 13);
     doc.text(`Rs ${parseFloat(selectedOrder.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY + 13, { align: 'right' });
     
     doc.save(`PO-${selectedOrder.orderNumber}.pdf`);
@@ -1221,7 +1285,8 @@ const PurchaseOrdersView = ({ companyId }) => {
                            </td>
                            <td className="px-4 py-3 border-r border-slate-100/60 text-right font-bold text-slate-900">₹ {parseFloat(order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                           <td className="px-4 py-3 text-slate-600 relative group">
-                            <span>{formatDate(order.deliveryDate)}</span>
+                            <span className="block font-medium">{formatDate(order.deliveryDate)}</span>
+                            {order.deliveryDate && getDueDaysText(order.deliveryDate, order.status, order.billed_status)}
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white border border-slate-200 px-1 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                               <button 
                                 onClick={() => navigate(`/purchase-orders/edit/${order.id}`)}

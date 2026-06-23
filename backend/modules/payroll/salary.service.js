@@ -15,9 +15,26 @@ class SalaryService {
    * @param {number} annualCtc - The employee's annual CTC
    * @param {Array} structureComponents - List of components assigned to the structure (with potential overrides)
    * @param {number} [basicOverride] - Optional annual basic salary override
+   * @param {string} [companyId] - Optional company ID for settings
+   * @param {number} [prorationFactor] - Fraction of month worked (0 to 1)
    */
-  static calculateSalaryBreakdown(annualCtc, structureComponents, basicOverride = null) {
+  static async calculateSalaryBreakdown(annualCtc, structureComponents, basicOverride = null, companyId = null, prorationFactor = 1.0) {
+    let pfCap = 1800;
+    let esiThreshold = 21000;
+    let ptAmount = 200;
+    
+    if (companyId) {
+      const { PayrollSettings } = require('../../models');
+      const settings = await PayrollSettings.findOne({ where: { CompanyId: companyId } });
+      if (settings) {
+        pfCap = Number(settings.pfCap) || 1800;
+        esiThreshold = Number(settings.esiThreshold) || 21000;
+        ptAmount = Number(settings.ptMonthlyAmount) || 200;
+      }
+    }
+
     const monthlyCtc = Number((annualCtc / 12).toFixed(2));
+    const proratedMonthlyCtc = Number((monthlyCtc * prorationFactor).toFixed(2));
     const breakdown = {};
     
     // Sort components:
@@ -34,7 +51,8 @@ class SalaryService {
       if (!comp) return;
 
       const calculationType = sc.overrideCalculationType || comp.calculationType;
-      const calculationValue = Number(sc.overrideCalculationValue !== null ? sc.overrideCalculationValue : comp.calculationValue);
+      const overrideVal = sc.overrideCalculationValue;
+      const calculationValue = Number(overrideVal !== null && overrideVal !== undefined ? overrideVal : comp.calculationValue);
       const calculationBase = comp.calculationBase;
 
       const componentData = {
@@ -75,15 +93,15 @@ class SalaryService {
     earnings.forEach(e => {
       if (e.code === 'BASIC' && basicOverride) {
         // Use basic override if provided (convert annual override to monthly)
-        e.monthlyAmount = Number((basicOverride / 12).toFixed(2));
+        e.monthlyAmount = Number(((basicOverride / 12) * prorationFactor).toFixed(2));
         breakdown[e.code] = e.monthlyAmount;
         currentGrossEarnings += e.monthlyAmount;
       } else if (e.calculationType === 'Fixed') {
-        e.monthlyAmount = e.calculationValue;
+        e.monthlyAmount = Number((e.calculationValue * prorationFactor).toFixed(2));
         breakdown[e.code] = e.monthlyAmount;
         currentGrossEarnings += e.monthlyAmount;
       } else if (e.calculationType === 'Percentage' && e.calculationBase === 'CTC') {
-        e.monthlyAmount = Number(((monthlyCtc * e.calculationValue) / 100).toFixed(2));
+        e.monthlyAmount = Number(((proratedMonthlyCtc * e.calculationValue) / 100).toFixed(2));
         breakdown[e.code] = e.monthlyAmount;
         currentGrossEarnings += e.monthlyAmount;
       }
@@ -92,8 +110,9 @@ class SalaryService {
     // Step 2: Calculate Earnings that depend on other earnings (e.g. HRA of BASIC)
     earnings.forEach(e => {
       if (e.calculationType === 'Percentage' && e.calculationBase && e.calculationBase !== 'CTC' && e.calculationBase !== 'RemainingGross') {
+        // Normalize base key to UPPER so 'Basic' and 'BASIC' both resolve correctly
         const baseKey = e.calculationBase.toUpperCase();
-        const baseVal = breakdown[baseKey] || breakdown[e.calculationBase] || 0;
+        const baseVal = breakdown[baseKey] || 0;
         e.monthlyAmount = Number(((baseVal * e.calculationValue) / 100).toFixed(2));
         breakdown[e.code] = e.monthlyAmount;
         currentGrossEarnings += e.monthlyAmount;
@@ -103,7 +122,7 @@ class SalaryService {
     // Step 3: Calculate SPECIAL_ALLOWANCE balancing figure (Gross target = Monthly CTC)
     // Gross target can be Monthly CTC if there are no employer contribution components.
     // If there is an employer PF component, it should subtract it, but by default:
-    const targetGross = monthlyCtc;
+    const targetGross = proratedMonthlyCtc;
     earnings.forEach(e => {
       if (e.code === 'SPECIAL_ALLOWANCE' || e.code === 'FIXED' || e.calculationBase === 'RemainingGross') {
         const remaining = targetGross - currentGrossEarnings;
@@ -138,31 +157,36 @@ class SalaryService {
 
     deductions.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
 
+    const baseGross = prorationFactor > 0 ? grossEarnings / prorationFactor : 0;
+
     deductions.forEach(d => {
       if (d.code === 'PF_EMP' || d.code === 'PF') {
-        // Employee PF: 12% of Basic, capped at 1800
+        // Employee PF: 12% of Basic, capped dynamically (default 1800)
         const basic = breakdown['BASIC'] || 0;
         const computedPf = (basic * d.calculationValue) / 100;
-        d.monthlyAmount = computedPf > 1800 ? 1800 : Number(computedPf.toFixed(2));
+        const actualCap = pfCap * prorationFactor; // Cap is also prorated
+        d.monthlyAmount = computedPf > actualCap ? Number(actualCap.toFixed(2)) : Number(computedPf.toFixed(2));
       } else if (d.code === 'ESI_EMP') {
-        // Employee ESI: 0.75% of Gross, only if Gross <= 21000
-        if (grossEarnings <= 21000) {
+        // Employee ESI: 0.75% of Gross, only if BASE Gross <= threshold (default 21000)
+        if (baseGross <= esiThreshold && grossEarnings > 0) {
           d.monthlyAmount = Number(((grossEarnings * d.calculationValue) / 100).toFixed(2));
         } else {
           d.monthlyAmount = 0;
         }
       } else if (d.code === 'PT') {
-        // Professional Tax: standard PT of 200, or apply standard Indian slabs if Gross > 15000: 200, Gross between 10k and 15k: 150, etc.
-        // Let's use the configured calculationValue if Fixed. If value is 200, apply gross salary check:
-        if (grossEarnings >= 15000) {
-          d.monthlyAmount = d.calculationValue; // e.g. 200
-        } else if (grossEarnings >= 10000) {
-          d.monthlyAmount = 150;
+        // Professional Tax: standard PT, or apply standard Indian slabs if BASE Gross > 15000: ptAmount, Gross between 10k and 15k: 150, etc.
+        // Usually full amount is deducted if there's any earnings, but we won't deduct if gross is 0
+        if (grossEarnings === 0) {
+          d.monthlyAmount = 0;
+        } else if (baseGross >= 15000) {
+          d.monthlyAmount = ptAmount;
+        } else if (baseGross >= 10000) {
+          d.monthlyAmount = 150; // We can leave the lower slab as 150 or also make it configurable, keeping simple for now
         } else {
           d.monthlyAmount = 0;
         }
       } else if (d.calculationType === 'Fixed') {
-        d.monthlyAmount = d.calculationValue;
+        d.monthlyAmount = Number((d.calculationValue * prorationFactor).toFixed(2));
       } else if (d.calculationType === 'Percentage' && d.calculationBase === 'BASIC') {
         const basic = breakdown['BASIC'] || 0;
         d.monthlyAmount = Number(((basic * d.calculationValue) / 100).toFixed(2));
@@ -170,8 +194,8 @@ class SalaryService {
         d.monthlyAmount = Number(((grossEarnings * d.calculationValue) / 100).toFixed(2));
       }
 
-      breakdown[d.code] = d.monthlyAmount;
-      totalDeductionsAmount += d.monthlyAmount;
+      breakdown[d.code] = d.monthlyAmount || 0;
+      totalDeductionsAmount += (d.monthlyAmount || 0);
     });
 
     const totalDeductions = Number(totalDeductionsAmount.toFixed(2));
@@ -217,10 +241,11 @@ class SalaryService {
     if (!assignment) return null;
 
     const structureComponents = assignment.structure?.components || [];
-    const result = this.calculateSalaryBreakdown(
+    const result = await this.calculateSalaryBreakdown(
       Number(assignment.ctcAmount),
       structureComponents,
-      assignment.basicAmount ? Number(assignment.basicAmount) : null
+      assignment.basicAmount ? Number(assignment.basicAmount) : null,
+      companyId
     );
 
     return {

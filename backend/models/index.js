@@ -45,7 +45,7 @@ const SalaryComponent = require('./salaryComponent.model')(sequelize, DataTypes)
 const SalaryStructure = require('./salaryStructure.model')(sequelize, DataTypes);
 const SalaryStructureComponent = require('./salaryStructureComponent.model')(sequelize, DataTypes);
 const EmployeeSalaryAssignment = require('./employeeSalaryAssignment.model')(sequelize, DataTypes);
-const Payslip = require('./payslip.model')(sequelize, DataTypes);
+
 const SalarySlip = require('./salarySlip.model')(sequelize, DataTypes);
 const PayrollSettings = require('./payrollSettings.model')(sequelize, DataTypes);
 const FixedAsset = require('./fixedAsset.model')(sequelize, DataTypes);
@@ -391,14 +391,12 @@ EmployeeSalaryAssignment.belongsTo(Employee, { foreignKey: 'EmployeeId' });
 SalaryStructure.hasMany(EmployeeSalaryAssignment, { foreignKey: 'SalaryStructureId', onDelete: 'RESTRICT' });
 EmployeeSalaryAssignment.belongsTo(SalaryStructure, { foreignKey: 'SalaryStructureId', as: 'structure' });
 
-Company.hasMany(Payslip, { foreignKey: 'CompanyId' });
-Payslip.belongsTo(Company, { foreignKey: 'CompanyId' });
-Employee.hasMany(Payslip, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
-Payslip.belongsTo(Employee, { foreignKey: 'EmployeeId' });
-Payslip.belongsTo(Voucher, { foreignKey: 'VoucherId', onDelete: 'SET NULL' });
+
 
 Company.hasMany(SalarySlip, { foreignKey: 'companyId' });
+SalarySlip.belongsTo(Company, { foreignKey: 'companyId' });
 Employee.hasMany(SalarySlip, { foreignKey: 'employeeId' });
+SalarySlip.belongsTo(Employee, { foreignKey: 'employeeId' });
 
 // 21. Fixed Assets
 Company.hasMany(FixedAsset, { foreignKey: 'CompanyId' });
@@ -500,7 +498,6 @@ module.exports = {
   SalaryStructure,
   SalaryStructureComponent,
   EmployeeSalaryAssignment,
-  Payslip,
   SalarySlip,
   PayrollSettings,
   FixedAsset,

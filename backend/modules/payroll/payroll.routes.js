@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const payrollController = require('./payroll.controller');
+const salarySlipController = require('./salarySlip.controller');
 const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/auth.middleware');
 
 const ALL_ROLES = ['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
@@ -40,9 +41,7 @@ router.get('/employees/:id/pdf', authorizeRoles(...ALL_ROLES), payrollController
 // Photo Upload
 router.post('/employees/:id/upload-photo', authorizeRoles(...WRITE_ROLES), upload.single('photo'), payrollController.uploadPhoto);
 
-// Salary Structure
-router.post('/salary-structure', authorizeRoles(...WRITE_ROLES), payrollController.saveSalaryStructure);
-router.post('/:companyId/salary-structures', authorizeRoles(...WRITE_ROLES), payrollController.saveSalaryStructure);
+
 
 // Payroll Settings
 router.get('/:companyId/settings', authorizeRoles(...ALL_ROLES), payrollController.getSettings);
@@ -56,6 +55,13 @@ router.get('/attendance/:companyId', authorizeRoles(...ALL_ROLES), payrollContro
 // Processing & Payslips
 router.post('/process', authorizeRoles(...WRITE_ROLES), payrollController.processPayroll);
 router.get('/payslips/:companyId', authorizeRoles(...ALL_ROLES), payrollController.getPayslips);
+
+// Salary Slips (Merged from salarySlip.routes.js)
+router.get('/:companyId/employees-selection', authorizeRoles(...ALL_ROLES), salarySlipController.getEmployeesForSelection);
+router.post('/:companyId/calculate-single', authorizeRoles(...WRITE_ROLES), salarySlipController.calculateSingleSalary);
+router.post('/:companyId/process-month', authorizeRoles(...WRITE_ROLES), salarySlipController.processMonth);
+router.get('/slips/detail/:slipId', authorizeRoles(...ALL_ROLES), salarySlipController.getSalarySlipDetails);
+router.get('/:companyId/slips', authorizeRoles(...ALL_ROLES), salarySlipController.getAllSlipsForMonth);
 
 // Employees CRUD
 router.post('/employees', authorizeRoles(...WRITE_ROLES), payrollController.createEmployee);
