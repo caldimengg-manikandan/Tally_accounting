@@ -2,6 +2,11 @@ const sequelize = require('../config/db.config');
 const { DataTypes } = require('sequelize');
 
 const User = require('./user.model')(sequelize, DataTypes);
+const Role = require('./role.model')(sequelize, DataTypes);
+const Permission = require('./permission.model')(sequelize, DataTypes);
+const SubscriptionPlan = require('./subscriptionPlan.model')(sequelize, DataTypes);
+const CompanySubscription = require('./companySubscription.model')(sequelize, DataTypes);
+const SupportTicket = require('./supportTicket.model')(sequelize, DataTypes);
 const Company = require('./company.model')(sequelize, DataTypes);
 const Group = require('./group.model')(sequelize, DataTypes);
 const Ledger = require('./ledger.model')(sequelize, DataTypes);
@@ -82,6 +87,30 @@ Company.belongsToMany(User, {
 
 Company.belongsTo(User, { as: 'Owner', foreignKey: { name: 'userId', type: DataTypes.UUID } });
 User.hasMany(Company, { as: 'OwnedCompanies', foreignKey: { name: 'userId', type: DataTypes.UUID } });
+
+// RBAC Associations
+Role.belongsToMany(Permission, { through: 'RolePermissions', foreignKey: 'roleId', otherKey: 'permissionId' });
+Permission.belongsToMany(Role, { through: 'RolePermissions', foreignKey: 'permissionId', otherKey: 'roleId' });
+
+User.belongsTo(Role, { foreignKey: 'RoleId' });
+Role.hasMany(User, { foreignKey: 'RoleId' });
+
+// SaaS Subscription Associations
+Company.belongsTo(SubscriptionPlan, { foreignKey: 'planId', as: 'SubscriptionPlan' });
+SubscriptionPlan.hasMany(Company, { foreignKey: 'planId' });
+
+Company.hasMany(CompanySubscription, { foreignKey: 'CompanyId', as: 'BillingHistory' });
+CompanySubscription.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+CompanySubscription.belongsTo(SubscriptionPlan, { foreignKey: 'PlanId' });
+SubscriptionPlan.hasMany(CompanySubscription, { foreignKey: 'PlanId' });
+
+// Support Ticket Associations
+Company.hasMany(SupportTicket, { foreignKey: 'CompanyId' });
+SupportTicket.belongsTo(Company, { foreignKey: 'CompanyId', as: 'Company' });
+
+User.hasMany(SupportTicket, { foreignKey: 'UserId' });
+SupportTicket.belongsTo(User, { foreignKey: 'UserId', as: 'Creator' });
 
 // 2. Structural Hierarchy
 Company.hasMany(Group, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -457,6 +486,11 @@ AppNotification.belongsTo(Company, { foreignKey: 'CompanyId' });
 module.exports = {
   sequelize,
   User,
+  Role,
+  Permission,
+  SubscriptionPlan,
+  CompanySubscription,
+  SupportTicket,
   Company,
   Group,
   Ledger,

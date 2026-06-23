@@ -9,6 +9,13 @@ const path = require('path');
 // 1. Initial Config (Loaded from backend/.env)
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+const fs = require('fs');
+const originalConsoleError = console.error;
+console.error = function (...args) {
+  fs.appendFileSync(path.join(__dirname, 'error_log.txt'), args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ') + '\n');
+  originalConsoleError.apply(console, args);
+};
+
 // Phase 2: Validate required env vars before any other code runs
 // If JWT_SECRET or other critical vars are missing, process.exit(1) is called.
 require('./config/env.validate')();
@@ -121,6 +128,8 @@ app.get('/api/auth/callback',
 );
 // 4. Modular Hub Routing
 app.use('/api/payment', require('./modules/payment/payment.routes'));
+app.use('/api/subscription', require('./modules/subscription/subscription.routes')); // SaaS Razorpay Integration
+app.use('/api/support', require('./modules/support/support.routes')); // SaaS Support Ticket System
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/users', require('./modules/auth/users.routes'));          // User management (ADMIN)
 app.use('/api/companies', require('./modules/company/company.routes'));
@@ -196,7 +205,7 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
 // Use alter:true only for local SQLite; disabled for cloud Postgres to prevent sync locks
-const syncOptions = process.env.DATABASE_URL ? {} : { alter: true };
+const syncOptions = { alter: true };
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');
@@ -279,6 +288,31 @@ const startServer = async () => {
       await sequelize.sync(syncOptions);
       const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
       console.log(`✅ Ledger Database Synced [${connectedTo}]`);
+      
+      // Seed default SaaS roles
+      try {
+        const { Role, SubscriptionPlan } = require('./models');
+        const defaultRoles = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'ACCOUNTANT', 'EMPLOYEE'];
+        for (const roleName of defaultRoles) {
+          await Role.findOrCreate({ where: { name: roleName }, defaults: { description: `Default ${roleName} role` } });
+        }
+        console.log('✅ Default RBAC Roles seeded.');
+
+        // Seed default Subscription Plans
+        const defaultPlans = [
+          { name: 'Basic Plan', price: 0.00, description: 'Sales, Purchases, Ledgers', features: ['SALES', 'PURCHASES', 'LEDGERS'] },
+          { name: 'Pro Plan', price: 999.00, description: 'Basic + Inventory, Multi-Currency, Cost Centers', features: ['SALES', 'PURCHASES', 'LEDGERS', 'INVENTORY', 'MULTI_CURRENCY', 'COST_CENTERS'] },
+          { name: 'Enterprise Plan', price: 4999.00, description: 'Pro + Multi-Branch, API Access, Priority Support', features: ['SALES', 'PURCHASES', 'LEDGERS', 'INVENTORY', 'MULTI_CURRENCY', 'COST_CENTERS', 'MULTI_BRANCH', 'API_ACCESS', 'PRIORITY_SUPPORT'] }
+        ];
+        for (const plan of defaultPlans) {
+          await SubscriptionPlan.findOrCreate({ where: { name: plan.name }, defaults: plan });
+        }
+        console.log('✅ Default Subscription Plans seeded.');
+
+      } catch (seedErr) {
+        console.error('❌ Failed to seed RBAC roles:', seedErr.message);
+      }
+
       break; // Success, exit retry loop
     } catch (err) {
       console.error('❌ Database connection/sync failed:', err.message);

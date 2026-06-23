@@ -1,0 +1,7 @@
+Error
+    at Query.run (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.select (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async SalesInvoice.findAll (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async ReminderService.processPaymentReminders (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\services\ReminderService.js:105:24)
+    at async exports.triggerReminders (C:\Users\loges\OneDrive\Desktop\Tally\Tally_accounting\backend\modules\sales\sales.controller.js:580:20)
