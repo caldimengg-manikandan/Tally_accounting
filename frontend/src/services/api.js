@@ -163,14 +163,26 @@ export const exchangeOAuthToken = () => api.post('/auth/oauth-token-exchange', {
 export const getCurrentUser = () => api.get('/auth/me');
 export const logout = () => api.post('/auth/logout');
 
-export const authAPI = { register, login, logout, googleLogin, exchangeOAuthToken, getCurrentUser };
+export const authAPI = {
+  register,
+  login,
+  logout,
+  googleLogin,
+  exchangeOAuthToken,
+  getCurrentUser,
+  getProfile: () => api.get('/auth/profile'),
+  changePassword: (data) => api.post('/auth/change-password', data),
+  getNotificationPreferences: () => api.get('/auth/notification-preferences'),
+  saveNotificationPreferences: (data) => api.post('/auth/notification-preferences', data)
+};
 
 // ─── Users ─────────────────────────────────────────
 export const usersAPI = {
   getCompanyUsers: () => api.get('/users'),
   inviteUser: (data) => api.post('/users/invite', data),
   updateUserRole: (userId, data) => api.put(`/users/${userId}/role`, data),
-  removeUser: (userId) => api.delete(`/users/${userId}`)
+  removeUser: (userId) => api.delete(`/users/${userId}`),
+  requestEmailChange: (newEmail) => api.post('/users/request-email-change', { newEmail })
 };
 
 // ─── Companies ─────────────────────────────────────
@@ -181,6 +193,28 @@ export const companyAPI = {
   update: (id, data) => api.put(`/companies/${id}`, data),
   getCompanyUsers: () => api.get('/users'),
   syncDefaultLedgers: (id) => api.post(`/companies/${id}/sync-default-ledgers`),
+  closeFinancialYear: (id) => api.post(`/companies/close-year/${id}`),
+};
+
+export const settingsAPI = {
+  createFinancialPeriod: (data) => api.post('/settings/financial-periods', data),
+  getFinancialPeriods: () => api.get('/settings/financial-periods'),
+  togglePeriodLock: (id, isLocked) => api.patch(`/settings/financial-periods/${id}/lock`, { isLocked }),
+  setLegacyPeriodLock: (data) => api.post('/settings/period-lock', data),
+  getLegacyPeriodLock: () => api.get('/settings/period-lock'),
+};
+
+export const supportAPI = {
+  createTicket: (data) => api.post('/support', data),
+  getCompanyTickets: () => api.get('/support'),
+  getAllTicketsAdmin: () => api.get('/support/admin'),
+  replyToTicket: (id, data) => api.put(`/support/admin/${id}`, data),
+};
+
+export const subscriptionAPI = {
+  getPlans: () => api.get('/subscription/plans'),
+  createOrder: (planId) => api.post('/subscription/create-order', { planId }),
+  mockSuccess: (orderId) => api.post('/subscription/mock-success', { orderId }),
 };
 
 // ─── Groups ────────────────────────────────────────

@@ -3,7 +3,13 @@ const router = express.Router();
 const usersController = require('./users.controller');
 const { verifyToken, authorizeRoles, tenantAccess } = require('../../middleware/auth.middleware');
 
-// All user management routes require a valid token, an active company, and ADMIN role
+// ── Public route: verify email change token (opened from email link in browser) ──
+router.get('/verify-email', usersController.verifyEmailChange);
+
+// ── Authenticated route: any logged-in user can request an email change for themselves ──
+router.post('/request-email-change', verifyToken, usersController.requestEmailChange);
+
+// All remaining user management routes require ADMIN or SUPER_ADMIN
 router.use(verifyToken, tenantAccess, authorizeRoles('ADMIN', 'SUPER_ADMIN'));
 
 // List all users in the current company

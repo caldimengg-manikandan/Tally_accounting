@@ -69,8 +69,19 @@ const InvoicePayment = require('./invoicePayment.model')(sequelize, DataTypes);
 const PaymentWebhookLog = require('./paymentWebhookLog.model')(sequelize, DataTypes);
 const StockMovement = require('./stockMovement.model')(sequelize, DataTypes);
 const AppNotification = require('./appNotification.model')(sequelize, DataTypes);
+const PeriodLock = require('./periodLock.model')(sequelize);
+const FinancialPeriod = require('./financialPeriod.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
+
+// PeriodLock Associations
+Company.hasMany(PeriodLock, { foreignKey: 'CompanyId', onDelete: 'CASCADE' });
+PeriodLock.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+// FinancialPeriod Associations
+Company.hasMany(FinancialPeriod, { foreignKey: 'CompanyId', onDelete: 'CASCADE' });
+FinancialPeriod.belongsTo(Company, { foreignKey: 'CompanyId' });
+
 
 // 1. User & Company (Multi-tenancy)
 // junction table for multi-company access
@@ -480,6 +491,83 @@ MfaSecret.belongsTo(User, { foreignKey: 'userId' });
 Company.hasMany(AppNotification, { foreignKey: 'CompanyId' });
 AppNotification.belongsTo(Company, { foreignKey: 'CompanyId' });
 
+const { getNamespace } = require('../middleware/cls.middleware');
+
+function registerAuditHooks(model, tableName) {
+  model.addHook('afterCreate', async (instance, options) => {
+    try {
+      const ns = getNamespace();
+      const userId = ns ? ns.get('userId') : null;
+      const companyId = ns ? ns.get('companyId') : instance.CompanyId;
+      
+      await AuditLog.create({
+        action: `CREATE_${tableName.toUpperCase()}`,
+        tableName,
+        recordId: instance.id?.toString(),
+        oldData: null,
+        newData: instance.toJSON(),
+        CompanyId: companyId,
+        UserId: userId
+      });
+    } catch (err) {
+      console.error(`[Audit Hook Error on Create ${tableName}]:`, err.message);
+    }
+  });
+
+  model.addHook('afterUpdate', async (instance, options) => {
+    try {
+      const ns = getNamespace();
+      const userId = ns ? ns.get('userId') : null;
+      const companyId = ns ? ns.get('companyId') : instance.CompanyId;
+      
+      const oldData = {};
+      const newData = {};
+      instance.changed().forEach(field => {
+        oldData[field] = instance.previous(field);
+        newData[field] = instance.getDataValue(field);
+      });
+
+      await AuditLog.create({
+        action: `UPDATE_${tableName.toUpperCase()}`,
+        tableName,
+        recordId: instance.id?.toString(),
+        oldData,
+        newData,
+        CompanyId: companyId,
+        UserId: userId
+      });
+    } catch (err) {
+      console.error(`[Audit Hook Error on Update ${tableName}]:`, err.message);
+    }
+  });
+
+  model.addHook('afterDestroy', async (instance, options) => {
+    try {
+      const ns = getNamespace();
+      const userId = ns ? ns.get('userId') : null;
+      const companyId = ns ? ns.get('companyId') : instance.CompanyId;
+      
+      await AuditLog.create({
+        action: `DELETE_${tableName.toUpperCase()}`,
+        tableName,
+        recordId: instance.id?.toString(),
+        oldData: instance.toJSON(),
+        newData: null,
+        CompanyId: companyId,
+        UserId: userId
+      });
+    } catch (err) {
+      console.error(`[Audit Hook Error on Destroy ${tableName}]:`, err.message);
+    }
+  });
+}
+
+registerAuditHooks(Voucher, 'Voucher');
+registerAuditHooks(Ledger, 'Ledger');
+registerAuditHooks(Company, 'Company');
+registerAuditHooks(User, 'User');
+
+
 
 module.exports = {
   sequelize,
@@ -549,6 +637,8 @@ module.exports = {
   InvoicePayment,
   PaymentWebhookLog,
   StockMovement,
-  AppNotification
+  AppNotification,
+  PeriodLock,
+  FinancialPeriod
 };
 

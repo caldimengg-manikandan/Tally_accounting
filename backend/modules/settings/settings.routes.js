@@ -11,4 +11,7 @@ router.post('/financial-periods', authorizeRoles('ADMIN', 'SUPER_ADMIN'), settin
 router.get('/financial-periods', authorizeRoles('ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT'), settingsController.getFinancialPeriods);
 router.patch('/financial-periods/:id/lock', authorizeRoles('ADMIN', 'SUPER_ADMIN'), settingsController.togglePeriodLock);
 
+router.post('/period-lock', authorizeRoles('ADMIN', 'SUPER_ADMIN'), settingsController.setLegacyPeriodLock);
+router.get('/period-lock', authorizeRoles('ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT'), settingsController.getLegacyPeriodLock);
+
 module.exports = router;
