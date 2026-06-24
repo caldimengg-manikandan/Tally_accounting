@@ -434,7 +434,6 @@ const DashboardView = ({ companyId: propCompanyId }) => {
             canCreate={canCreate} loading={loading}
             dropdownItems={[
               { label: 'New Bill',            icon: FileStack,    onClick: () => navigate('/bills/new') },
-              { label: 'New Recurring Bill',  icon: Repeat,       onClick: () => navigate('/recurring-bills/new') },
               { label: 'New Vendor Payment',  icon: Wallet,       onClick: () => navigate('/payments-made/new') },
               { label: 'New Purchase Order',  icon: ShoppingBag,  onClick: () => navigate('/purchase-orders/new') },
               { label: 'New Debit Note',      icon: ArrowUpRight, onClick: () => navigate('/vendor-credits/new') },

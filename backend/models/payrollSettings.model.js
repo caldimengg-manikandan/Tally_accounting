@@ -20,6 +20,11 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: true,
       allowNull: false
     },
+    pfCap: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 1800.00,
+      allowNull: false
+    },
     esiEmployeeRate: {
       type: DataTypes.DECIMAL(5, 2),
       defaultValue: 0.75,
@@ -33,6 +38,11 @@ module.exports = (sequelize, DataTypes) => {
     esiApplicable: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+      allowNull: false
+    },
+    esiThreshold: {
+      type: DataTypes.DECIMAL(10, 2),
+      defaultValue: 21000.00,
       allowNull: false
     },
     ptMonthlyAmount: {

@@ -11,10 +11,21 @@ import CreateAccountModal from '../../components/accounting/CreateAccountModal';
 import useNotificationStore from '../../store/notificationStore';
 
 const INITIAL_UNITS = [
-  "CMS - cm", "DOZ - dz", "FTS - ft", "GMS - g", "INC - in",
-  "KGS - kg", "KME - km", "LBS - lb", "MGS - mg", "MLT - ml",
-  "MTR - m", "PCS - pcs"
+  "BAG - bag", "BTL - btl", "BOX - box", "CMS - cm", "DOZ - dz", 
+  "FTS - ft", "GMS - g", "INC - in", "KGS - kg", "KLR - kl", 
+  "KME - km", "LBS - lb", "LTR - lt", "MGS - mg", "MLT - ml",
+  "MTR - m", "NOS - nos", "PAC - pac", "PCS - pcs", "ROL - rol", 
+  "SET - set", "SQM - sqm", "TON - t", "UNT - unt"
 ];
+
+const UNIT_KEYWORDS = {
+  "shirt": "PCS - pcs", "pant": "PCS - pcs", "mouse": "NOS - nos", 
+  "laptop": "NOS - nos", "computer": "NOS - nos", "milk": "LTR - lt", 
+  "water": "LTR - lt", "oil": "LTR - lt", "rice": "KGS - kg", 
+  "wheat": "KGS - kg", "sugar": "KGS - kg", "salt": "KGS - kg", 
+  "box": "BOX - box", "bottle": "BTL - btl", "packet": "PAC - pac", 
+  "roll": "ROL - rol", "cable": "MTR - m", "wire": "MTR - m", "pipe": "MTR - m"
+};
 
 const SALES_ACCOUNTS_STRUCTURE = [
   { category: "Other Current Asset", accounts: ["Advance Tax", "Employee Advance", "Prepaid Expenses", "TDS Receivable"] },
@@ -139,14 +150,35 @@ const ItemEntryView = ({ onSaveSuccess, onCancel }) => {
     }
   }, [companyId]);
 
+  const [autoAssignedUnit, setAutoAssignedUnit] = useState('');
+
   useEffect(() => {
-    if (uomUnits.length > 0) {
-      const formatted = uomUnits.map(u => `${u.symbol.toUpperCase()} - ${u.formalName}`);
-      setAvailableUnits(formatted);
-    } else {
-      setAvailableUnits(INITIAL_UNITS);
+    let unitsList = [...INITIAL_UNITS];
+    if (uomUnits && uomUnits.length > 0) {
+      const formatted = uomUnits.map(u => `${u.symbol.toUpperCase()} - ${u.formalName || u.symbol}`);
+      formatted.forEach(f => {
+        if (!unitsList.includes(f)) unitsList.push(f);
+      });
     }
+    setAvailableUnits(unitsList.sort());
   }, [uomUnits]);
+
+  useEffect(() => {
+    if (!isEditMode && newItem.name) {
+      const lowerName = newItem.name.toLowerCase();
+      let matchedUnit = '';
+      for (const [key, unit] of Object.entries(UNIT_KEYWORDS)) {
+        if (lowerName.includes(key)) {
+          matchedUnit = unit;
+          break;
+        }
+      }
+      if (matchedUnit && (!newItem.unit || newItem.unit === autoAssignedUnit)) {
+        setNewItem(prev => ({ ...prev, unit: matchedUnit }));
+        setAutoAssignedUnit(matchedUnit);
+      }
+    }
+  }, [newItem.name, isEditMode, newItem.unit, autoAssignedUnit]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

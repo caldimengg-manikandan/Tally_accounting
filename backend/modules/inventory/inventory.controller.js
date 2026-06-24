@@ -1,4 +1,5 @@
-const { Item, AuditLog, User, StockMovement } = require('../../models');
+const { Item, AuditLog, User, StockMovement, Ledger, Group, sequelize } = require('../../models');
+const AccountingService = require('../../services/AccountingService');
 const { Op } = require('sequelize');
 const AuditService = require('../../services/AuditService');
 const fs = require('fs');
@@ -136,6 +137,137 @@ exports.updateStock = async (req, res, next) => {
 
     res.json(item);
   } catch (err) {
+    next(err);
+  }
+};
+
+exports.adjustStock = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { itemId } = req.params;
+    const { newQuantity, reason, date } = req.body;
+    const companyId = req.companyId || req.user?.CompanyId;
+
+    const item = await Item.findOne({ where: { id: itemId, CompanyId: companyId }, transaction });
+    if (!item) {
+        await transaction.rollback();
+        return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const currentStock = parseFloat(item.currentStock) || 0;
+    const nQuantity = parseFloat(newQuantity) || 0;
+    const financialDelta = nQuantity - currentStock;
+
+    if (financialDelta === 0) {
+        await transaction.rollback();
+        return res.json({ message: 'No adjustment needed. Quantity is identical.' });
+    }
+
+    const costPrice = parseFloat(item.costPrice) || 0;
+    const financialImpact = Math.abs(financialDelta * costPrice);
+
+    let ledgerToUse = null;
+    let description = '';
+
+    if (financialDelta < 0) {
+      // Shrinkage/Loss (Expense)
+      ledgerToUse = await Ledger.findOne({ 
+        where: { name: 'Inventory Shrinkage/Loss', CompanyId: companyId }, transaction 
+      });
+      if (!ledgerToUse) {
+         const expGroup = await Group.findOne({ where: { name: 'Expense', CompanyId: companyId }, transaction });
+         ledgerToUse = await Ledger.create({
+            name: 'Inventory Shrinkage/Loss',
+            GroupId: expGroup ? expGroup.id : null,
+            CompanyId: companyId,
+            accountType: 'Expense',
+            balance: 0,
+            nature: 'Debit'
+         }, { transaction });
+      }
+      description = `Inventory adjustment down by ${Math.abs(financialDelta)} units (${reason})`;
+    } else {
+      // Gain (Income)
+      ledgerToUse = await Ledger.findOne({ 
+        where: { name: 'Inventory Gain', CompanyId: companyId }, transaction 
+      });
+      if (!ledgerToUse) {
+         const incGroup = await Group.findOne({ where: { name: 'Income', CompanyId: companyId }, transaction });
+         ledgerToUse = await Ledger.create({
+            name: 'Inventory Gain',
+            GroupId: incGroup ? incGroup.id : null,
+            CompanyId: companyId,
+            accountType: 'Income',
+            balance: 0,
+            nature: 'Credit'
+         }, { transaction });
+      }
+      description = `Inventory adjustment up by ${financialDelta} units (${reason})`;
+    }
+
+    let purchaseLedger = await Ledger.findOne({ where: { name: item.purchaseAccount || 'Cost of Goods Sold', CompanyId: companyId }, transaction });
+    if (!purchaseLedger) {
+       const cogsGroup = await Group.findOne({ where: { name: 'Cost Of Goods Sold', CompanyId: companyId }, transaction });
+       purchaseLedger = await Ledger.create({
+           name: item.purchaseAccount || 'Cost of Goods Sold',
+           GroupId: cogsGroup ? cogsGroup.id : null,
+           CompanyId: companyId,
+           accountType: 'Expense',
+           balance: 0,
+           nature: 'Debit'
+       }, { transaction });
+    }
+
+    const sumMovements = await StockMovement.sum('quantity', { where: { ItemId: item.id }, transaction }) || 0;
+    const movementDelta = nQuantity - sumMovements;
+
+    const movement = await StockMovement.create({
+      CompanyId: companyId,
+      ItemId: item.id,
+      movementType: 'ADJUSTMENT',
+      quantity: movementDelta,
+      rate: costPrice,
+      date: date || new Date(),
+      reference: reason || 'Physical Stock Count',
+    }, { transaction });
+
+    if (financialImpact > 0) {
+        const entries = [];
+        if (financialDelta < 0) {
+            entries.push({ ledgerId: ledgerToUse.id, debit: financialImpact, credit: 0, description });
+            entries.push({ ledgerId: purchaseLedger.id, debit: 0, credit: financialImpact, description });
+        } else {
+            entries.push({ ledgerId: purchaseLedger.id, debit: financialImpact, credit: 0, description });
+            entries.push({ ledgerId: ledgerToUse.id, debit: 0, credit: financialImpact, description });
+        }
+
+        await AccountingService.recordJournalEntry({
+            companyId,
+            date: date || new Date(),
+            narration: description,
+            voucherType: 'Journal',
+            entries,
+            userId: req.user?.id
+        }, transaction);
+    }
+
+    await transaction.commit();
+
+    await AuditService.log({
+      action: 'ADJUST_STOCK',
+      tableName: 'Items',
+      recordId: item.id,
+      oldData: { currentStock },
+      newData: { currentStock: nQuantity },
+      companyId,
+      userId: req.user?.id,
+      req
+    });
+
+    const updatedItem = await Item.findByPk(item.id);
+    res.json(updatedItem);
+  } catch (err) {
+    await transaction.rollback();
     next(err);
   }
 };

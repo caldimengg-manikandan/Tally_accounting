@@ -7,7 +7,11 @@ import NotificationBell from './components/NotificationBell';
 import { setUser, getUser } from './stores/authStore';
 import AuthPage from './modules/auth/AuthPage';
 import LandingPage from './modules/landing/LandingPage';
+import UpgradeScreen from './modules/billing/UpgradeScreen';
 import DashboardView from './modules/dashboard/DashboardView';
+import SupportHelpButton from './components/SupportHelpButton';
+import AdminSupportDashboard from './modules/support/AdminSupportDashboard';
+import { useAuth } from './store/AuthContext';
 import LedgersView from './modules/accounting/LedgersView';
 import LedgerStatementView from './modules/accounting/LedgerStatementView';
 import VoucherListView from './modules/accounting/VoucherListView';
@@ -62,8 +66,6 @@ import RecurringExpenseEntryView from './modules/purchases/RecurringExpenseEntry
 import PurchaseOrderEntryView from './modules/purchases/PurchaseOrderEntryView';
 import PurchaseOrderEmailView from './modules/purchases/PurchaseOrderEmailView';
 import BillEntryView from './modules/purchases/BillEntryView';
-import RecurringBillEntryView from './modules/purchases/RecurringBillEntryView';
-import RecurringBillsView from './modules/purchases/RecurringBillsView';
 import PaymentsMadeListView from './modules/purchases/PaymentsMadeListView';
 import PaymentsMadeEntryView from './modules/purchases/PaymentsMadeEntryView';
 import BudgetsView from './modules/accountant/BudgetsView';
@@ -138,7 +140,6 @@ const NAV = [
       { label: 'Vendors',            path: '/vendors', icon: Users, showPlus: true, plusPath: '/vendors/new' },
       { label: 'Purchase Orders',    path: '/purchase-orders', icon: ShoppingBag, showPlus: true, plusPath: '/purchase-orders/new' },
       { label: 'Bills',              path: '/bills', icon: FileStack, showPlus: true, plusPath: '/bills/new' },
-      { label: 'Recurring Bills',    path: '/recurring-bills', icon: Repeat, showPlus: true, plusPath: '/recurring-bills/new' },
       { label: 'Vendor Payments',    path: '/payments-made', icon: Wallet, showPlus: true, plusPath: '/payments-made/new' },
     ]
   },
@@ -184,6 +185,7 @@ const NAV = [
       { label: 'Trial Balance',      path: '/reports/trial-balance', icon: BarChart2 },
       { label: 'Cash Flow',          path: '/reports/cash-flow', icon: TrendingUp },
       { label: 'Inventory Report',   path: '/reports/inventory-report', icon: Package },
+      { label: 'Audit Trails',       path: '/reports/audit', icon: Shield },
     ]
   },
   {
@@ -191,6 +193,13 @@ const NAV = [
     icon: MessageSquare,
     items: [
       { label: 'AI Assistant',     path: '/ai-assistant', icon: MessageSquare }
+    ]
+  },
+  {
+    group: 'Platform Admin',
+    icon: Shield,
+    items: [
+      { label: 'Support Tickets',  path: '/admin/support', icon: MessageSquare }
     ]
   }
 ];
@@ -432,7 +441,8 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
   const location   = useLocation();
   const { pathname } = location;
   const [collapsed, setCollapsed] = useState(false);
-  const user = useMemo(() => getUser(), []);
+  const user = getUser();
+  const company = companies.find(c => c.id === currentCompanyId);
 
   const sidebarW = collapsed ? 84 : 230;
 
@@ -500,25 +510,50 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         {/* Nav */}
         <nav className={`flex-1 space-y-0 ${collapsed ? 'px-0 overflow-y-visible py-0' : 'px-0 overflow-y-auto py-6'}`}>
           {NAV.filter(section => {
+            if (!user) return false;
+
+            // FEATURE GATING LOGIC (SaaS Plan)
+            const features = company?.SubscriptionPlan?.features || [];
+            if (section.group === 'Items' && !features.includes('INVENTORY')) return false;
+
+            // Let's filter out specific items from groups if needed
+            // For now, if the group is purely 'Items' (Inventory), we hide it entirely.
+            
             // RBAC FILTERING LOGIC
-            const role = user.role || 'VIEWER';
+            const role = user.Role?.name || user.role || 'VIEWER';
+            if (role !== 'SUPER_ADMIN' && role !== 'COMPANY_ADMIN' && role !== 'ADMIN' && section.group === 'Platform Admin') return false;
+            
             if (role === 'VIEWER') return ['Home', 'Reports'].includes(section.group);
             if (role === 'AUDITOR') return ['Home', 'Reports', 'Setup'].includes(section.group);
             if (role === 'DATA_ENTRY') return ['Home', 'Items', 'Banking', 'Sales', 'Purchases', 'Accounting', 'Operations', 'Payroll'].includes(section.group);
             if (role === 'EMPLOYEE') return ['Home', 'Items', 'Sales', 'Purchases', 'Banking', 'Accounting', 'Reports'].includes(section.group);
             return true; // ADMIN, SUPER_ADMIN, ACCOUNTANT, MANAGER see all
-          }).map(section => (
-            <NavGroup
-              key={section.group}
-              group={section.group}
-              icon={section.icon}
-              items={section.items}
-              collapsed={collapsed}
-              pathname={pathname}
-              location={location}
-              navigate={navigate}
-            />
-          ))}
+          }).map(section => {
+            // Further item-level feature gating
+            const features = company?.SubscriptionPlan?.features || [];
+            let filteredItems = section.items;
+            
+            if (section.group === 'Accountant Tools') {
+              if (!features.includes('COST_CENTERS')) {
+                filteredItems = filteredItems.filter(item => item.path !== '/cost-centers');
+              }
+            }
+
+            if (filteredItems.length === 0) return null;
+
+            return (
+              <NavGroup
+                key={section.group}
+                group={section.group}
+                icon={section.icon}
+                items={filteredItems}
+                collapsed={collapsed}
+                pathname={pathname}
+                location={location}
+                navigate={navigate}
+              />
+            );
+          })}
         </nav>
 
         {/* Collapse toggle - Floating Transparent version */}
@@ -579,6 +614,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
           </div>
         </main>
       </div>
+      <SupportHelpButton />
     </div>
   );
 };
@@ -673,6 +709,7 @@ function AuthenticatedApp() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/upgrade" element={<UpgradeScreen />} />
 
       <Route path="/setup-company" element={
         <CompanyInfoView firstTime={true} onCompanyCreated={(id, name) => {
@@ -689,6 +726,9 @@ function AuthenticatedApp() {
           <DashboardView companyId={companyId} stats={stats} vouchers={vouchers} />
         </AppShell>
       } />
+
+      {/* Admin Support Dashboard */}
+      <Route path="/admin/support" element={shell(AdminSupportDashboard)} />
 
       {/* Accounting */}
       <Route path="/vouchers" element={
@@ -764,8 +804,6 @@ function AuthenticatedApp() {
       <Route path="/bills"               element={shell(BillsView)} />
       <Route path="/bills/new"           element={shell(BillEntryView)} />
       <Route path="/bills/edit/:id"      element={shell(BillEntryView)} />
-      <Route path="/recurring-bills"     element={shell(RecurringBillsView)} />
-      <Route path="/recurring-bills/new" element={shell(RecurringBillEntryView)} />
       <Route path="/purchase-orders"     element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/view/:id" element={shell(PurchaseOrdersView)} />
       <Route path="/purchase-orders/:id/email" element={shell(PurchaseOrderEmailView)} />

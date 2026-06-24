@@ -487,11 +487,31 @@ exports.getDaybook = async (req, res, next) => {
 exports.getAuditLogs = async (req, res, next) => {
   try {
     const { AuditLog, User } = require('../../models');
+    const { Op } = require('sequelize');
+    const { from, to } = req.query;
+
+    const whereClause = { CompanyId: req.params.companyId };
+
+    if (from && to) {
+      const startDate = new Date(from);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = { [Op.between]: [startDate, endDate] };
+    } else if (from) {
+      const startDate = new Date(from);
+      startDate.setHours(0, 0, 0, 0);
+      whereClause.createdAt = { [Op.gte]: startDate };
+    } else if (to) {
+      const endDate = new Date(to);
+      endDate.setHours(23, 59, 59, 999);
+      whereClause.createdAt = { [Op.lte]: endDate };
+    }
+
     const logs = await AuditLog.findAll({
-      where: { CompanyId: req.params.companyId },
+      where: whereClause,
       include: [{ model: User, attributes: ['id', 'name', 'email'] }],
       order: [['createdAt', 'DESC']],
-      limit: 100 // Last 100 activities
     });
     res.json(logs);
   } catch (err) {

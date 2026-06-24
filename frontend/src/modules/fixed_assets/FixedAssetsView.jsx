@@ -752,38 +752,80 @@ export default function FixedAssetsView() {
                   const annualDep = method === 'SLM' ? (purchaseValue / life) : (bookValue * rate / 100);
                   const monthlyDep = annualDep / 12;
 
+                  const forecast = [];
+                  let currentVal = bookValue;
+                  const scrapValue = parseFloat(selectedAsset.scrapValue || 0);
+                  for (let i = 1; i <= 5; i++) {
+                     let depAmount = method === 'SLM' ? (purchaseValue / life) : (currentVal * rate / 100);
+                     if (currentVal <= scrapValue) break;
+                     if (currentVal - depAmount < scrapValue) {
+                         depAmount = currentVal - scrapValue;
+                     }
+                     currentVal -= depAmount;
+                     forecast.push({ year: i, depAmount, endValue: currentVal });
+                     if (currentVal <= scrapValue) break;
+                  }
+
                   return (
-                    <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/30 border border-blue-100 rounded-3xl p-6 flex flex-col gap-4 shadow-sm">
-                      <div className="flex items-center gap-3 border-b border-blue-100 pb-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25">
-                          <Calculator size={18} />
+                    <div className="space-y-6">
+                      <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/30 border border-blue-100 rounded-3xl p-6 flex flex-col gap-4 shadow-sm">
+                        <div className="flex items-center gap-3 border-b border-blue-100 pb-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25">
+                            <Calculator size={18} />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Selected Asset Register</p>
+                            <span className="text-slate-900 font-extrabold text-lg">{selectedAsset.name}</span>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Selected Asset Register</p>
-                          <span className="text-slate-900 font-extrabold text-lg">{selectedAsset.name}</span>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold text-slate-600 mt-2">
+                          <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
+                            <span>Carrying WDV Value</span>
+                            <span className="text-slate-900 font-black text-sm">{fmt(bookValue)}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
+                            <span>Calculation Method</span>
+                            <span className="bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-md uppercase">
+                              {method === 'WDV' ? `WDV (${rate}%)` : 'SLM'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
+                            <span>Annual Depreciation</span>
+                            <span className="text-emerald-700 font-black text-sm">{fmt(annualDep)}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
+                            <span>Monthly Depreciation</span>
+                            <span className="text-emerald-700 font-black text-sm">{fmt(monthlyDep)}</span>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold text-slate-600 mt-2">
-                        <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
-                          <span>Carrying WDV Value</span>
-                          <span className="text-slate-900 font-black text-sm">{fmt(bookValue)}</span>
+
+                      {forecast.length > 0 && (
+                        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                           <h4 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2"><TrendingDown size={16} className="text-blue-500" /> 5-Year Depreciation Forecast</h4>
+                           <div className="overflow-x-auto">
+                              <table className="w-full text-left text-xs">
+                                 <thead>
+                                    <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                                       <th className="pb-3 pl-2">Year</th>
+                                       <th className="pb-3 text-right">Predicted Depreciation</th>
+                                       <th className="pb-3 text-right pr-2">Ending Book Value</th>
+                                    </tr>
+                                 </thead>
+                                 <tbody className="divide-y divide-slate-50">
+                                    {forecast.map((f) => (
+                                       <tr key={f.year} className="hover:bg-slate-50/50 transition-colors">
+                                          <td className="py-3 pl-2 font-bold text-slate-600">Year {f.year}</td>
+                                          <td className="py-3 text-right font-bold text-red-500">-{fmt(f.depAmount)}</td>
+                                          <td className="py-3 text-right pr-2 font-black text-slate-800">{fmt(f.endValue)}</td>
+                                       </tr>
+                                    ))}
+                                 </tbody>
+                              </table>
+                           </div>
                         </div>
-                        <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
-                          <span>Calculation Method</span>
-                          <span className="bg-blue-50 border border-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-md uppercase">
-                            {method === 'WDV' ? `WDV (${rate}%)` : 'SLM'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
-                          <span>Annual Depreciation</span>
-                          <span className="text-emerald-700 font-black text-sm">{fmt(annualDep)}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-3.5 bg-white rounded-2xl border border-slate-50 shadow-sm">
-                          <span>Monthly Depreciation</span>
-                          <span className="text-emerald-700 font-black text-sm">{fmt(monthlyDep)}</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })()}

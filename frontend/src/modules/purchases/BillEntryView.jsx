@@ -59,7 +59,7 @@ const BillEntryView = ({ companyId }) => {
   });
 
   const [items, setItems] = useState([
-    { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0 }
+    { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0, isFixedAsset: false, depMethod: 'WDV', depRate: 10, usefulLife: 10, scrapValue: 0 }
   ]);
 
   // ── Search & Dropdown State ─────────────────────────────────────
@@ -179,12 +179,13 @@ const BillEntryView = ({ companyId }) => {
   }, [formData.date, formData.paymentTerms, isDataLoaded, id]);
 
   const tdsOptions = [
-    { name: 'Commission or Brokerage', rate: 2 },
-    { name: 'Dividend', rate: 10 },
-    { name: 'Other Interest than securities', rate: 10 },
-    { name: 'Payment of contractors for Others', rate: 2 },
-    { name: 'Payment of contractors HUF/Indiv', rate: 1 },
-    { name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194H', name: 'Commission or Brokerage', rate: 2 },
+    { section: '194',  name: 'Dividend', rate: 10 },
+    { section: '194A', name: 'Other Interest than securities', rate: 10 },
+    { section: '194C', name: 'Payment of contractors for Others', rate: 2 },
+    { section: '194C', name: 'Payment of contractors HUF/Indiv', rate: 1 },
+    { section: '194J', name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194J', name: 'Professional Fees', rate: 10 },
   ];
 
   const filteredTdsOptions = tdsOptions.filter(opt => 
@@ -558,7 +559,7 @@ const BillEntryView = ({ companyId }) => {
   };
 
   const addItem = () => {
-    setItems([...items, { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0 }]);
+    setItems([...items, { id: Date.now(), itemName: '', account: '', qty: 1, rate: 0, amount: 0, isFixedAsset: false, depMethod: 'WDV', depRate: 10, usefulLife: 10, scrapValue: 0 }]);
   };
 
   const removeItem = (id) => {
@@ -712,9 +713,17 @@ const BillEntryView = ({ companyId }) => {
                               onFocus={() => setIsVendorDropdownOpen(true)}
                               className="w-full h-9 px-3 pr-8 border border-slate-300 rounded-l text-slate-800 focus:border-blue-500 outline-none"
                             />
-                            <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" />
+                            <ChevronDown 
+                              size={14} 
+                              className="absolute right-3 top-2.5 text-slate-400 cursor-pointer" 
+                              onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
+                            />
                          </div>
-                         <button className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600">
+                         <button 
+                           type="button"
+                           onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
+                           className="h-9 w-9 bg-blue-600 text-white rounded-r flex items-center justify-center hover:bg-blue-700 transition-colors border-y border-r border-blue-600"
+                         >
                             <Search size={14} />
                          </button>
                       </div>
@@ -752,6 +761,20 @@ const BillEntryView = ({ companyId }) => {
                          <div className="max-h-[200px] overflow-y-auto py-1 custom-scrollbar">
                             {filteredVendors.map(vendor => (
                                <div key={vendor.id} onClick={() => {
+                                  let newTdsName = formData.tdsName;
+                                  let newTdsRate = formData.tdsRate;
+                                  
+                                  if (vendor.tdsApplicable && vendor.tds_section) {
+                                     const matched = tdsOptions.find(o => o.section === vendor.tds_section && o.rate === Number(vendor.tds_rate));
+                                     if (matched) {
+                                        newTdsName = matched.name;
+                                        newTdsRate = matched.rate;
+                                     }
+                                  } else if (vendor.tdsApplicable === false) {
+                                     newTdsName = '';
+                                     newTdsRate = 0;
+                                  }
+
                                   setFormData({ 
                                      ...formData, 
                                      vendorId: vendor.id, 
@@ -869,65 +892,102 @@ const BillEntryView = ({ companyId }) => {
                 </div>
                 <div className="divide-y divide-slate-100">
                    {items.map((item, index) => (
-                      <div key={item.id} className="grid grid-cols-[2.5fr_2fr_1fr_1fr_1fr_40px] items-start hover:bg-slate-50/50 group/row relative min-h-[44px]">
-                         <div className="absolute left-1 top-4 text-slate-300 opacity-0 group-hover/row:opacity-100 cursor-grab"><GripVertical size={14} /></div>
-                         <div className="px-6 py-2 relative" ref={openItemDropdown === item.id ? itemDropdownRef : null}>
-                            <textarea placeholder="Type or click to select an item." value={item.itemName} onClick={() => setOpenItemDropdown(openItemDropdown === item.id ? null : item.id)} onChange={(e) => { handleItemChange(item.id, 'itemName', e.target.value); setOpenItemDropdown(item.id); }} className={`w-full bg-transparent text-[13px] text-slate-800 resize-none h-[50px] px-2 py-1.5 outline-none border border-transparent rounded ${openItemDropdown === item.id ? 'border-blue-500 ring-1 ring-blue-500 bg-white' : 'hover:border-slate-300'}`} />
-                            {(item.hsnCode || item.gstRate !== undefined) && (
-                               <div className="flex gap-3 mt-0.5 px-2 text-[11px] font-medium text-slate-400">
-                                  {item.hsnCode && <span>HSN/SAC: <strong className="text-slate-600">{item.hsnCode}</strong></span>}
-                                  {item.gstRate !== undefined && <span>GST: <strong className="text-slate-600">{item.gstRate}%</strong></span>}
+                      <div key={item.id} className="flex flex-col hover:bg-slate-50/50 group/row relative min-h-[44px]">
+                         <div className="grid grid-cols-[2.5fr_2fr_1fr_1fr_1fr_40px] items-start">
+                            <div className="absolute left-1 top-4 text-slate-300 opacity-0 group-hover/row:opacity-100 cursor-grab"><GripVertical size={14} /></div>
+                            <div className="px-6 py-2 relative" ref={openItemDropdown === item.id ? itemDropdownRef : null}>
+                               <textarea placeholder="Type or click to select an item." value={item.itemName} onClick={() => setOpenItemDropdown(openItemDropdown === item.id ? null : item.id)} onChange={(e) => { handleItemChange(item.id, 'itemName', e.target.value); setOpenItemDropdown(item.id); }} className={`w-full bg-transparent text-[13px] text-slate-800 resize-none h-[50px] px-2 py-1.5 outline-none border border-transparent rounded ${openItemDropdown === item.id ? 'border-blue-500 ring-1 ring-blue-500 bg-white' : 'hover:border-slate-300'}`} />
+                               <div className="flex gap-4 mt-1 items-center px-2">
+                                  <label className="flex items-center gap-1.5 cursor-pointer hover:bg-blue-50 p-1 -ml-1 rounded transition-colors group/cap">
+                                     <input type="checkbox" checked={item.isFixedAsset || false} onChange={(e) => handleItemChange(item.id, 'isFixedAsset', e.target.checked)} className="accent-blue-600 w-3.5 h-3.5" />
+                                     <span className={`text-[10px] font-bold uppercase tracking-wider ${item.isFixedAsset ? 'text-blue-600' : 'text-slate-400 group-hover/cap:text-blue-500'}`}>Capitalize Asset</span>
+                                  </label>
+                                  {(item.hsnCode || item.gstRate !== undefined) && (
+                                     <div className="flex gap-3 text-[11px] font-medium text-slate-400">
+                                        {item.hsnCode && <span>HSN: <strong className="text-slate-600">{item.hsnCode}</strong></span>}
+                                        {item.gstRate !== undefined && <span>GST: <strong className="text-slate-600">{item.gstRate}%</strong></span>}
+                                     </div>
+                                  )}
                                </div>
-                            )}
-                            {openItemDropdown === item.id && (
-                               <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
-                                  <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
-                                     {inventoryItems.filter(inv => {
-                                        const matchesSearch = inv.name.toLowerCase().includes((item.itemName || '').toLowerCase());
-                                        const isPurchaseItem = inv.purchaseInformation !== false && inv.purchaseInformation !== 0 && inv.purchaseInformation !== 'false';
-                                        return matchesSearch && isPurchaseItem;
-                                     }).map(invItem => (
-                                        <div key={invItem.id || invItem._id} onClick={() => handleItemSelect(item.id, invItem)} className={`px-4 py-2 text-[13px] cursor-pointer border-b border-slate-100 last:border-0 ${item.itemName === invItem.name ? 'bg-blue-500 text-white' : 'hover:bg-slate-50'}`}>
-                                           <div className="font-medium">{invItem.name}</div>
-                                           <div className={`text-[12px] ${item.itemName === invItem.name ? 'text-blue-100' : 'text-slate-500'}`}>Rate: ₹{(invItem.costPrice || 0).toLocaleString()}</div>
-                                        </div>
-                                     ))}
+                               {openItemDropdown === item.id && (
+                                  <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
+                                     <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
+                                        {inventoryItems.filter(inv => {
+                                           const matchesSearch = inv.name.toLowerCase().includes((item.itemName || '').toLowerCase());
+                                           const isPurchaseItem = inv.purchaseInformation !== false && inv.purchaseInformation !== 0 && inv.purchaseInformation !== 'false';
+                                           return matchesSearch && isPurchaseItem;
+                                        }).map(invItem => (
+                                           <div key={invItem.id || invItem._id} onClick={() => handleItemSelect(item.id, invItem)} className={`px-4 py-2 text-[13px] cursor-pointer border-b border-slate-100 last:border-0 ${item.itemName === invItem.name ? 'bg-blue-500 text-white' : 'hover:bg-slate-50'}`}>
+                                              <div className="font-medium">{invItem.name}</div>
+                                              <div className={`text-[12px] ${item.itemName === invItem.name ? 'text-blue-100' : 'text-slate-500'}`}>Rate: ₹{(invItem.costPrice || 0).toLocaleString()}</div>
+                                           </div>
+                                        ))}
+                                     </div>
+                                     <div onClick={() => { setActiveRowForItemModal(item.id); setIsItemModalOpen(true); setOpenItemDropdown(null); }} className="px-4 py-3 bg-white border-t border-slate-100 flex items-center gap-2 text-[13px] font-medium text-blue-600 hover:bg-slate-50 cursor-pointer shrink-0">
+                                        <PlusCircle size={14} /> Add New Item
+                                     </div>
                                   </div>
-                                  <div onClick={() => { setActiveRowForItemModal(item.id); setIsItemModalOpen(true); setOpenItemDropdown(null); }} className="px-4 py-3 bg-white border-t border-slate-100 flex items-center gap-2 text-[13px] font-medium text-blue-600 hover:bg-slate-50 cursor-pointer shrink-0">
-                                     <PlusCircle size={14} /> Add New Item
-                                  </div>
-                               </div>
-                            )}
-                         </div>
-                         <div className="px-3 py-2 border-l border-slate-100 relative" ref={openAccountDropdown === item.id ? accountDropdownRef : null}>
-                            <div onClick={() => setOpenAccountDropdown(openAccountDropdown === item.id ? null : item.id)} className="w-full flex items-center justify-between text-[13px] cursor-pointer hover:bg-white border-b border-transparent hover:border-slate-300 px-1 py-1">
-                               <span className={item.account ? 'text-slate-800 truncate' : 'text-slate-500'}>{item.account || 'Select an account'}</span>
-                               <ChevronDown size={14} className="text-slate-400" />
+                               )}
                             </div>
-                            {openAccountDropdown === item.id && (
-                                <div className="absolute top-[80%] left-0 w-full min-w-[200px] bg-white border border-slate-200 shadow-xl z-50 rounded-md overflow-hidden flex flex-col font-normal">
-                                   <div className="p-2 border-b border-slate-100 bg-slate-50/50">
-                                      <div className="relative"><Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" /><input autoFocus placeholder="Search accounts..." value={accountSearchTerm} onChange={(e) => setAccountSearchTerm(e.target.value)} className="w-full pl-7 pr-2 py-1 text-[12px] outline-none border border-slate-200 rounded" /></div>
+                            <div className="px-3 py-2 border-l border-slate-100 relative" ref={openAccountDropdown === item.id ? accountDropdownRef : null}>
+                               <div onClick={() => setOpenAccountDropdown(openAccountDropdown === item.id ? null : item.id)} className="w-full flex items-center justify-between text-[13px] cursor-pointer hover:bg-white border-b border-transparent hover:border-slate-300 px-1 py-1">
+                                  <span className={item.account ? 'text-slate-800 truncate' : 'text-slate-500'}>{item.account || 'Select an account'}</span>
+                                  <ChevronDown size={14} className="text-slate-400" />
+                               </div>
+                               {openAccountDropdown === item.id && (
+                                   <div className="absolute top-[80%] left-0 w-full min-w-[200px] bg-white border border-slate-200 shadow-xl z-50 rounded-md overflow-hidden flex flex-col font-normal">
+                                      <div className="p-2 border-b border-slate-100 bg-slate-50/50">
+                                         <div className="relative"><Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" /><input autoFocus placeholder="Search accounts..." value={accountSearchTerm} onChange={(e) => setAccountSearchTerm(e.target.value)} className="w-full pl-7 pr-2 py-1 text-[12px] outline-none border border-slate-200 rounded" /></div>
+                                      </div>
+                                      <div className="max-h-[220px] overflow-y-auto py-1 custom-scrollbar">
+                                         {accountGroups.map(group => (
+                                            <div key={group.category}>
+                                               <div className="px-3 py-1 font-bold text-slate-400 bg-slate-50 text-[11px] uppercase">{group.category}</div>
+                                               {group.accounts.filter(acc => acc.toLowerCase().includes(accountSearchTerm.toLowerCase())).map(acc => (
+                                                  <div key={acc} onClick={() => { handleItemChange(item.id, 'account', acc); setOpenAccountDropdown(null); setAccountSearchTerm(''); }} className={`px-4 py-1.5 text-[13px] cursor-pointer hover:bg-blue-600 hover:text-white ${item.account === acc ? 'bg-blue-50 text-blue-600' : ''}`}>{acc}</div>
+                                               ))}
+                                            </div>
+                                         ))}
+                                      </div>
                                    </div>
-                                   <div className="max-h-[220px] overflow-y-auto py-1 custom-scrollbar">
-                                      {accountGroups.map(group => (
-                                         <div key={group.category}>
-                                            <div className="px-3 py-1 font-bold text-slate-400 bg-slate-50 text-[11px] uppercase">{group.category}</div>
-                                            {group.accounts.filter(acc => acc.toLowerCase().includes(accountSearchTerm.toLowerCase())).map(acc => (
-                                               <div key={acc} onClick={() => { handleItemChange(item.id, 'account', acc); setOpenAccountDropdown(null); setAccountSearchTerm(''); }} className={`px-4 py-1.5 text-[13px] cursor-pointer hover:bg-blue-600 hover:text-white ${item.account === acc ? 'bg-blue-50 text-blue-600' : ''}`}>{acc}</div>
-                                            ))}
-                                         </div>
-                                      ))}
-                                   </div>
-                                </div>
-                             )}
+                                )}
+                            </div>
+                            <div className="px-3 py-2 border-l border-slate-100"><input type="number" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full bg-transparent text-[13px] text-right focus:bg-white px-1 py-1 outline-none border-b border-transparent focus:border-slate-300" /></div>
+                            <div className="px-3 py-2 border-l border-slate-100"><input type="number" value={item.rate} onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)} className="w-full bg-transparent text-[13px] text-right focus:bg-white px-1 py-1 outline-none border-b border-transparent focus:border-slate-300" /></div>
+                            <div className="px-3 py-2 border-l border-slate-100 text-right font-medium py-3 text-slate-800">{Number(item.qty * item.rate).toFixed(2)}</div>
+                            <div className="flex items-center justify-center pt-2.5">
+                               <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/row:opacity-100"><Trash2 size={16} /></button>
+                            </div>
                          </div>
-                         <div className="px-3 py-2 border-l border-slate-100"><input type="number" value={item.qty} onChange={(e) => handleItemChange(item.id, 'qty', e.target.value)} className="w-full bg-transparent text-[13px] text-right focus:bg-white px-1 py-1 outline-none border-b border-transparent focus:border-slate-300" /></div>
-                         <div className="px-3 py-2 border-l border-slate-100"><input type="number" value={item.rate} onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)} className="w-full bg-transparent text-[13px] text-right focus:bg-white px-1 py-1 outline-none border-b border-transparent focus:border-slate-300" /></div>
-                         <div className="px-3 py-2 border-l border-slate-100 text-right font-medium py-3 text-slate-800">{Number(item.qty * item.rate).toFixed(2)}</div>
-                         <div className="flex items-center justify-center pt-2.5">
-                            <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/row:opacity-100"><Trash2 size={16} /></button>
-                         </div>
+
+                         {item.isFixedAsset && (
+                            <div className="bg-blue-50/50 border-t border-blue-100/50 px-8 py-3 animate-fade-in flex flex-wrap gap-4 items-end rounded-b-md mb-2 mx-2">
+                               <div className="flex flex-col gap-1 w-36">
+                                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Dep. Method</label>
+                                  <select value={item.depMethod || 'WDV'} onChange={(e) => handleItemChange(item.id, 'depMethod', e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 bg-white shadow-sm cursor-pointer">
+                                     <option value="WDV">WDV</option>
+                                     <option value="SLM">SLM</option>
+                                  </select>
+                               </div>
+                               {item.depMethod !== 'SLM' && (
+                                  <div className="flex flex-col gap-1 w-24">
+                                     <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Rate (%)</label>
+                                     <input type="number" value={item.depRate || 10} onChange={(e) => handleItemChange(item.id, 'depRate', e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 bg-white shadow-sm" />
+                                  </div>
+                               )}
+                               <div className="flex flex-col gap-1 w-24">
+                                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Life (Years)</label>
+                                  <input type="number" value={item.usefulLife || 10} onChange={(e) => handleItemChange(item.id, 'usefulLife', e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 bg-white shadow-sm" />
+                               </div>
+                               <div className="flex flex-col gap-1 w-32">
+                                  <label className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Scrap Value (₹)</label>
+                                  <input type="number" value={item.scrapValue || 0} onChange={(e) => handleItemChange(item.id, 'scrapValue', e.target.value)} className="w-full border border-slate-200 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 bg-white shadow-sm" />
+                               </div>
+                               <div className="ml-auto flex items-center text-[9px] text-blue-500 font-bold uppercase gap-1 bg-white px-2.5 py-1 rounded border border-blue-100 shadow-sm">
+                                 <CheckCircle2 size={12} className="text-blue-500"/> Asset Registry Link Enabled
+                               </div>
+                            </div>
+                         )}
                       </div>
                    ))}
                 </div>
@@ -1066,7 +1126,7 @@ const BillEntryView = ({ companyId }) => {
           </div>
        </div>
 
-       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-8 z-50">
+       <div className="fixed bottom-0 right-0 h-16 bg-white border-t border-slate-200 flex items-center justify-between px-8 z-50" style={{ left: 'var(--sidebar-width)' }}>
           <div className="flex items-center gap-3">
              {id ? (
                // Edit mode: Save + Cancel

@@ -572,3 +572,14 @@ exports.getPublicInvoiceByShareToken = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.triggerReminders = async (req, res, next) => {
+  try {
+    const { companyId } = req.params;
+    const ReminderService = require('../../services/ReminderService');
+    const result = await ReminderService.processPaymentReminders(companyId);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};

@@ -8,7 +8,7 @@ import {
   Check, AlertCircle, File, Mail, Printer,
   Share2, History, X, ChevronRight, Download,
   Send, Loader2, ArrowLeft, DollarSign, Clock,
-  Tag, Info, Paperclip, Sparkles, CreditCard, ShieldCheck
+  Tag, Info, Paperclip, Sparkles, CreditCard
 } from 'lucide-react';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
@@ -494,7 +494,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             {/* Document Scrolling Area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
                  {/* Main Scrollable Invoice Document */}
-                 <div id="printable-invoice" className="pdf-preview-paper bg-white w-full max-w-[800px] min-h-[1050px] shadow-lg border border-slate-200/80 p-12 relative overflow-hidden flex flex-col justify-between" style={{fontFamily: 'Arial, sans-serif'}} >
+                 <div id="printable-invoice" className="bg-white w-full max-w-[820px] mx-auto mb-20 border border-slate-300 shadow-2xl relative" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px', minHeight: '600px'}} >
                     
                     {/* Status Ribbon (no-print) */}
                     {(() => {
@@ -509,168 +509,172 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         );
                     })()}
 
-                    <div>
-                      {/* —— Top Header: Company (left) | TAX INVOICE (right) —— */}
-                      <div className="flex justify-between items-start mb-12">
-                        <div className="space-y-1 relative z-10">
-                          <h3 className="text-[18px] font-extrabold text-slate-900 tracking-tight">{company?.name || invoice.CustomerLedger?.companyName || 'Company'}</h3>
-                          {company?.street1 && <p className="text-[13px] font-semibold text-slate-500">{company.street1}</p>}
-                          <p className="text-[13px] font-semibold text-slate-500">{company?.state || 'Tamil Nadu'}, India</p>
-                          {company?.phone && <p className="text-[13px] font-semibold text-slate-500">{company.phone}</p>}
-                          <p className="text-[13px] font-semibold text-slate-500">{company?.email || ''}</p>
+                    {/* Smart Payment Reminder Badge */}
+                    {invoice.lastReminderType && (
+                        <div className="absolute top-2 left-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-md flex items-center gap-2 no-print shadow-sm z-10">
+                            <Clock size={14} className="text-indigo-600" />
+                            <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest">
+                                {invoice.lastReminderType} REMINDER SENT
+                            </div>
+                            <div className="text-[10px] font-medium text-indigo-400 border-l border-indigo-200 pl-2">
+                                Count: {invoice.reminderCount || 1}
+                            </div>
                         </div>
-                        <div className="text-right">
-                          <h1 className="text-[28px] font-bold text-slate-800 uppercase tracking-wider mb-2" style={{fontFamily:'Georgia, serif'}}>TAX INVOICE</h1>
-                          <p className="text-[15px] font-bold text-slate-500"># {invoice.invoiceNumber}</p>
-                        </div>
-                      </div>
+                    )}
 
-                      {/* —— Customer Bill To / Ship To —— */}
-                      <div className="grid grid-cols-2 gap-8 mb-12">
-                        {/* Bill To */}
-                        <div className="space-y-2">
-                          <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Bill To</h4>
-                          <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
-                            <p className="font-extrabold text-slate-950 text-[14px]">{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</p>
-                            <p className="font-semibold text-slate-700">
-                              {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
-                            </p>
-                            {invoice.CustomerLedger?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {invoice.CustomerLedger.gstNumber}</p>}
-                            {invoice.CustomerLedger?.state && <p className="text-[12px] mt-1">State: {invoice.CustomerLedger.state}</p>}
-                          </div>
-                        </div>
-
-                        {/* Ship To */}
-                        <div className="space-y-2">
-                          <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Ship To</h4>
-                          <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
-                            <p className="font-extrabold text-slate-950 text-[14px]">{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</p>
-                            <p className="font-semibold text-slate-700">
-                              {formatAddress(invoice.CustomerLedger?.shippingAddress || invoice.CustomerLedger?.address) || 'No shipping address provided.'}
-                            </p>
-                            {invoice.CustomerLedger?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {invoice.CustomerLedger.gstNumber}</p>}
-                            {invoice.CustomerLedger?.state && <p className="text-[12px] mt-1">State: {invoice.CustomerLedger.state}</p>}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* —— Meta Row: Date / Due Date / Order No —— */}
-                      <div className="flex items-center gap-12 border-t border-b border-slate-100 py-4 mb-10 text-[13px] font-semibold">
-                        <div>
-                          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Date</span>
-                          <span className="text-slate-700">{new Date(invoice.date).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</span>
-                        </div>
-                        {invoice.dueDate && (
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Due Date</span>
-                            <span className="text-slate-700">{new Date(invoice.dueDate).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'})}</span>
-                          </div>
-                        )}
-                        {invoice.orderNumber && (
-                          <div>
-                            <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Order No</span>
-                            <span className="text-slate-700">{invoice.orderNumber}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* —— Items Table —— */}
-                      <table className="w-full text-left mb-10">
-                        <thead>
-                          <tr className="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider">
-                            <th className="px-4 py-3 rounded-l">#</th>
-                            <th className="px-4 py-3">Item &amp; Description</th>
-                            <th className="px-4 py-3 text-center">Qty</th>
-                            <th className="px-4 py-3 text-right">Rate</th>
-                            <th className="px-4 py-3 text-right rounded-r">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-[13px] font-semibold text-slate-700">
-                          {items.length > 0 ? (
-                            items.map((it, idx) => (
-                              <tr key={idx}>
-                                <td className="px-4 py-3.5 text-slate-400">{idx + 1}</td>
-                                <td className="px-4 py-3.5">
-                                  <p className="font-extrabold text-slate-800">{it.Item?.name || 'Service Item'}</p>
-                                  {it.description && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{it.description}</p>}
-                                  {it.Item?.hsnCode && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">HSN: {it.Item.hsnCode}</p>}
-                                </td>
-                                <td className="px-4 py-3.5 text-center font-mono">{parseFloat(it.quantity || 0).toFixed(2)} {it.Item?.unit || 'Nos'}</td>
-                                <td className="px-4 py-3.5 text-right font-mono">{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                              </tr>
-                            ))
-                          ) : (
+                    {/* ─── TALLY-STYLE HEADER ─── */}
+                    <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'2px solid #000'}} >
+                        <tbody>
                             <tr>
-                              <td colSpan="5" className="px-4 py-8 text-center text-slate-400 italic">No items found</td>
+                                <td style={{padding:'10px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
+                                    <div style={{fontWeight:'bold', fontSize:'15px'}} >{company?.name || 'N/A'}</div>
+                                    <div style={{fontSize:'11px', color:'#333', marginTop:'2px'}} >
+                                        {company?.state || 'Tamil Nadu'}, India
+                                    </div>
+                                    {company?.email && <div style={{fontSize:'11px', color:'#555', marginTop:'2px'}} >Email: {company.email}</div>}
+                                </td>
+                                <td style={{padding:'10px 14px', verticalAlign:'top', width:'50%', textAlign:'center'}} >
+                                    <div style={{fontWeight:'bold', fontSize:'16px', letterSpacing:'1px', marginBottom:'4px'}} >TAX INVOICE</div>
+                                    <div style={{fontSize:'11px', color:'#555'}} >Invoice No: <strong>{invoice.invoiceNumber}</strong></div>
+                                    <div style={{fontSize:'11px', color:'#555'}} >Date: <strong>{new Date(invoice.date).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</strong></div>
+                                    {invoice.orderNumber && <div style={{fontSize:'11px', color:'#555'}} >Order No: <strong>{invoice.orderNumber}</strong></div>}
+                                    {invoice.dueDate && <div style={{fontSize:'11px', color:'#555'}} >Due Date: <strong>{new Date(invoice.dueDate).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</strong></div>}
+                                </td>
                             </tr>
-                          )}
                         </tbody>
-                      </table>
+                    </table>
 
-                      {/* —— Totals —— */}
-                      <div className="flex justify-end mb-16">
-                        <div className="w-80 space-y-2 text-[13px] font-bold text-slate-600">
-                          <div className="flex justify-between items-center py-1">
-                            <span>Sub Total</span>
-                            <span className="font-mono text-slate-800">{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
-                          </div>
-                          {parseFloat(invoice.gstAmount || 0) > 0 && (
-                            <div className="flex justify-between items-center py-1">
-                              <span>GST (18%)</span>
-                              <span className="font-mono text-slate-800">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">
-                            <span>Grand Total</span>
-                            <span className="font-mono text-[#1e61f0]">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    {/* ─── BUYER / CONSIGNEE SECTION ─── */}
+                    <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'1px solid #000'}} >
+                        <tbody>
+                            <tr>
+                                <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
+                                    <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Buyer (Bill To):</div>
+                                    <div style={{fontWeight:'bold'}} >{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</div>
+                                    <div style={{fontSize:'11px', color:'#333'}} >
+                                        {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
+                                    </div>
+                                    {invoice.CustomerLedger?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {invoice.CustomerLedger.gstNumber}</div>}
+                                    {invoice.CustomerLedger?.state && <div style={{fontSize:'11px'}} >State: {invoice.CustomerLedger.state}</div>}
+                                </td>
+                                <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
+                                    <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Consignee (Ship To):</div>
+                                    <div style={{fontWeight:'bold'}} >{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</div>
+                                    <div style={{fontSize:'11px', color:'#333'}} >
+                                        {formatAddress(invoice.CustomerLedger?.shippingAddress || invoice.CustomerLedger?.address) || 'No shipping address provided.'}
+                                    </div>
+                                    {invoice.CustomerLedger?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {invoice.CustomerLedger.gstNumber}</div>}
+                                    {invoice.CustomerLedger?.state && <div style={{fontSize:'11px'}} >State: {invoice.CustomerLedger.state}</div>}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                    {/* ── Notes / Terms + Signature ── */}
-                    <div className="mt-8 pt-8 border-t border-slate-100">
-                      {(invoice.customerNotes || invoice.termsConditions) && (
-                        <div className="grid grid-cols-2 gap-6 mb-10 text-[12px]">
-                          {invoice.customerNotes && (
-                            <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
-                              <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
-                                <FileText size={12} className="text-slate-400"/> Customer Notes
-                              </span>
-                              <p className="text-slate-600 font-semibold leading-relaxed">{invoice.customerNotes}</p>
-                            </div>
-                          )}
-                          {invoice.termsConditions && (
-                            <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
-                              <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
-                                <ShieldCheck size={12} className="text-slate-400"/> Terms &amp; Conditions
-                              </span>
-                              <p className="text-slate-600 font-semibold leading-relaxed">{invoice.termsConditions}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                    {/* ─── LINE ITEMS TABLE ─── */}
+                    <table style={{width:'100%', borderCollapse:'collapse'}} >
+                        <thead>
+                            <tr style={{background:'#f0f0f0'}} >
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'40px'}} >Sl. No.</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'left'}} >Description of Goods</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'90px'}} >HSN/SAC</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'80px'}} >Quantity</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'90px'}} >Rate</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'50px'}} >per</th>
+                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'100px'}} >Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items.length === 0 && (
+                                <tr><td colSpan="7" style={{border:'1px solid #000', padding:'20px', textAlign:'center', color:'#999'}} >No items</td></tr>
+                            )}
+                            {items.map((it, idx) => (
+                                <tr key={idx} >
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{idx + 1}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', verticalAlign:'top'}} >
+                                        <div style={{fontWeight:'bold'}} >{it.Item?.name || 'Service Item'}</div>
+                                        {it.description && <div style={{fontSize:'11px', color:'#555', marginTop:'2px'}} >{it.description}</div>}
+                                    </td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.Item?.hsnCode || ''}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{parseFloat(it.quantity || 1).toFixed(2)}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top'}} >{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.Item?.unit || 'Nos'}</td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top', fontWeight:'bold'}} >{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            {/* Sub Total row */}
+                            <tr style={{background:'#f9f9f9'}} >
+                                <td colSpan="3" style={{border:'1px solid #000', padding:'6px 8px', fontWeight:'bold', textAlign:'right'}} >Total</td>
+                                <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', fontWeight:'bold'}} >
+                                    {items.reduce((s, it) => s + parseFloat(it.quantity || 0), 0).toFixed(2)}
+                                </td>
+                                <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
+                                <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
+                                <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
+                                    {parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                </td>
+                            </tr>
+                            {/* GST row */}
+                            {parseFloat(invoice.gstAmount || 0) > 0 && (
+                                <tr>
+                                    <td colSpan="6" style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right'}} >
+                                        GST (18%)
+                                    </td>
+                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
+                                        {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                    </td>
+                                </tr>
+                            )}
+                            {/* Grand Total row */}
+                            <tr style={{background:'#e8e8e8'}} >
+                                <td colSpan="6" style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >Grand Total</td>
+                                <td style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >
+                                    {getCurrencyDisplay(invoice.CustomerLedger?.currency)}{' '}
+                                    {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
 
-                      <div className="grid grid-cols-2 gap-12 mt-12 text-[13px] font-bold text-slate-400">
-                        {/* Receiver's Signature */}
-                        <div className="space-y-4">
-                          <p className="text-slate-500 text-[11px] uppercase tracking-widest">Receiver's Signature &amp; Stamp</p>
-                          <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
-                            Stamp &amp; Signature Space
-                          </div>
-                        </div>
+                    {/* ─── NOTES & TERMS ─── */}
+                    {(invoice.customerNotes || invoice.termsConditions) && (
+                        <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
+                            <tbody>
+                                <tr>
+                                    {invoice.customerNotes && (
+                                        <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight: invoice.termsConditions ? '1px solid #000' : 'none'}} >
+                                            <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Customer Notes:</div>
+                                            <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{invoice.customerNotes}</div>
+                                        </td>
+                                    )}
+                                    {invoice.termsConditions && (
+                                        <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
+                                            <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Terms & Conditions:</div>
+                                            <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{invoice.termsConditions}</div>
+                                        </td>
+                                    )}
+                                </tr>
+                            </tbody>
+                        </table>
+                    )}
 
-                        {/* Authorized Signatory */}
-                        <div className="text-right space-y-4 flex flex-col items-end">
-                          <p className="text-slate-500 text-[11px] uppercase tracking-widest">For {invoice.salesperson || company?.name || 'Authorized Signatory'}</p>
-                          <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
-                            Authorized Signature Space
-                          </div>
-                          <p className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider">{invoice.salesperson || company?.name || 'Authorized Signatory'}</p>
-                        </div>
-                      </div>
-                    </div>
+                    {/* ─── SIGNATURE BLOCK ─── */}
+                    <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
+                        <tbody>
+                            <tr>
+                                <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', borderRight:'1px solid #000'}} >
+                                    <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >Receiver's Signature & Stamp</div>
+                                    <div style={{borderTop:'1px solid #000', width:'70%', marginTop:'32px'}} ></div>
+                                </td>
+                                <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', textAlign:'right'}} >
+                                    <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >For Authorized Signatory</div>
+                                    <div style={{borderTop:'1px solid #000', width:'60%', marginTop:'32px', marginLeft:'auto'}} ></div>
+                                    <div style={{fontSize:'11px', marginTop:'4px', textAlign:'right', fontWeight:'bold'}} >{invoice.salesperson || company?.name || 'Authorized Signatory'}</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                  </div>
 
                  {/* Online Payments & Settlement Panel (no-print) */}
@@ -816,11 +820,26 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 // FULL TABLE VIEW (INITIAL STATE)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoices, filterType }) => {
+const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoices, filterType, companyId }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState(null);
+    const [isTriggering, setIsTriggering] = useState(false);
     const { addNotification } = useNotificationStore();
+
+    const handleTriggerReminders = async () => {
+        setIsTriggering(true);
+        try {
+            const res = await salesAPI.triggerReminders(companyId);
+            addNotification(`Reminders Triggered: ${res.data.sent} sent, ${res.data.skipped} skipped, ${res.data.errors} errors.`, 'success');
+            fetchInvoices();
+        } catch (err) {
+            console.error('Trigger Reminders Error:', err);
+            addNotification(err.response?.data?.error || err.message || 'Failed to trigger reminders.', 'error');
+        } finally {
+            setIsTriggering(false);
+        }
+    };
 
     const handleDelete = async () => {
         if (!idToDelete) return;
@@ -873,6 +892,14 @@ const InvoicesTableView = ({ invoices, loading, onSelect, navigate, fetchInvoice
                       className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
                    >
                       <Plus size={18} strokeWidth={2.5}/> New Invoice
+                   </button>
+                   <button 
+                      onClick={handleTriggerReminders}
+                      disabled={isTriggering}
+                      className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+                      title="Manually trigger Smart Payment Reminders for all open invoices"
+                   >
+                      {isTriggering ? <Loader2 size={18} className="animate-spin" /> : <Clock size={18} />} Trigger Reminders
                    </button>
                    <div className="relative">
                       <button className="p-2 text-slate-500 hover:text-slate-800 border border-slate-200 bg-white rounded-md hover:bg-slate-50 transition-colors shadow-sm">
@@ -1114,6 +1141,7 @@ const SalesInvoicesView = ({ companyId }) => {
                     navigate={navigate}
                     fetchInvoices={fetchInvoices}
                     filterType={filterType}
+                    companyId={companyId}
                 />
             </div>
         );

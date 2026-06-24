@@ -628,7 +628,7 @@ exports.createBill = async (req, res, next) => {
 
         // Update inventory stock quantities
         if (items && Array.isArray(items) && items.length > 0) {
-            const { StockMovement } = require('../../models');
+            const { StockMovement, FixedAsset, Ledger } = require('../../models');
             for (const itemData of items) {
                 const qty = itemData.quantity || itemData.qty;
                 if (itemData.itemId && parseFloat(qty) > 0) {
@@ -640,6 +640,39 @@ exports.createBill = async (req, res, next) => {
                         date: date || new Date(),
                         ItemId: itemData.itemId
                     });
+                }
+                
+                // Auto-Capitalize Fixed Asset
+                if (itemData.isFixedAsset) {
+                    let assetLedgerId = null;
+                    if (itemData.account) {
+                        const accountLedger = await Ledger.findOne({ where: { name: itemData.account, CompanyId: companyId } });
+                        if (accountLedger) assetLedgerId = accountLedger.id;
+                    }
+                    
+                    const existingAsset = await FixedAsset.findOne({
+                        where: {
+                            CompanyId: companyId,
+                            name: itemData.itemName || 'Auto-Generated Asset',
+                            purchaseValue: parseFloat(itemData.amount || 0)
+                        }
+                    });
+                    
+                    if (!existingAsset) {
+                        await FixedAsset.create({
+                            CompanyId: companyId,
+                            name: itemData.itemName || 'Auto-Generated Asset',
+                            assetLedgerId: assetLedgerId,
+                            purchaseDate: date || new Date(),
+                            purchaseValue: parseFloat(itemData.amount || 0),
+                            scrapValue: parseFloat(itemData.scrapValue || 0),
+                            usefulLife: parseInt(itemData.usefulLife || 10),
+                            depreciationMethod: itemData.depMethod || 'WDV',
+                            depreciationRate: parseFloat(itemData.depRate || 10),
+                            currentBookValue: parseFloat(itemData.amount || 0),
+                            status: 'Active'
+                        });
+                    }
                 }
             }
         }
@@ -788,7 +821,7 @@ exports.updateBill = async (req, res, next) => {
 
         // 3. Increment stock with new quantities
         if (items && Array.isArray(items) && items.length > 0) {
-            const { StockMovement } = require('../../models');
+            const { StockMovement, FixedAsset, Ledger } = require('../../models');
             for (const itemData of items) {
                 const qty = itemData.quantity || itemData.qty;
                 if (itemData.itemId && parseFloat(qty) > 0) {
@@ -800,6 +833,39 @@ exports.updateBill = async (req, res, next) => {
                         date: date || new Date(),
                         ItemId: itemData.itemId
                     });
+                }
+                
+                // Auto-Capitalize Fixed Asset
+                if (itemData.isFixedAsset) {
+                    let assetLedgerId = null;
+                    if (itemData.account) {
+                        const accountLedger = await Ledger.findOne({ where: { name: itemData.account, CompanyId: companyId } });
+                        if (accountLedger) assetLedgerId = accountLedger.id;
+                    }
+                    
+                    const existingAsset = await FixedAsset.findOne({
+                        where: {
+                            CompanyId: companyId,
+                            name: itemData.itemName || 'Auto-Generated Asset',
+                            purchaseValue: parseFloat(itemData.amount || 0)
+                        }
+                    });
+                    
+                    if (!existingAsset) {
+                        await FixedAsset.create({
+                            CompanyId: companyId,
+                            name: itemData.itemName || 'Auto-Generated Asset',
+                            assetLedgerId: assetLedgerId,
+                            purchaseDate: date || new Date(),
+                            purchaseValue: parseFloat(itemData.amount || 0),
+                            scrapValue: parseFloat(itemData.scrapValue || 0),
+                            usefulLife: parseInt(itemData.usefulLife || 10),
+                            depreciationMethod: itemData.depMethod || 'WDV',
+                            depreciationRate: parseFloat(itemData.depRate || 10),
+                            currentBookValue: parseFloat(itemData.amount || 0),
+                            status: 'Active'
+                        });
+                    }
                 }
             }
         }
@@ -891,6 +957,140 @@ exports.getExpenses = async (req, res, next) => {
         });
 
         res.json(mappedExpenses);
+    } catch (err) {
+        console.error(err);
+        next(err);
+    }
+};
+
+exports.batchRestock = async (req, res, next) => {
+    try {
+        const companyId = req.companyId || req.body.companyId;
+        const { itemIds } = req.body;
+
+        if (!companyId || !itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+            return res.status(400).json({ error: 'companyId and itemIds array are required.' });
+        }
+
+        const items = await Item.findAll({
+            where: {
+                id: { [Op.in]: itemIds },
+                CompanyId: companyId
+            }
+        });
+
+        // Group by preferredVendor
+        const groupedItems = {};
+        const skippedItems = [];
+
+        items.forEach(item => {
+            const vendorName = item.preferredVendor;
+            if (!vendorName) {
+                skippedItems.push(item);
+                return;
+            }
+            if (!groupedItems[vendorName]) {
+                groupedItems[vendorName] = [];
+            }
+            groupedItems[vendorName].push(item);
+        });
+
+        const createdOrders = [];
+        const missingVendors = [];
+
+        // Determine base PO number safely
+        const existingOrders = await PurchaseOrder.findAll({
+            where: { CompanyId: companyId },
+            attributes: ['orderNumber']
+        });
+        
+        let maxNum = 0;
+        existingOrders.forEach(o => {
+            if (!o.orderNumber) return;
+            const match = o.orderNumber.match(/(\d+)(?!.*\d)/);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (!isNaN(num) && num > maxNum) {
+                    maxNum = num;
+                }
+            }
+        });
+
+        for (const [vendorName, vendorItems] of Object.entries(groupedItems)) {
+            // Resolve Ledger ID for vendor
+            const ledger = await Ledger.findOne({
+                where: { name: vendorName, CompanyId: companyId }
+            });
+
+            if (!ledger) {
+                missingVendors.push(vendorName);
+                vendorItems.forEach(i => skippedItems.push(i));
+                continue;
+            }
+
+            maxNum++;
+            const nextOrderNumber = `PO-${String(maxNum).padStart(5, '0')}`;
+
+            let totalAmount = 0;
+            const poItems = vendorItems.map(item => {
+                const currentStock = parseFloat(item.currentStock) || 0;
+                const reorderLevel = parseFloat(item.reorderLevel) || 0;
+                
+                // Option C math: Order the difference to reach reorder level, minimum 1
+                let qtyToOrder = Math.ceil(reorderLevel - currentStock);
+                if (qtyToOrder <= 0) qtyToOrder = 1;
+
+                const rate = parseFloat(item.costPrice) || 0;
+                const taxRate = parseFloat(item.gstRate) || 0;
+                const itemTotal = qtyToOrder * rate;
+                
+                totalAmount += itemTotal;
+
+                return {
+                    id: Math.random().toString(36).substr(2, 9),
+                    itemId: item.id,
+                    itemName: item.name,
+                    qty: qtyToOrder,
+                    rate: rate,
+                    taxRate: taxRate,
+                    amount: itemTotal,
+                    taxAmount: itemTotal * (taxRate / 100)
+                };
+            });
+
+            // Note: Simplistic subtotal logic (assumes tax is added after or inclusive, adjust as needed)
+            const subtotal = totalAmount;
+            const totalTax = poItems.reduce((sum, item) => sum + item.taxAmount, 0);
+            const finalTotal = subtotal + totalTax;
+
+            const newOrder = await PurchaseOrder.create({
+                orderNumber: nextOrderNumber,
+                date: new Date(),
+                totalAmount: finalTotal,
+                status: 'draft',
+                billed_status: 'yet_to_be_billed',
+                LedgerId: ledger.id,
+                CompanyId: companyId,
+                itemsJson: JSON.stringify(poItems),
+                subtotal: subtotal,
+                taxAmount: totalTax,
+                discount: 0,
+                discountAmount: 0,
+                adjustment: 0,
+                notes: 'Auto-generated by Smart Restocking feature.'
+            });
+
+            createdOrders.push(newOrder);
+        }
+
+        res.json({
+            message: 'Batch restock completed.',
+            createdOrdersCount: createdOrders.length,
+            skippedItemsCount: skippedItems.length,
+            skippedItems: skippedItems.map(i => i.name),
+            missingVendors
+        });
+
     } catch (err) {
         console.error(err);
         next(err);

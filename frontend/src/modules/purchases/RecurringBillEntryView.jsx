@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Trash2, ShoppingBag, PlusCircle, 
   ChevronDown, Search, Filter, MoreHorizontal,
@@ -19,6 +20,7 @@ import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
 
 const RecurringBillEntryView = ({ companyId }) => {
+  const navigate = useNavigate();
   const { addNotification } = useNotificationStore();
   // â”€â”€ Form State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [formData, setFormData] = useState({
@@ -114,12 +116,13 @@ const RecurringBillEntryView = ({ companyId }) => {
   const tdsDropdownRef = useRef(null);
 
   const tdsOptions = [
-    { name: 'Commission or Brokerage', rate: 2 },
-    { name: 'Dividend', rate: 10 },
-    { name: 'Other Interest than securities', rate: 10 },
-    { name: 'Payment of contractors for Others', rate: 2 },
-    { name: 'Payment of contractors HUF/Indiv', rate: 1 },
-    { name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194H', name: 'Commission or Brokerage', rate: 2 },
+    { section: '194',  name: 'Dividend', rate: 10 },
+    { section: '194A', name: 'Other Interest than securities', rate: 10 },
+    { section: '194C', name: 'Payment of contractors for Others', rate: 2 },
+    { section: '194C', name: 'Payment of contractors HUF/Indiv', rate: 1 },
+    { section: '194J', name: 'Technical Fees (2%)', rate: 2 },
+    { section: '194J', name: 'Professional Fees', rate: 10 },
   ];
 
   const filteredTdsOptions = tdsOptions.filter(opt => 
@@ -352,7 +355,11 @@ const RecurringBillEntryView = ({ companyId }) => {
         setIsEmailModalOpen(true);
       } else {
         addNotification('Bill saved successfully', 'success');
-        window.history.back();
+        if (savedData && savedData.id) {
+          navigate(`/recurring-bills/${savedData.id}`);
+        } else {
+          window.history.back();
+        }
       }
     } catch (err) {
       console.error('Error saving Bill:', err);
@@ -476,7 +483,27 @@ const RecurringBillEntryView = ({ companyId }) => {
                                   <div 
                                      key={vendor.id}
                                      onClick={() => {
-                                        setFormData({ ...formData, vendorId: vendor.id, vendorName: vendor.name });
+                                        let newTdsName = formData.tdsName;
+                                        let newTdsRate = formData.tdsRate;
+                                        
+                                        if (vendor.tdsApplicable && vendor.tds_section) {
+                                           const matched = tdsOptions.find(o => o.section === vendor.tds_section && o.rate === Number(vendor.tds_rate));
+                                           if (matched) {
+                                              newTdsName = matched.name;
+                                              newTdsRate = matched.rate;
+                                           }
+                                        } else if (vendor.tdsApplicable === false) {
+                                           newTdsName = '';
+                                           newTdsRate = 0;
+                                        }
+
+                                        setFormData({ 
+                                          ...formData, 
+                                          vendorId: vendor.id, 
+                                          vendorName: vendor.name,
+                                          tdsName: newTdsName,
+                                          tdsRate: newTdsRate
+                                        });
                                         setSelectedVendor(vendor);
                                         setVendorSearch('');
                                         setIsVendorDropdownOpen(false);
@@ -864,6 +891,14 @@ const RecurringBillEntryView = ({ companyId }) => {
                          <span className="text-[13px]">Sub Total</span>
                          <span className="font-medium text-slate-800">{(totals.subtotal).toFixed(2)}</span>
                       </div>
+
+                      {/* Total Quantity */}
+                      <div className="flex items-center gap-2 text-slate-900">
+                         <span className="text-[13px] font-semibold">Total Quantity :</span>
+                         <span className="font-bold text-slate-900 text-[13px]">
+                           {items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0), 0)}
+                         </span>
+                      </div>
                       
                       {/* Discount Row */}
                       <div className="flex items-center justify-between gap-4">
@@ -1194,7 +1229,7 @@ const RecurringBillEntryView = ({ companyId }) => {
        </div>
 
        {/* â”€â”€â”€ Bottom Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-       <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between px-8 z-50">
+       <div className="fixed bottom-0 right-0 h-16 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] flex items-center justify-between px-8 z-50" style={{ left: 'var(--sidebar-width)' }}>
           <div className="flex items-center gap-3">
              <button 
                onClick={() => handleSaveOrder(false)}
@@ -1313,6 +1348,25 @@ const RecurringBillEntryView = ({ companyId }) => {
             }}
           />
         )}
+
+        {/* Save / Cancel Buttons */}
+        <div className="px-8 py-6 border-t border-slate-100 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => handleSaveOrder(false)}
+            disabled={isSaving}
+            className="px-8 py-2.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="px-8 py-2.5 rounded border border-slate-300 text-slate-600 text-[13px] font-semibold hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
     </div>
   );
 };

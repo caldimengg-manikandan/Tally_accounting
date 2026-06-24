@@ -130,6 +130,27 @@ module.exports = (sequelize, DataTypes) => {
     userId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    // SaaS Billing & Trial Fields
+    accountType: {
+      type: DataTypes.STRING,
+      defaultValue: 'Business' // 'Business' or 'Student'
+    },
+    trialStartDate: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    trialEndsAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    subscriptionStatus: {
+      type: DataTypes.STRING,
+      defaultValue: 'Trialing' // 'Trialing', 'Grace_Period', 'Active', 'Past_Due', 'Canceled'
+    },
+    planId: {
+      type: DataTypes.UUID,
+      allowNull: true // Can be null if custom or totally free
     }
   });
 

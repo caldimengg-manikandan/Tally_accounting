@@ -1063,32 +1063,6 @@ const BillsView = ({ companyId }) => {
                 </div>
             )}
         </div>
-
-        {/* --- GLOBAL FOOTER (Totals Summary) --- */}
-        <footer className="px-6 py-3 border-t border-slate-200 bg-white flex items-center justify-between z-30 shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-6">
-                 <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Total Unpaid</span>
-                    <span className="text-[16px] font-bold text-orange-600 tabular-nums">
-                        ₹{filteredBills.reduce((acc, b) => acc + parseFloat(b.balanceDue || b.totalAmount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
-                 </div>
-                 <div className="w-px h-8 bg-slate-100"></div>
-                 <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight">Grand Total</span>
-                    <span className="text-[16px] font-bold text-slate-900 tabular-nums">
-                        ₹{bills.reduce((acc, b) => acc + parseFloat(b.totalAmount || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
-                 </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[11px] font-bold">
-                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                   Synced Live
-                </div>
-            </div>
-        </footer>
     </div>
   );
 };

@@ -139,8 +139,10 @@ export default function SalaryStructuresTab() {
     setError(null);
     setSuccess(null);
 
-    if (!formData.name.trim() || !formData.code.trim() || !formData.effectiveFrom) {
-      setError('Name, Code, and Effective From date are required');
+    const derivedCode = formData.name.trim().toUpperCase().replace(/\s+/g, '_');
+
+    if (!formData.name.trim() || !formData.effectiveFrom) {
+      setError('Name and Effective From date are required');
       return;
     }
 
@@ -150,8 +152,7 @@ export default function SalaryStructuresTab() {
       .map(c => ({
         SalaryComponentId: c.SalaryComponentId,
         overrideCalculationType: c.overrideCalculationType || null,
-        overrideCalculationValue: c.overrideCalculationValue !== '' ? parseFloat(c.overrideCalculationValue) : null,
-        displayOrder: parseInt(c.displayOrder) || 0
+        overrideCalculationValue: c.overrideCalculationValue !== undefined && c.overrideCalculationValue !== null ? c.overrideCalculationValue : null
       }));
 
     if (selectedComps.length === 0) {
@@ -162,9 +163,8 @@ export default function SalaryStructuresTab() {
     try {
       const payload = {
         name: formData.name,
-        code: formData.code.toUpperCase(),
+        code: derivedCode,
         description: formData.description,
-        gradeLevel: formData.gradeLevel,
         effectiveFrom: formData.effectiveFrom,
         components: selectedComps
       };
@@ -327,7 +327,7 @@ export default function SalaryStructuresTab() {
             )}
 
             {/* General Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Structure/Grade Name *</label>
                 <input
@@ -336,43 +336,6 @@ export default function SalaryStructuresTab() {
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g. Senior Software Engineer Grade"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Structure Code *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.code}
-                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase().replace(/\s+/g, '_') }))}
-                  placeholder="e.g. SR_ENG_GRADE"
-                  disabled={formMode === 'edit'}
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all font-mono uppercase text-xs disabled:bg-slate-50 disabled:text-slate-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Grade Level / Band</label>
-                <input
-                  type="text"
-                  value={formData.gradeLevel}
-                  onChange={(e) => setFormData(prev => ({ ...prev, gradeLevel: e.target.value }))}
-                  placeholder="e.g. L4, Band B"
-                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Description of who matches this pay structure..."
                   className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
                 />
               </div>
@@ -389,6 +352,19 @@ export default function SalaryStructuresTab() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description</label>
+                <input
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Description of who matches this pay structure..."
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 outline-none focus:border-blue-500 transition-all"
+                />
+              </div>
+            </div>
+
             {/* Link Pay Heads & Overrides */}
             <div className="border-t border-slate-100 pt-6">
               <h4 className="font-bold text-slate-800 text-sm mb-4">Link & Configure Pay Heads</h4>
@@ -400,9 +376,8 @@ export default function SalaryStructuresTab() {
                         <th className="px-6 py-4 w-12 text-center">Include</th>
                         <th className="px-6 py-4">Component</th>
                         <th className="px-6 py-4">Default Rules</th>
-                        <th className="px-6 py-4">Override Calculation Type</th>
-                        <th className="px-6 py-4 w-32">Override Value</th>
-                        <th className="px-6 py-4 w-28">Display Order</th>
+                        <th className="px-6 py-4">Calculation Basis</th>
+                        <th className="px-6 py-4">Value</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 text-sm font-medium">
@@ -427,37 +402,29 @@ export default function SalaryStructuresTab() {
                             <span className="text-slate-400">{item.defaultCalcType}: {item.defaultCalcType === 'Percentage' ? `${item.defaultCalcValue}%` : `₹${item.defaultCalcValue}`}</span>
                           </td>
                           <td className="px-6 py-4">
-                            <select
-                              disabled={!item.checked}
-                              value={item.overrideCalculationType}
-                              onChange={(e) => handleComponentOverrideChange(index, 'overrideCalculationType', e.target.value)}
-                              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white disabled:bg-slate-50 disabled:text-slate-400 outline-none"
-                            >
-                              <option value="">(No Override)</option>
-                              <option value="Fixed">Fixed Amount</option>
-                              <option value="Percentage">Percentage (%)</option>
-                              <option value="Formula">Formula</option>
-                            </select>
+                            {item.checked && (
+                              <select
+                                value={item.overrideCalculationType || item.defaultCalcType || 'Fixed'}
+                                onChange={(e) => handleComponentOverrideChange(index, 'overrideCalculationType', e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-500 font-medium"
+                              >
+                                <option value="Percentage">Percentage (%)</option>
+                                <option value="Fixed">Flat Amount (₹)</option>
+                                <option value="Formula">Formula</option>
+                              </select>
+                            )}
                           </td>
                           <td className="px-6 py-4">
-                            <input
-                              type="number"
-                              step="0.01"
-                              disabled={!item.checked}
-                              value={item.overrideCalculationValue}
-                              onChange={(e) => handleComponentOverrideChange(index, 'overrideCalculationValue', e.target.value)}
-                              placeholder="Default"
-                              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs w-full font-bold text-slate-850 disabled:bg-slate-50 disabled:text-slate-400 outline-none"
-                            />
-                          </td>
-                          <td className="px-6 py-4">
-                            <input
-                              type="number"
-                              disabled={!item.checked}
-                              value={item.displayOrder}
-                              onChange={(e) => handleComponentOverrideChange(index, 'displayOrder', e.target.value)}
-                              className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs w-full text-center font-bold disabled:bg-slate-50 disabled:text-slate-400 outline-none"
-                            />
+                            {item.checked && (
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={item.overrideCalculationValue !== null && item.overrideCalculationValue !== undefined ? item.overrideCalculationValue : (item.defaultCalcValue || '')}
+                                onChange={(e) => handleComponentOverrideChange(index, 'overrideCalculationValue', e.target.value ? parseFloat(e.target.value) : null)}
+                                placeholder="Value..."
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm outline-none focus:border-blue-500 font-medium"
+                              />
+                            )}
                           </td>
                         </tr>
                       ))}

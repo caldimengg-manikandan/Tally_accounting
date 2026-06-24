@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     employeeId: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true
     },
     name: {
       type: DataTypes.STRING,
@@ -52,7 +52,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     mobileNumber: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true
     },
     personalEmail: {
       type: DataTypes.STRING,
@@ -60,7 +60,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     workEmail: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: true
     },
     emergencyContactName: {
       type: DataTypes.STRING,

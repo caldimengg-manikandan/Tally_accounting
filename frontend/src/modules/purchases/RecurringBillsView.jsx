@@ -179,7 +179,7 @@ const RecurringBillsView = ({ companyId }) => {
                          </td>
                          <td className="px-4 py-4">
                             <button 
-                               onClick={() => setSelectedTemplate(template)}
+                               onClick={() => navigate(`/recurring-bills/${template.id}`)}
                                className="text-blue-600 hover:text-blue-800 text-[13px] font-medium transition-colors"
                             >
                                {template.profileName}
@@ -239,99 +239,6 @@ const RecurringBillsView = ({ companyId }) => {
           </div>
         </div>
 
-        {/* Floating Action for selected profile (optional detail view) */}
-        {selectedTemplate && (
-          <div className="fixed inset-0 z-50 flex items-center justify-end animate-in fade-in duration-300">
-            <div 
-              className="absolute inset-0 bg-slate-900/20 backdrop-blur-[2px]" 
-              onClick={() => setSelectedTemplate(null)}
-            ></div>
-            <div className="relative w-full max-w-2xl h-full bg-white shadow-2xl flex flex-col slide-in-from-right-full animate-in duration-300">
-                <header className="px-10 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
-                    <div>
-                        <h2 className="text-[20px] font-bold text-slate-800 tracking-tight">{selectedTemplate.profileName}</h2>
-                        <div className="flex items-center gap-2 mt-1">
-                             <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${selectedTemplate.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
-                                {selectedTemplate.status}
-                             </span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button 
-                            onClick={() => toggleStatus(selectedTemplate)}
-                            className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-all"
-                        >
-                            {selectedTemplate.status === 'Active' ? <Pause size={18} /> : <Play size={18} className="text-emerald-500" />}
-                        </button>
-                        <button 
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                            onClick={() => { setDeleteId(selectedTemplate.id); setIsDeleteModalOpen(true); }}
-                        >
-                            <Trash2 size={18} />
-                        </button>
-                        <div className="w-px h-6 bg-slate-200 mx-2"></div>
-                        <button onClick={() => setSelectedTemplate(null)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg transition-all">
-                             <X size={20} />
-                        </button>
-                    </div>
-                </header>
-                
-                <div className="flex-1 overflow-y-auto p-10 custom-scrollbar bg-slate-50/30">
-                    <div className="space-y-8">
-                        {/* Highlights */}
-                        <div className="grid grid-cols-2 gap-4">
-                           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                              <div className="text-[11px] text-slate-400 font-bold uppercase mb-2">Total Amount</div>
-                              <div className="text-[24px] font-bold text-slate-900">₹{parseFloat(selectedTemplate.totalAmount).toLocaleString()}</div>
-                           </div>
-                           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                              <div className="text-[11px] text-slate-400 font-bold uppercase mb-2">Frequency</div>
-                              <div className="text-[24px] font-bold text-blue-600 tracking-tight uppercase">{selectedTemplate.repeatEvery}</div>
-                           </div>
-                        </div>
-
-                        {/* Schedule */}
-                        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-                           <h3 className="text-[14px] font-bold text-slate-800 mb-6">Execution Schedule</h3>
-                           <div className="space-y-4">
-                              <div className="flex items-center justify-between py-3 border-b border-slate-50">
-                                 <span className="text-slate-400 text-[13px]">Start Date</span>
-                                 <span className="text-slate-800 font-bold">{new Date(selectedTemplate.startDate).toLocaleDateString()}</span>
-                              </div>
-                              <div className="flex items-center justify-between py-3 border-b border-slate-50">
-                                 <span className="text-slate-400 text-[13px]">Last Run</span>
-                                 <span className="text-slate-800 font-bold">{selectedTemplate.lastGeneratedDate ? new Date(selectedTemplate.lastGeneratedDate).toLocaleDateString() : 'Never'}</span>
-                              </div>
-                              <div className="flex items-center justify-between py-3">
-                                 <span className="text-slate-400 text-[13px]">Next Run</span>
-                                 <span className="text-blue-600 font-bold">{new Date(selectedTemplate.nextGenerationDate).toLocaleDateString()}</span>
-                              </div>
-                           </div>
-                        </div>
-
-                        {/* Items */}
-                        <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-                           <h3 className="text-[14px] font-bold text-slate-800 mb-6 font-bold uppercase tracking-wider text-[11px] text-slate-400">Line Items</h3>
-                           <div className="space-y-4">
-                              {selectedTemplate.items?.map((item, idx) => (
-                                 <div key={idx} className="flex justify-between items-start py-4 group">
-                                    <div>
-                                       <div className="font-bold text-slate-800 text-[14px]">{item.itemName}</div>
-                                       <div className="text-[11px] text-slate-400 mt-0.5">{item.account}</div>
-                                    </div>
-                                    <div className="text-right">
-                                       <div className="font-bold text-slate-900">₹{parseFloat(item.amount).toLocaleString()}</div>
-                                       <div className="text-[11px] text-slate-400 mt-0.5">Qty {item.qty} × ₹{parseFloat(item.rate).toLocaleString()}</div>
-                                    </div>
-                                 </div>
-                              ))}
-                           </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-          </div>
-        )}
     </div>
   );
 };

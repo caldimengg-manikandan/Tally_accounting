@@ -71,12 +71,13 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
     const [projects, setProjects] = useState([]);
 
     const tdsOptions = [
-        { name: 'Commission or Brokerage', rate: 2 },
-        { name: 'Dividend', rate: 10 },
-        { name: 'Other Interest than securities', rate: 10 },
-        { name: 'Payment of contractors for Others', rate: 2 },
-        { name: 'Payment of contractors HUF/Indiv', rate: 1 },
-        { name: 'Technical Fees (2%)', rate: 2 },
+        { section: '194H', name: 'Commission or Brokerage', rate: 2 },
+        { section: '194',  name: 'Dividend', rate: 10 },
+        { section: '194A', name: 'Other Interest than securities', rate: 10 },
+        { section: '194C', name: 'Payment of contractors for Others', rate: 2 },
+        { section: '194C', name: 'Payment of contractors HUF/Indiv', rate: 1 },
+        { section: '194J', name: 'Technical Fees (2%)', rate: 2 },
+        { section: '194J', name: 'Professional Fees', rate: 10 },
     ];
 
     const filteredTdsOptions = tdsOptions.filter(opt => 
@@ -235,7 +236,26 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
                                     <div className="relative group">
                                         <select 
                                             value={formData.vendorLedgerId} 
-                                            onChange={e => setFormData({...formData, vendorLedgerId: e.target.value})}
+                                            onChange={e => {
+                                                const vendorId = e.target.value;
+                                                const vendor = vendors.find(v => v.id === vendorId);
+                                                let newTdsName = formData.tdsName;
+                                                let newTdsRate = formData.tdsRate;
+                                                
+                                                if (vendor) {
+                                                    if (vendor.tdsApplicable && vendor.tds_section) {
+                                                        const matched = tdsOptions.find(o => o.section === vendor.tds_section && o.rate === Number(vendor.tds_rate));
+                                                        if (matched) {
+                                                            newTdsName = matched.name;
+                                                            newTdsRate = matched.rate;
+                                                        }
+                                                    } else if (vendor.tdsApplicable === false) {
+                                                        newTdsName = '';
+                                                        newTdsRate = 0;
+                                                    }
+                                                }
+                                                setFormData({ ...formData, vendorLedgerId: vendorId, tdsName: newTdsName, tdsRate: newTdsRate });
+                                            }}
                                             className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm appearance-none"
                                         >
                                             <option value="">Select or add a vendor</option>
@@ -453,7 +473,7 @@ const VendorCreditForm = ({ companyId, navigate, editId }) => {
             </div>
 
             {/* BOTTOM ACTION BAR */}
-            <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 px-8 flex items-center gap-3 z-20 shadow-[0_-2px_6px_rgba(0,0,0,0.02)]">
+            <div className="fixed bottom-0 right-0 h-16 bg-white border-t border-slate-200 px-8 flex items-center gap-3 z-20 shadow-[0_-2px_6px_rgba(0,0,0,0.02)]" style={{ left: 'var(--sidebar-width)' }}>
                 <button 
                   onClick={() => handleSave('Open')} 
                   disabled={saving}

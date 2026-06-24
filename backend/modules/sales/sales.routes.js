@@ -31,4 +31,7 @@ router.get('/next-number/:companyId/:type', salesController.getNextNumber);
 router.post('/payments/record', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.recordPayment);
 router.post('/credits/apply', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.applyCredit);
 
+// Smart Payment Reminder Trigger
+router.post('/trigger-reminders/:companyId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN'), salesController.triggerReminders);
+
 module.exports = router;

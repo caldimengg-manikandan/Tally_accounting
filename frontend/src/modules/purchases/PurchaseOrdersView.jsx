@@ -11,6 +11,8 @@ import { purchaseAPI, companyAPI } from '../../services/api';
 import PurchaseOrderEmailModal from './PurchaseOrderEmailModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const PurchaseOrdersView = ({ companyId }) => {
   const { id } = useParams();
@@ -52,6 +54,19 @@ const PurchaseOrdersView = ({ companyId }) => {
   const [showPDFView, setShowPDFView] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isPdfDropdownOpen, setIsPdfDropdownOpen] = useState(false);
+  const pdfDropdownRef = useRef(null);
+
+  // Click outside handler for PDF dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (pdfDropdownRef.current && !pdfDropdownRef.current.contains(event.target)) {
+        setIsPdfDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Fetching Data
   const fetchData = async () => {
@@ -251,6 +266,188 @@ const PurchaseOrdersView = ({ companyId }) => {
     } catch (e) {
       return dateStr;
     }
+  };
+
+  const getDueDaysText = (dateString, status, billed_status) => {
+    if (!dateString) return null;
+    
+    // Don't show due text if already received/cancelled
+    const s = String(status || '').toLowerCase();
+    if (['received', 'cancelled'].includes(s)) return null;
+
+    const due = new Date(dateString);
+    const today = new Date();
+    due.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    const diffTime = due - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 0) return <span className="text-[11px] font-medium text-blue-500 block mt-0.5 tracking-wide">Due in {diffDays} days</span>;
+    if (diffDays === 0) return <span className="text-[11px] font-medium text-amber-600 block mt-0.5 tracking-wide">Due today</span>;
+    return <span className="text-[11px] font-medium text-red-500 block mt-0.5 tracking-wide">Overdue by {Math.abs(diffDays)} days</span>;
+  };
+
+  const handleDownloadPDF = () => {
+    if (!selectedOrder) return;
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('PURCHASE ORDER', 190, 25, { align: 'right' });
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`#${selectedOrder.orderNumber}`, 190, 32, { align: 'right' });
+    
+    // Company Info
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(currentCompany?.name || 'Company Name', 20, 25);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${currentCompany?.street1 || ''}`, 20, 30);
+    doc.text(`${currentCompany?.city || ''}, ${currentCompany?.state || ''}`, 20, 35);
+    doc.text(`${currentCompany?.location || 'India'}`, 20, 40);
+    if (currentCompany?.phone) doc.text(`Ph: ${currentCompany.phone}`, 20, 45);
+    
+    // Grid Dates
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', 140, 50);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formatDate(selectedOrder.date), 190, 50, { align: 'right' });
+    
+    if (selectedOrder.deliveryDate) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Delivery Date:', 140, 57);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatDate(selectedOrder.deliveryDate), 190, 57, { align: 'right' });
+    }
+    
+    // Addresses
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(37, 99, 235);
+    doc.text('VENDOR ADDRESS', 20, 65);
+    doc.text('DELIVER TO', 105, 65);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    doc.text(selectedOrder.Ledger?.name || '', 20, 72);
+    doc.text(deliveryAddressData?.attention || selectedOrder.deliveryAddressText || 'Organization', 105, 72);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    
+    let yV = 77;
+    if (vendorBillingAddress) {
+      if (vendorBillingAddress.attention) { doc.text(vendorBillingAddress.attention, 20, yV); yV += 5; }
+      if (vendorBillingAddress.street1) { doc.text(vendorBillingAddress.street1, 20, yV); yV += 5; }
+      if (vendorBillingAddress.city) { doc.text(`${vendorBillingAddress.city}, ${vendorBillingAddress.state || ''}`, 20, yV); yV += 5; }
+    }
+    
+    let yD = 77;
+    if (deliveryAddressData) {
+      if (deliveryAddressData.street1) { doc.text(deliveryAddressData.street1, 105, yD); yD += 5; }
+      if (deliveryAddressData.city) { doc.text(`${deliveryAddressData.city}, ${deliveryAddressData.state || ''}`, 105, yD); yD += 5; }
+    }
+    
+    const startY = Math.max(yV, yD) + 10;
+    
+    // Items Table
+    const tableData = orderItems.map((item, idx) => [
+      idx + 1,
+      item.itemName || item.name,
+      item.qty || '0.00',
+      `Rs ${parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+      `Rs ${parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+    ]);
+    
+    autoTable(doc, {
+      startY,
+      head: [['#', 'Item & Description', 'Qty', 'Rate', 'Amount']],
+      body: tableData,
+      theme: 'plain',
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 4 },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        1: { cellWidth: 90 },
+        2: { halign: 'right', cellWidth: 20 },
+        3: { halign: 'right', cellWidth: 30 },
+        4: { halign: 'right', cellWidth: 35 }
+      }
+    });
+    
+    // Totals
+    let finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Sub Total', 115, finalY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Rs ${parseFloat(selectedOrder.subtotal || selectedOrder.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    
+    if (parseFloat(selectedOrder.discountAmount || 0) > 0) {
+      finalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Discount (${selectedOrder.discount || 0}%)`, 115, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(239, 68, 68);
+      doc.text(`- Rs ${parseFloat(selectedOrder.discountAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    }
+
+    if (parseFloat(selectedOrder.taxAmount || 0) > 0) {
+      finalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Tax (${selectedOrder.taxRate || 0}%)`, 115, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`+ Rs ${parseFloat(selectedOrder.taxAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    }
+
+    if (parseFloat(selectedOrder.tdsAmount || 0) > 0) {
+      finalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      let tdsLabel = `TDS (${selectedOrder.tdsName || 'TDS'} - ${selectedOrder.tdsRate || 0}%)`;
+      if (tdsLabel.length > 22) {
+        tdsLabel = tdsLabel.substring(0, 19) + '...)';
+      }
+      doc.text(tdsLabel, 115, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(239, 68, 68);
+      doc.text(`- Rs ${parseFloat(selectedOrder.tdsAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    }
+
+    if (parseFloat(selectedOrder.adjustment || 0) !== 0) {
+      finalY += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 116, 139);
+      doc.text('Adjustment', 115, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(15, 23, 42);
+      const adjVal = parseFloat(selectedOrder.adjustment || 0);
+      doc.text(`${adjVal > 0 ? '+' : ''} Rs ${adjVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY, { align: 'right' });
+    }
+    
+    doc.setFillColor(15, 23, 42);
+    doc.rect(110, finalY + 5, 85, 12, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('Total', 115, finalY + 13);
+    doc.text(`Rs ${parseFloat(selectedOrder.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 190, finalY + 13, { align: 'right' });
+    
+    doc.save(`PO-${selectedOrder.orderNumber}.pdf`);
   };
 
   if (loading) return (
@@ -471,13 +668,38 @@ const PurchaseOrdersView = ({ companyId }) => {
                 </button>
 
                 {/* PDF/Print */}
-                <button 
-                  onClick={() => window.print()}
-                  className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded text-[13px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-                >
-                  <Printer size={14} className="text-slate-500" />
-                  <span>PDF/Print</span>
-                </button>
+                <div className="relative" ref={pdfDropdownRef}>
+                  <button 
+                    onClick={() => setIsPdfDropdownOpen(!isPdfDropdownOpen)}
+                    className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded text-[13px] font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <Printer size={14} className="text-slate-500" />
+                    <span>PDF/Print</span>
+                    <ChevronDown size={14} className={`text-slate-400 transition-transform ${isPdfDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isPdfDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-36 bg-white border border-slate-200 rounded shadow-lg z-50 p-1">
+                      <button 
+                        onClick={() => {
+                          handleDownloadPDF();
+                          setIsPdfDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-[13px] font-medium text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors mb-0.5"
+                      >
+                        PDF
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setIsPdfDropdownOpen(false);
+                          window.print();
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-[13px] text-slate-700 hover:bg-slate-50 rounded transition-colors"
+                      >
+                        Print
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Mark as Issued */}
                  {selectedOrder.status?.toLowerCase() === 'draft' && (
@@ -1063,7 +1285,8 @@ const PurchaseOrdersView = ({ companyId }) => {
                            </td>
                            <td className="px-4 py-3 border-r border-slate-100/60 text-right font-bold text-slate-900">₹ {parseFloat(order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                           <td className="px-4 py-3 text-slate-600 relative group">
-                            <span>{formatDate(order.deliveryDate)}</span>
+                            <span className="block font-medium">{formatDate(order.deliveryDate)}</span>
+                            {order.deliveryDate && getDueDaysText(order.deliveryDate, order.status, order.billed_status)}
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-white border border-slate-200 px-1 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                               <button 
                                 onClick={() => navigate(`/purchase-orders/edit/${order.id}`)}

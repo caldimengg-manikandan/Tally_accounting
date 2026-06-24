@@ -2,6 +2,11 @@ const sequelize = require('../config/db.config');
 const { DataTypes } = require('sequelize');
 
 const User = require('./user.model')(sequelize, DataTypes);
+const Role = require('./role.model')(sequelize, DataTypes);
+const Permission = require('./permission.model')(sequelize, DataTypes);
+const SubscriptionPlan = require('./subscriptionPlan.model')(sequelize, DataTypes);
+const CompanySubscription = require('./companySubscription.model')(sequelize, DataTypes);
+const SupportTicket = require('./supportTicket.model')(sequelize, DataTypes);
 const Company = require('./company.model')(sequelize, DataTypes);
 const Group = require('./group.model')(sequelize, DataTypes);
 const Ledger = require('./ledger.model')(sequelize, DataTypes);
@@ -30,8 +35,6 @@ const Project = require('./project.model')(sequelize, DataTypes);
 const ProjectTask = require('./projectTask.model')(sequelize, DataTypes);
 const ProjectUser = require('./projectUser.model')(sequelize, DataTypes);
 const RecurringExpense = require('./recurringExpense.model')(sequelize, DataTypes);
-const RecurringBill = require('./recurringBill.model')(sequelize, DataTypes);
-const RecurringBillItem = require('./recurringBillItem.model')(sequelize, DataTypes);
 const VendorCredit = require('./vendorCredit.model')(sequelize, DataTypes);
 const VendorCreditItem = require('./vendorCreditItem.model')(sequelize, DataTypes);
 const Timesheet = require('./timesheet.model')(sequelize, DataTypes);
@@ -47,7 +50,7 @@ const SalaryComponent = require('./salaryComponent.model')(sequelize, DataTypes)
 const SalaryStructure = require('./salaryStructure.model')(sequelize, DataTypes);
 const SalaryStructureComponent = require('./salaryStructureComponent.model')(sequelize, DataTypes);
 const EmployeeSalaryAssignment = require('./employeeSalaryAssignment.model')(sequelize, DataTypes);
-const Payslip = require('./payslip.model')(sequelize, DataTypes);
+
 const SalarySlip = require('./salarySlip.model')(sequelize, DataTypes);
 const PayrollSettings = require('./payrollSettings.model')(sequelize, DataTypes);
 const FixedAsset = require('./fixedAsset.model')(sequelize, DataTypes);
@@ -65,6 +68,7 @@ const PaymentTransaction = require('./paymentTransaction.model')(sequelize, Data
 const InvoicePayment = require('./invoicePayment.model')(sequelize, DataTypes);
 const PaymentWebhookLog = require('./paymentWebhookLog.model')(sequelize, DataTypes);
 const StockMovement = require('./stockMovement.model')(sequelize, DataTypes);
+const AppNotification = require('./appNotification.model')(sequelize, DataTypes);
 
 // ─── Associations ────────────────────────────────────────────────────────────
 
@@ -83,6 +87,30 @@ Company.belongsToMany(User, {
 
 Company.belongsTo(User, { as: 'Owner', foreignKey: { name: 'userId', type: DataTypes.UUID } });
 User.hasMany(Company, { as: 'OwnedCompanies', foreignKey: { name: 'userId', type: DataTypes.UUID } });
+
+// RBAC Associations
+Role.belongsToMany(Permission, { through: 'RolePermissions', foreignKey: 'roleId', otherKey: 'permissionId' });
+Permission.belongsToMany(Role, { through: 'RolePermissions', foreignKey: 'permissionId', otherKey: 'roleId' });
+
+User.belongsTo(Role, { foreignKey: 'RoleId' });
+Role.hasMany(User, { foreignKey: 'RoleId' });
+
+// SaaS Subscription Associations
+Company.belongsTo(SubscriptionPlan, { foreignKey: 'planId', as: 'SubscriptionPlan' });
+SubscriptionPlan.hasMany(Company, { foreignKey: 'planId' });
+
+Company.hasMany(CompanySubscription, { foreignKey: 'CompanyId', as: 'BillingHistory' });
+CompanySubscription.belongsTo(Company, { foreignKey: 'CompanyId' });
+
+CompanySubscription.belongsTo(SubscriptionPlan, { foreignKey: 'PlanId' });
+SubscriptionPlan.hasMany(CompanySubscription, { foreignKey: 'PlanId' });
+
+// Support Ticket Associations
+Company.hasMany(SupportTicket, { foreignKey: 'CompanyId' });
+SupportTicket.belongsTo(Company, { foreignKey: 'CompanyId', as: 'Company' });
+
+User.hasMany(SupportTicket, { foreignKey: 'UserId' });
+SupportTicket.belongsTo(User, { foreignKey: 'UserId', as: 'Creator' });
 
 // 2. Structural Hierarchy
 Company.hasMany(Group, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -179,15 +207,7 @@ RecurringExpense.belongsTo(Ledger, { as: 'PaidThrough', foreignKey: 'paidThrough
 RecurringExpense.belongsTo(Ledger, { as: 'Vendor', foreignKey: 'vendorId' });
 RecurringExpense.belongsTo(Ledger, { as: 'Customer', foreignKey: 'customerId' });
 
-// 11. Recurring Bills
-Company.hasMany(RecurringBill, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
-RecurringBill.belongsTo(Company, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
 
-RecurringBill.hasMany(RecurringBillItem, { as: 'items', foreignKey: 'RecurringBillId', onDelete: 'CASCADE' });
-RecurringBillItem.belongsTo(RecurringBill, { foreignKey: 'RecurringBillId' });
-
-RecurringBill.belongsTo(Ledger, { as: 'Vendor', foreignKey: 'vendorId' });
-Ledger.hasMany(RecurringBill, { foreignKey: 'vendorId' });
 
 // 10. Retainer Adjustments
 Company.hasMany(RetainerAdjustment, { foreignKey: { name: 'CompanyId', type: DataTypes.UUID } });
@@ -400,14 +420,12 @@ EmployeeSalaryAssignment.belongsTo(Employee, { foreignKey: 'EmployeeId' });
 SalaryStructure.hasMany(EmployeeSalaryAssignment, { foreignKey: 'SalaryStructureId', onDelete: 'RESTRICT' });
 EmployeeSalaryAssignment.belongsTo(SalaryStructure, { foreignKey: 'SalaryStructureId', as: 'structure' });
 
-Company.hasMany(Payslip, { foreignKey: 'CompanyId' });
-Payslip.belongsTo(Company, { foreignKey: 'CompanyId' });
-Employee.hasMany(Payslip, { foreignKey: 'EmployeeId', onDelete: 'CASCADE' });
-Payslip.belongsTo(Employee, { foreignKey: 'EmployeeId' });
-Payslip.belongsTo(Voucher, { foreignKey: 'VoucherId', onDelete: 'SET NULL' });
+
 
 Company.hasMany(SalarySlip, { foreignKey: 'companyId' });
+SalarySlip.belongsTo(Company, { foreignKey: 'companyId' });
 Employee.hasMany(SalarySlip, { foreignKey: 'employeeId' });
+SalarySlip.belongsTo(Employee, { foreignKey: 'employeeId' });
 
 // 21. Fixed Assets
 Company.hasMany(FixedAsset, { foreignKey: 'CompanyId' });
@@ -458,10 +476,19 @@ RefreshToken.belongsTo(User, { foreignKey: 'UserId' });
 User.hasOne(MfaSecret, { foreignKey: 'userId', onDelete: 'CASCADE' });
 MfaSecret.belongsTo(User, { foreignKey: 'userId' });
 
+// App Notifications
+Company.hasMany(AppNotification, { foreignKey: 'CompanyId' });
+AppNotification.belongsTo(Company, { foreignKey: 'CompanyId' });
+
 
 module.exports = {
   sequelize,
   User,
+  Role,
+  Permission,
+  SubscriptionPlan,
+  CompanySubscription,
+  SupportTicket,
   Company,
   Group,
   Ledger,
@@ -490,8 +517,6 @@ module.exports = {
   ProjectTask,
   ProjectUser,
   RecurringExpense,
-  RecurringBill,
-  RecurringBillItem,
   VendorCredit,
   VendorCreditItem,
   Timesheet,
@@ -507,7 +532,6 @@ module.exports = {
   SalaryStructure,
   SalaryStructureComponent,
   EmployeeSalaryAssignment,
-  Payslip,
   SalarySlip,
   PayrollSettings,
   FixedAsset,
@@ -524,6 +548,7 @@ module.exports = {
   PaymentTransaction,
   InvoicePayment,
   PaymentWebhookLog,
-  StockMovement
+  StockMovement,
+  AppNotification
 };
 

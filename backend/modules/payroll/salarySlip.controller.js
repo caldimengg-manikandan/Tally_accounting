@@ -1,5 +1,6 @@
 const { sequelize, Employee, SalarySlip, PayrollSettings, EmployeeSalaryAssignment, SalaryStructure, SalaryStructureComponent, SalaryComponent, Ledger, JournalEntry, JournalEntryItem } = require('../../models');
 const { Op } = require('sequelize');
+const SalaryService = require('./salary.service');
 
 exports.getEmployeesForSelection = async (req, res) => {
   try {
@@ -78,84 +79,46 @@ exports.calculateSingleSalary = async (req, res) => {
 
     if (!emp) return res.status(404).json({ error: 'Employee or active salary structure not found' });
 
-    let settings = await PayrollSettings.findOne({ where: { CompanyId: companyId } });
-    if (!settings) {
-      settings = {
-        pfApplicable: true, pfEmployeeRate: 12, pfEmployerRate: 12,
-        esiApplicable: false, esiEmployeeRate: 0.75, esiEmployerRate: 3.25,
-        ptMonthlyAmount: 200, standardDeduction: 50000,
-        incomeTaxSlabs: [
-          { min: 0, max: 250000, rate: 0 },
-          { min: 250000, max: 500000, rate: 5 },
-          { min: 500000, max: 1000000, rate: 20 },
-          { min: 1000000, max: null, rate: 30 }
-        ]
-      };
-    }
+    const assignment = emp.EmployeeSalaryAssignments[0];
+    const structureComponents = assignment.structure.components || [];
 
-    const structure = emp.EmployeeSalaryAssignments[0].structure;
-    
-    let basic = 0;
-    let hra = 0;
-    let da = 0;
-    let special = 0;
+    const breakdown = await SalaryService.calculateSalaryBreakdown(
+      Number(assignment.ctcAmount || 0),
+      structureComponents,
+      assignment.basicAmount ? Number(assignment.basicAmount) : null,
+      companyId
+    );
+
+    const basic = breakdown.breakdown['BASIC'] || 0;
+    const hra = breakdown.breakdown['HRA'] || 0;
+    const da = breakdown.breakdown['DA'] || 0;
+    const special = breakdown.breakdown['SPECIAL_ALLOWANCE'] || 0;
+
     let other = 0;
-
-    structure.components.forEach(c => {
-      const type = c.component?.name?.toLowerCase() || '';
-      const amt = parseFloat(c.amount || 0);
-      if (type.includes('basic')) basic += amt;
-      else if (type.includes('hra') || type.includes('house')) hra += amt;
-      else if (type.includes('da') || type.includes('dearness')) da += amt;
-      else if (type.includes('special')) special += amt;
-      else other += amt;
+    breakdown.components.forEach(c => {
+      if (c.type === 'Earning' && !['BASIC', 'HRA', 'DA', 'SPECIAL_ALLOWANCE'].includes(c.code)) {
+        other += (breakdown.breakdown[c.code] || 0);
+      }
     });
 
-    const grossAmount = parseFloat(structure.grossSalary) || (basic + hra + da + special + other);
-
-    // Calculations
-    let pfEmployee = 0;
-    let pfEmployer = 0;
-    if (settings.pfApplicable) {
-      pfEmployee = Math.round(basic * (parseFloat(settings.pfEmployeeRate) / 100));
-      pfEmployer = Math.round(basic * (parseFloat(settings.pfEmployerRate) / 100));
-    }
+    const pfEmployee = breakdown.pf || 0;
+    // Basic employer cost logic: employer matches employee PF typically
+    const pfEmployer = pfEmployee; 
+    const esiEmployee = breakdown.esi || 0;
+    const esiEmployer = breakdown.esi ? Number((breakdown.grossEarnings * 3.25 / 100).toFixed(2)) : 0;
+    const ptDeduction = breakdown.pt || 0;
+    const monthlyTax = breakdown.tds || 0;
     
-    let esiEmployee = 0;
-    let esiEmployer = 0;
-    if (settings.esiApplicable) {
-      esiEmployee = Math.round(grossAmount * (parseFloat(settings.esiEmployeeRate) / 100));
-      esiEmployer = Math.round(grossAmount * (parseFloat(settings.esiEmployerRate) / 100));
-    }
-    
-    const ptDeduction = parseFloat(settings.ptMonthlyAmount) || 0;
-    
-    const standardDed = parseFloat(settings.standardDeduction) || 50000;
-    const annualGross = grossAmount * 12;
-    const taxableIncome = Math.max(0, annualGross - standardDed);
-    
-    let annualTax = 0;
-    const slabs = settings.incomeTaxSlabs || [];
-    for (const slab of slabs) {
-      const min = parseFloat(slab.min);
-      const max = slab.max ? parseFloat(slab.max) : Infinity;
-      const rate = parseFloat(slab.rate) / 100;
-      if (taxableIncome > min) {
-        const taxableAtThisSlab = Math.min(taxableIncome - min, max - min);
-        annualTax += taxableAtThisSlab * rate;
-      }
-    }
-    const monthlyTax = Math.round(annualTax / 12);
-    
-    const totalDeductions = pfEmployee + esiEmployee + ptDeduction + monthlyTax;
-    const netSalary = grossAmount - totalDeductions;
-    const employerCost = grossAmount + pfEmployer + esiEmployer;
+    // total_deductions from breakdown
+    const totalDeductions = breakdown.totalDeductions;
+    const netSalary = breakdown.netPay;
+    const employerCost = breakdown.grossEarnings + pfEmployer + esiEmployer;
 
     res.json({
       employee_id: emp.id,
       name: emp.name,
       components: { basic, hra, da, special, other },
-      gross_salary: grossAmount,
+      gross_salary: breakdown.grossEarnings,
       pf_employee: pfEmployee,
       pf_employer: pfEmployer,
       esi_employee: esiEmployee,
