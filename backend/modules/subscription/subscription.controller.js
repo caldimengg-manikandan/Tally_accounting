@@ -122,3 +122,36 @@ exports.verifyPaymentWebhook = async (req, res) => {
     res.status(500).json({ error: 'Webhook Error' });
   }
 };
+
+exports.mockSuccessPayment = async (req, res, next) => {
+  try {
+    const { orderId } = req.body;
+    const subscription = await CompanySubscription.findOne({ where: { razorpaySubscriptionId: orderId } });
+    if (!subscription) return res.status(404).json({ error: 'Subscription order not found' });
+
+    subscription.paymentStatus = 'Paid';
+    await subscription.save();
+
+    const company = await Company.findByPk(subscription.CompanyId);
+    if (company) {
+      company.subscriptionStatus = 'Active';
+      company.planId = subscription.PlanId;
+      await company.save();
+    }
+
+    res.json({ success: true, message: 'Payment successfully mocked and subscription updated!' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getPlans = async (req, res, next) => {
+  try {
+    const plans = await SubscriptionPlan.findAll({
+      order: [['price', 'ASC']]
+    });
+    res.json(plans);
+  } catch (err) {
+    next(err);
+  }
+};

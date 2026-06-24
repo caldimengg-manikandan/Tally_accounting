@@ -50,6 +50,33 @@ module.exports = (sequelize, DataTypes) => {
     lockedUntil: {
       type: DataTypes.DATE,
       allowNull: true  // null = not locked
+    },
+    // Secure email change flow
+    pendingEmail: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    emailVerificationToken: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    emailVerificationExpiry: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    // Per-user notification preferences (JSON blob)
+    notificationPreferences: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: {
+        emailInvoices: true,
+        emailReports: false,
+        emailUsers: true,
+        smsInvoices: false,
+        smsCritical: true,
+        appAlerts: true,
+        appInventory: true
+      }
     }
   });
 

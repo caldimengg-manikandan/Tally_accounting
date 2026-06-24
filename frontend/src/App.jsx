@@ -8,9 +8,10 @@ import { setUser, getUser } from './stores/authStore';
 import AuthPage from './modules/auth/AuthPage';
 import LandingPage from './modules/landing/LandingPage';
 import UpgradeScreen from './modules/billing/UpgradeScreen';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import DashboardView from './modules/dashboard/DashboardView';
 import SupportHelpButton from './components/SupportHelpButton';
-import AdminSupportDashboard from './modules/support/AdminSupportDashboard';
+import SupportCenter from './modules/settings/SupportCenter';
 import { useAuth } from './store/AuthContext';
 import LedgersView from './modules/accounting/LedgersView';
 import LedgerStatementView from './modules/accounting/LedgerStatementView';
@@ -75,6 +76,7 @@ import JournalEntriesView from './modules/accounting/JournalEntriesView';
 import FixedAssetsView from './modules/fixed_assets/FixedAssetsView';
 import ProjectsView from './modules/time_tracking/ProjectsView';
 import PaymentGatewaysSettings from './modules/settings/PaymentGatewaysSettings';
+import SettingsDashboard from './modules/settings/SettingsDashboard';
 import SharedInvoiceView from './modules/sales/SharedInvoiceView';
 import GatewaySettlementView from './modules/banking/GatewaySettlementView';
 
@@ -94,7 +96,7 @@ import {
   Bell, ChevronRight, ChevronDown, ChevronsLeft, ChevronsRight,
   Building2, Activity, ShoppingCart, UserCheck, FileBarChart2,
   PieChart, Landmark, Target, Clock, Undo2, Truck, Repeat, ClipboardList, FileStack, Plus,
-  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders, CreditCard
+  RefreshCw, PanelLeftClose, PanelLeftOpen, MessageSquare, Sliders, CreditCard, LifeBuoy
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -108,12 +110,12 @@ const NAV = [
       { label: 'Dashboard',        path: '/dashboard', icon: LayoutDashboard },
     ]
   },
+
   {
     group: 'Setup',
     icon: Settings,
     items: [
-      { label: 'Company Settings', path: '/settings/company', icon: Building2 },
-      { label: 'Payment Gateways', path: '/settings/payment-gateways', icon: CreditCard }
+      { label: 'Company Settings', path: '/company-hub', icon: Building2 }
     ]
   },
   {
@@ -199,7 +201,7 @@ const NAV = [
     group: 'Platform Admin',
     icon: Shield,
     items: [
-      { label: 'Support Tickets',  path: '/admin/support', icon: MessageSquare }
+      { label: 'Support Tickets',  path: '/support', icon: LifeBuoy }
     ]
   }
 ];
@@ -319,7 +321,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
   }
 
   // EXPANDED VIEW
-  if (items.length <= 1) {
+  if (items.length <= 1 && group !== 'Setup') {
     return items.map(item => (
       <NavItem
         key={item.path}
@@ -533,11 +535,11 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             const features = company?.SubscriptionPlan?.features || [];
             let filteredItems = section.items;
             
-            if (section.group === 'Accountant Tools') {
-              if (!features.includes('COST_CENTERS')) {
-                filteredItems = filteredItems.filter(item => item.path !== '/cost-centers');
-              }
-            }
+            // if (section.group === 'Accountant Tools') {
+            //   if (!features.includes('COST_CENTERS')) {
+            //     filteredItems = filteredItems.filter(item => item.path !== '/cost-centers');
+            //   }
+            // }
 
             if (filteredItems.length === 0) return null;
 
@@ -598,7 +600,14 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
             <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest border-r border-gray-100 pr-6 mr-1">
                {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+               <button 
+                 onClick={() => navigate('/settings/company')}
+                 className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-700 transition-colors"
+                 title="Workspace Settings"
+               >
+                 <Settings size={18} strokeWidth={2} />
+               </button>
                <NotificationBell />
                <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white text-[10px] font-bold cursor-pointer">
                   {user.email?.substring(0, 1).toUpperCase() || 'A'}
@@ -710,6 +719,7 @@ function AuthenticatedApp() {
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/upgrade" element={<UpgradeScreen />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route path="/setup-company" element={
         <CompanyInfoView firstTime={true} onCompanyCreated={(id, name) => {
@@ -721,6 +731,17 @@ function AuthenticatedApp() {
         }} />
       } />
 
+      <Route path="/company-hub" element={
+        shell(CompanyInfoView, { 
+          firstTime: false, 
+          onCompanyCreated: (id, name) => {
+            sessionStorage.setItem('companyId', id);
+            sessionStorage.setItem('companyName', name);
+            window.location.reload();
+          }
+        })
+      } />
+
       <Route path="/dashboard" element={
         <AppShell onLogout={handleLogout} companies={companies} currentCompanyId={companyId} onCompanyChange={handleCompanyChange} stats={stats}>
           <DashboardView companyId={companyId} stats={stats} vouchers={vouchers} />
@@ -728,7 +749,7 @@ function AuthenticatedApp() {
       } />
 
       {/* Admin Support Dashboard */}
-      <Route path="/admin/support" element={shell(AdminSupportDashboard)} />
+      <Route path="/support" element={shell(SupportCenter)} />
 
       {/* Accounting */}
       <Route path="/vouchers" element={
@@ -888,7 +909,7 @@ function AuthenticatedApp() {
       <Route path="/ai-assistant"          element={shell(AIAssistantView)} />
 
       {/* Settings */}
-      <Route path="/settings/company"   element={shell(CompanyInfoView, { setActiveTab: () => {} })} />
+      <Route path="/settings/company"   element={shell(SettingsDashboard)} />
       <Route path="/settings/payment-gateways" element={shell(PaymentGatewaysSettings)} />
       <Route path="/banking/gateways" element={shell(GatewaySettlementView)} />
       <Route path="/shared/invoice/:share_token" element={<SharedInvoiceView />} />

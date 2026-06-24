@@ -4,20 +4,26 @@ const assert = require('assert');
 
 async function runTests() {
   console.log('--- STARTING ACCOUNTING ENGINE INTEGRATION TEST ---');
-  await sequelize.authenticate();
-
-  const testEmail = `test_accounting_${Date.now()}@example.com`;
-
-  // 1. Setup Data
-  const user = await User.create({ email: testEmail, name: 'Acc Test User', password: 'pwd', role: 'ADMIN' });
-  const company = await Company.create({ name: 'Acc Test Company', userId: user.id });
-
-  const cashLedger = await Ledger.create({ name: 'Cash', CompanyId: company.id, openingBalanceType: 'Dr', currentBalance: 0 });
-  const salesLedger = await Ledger.create({ name: 'Sales', CompanyId: company.id, openingBalanceType: 'Cr', currentBalance: 0 });
-
-  const t = await sequelize.transaction();
-
+  let t;
   try {
+    await sequelize.authenticate();
+
+    const testEmail = `test_accounting_${Date.now()}@example.com`;
+
+    // 1. Setup Data
+    const user = await User.create({ email: testEmail, name: 'Acc Test User', password: 'pwd', role: 'ADMIN' });
+    const company = await Company.create({ 
+      name: 'Acc Test Company', 
+      userId: user.id,
+      financialYearStart: new Date('2024-04-01'),
+      financialYearEnd: new Date('2025-03-31'),
+      booksBeginningFrom: new Date('2024-04-01')
+    });
+
+    const cashLedger = await Ledger.create({ name: 'Cash', CompanyId: company.id, openingBalanceType: 'Dr', currentBalance: 0 });
+    const salesLedger = await Ledger.create({ name: 'Sales', CompanyId: company.id, openingBalanceType: 'Cr', currentBalance: 0 });
+
+    t = await sequelize.transaction();
     // 2. Test Balanced Entry (Success)
     console.log('Test 1: Balanced Journal Entry');
     const voucher1 = await AccountingService.recordJournalEntry({
@@ -94,16 +100,26 @@ async function runTests() {
     console.log('🎉 ALL ACCOUNTING TESTS PASSED 🎉');
 
   } catch (err) {
-    await t.rollback();
+    if (t) {
+      try { await t.rollback(); } catch (e) {}
+    }
     console.error('❌ ACCOUNTING TEST FAILED', err);
     process.exit(1);
   } finally {
     // Cleanup
-    await PeriodLock.destroy({ where: { CompanyId: company.id } });
-    await Ledger.destroy({ where: { CompanyId: company.id } });
-    await Voucher.destroy({ where: { CompanyId: company.id } });
-    await Company.destroy({ where: { id: company.id } });
-    await User.destroy({ where: { id: user.id } });
+    try {
+      if (typeof company !== 'undefined' && company) {
+        await PeriodLock.destroy({ where: { CompanyId: company.id } });
+        await Ledger.destroy({ where: { CompanyId: company.id } });
+        await Voucher.destroy({ where: { CompanyId: company.id } });
+        await Company.destroy({ where: { id: company.id } });
+      }
+      if (typeof user !== 'undefined' && user) {
+        await User.destroy({ where: { id: user.id } });
+      }
+    } catch (cleanupErr) {
+      console.error('Cleanup warning:', cleanupErr.message);
+    }
   }
 }
 

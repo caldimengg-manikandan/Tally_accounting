@@ -137,6 +137,7 @@ app.use('/api/groups', require('./modules/accounting/group.routes'));
 app.use('/api/ledgers', require('./modules/accounting/ledger.routes'));
 app.use('/api/vouchers', require('./modules/accounting/voucher.routes'));
 app.use('/api/accounting', require('./modules/accounting/accounting.routes'));
+app.use('/api/settings', require('./modules/settings/settings.routes'));
 
 app.use('/api/reports', require('./modules/reports/reports.routes'));
 app.use('/api/sales', require('./modules/sales/sales.routes'));
@@ -205,7 +206,7 @@ app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
 // Use alter:true only for local SQLite; disabled for cloud Postgres to prevent sync locks
-const syncOptions = { alter: true };
+const syncOptions = { alter: false };
 
 const cron = require('node-cron');
 const recurringController = require('./modules/sales/recurringInvoice.controller');

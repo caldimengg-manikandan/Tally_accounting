@@ -264,7 +264,15 @@ exports.login = async (req, res) => {
     return await _issueTokens(req, res, user);
   } catch (err) {
     const eId = require('crypto').randomBytes(6).toString('hex');
+    const { sequelize } = require('../../models');
     console.error(`[AUTH-LOGIN-${eId}]`, err.message, err.stack);
+    
+    // Write to a log file so we can read it
+    const fs = require('fs');
+    const path = require('path');
+    const logPath = path.join(__dirname, '../../error-capture.log');
+    fs.appendFileSync(logPath, `[AUTH-LOGIN-${eId}] DB: ${sequelize.options.dialect} | ${err.message}\n${err.stack}\n`);
+    
     res.status(500).json({ error: 'Login failed. Please try again.', errorId: eId });
   }
 };
@@ -686,5 +694,138 @@ exports.me = async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch /me:', err);
     res.status(500).json({ error: 'Failed to fetch user data.' });
+  }
+};
+
+// ─── GET /auth/profile: return oauthOnly flag so frontend knows which UI to show ──
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['id', 'name', 'email', 'role', 'oauthOnly']
+    });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch profile.' });
+  }
+};
+
+// ─── POST /auth/change-password ────────────────────────────────────────────────
+// For regular users: requires currentPassword + newPassword
+// For oauthOnly users: only newPassword is required (they never set one before)
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword) return res.status(400).json({ error: 'New password is required.' });
+
+    // Enforce complexity
+    const issues = validatePasswordComplexity(newPassword);
+    if (issues.length > 0) {
+      return res.status(422).json({
+        error: 'Password does not meet security requirements.',
+        requirements: issues
+      });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    if (user.oauthOnly) {
+      // First-time password setup for Google/OAuth users — no current password check needed
+      user.password = await bcrypt.hash(newPassword, 10);
+      user.oauthOnly = false; // Now they have a password, allow email/password login too
+      await user.save();
+
+      await logAuthEvent('PASSWORD_SET', { userId: user.id, email: user.email, detail: 'OAuth user set a password for the first time' });
+      return res.json({ message: 'Password set successfully! You can now log in with email & password.' });
+    }
+
+    // Regular user — verify current password first
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required.' });
+    }
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: 'New password must be different from your current password.' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    await logAuthEvent('PASSWORD_CHANGED', { userId: user.id, email: user.email, detail: 'Password changed via profile settings' });
+    res.json({ message: 'Password updated successfully!' });
+  } catch (err) {
+    console.error('changePassword error:', err);
+    res.status(500).json({ error: 'Failed to update password.' });
+  }
+};
+
+// ─── GET /auth/notification-preferences ──────────────────────────────────────
+// Returns the current user's saved notification preferences from the DB.
+exports.getNotificationPreferences = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['notificationPreferences']
+    });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Return saved prefs or sensible defaults if never saved before
+    const defaults = {
+      emailInvoices: true,
+      emailReports: false,
+      emailUsers: true,
+      smsInvoices: false,
+      smsCritical: true,
+      appAlerts: true,
+      appInventory: true
+    };
+    res.json(user.notificationPreferences || defaults);
+  } catch (err) {
+    console.error('getNotificationPreferences error:', err);
+    res.status(500).json({ error: 'Failed to load notification preferences.' });
+  }
+};
+
+// ─── POST /auth/notification-preferences ─────────────────────────────────────
+// Saves the user's notification preferences to the DB.
+exports.saveNotificationPreferences = async (req, res) => {
+  try {
+    const allowed = ['emailInvoices', 'emailReports', 'emailUsers', 'smsInvoices', 'smsCritical', 'appAlerts', 'appInventory'];
+    const prefs = {};
+    for (const key of allowed) {
+      if (key in req.body) prefs[key] = Boolean(req.body[key]);
+    }
+
+    if (Object.keys(prefs).length === 0) {
+      return res.status(400).json({ error: 'No valid preference fields provided.' });
+    }
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    // Merge with existing to avoid overwriting untouched fields
+    const existing = user.notificationPreferences || {};
+    user.notificationPreferences = { ...existing, ...prefs };
+    await user.save();
+
+    await AuditLog.create({
+      action: 'NOTIFICATION_PREFS_UPDATED',
+      tableName: 'Users',
+      recordId: user.id,
+      newData: JSON.stringify(user.notificationPreferences),
+      UserId: user.id,
+      CompanyId: req.user.companyId || null
+    }).catch(() => {}); // Non-blocking
+
+    res.json({
+      message: 'Notification preferences saved successfully.',
+      preferences: user.notificationPreferences
+    });
+  } catch (err) {
+    console.error('saveNotificationPreferences error:', err);
+    res.status(500).json({ error: 'Failed to save notification preferences.' });
   }
 };
