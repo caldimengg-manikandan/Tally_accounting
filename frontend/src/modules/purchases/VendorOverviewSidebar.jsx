@@ -167,15 +167,7 @@ const VendorOverviewSidebar = ({
               </div>
             )}
 
-            {/* Invite to Portal Link */}
-            <div className="pt-2">
-              <button 
-                onClick={onInvitePortal}
-                className="text-[13px] font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-all"
-              >
-                Invite to Portal
-              </button>
-            </div>
+
           </div>
         </div>
       </div>
@@ -314,16 +306,7 @@ const VendorOverviewSidebar = ({
                 </span>
               </div>
 
-              {/* Portal Status */}
-              <div className="flex justify-between items-center text-[13.5px]">
-                <span className="text-slate-500 font-medium">Portal Status</span>
-                <div className="flex items-center gap-1.5 justify-end">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
-                  <span className="text-red-500 font-semibold">
-                    {vendor.portalStatus || 'Disabled'}
-                  </span>
-                </div>
-              </div>
+
 
               {/* Vendor Language */}
               <div className="flex justify-between items-center text-[13.5px]">
@@ -362,6 +345,24 @@ const VendorOverviewSidebar = ({
                     <span className="text-slate-500 font-medium">GSTIN State</span>
                     <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                       {getGstinStateName(vendor.gstNumber) || 'Unknown State'}
+                    </span>
+                  </div>
+                )}
+
+                {vendor.pan && (
+                  <div className="flex justify-between items-center text-[13.5px]">
+                    <span className="text-slate-500 font-medium">PAN</span>
+                    <span className="text-slate-900 font-bold font-mono">
+                      {vendor.pan}
+                    </span>
+                  </div>
+                )}
+
+                {vendor.tdsApplicable && (
+                  <div className="flex justify-between items-center text-[13.5px]">
+                    <span className="text-slate-500 font-medium">TDS</span>
+                    <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      {vendor.tds_section} ({vendor.tds_rate}%)
                     </span>
                   </div>
                 )}

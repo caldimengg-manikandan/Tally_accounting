@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { inventoryAPI, purchaseAPI } from '../../services/api';
+import AdjustStockModal from '../../components/AdjustStockModal';
 import {
-  X, Edit2, ChevronRight, ChevronLeft, Calendar, Package, Coins, ShoppingCart, 
+  X, Edit2, ChevronRight, ChevronLeft, ArrowLeft, Calendar, Package, Coins, ShoppingCart, 
   Trash2, ArrowUpRight, Box, User, Info, Tag, Layers, ArrowDownLeft,
   CheckCircle2, Clock, List, RefreshCcw, ChevronDown
 } from 'lucide-react';
@@ -239,6 +240,7 @@ const TransactionsTab = () => {
 // ─── Main Component ────────────────────────────────────────────────
 const ItemDetailView = ({ item, onClose, onEdit }) => {
   const [activeTab, setActiveTab] = useState('Overview');
+  const [isAdjustStockModalOpen, setIsAdjustStockModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleVendorClick = async (vendorName) => {
@@ -270,7 +272,7 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount || 0);
 
-  const tabs = ['Overview', 'Transactions', 'History'];
+  const tabs = ['Overview', 'History'];
 
   const SimpleDetailRow = ({ label, value, isLink = false, onClick = null }) => (
      <div className="grid grid-cols-[180px_1fr] py-2 text-[13px]">
@@ -293,17 +295,38 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
 
   return (
     <div className="h-full flex flex-col bg-[#F9FAFB] animate-fade-in overflow-hidden">
+      <AdjustStockModal 
+         isOpen={isAdjustStockModalOpen}
+         onClose={() => setIsAdjustStockModalOpen(false)}
+         item={item}
+         onSuccess={() => {
+            window.location.reload();
+         }}
+      />
       
       {/* ── HEADER ─────────────────────────────────────── */}
       <div className="bg-white px-8 py-4 flex items-center justify-between border-b border-slate-150">
         <div className="flex items-center gap-4">
-          <button type="button" onClick={onClose} className="p-1.5 rounded hover:bg-slate-100 cursor-pointer text-slate-500 hover:text-slate-800 transition-colors" title="Go back to items list">
-             <ChevronLeft size={20}/>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 cursor-pointer text-slate-500 hover:text-slate-900 transition-colors border border-transparent hover:border-slate-200" 
+            title="Go back to items list"
+          >
+             <ArrowLeft size={18} strokeWidth={2.5}/>
+             <span className="text-[12px] font-bold tracking-wide uppercase">Back</span>
           </button>
+          <div className="h-6 w-px bg-slate-200"></div>
           <h1 className="text-[20px] font-bold text-slate-900">{item.name}</h1>
         </div>
         
         <div className="flex items-center gap-2">
+           <button
+             onClick={() => setIsAdjustStockModalOpen(true)}
+             className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 text-[12px] font-bold uppercase tracking-widest rounded-md transition-colors shadow-sm"
+           >
+             Adjust Stock
+           </button>
            <button
              onClick={() => onEdit(item)}
              className="p-2 border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-all shadow-sm"
@@ -347,6 +370,7 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
             <div className="space-y-1">
                <SimpleDetailRow label="Item Type" value={getItemTypeLabel()} />
                <SimpleDetailRow label="Unit" value={item.unit || 'Nos'} />
+               <SimpleDetailRow label="Available Stock" value={`${item.currentStock || 0} ${item.unit || 'Nos'}`} />
                <SimpleDetailRow label="Created Source" value="User" />
             </div>
 
@@ -386,31 +410,14 @@ const ItemDetailView = ({ item, onClose, onEdit }) => {
               </div>
             )}
 
-            {/* REPORTING TAGS */}
-            <div className={`space-y-4 pt-4 ${(item.salesInformation || item.purchaseInformation) ? 'border-t border-slate-100' : ''}`}>
-               <h3 className="text-[16px] font-bold text-slate-800">Reporting Tags</h3>
-               <p className="text-[13px] text-slate-500">No reporting tag has been associated with this item.</p>
-            </div>
 
-            {/* ASSOCIATED PRICE LISTS */}
-            <div className="pt-2">
-               <button className="text-[13px] font-bold text-[#1e61f0] hover:underline flex items-center gap-1">
-                  Associated Price Lists
-                  <ChevronRight size={14} className="mt-0.5" />
-               </button>
-            </div>
+
+
 
           </div>
         )}
 
-        {/* Transactions Tab Content */}
-        {activeTab === 'Transactions' && (
-          <div className="p-0 h-full max-w-6xl mx-auto">
-            <ErrorBoundary>
-              <TransactionsTab />
-            </ErrorBoundary>
-          </div>
-        )}
+
 
         {/* History Tab Content */}
         {activeTab === 'History' && (

@@ -3,7 +3,8 @@ import {
   ShieldCheck, Search, Filter, Calendar, 
   User as UserIcon, Activity, RefreshCcw,
   ShieldAlert, Clock, Database, Download,
-  Printer, MoreHorizontal, AlertCircle, CheckCircle2
+  Printer, MoreHorizontal, AlertCircle, CheckCircle2,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { reportsAPI } from '../../services/api';
 import jsPDF from 'jspdf';
@@ -16,20 +17,25 @@ export default function AuditReportView() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState('All');
+  const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0]);
+  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   const fetchLogs = useCallback(async () => {
     if (!companyId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const response = await reportsAPI.auditTrail(companyId);
+      const response = await reportsAPI.auditTrail(companyId, fromDate, toDate);
       const data = response.data;
       setLogs(Array.isArray(data) ? data : []);
+      setCurrentPage(1);
     } catch (err) {
       console.error('Audit Fetch Error:', err);
     } finally {
       setLoading(false);
     }
-  }, [companyId]);
+  }, [companyId, fromDate, toDate]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
@@ -46,6 +52,22 @@ export default function AuditReportView() {
     const matchesAction = filterAction === 'All' || log.action === filterAction;
     return matchesSearch && matchesAction;
   }), [logs, searchTerm, filterAction]);
+
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+  const paginatedLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredLogs.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredLogs, currentPage]);
+
+  const groupedPaginatedLogs = useMemo(() => {
+    const groups = {};
+    paginatedLogs.forEach(log => {
+      const dateKey = new Date(log.createdAt).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+      if (!groups[dateKey]) groups[dateKey] = [];
+      groups[dateKey].push(log);
+    });
+    return groups;
+  }, [paginatedLogs]);
 
   const actionBadge = (action = '') => {
     if (action.includes('CREATE')) return 'bg-emerald-50 text-emerald-700 border-emerald-100';
@@ -128,18 +150,35 @@ export default function AuditReportView() {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Search action, user or module..."
-              className="w-72 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[12px] font-bold outline-none focus:border-[#1e61f0] focus:bg-white transition-all placeholder:text-slate-300"
+              className="w-56 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[12px] font-bold outline-none focus:border-[#1e61f0] focus:bg-white transition-all placeholder:text-slate-300"
             />
           </div>
-          <div className="w-px h-6 bg-slate-200" />
-          <button onClick={fetchLogs} className="p-2 text-slate-400 hover:text-[#1e61f0] transition-colors">
-            <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
+          <div className="w-px h-6 bg-slate-200 mx-1" />
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+            <Calendar size={14} className="text-slate-400 ml-1" />
+            <input 
+              type="date" 
+              value={fromDate} 
+              onChange={e => setFromDate(e.target.value)} 
+              className="bg-transparent text-[11px] font-bold text-slate-700 outline-none w-[105px] cursor-pointer"
+            />
+            <span className="text-slate-300 text-[10px]">to</span>
+            <input 
+              type="date" 
+              value={toDate} 
+              onChange={e => setToDate(e.target.value)} 
+              className="bg-transparent text-[11px] font-bold text-slate-700 outline-none w-[105px] cursor-pointer"
+            />
+          </div>
+          <button onClick={fetchLogs} className="p-2 ml-1 text-slate-400 hover:text-[#1e61f0] transition-colors rounded-lg hover:bg-blue-50">
+            <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
-            <Printer size={16} /> Print
+          <div className="w-px h-6 bg-slate-200 mx-1" />
+          <button onClick={() => window.print()} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+            <Printer size={14} /> Print
           </button>
-          <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-6 py-2 bg-[#1e61f0] text-white rounded-lg text-[12px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
-            <Download size={16} /> Export PDF
+          <button onClick={handleDownloadPDF} className="flex items-center gap-2 px-4 py-2 bg-[#1e61f0] text-white rounded-lg text-[11px] font-bold hover:bg-[#1a54d1] transition-all shadow-lg shadow-blue-500/20">
+            <Download size={14} /> Export PDF
           </button>
         </div>
       </header>
@@ -243,47 +282,79 @@ export default function AuditReportView() {
                         {searchTerm ? 'No entries match your search.' : 'No suspicious activity detected. System is secure.'}
                       </td>
                     </tr>
-                  ) : filteredLogs.map((log, idx) => (
-                    <tr key={log.id || idx} className="hover:bg-slate-50/80 transition-all group">
-                      <td className="px-8 py-4">
-                        <div className="flex flex-col">
-                          <span className="text-[12px] font-bold text-slate-900">{new Date(log.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                          <span className="text-[10px] font-bold text-slate-400">{new Date(log.createdAt).toLocaleTimeString()}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-                            <UserIcon size={14} />
-                          </div>
-                          <span className="font-bold text-slate-900">{log.User?.name || 'Administrator'}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border ${actionBadge(log.action)}`}>
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="font-bold text-slate-700 uppercase tracking-tight text-[11px]">{log.tableName}</span>
-                      </td>
-                      <td className="px-4 py-4 max-w-xs">
-                        <span className="text-[11px] text-slate-400 italic truncate block">
-                          {JSON.stringify(log.newData || log.oldData || {}).substring(0, 60)}...
-                        </span>
-                      </td>
-                      <td className="px-8 py-4 text-right">
-                        <span className="text-[10px] font-bold bg-slate-100 px-3 py-1.5 rounded-lg text-slate-500 font-mono">
-                          {(log.recordId || 'GEN-01').toString().substring(0, 8)}
-                        </span>
-                      </td>
-                    </tr>
+                  ) : Object.entries(groupedPaginatedLogs).map(([dateLabel, dateLogs]) => (
+                    <React.Fragment key={dateLabel}>
+                      <tr className="bg-slate-50/50">
+                        <td colSpan={6} className="px-8 py-2 text-[10px] font-black text-slate-500 uppercase tracking-widest border-y border-slate-100">
+                          {dateLabel}
+                        </td>
+                      </tr>
+                      {dateLogs.map((log, idx) => (
+                        <tr key={log.id || idx} className="hover:bg-slate-50/80 transition-all group">
+                          <td className="px-8 py-4">
+                            <span className="text-[11px] font-bold text-slate-400">{new Date(log.createdAt).toLocaleTimeString()}</span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                <UserIcon size={14} />
+                              </div>
+                              <span className="font-bold text-slate-900">{log.User?.name || 'Administrator'}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border ${actionBadge(log.action)}`}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="font-bold text-slate-700 uppercase tracking-tight text-[11px]">{log.tableName}</span>
+                          </td>
+                          <td className="px-4 py-4 max-w-xs">
+                            <span className="text-[11px] text-slate-400 italic truncate block">
+                              {JSON.stringify(log.newData || log.oldData || {}).substring(0, 60)}...
+                            </span>
+                          </td>
+                          <td className="px-8 py-4 text-right">
+                            <span className="text-[10px] font-bold bg-slate-100 px-3 py-1.5 rounded-lg text-slate-500 font-mono">
+                              {(log.recordId || 'GEN-01').toString().substring(0, 8)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
                   ))}
                 </tbody>
-                <tfoot className="bg-slate-50/80 border-t-2 border-slate-200">
+                <tfoot className="bg-white border-t border-slate-200">
                   <tr>
-                    <td colSpan={6} className="px-8 py-4 text-[11px] font-black text-slate-900 uppercase tracking-widest">
-                      Total — {filteredLogs.length} Audit Entries
+                    <td colSpan={6} className="px-8 py-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                          Showing {paginatedLogs.length} of {filteredLogs.length} Records
+                        </span>
+                        
+                        {totalPages > 1 && (
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                              disabled={currentPage === 1}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-30 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm"
+                            >
+                              <ChevronLeft size={16} strokeWidth={3} />
+                            </button>
+                            <span className="text-[11px] font-bold text-slate-600 px-2">
+                              Page {currentPage} of {totalPages}
+                            </span>
+                            <button 
+                              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                              disabled={currentPage === totalPages}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-30 disabled:hover:bg-white disabled:cursor-not-allowed transition-all shadow-sm"
+                            >
+                              <ChevronRight size={16} strokeWidth={3} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 </tfoot>

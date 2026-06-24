@@ -6,7 +6,7 @@ import {
   Upload, FileText, Globe, CreditCard, Clock, Download, Search, User, Truck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ledgerAPI, groupAPI } from '../../services/api';
+import api, { ledgerAPI, groupAPI } from '../../services/api';
 import { COUNTRY_CODES } from '../../utils/countryCodes';
 import { INDIAN_STATES } from '../../utils/indianStates';
 import useNotificationStore from '../../store/notificationStore';
@@ -43,6 +43,32 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
   const [paymentTerms, setPaymentTerms] = useState('Due on Receipt');
   const [gstNumber, setGstNumber] = useState('');
   const [gstError, setGstError] = useState('');
+  const [tdsTax, setTdsTax] = useState('');
+  const [tdsConfigs, setTdsConfigs] = useState([]);
+  
+  const defaultTdsOptions = useMemo(() => [
+    { section: '194H', rate: 2.00,  label: 'Commission or Brokerage',          fullLabel: 'Commission or Brokerage - [2 %]' },
+    { section: '194',  rate: 10.00, label: 'Dividend',                          fullLabel: 'Dividend - [10 %]' },
+    { section: '194A', rate: 10.00, label: 'Other Interest than securities',    fullLabel: 'Other Interest than securities - [10 %]' },
+    { section: '194C', rate: 2.00,  label: 'Payment of contractors for Others', fullLabel: 'Payment of contractors for Others - [2 %]' },
+    { section: '194C', rate: 1.00,  label: 'Payment of contractors HUF/Indiv',  fullLabel: 'Payment of contractors HUF/Indiv - [1 %]' },
+    { section: '194J', rate: 2.00,  label: 'Technical Fees (2%)',               fullLabel: 'Technical Fees (2%) - [2 %]' },
+    { section: '194J', rate: 10.00, label: 'Professional Fees',                 fullLabel: 'Professional Fees - [10 %]' }
+  ], []);
+
+  const [isTdsDropdownOpen, setIsTdsDropdownOpen] = useState(false);
+  const [tdsSearch, setTdsSearch] = useState('');
+  const tdsDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutsideTds = (event) => {
+      if (tdsDropdownRef.current && !tdsDropdownRef.current.contains(event.target)) {
+        setIsTdsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutsideTds);
+    return () => document.removeEventListener('mousedown', handleClickOutsideTds);
+  }, []);
   
   // Addresses (optional — not required to save)
   const initialAddress = { attention: '', country: '', street1: '', street2: '', city: '', state: '', pinCode: '', phone: '' };
@@ -144,6 +170,17 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
   useEffect(() => {
     if (!companyId) return;
     
+    // Fetch TDS configurations
+    api.get(`/${companyId}/purchases/tds-config/list`)
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setTdsConfigs(res.data);
+        }
+      })
+      .catch(err => {
+        console.warn('TDS configs fetch failed, using defaults:', err);
+      });
+      
     const resolveGroups = async () => {
        try {
           let res = await groupAPI.getByCompany(companyId);
@@ -199,6 +236,11 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
              if (c.shippingAddressJson) setShippingAddress(JSON.parse(c.shippingAddressJson));
              else if (c.shippingAddress) setShippingAddress(JSON.parse(c.shippingAddress));
              setDisplayName(c.name || '');
+             if (c.tdsApplicable && c.tds_section) {
+                setTdsTax(`${c.tds_section}-${c.tds_rate || 0}`);
+             } else {
+                setTdsTax('');
+             }
           }
        }).catch(err => {
           console.error("Error fetching vendor:", err);
@@ -266,7 +308,10 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
         billingAddressJson: JSON.stringify(billingAddress),
         currency,
         paymentTerms,
-        companyName: vendorType === 'Business' ? companyName : ''
+        companyName: vendorType === 'Business' ? companyName : '',
+        tdsApplicable: tdsTax ? true : false,
+        tds_section: tdsTax ? tdsTax.split('-')[0] : null,
+        tds_rate: tdsTax ? parseFloat(tdsTax.split('-')[1]) || 0 : 0
       };
 
       let result;
@@ -799,14 +844,96 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
                             )}
                         </div>
                         {gstNumber && gstError && (
-                          <p className="text-[11px] font-medium text-red-500 flex items-center gap-1">
+                          <p className="text-[11px] font-medium text-red-500 flex items-center gap-1 mt-1">
                             <AlertCircle size={12} /> {gstError}
                           </p>
                         )}
                         {gstNumber && !gstError && (
-                          <p className="text-[11px] font-medium text-green-600 flex items-center gap-1">
+                          <p className="text-[11px] font-medium text-green-600 flex items-center gap-1 mt-1">
                             <CheckCircle2 size={12} /> Valid GSTIN Format
                           </p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-start pt-2" ref={tdsDropdownRef}>
+                    <label className="w-48 text-[13px] font-medium text-slate-500 mt-2">TDS</label>
+                    <div className="flex-1 max-w-lg relative">
+                        {/* Trigger Button */}
+                        <button
+                            type="button"
+                            onClick={() => { setIsTdsDropdownOpen(v => !v); setTdsSearch(''); }}
+                            className={`w-full h-9 px-3 flex items-center justify-between border rounded text-left outline-none bg-white text-[13px] ${
+                                isTdsDropdownOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-200'
+                            }`}
+                        >
+                            <span className={tdsTax ? 'text-slate-800' : 'text-slate-400'}>
+                                {tdsTax
+                                    ? (() => {
+                                        const match = defaultTdsOptions.find(o => `${o.section}-${o.rate}` === tdsTax);
+                                        return match ? match.fullLabel : tdsTax;
+                                      })()
+                                    : 'Select a Tax'
+                                }
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                                {tdsTax && (
+                                    <X
+                                        size={14}
+                                        className="text-red-400 hover:text-red-600 transition-colors"
+                                        onClick={(e) => { e.stopPropagation(); setTdsTax(''); }}
+                                    />
+                                )}
+                                <ChevronDown size={14} className={`text-blue-500 transition-transform ${isTdsDropdownOpen ? 'rotate-180' : ''}`} />
+                            </div>
+                        </button>
+
+                        {/* Dropdown Panel */}
+                        {isTdsDropdownOpen && (
+                            <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded shadow-lg z-50 overflow-hidden">
+                                {/* Search Box */}
+                                <div className="p-2 border-b border-slate-100">
+                                    <div className="relative">
+                                        <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={tdsSearch}
+                                            onChange={e => setTdsSearch(e.target.value)}
+                                            placeholder="Search"
+                                            className="w-full pl-8 pr-3 py-1.5 border border-slate-300 text-slate-800 rounded focus:outline-none focus:border-blue-500 text-[13px]"
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Options */}
+                                <div className="max-h-52 overflow-y-auto py-1">
+                                    {defaultTdsOptions
+                                    .filter(o => o.fullLabel.toLowerCase().includes(tdsSearch.toLowerCase()))
+                                    .map(o => {
+                                        const val = `${o.section}-${o.rate}`;
+                                        const isSelected = tdsTax === val;
+                                        return (
+                                            <button
+                                                key={o.key}
+                                                type="button"
+                                                onClick={() => { setTdsTax(val); setIsTdsDropdownOpen(false); }}
+                                                className={`w-full text-left px-4 py-2 text-[13px] transition-colors ${
+                                                    isSelected ? 'bg-blue-600 text-white font-medium' : 'text-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {o.fullLabel}
+                                            </button>
+                                        );
+                                    })}
+                                    {(tdsConfigs.length > 0
+                                        ? tdsConfigs.filter(c => `${c.vendor_type} - [${c.tds_rate} %]`.toLowerCase().includes(tdsSearch.toLowerCase()))
+                                        : defaultTdsOptions.filter(o => o.fullLabel.toLowerCase().includes(tdsSearch.toLowerCase()))
+                                    ).length === 0 && (
+                                        <div className="text-[13px] text-slate-400 px-4 py-3 text-center">No options found</div>
+                                    )}
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -857,12 +984,12 @@ const VendorForm = ({ editId, standalone = true, onSaveSuccess, onCancel, compan
             </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-12 py-10 max-w-6xl mx-auto w-full pb-32">
+        <div className="flex-1 overflow-y-auto px-12 py-10 max-w-6xl mx-auto w-full pb-56">
             {renderContent()}
         </div>
 
         {/* Action Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-[60]">
+        <div className="fixed bottom-0 right-0 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-[60]" style={{ left: 'var(--sidebar-width)' }}>
             <div className="max-w-6xl mx-auto px-12 py-4 flex justify-between items-center">
                  <div></div>
                  <div className="flex items-center gap-3">

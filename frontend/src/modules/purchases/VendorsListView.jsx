@@ -248,7 +248,7 @@ const VendorsListView = ({ companyId }) => {
                    <th className="px-6 py-4">GSTIN</th>
                    <th className="px-6 py-4 text-right">Payables</th>
                    <th className="px-6 py-4 text-right">Unused Credits (BCY)</th>
-                   <th className="px-6 py-4 text-center">Actions</th>
+
                 </tr>
              </thead>
              <tbody className="divide-y divide-slate-100">
@@ -262,7 +262,7 @@ const VendorsListView = ({ companyId }) => {
                         <td className="px-6 py-4 text-[14px] font-medium text-blue-600 group-hover:underline">{v.name}</td>
                         <td className="px-6 py-4 text-[14px] text-slate-600">{v.companyName || '-'}</td>
                         <td className="px-6 py-4 text-[14px] text-slate-600">{v.email || '-'}</td>
-                        <td className="px-6 py-4 text-[14px] text-slate-600">{v.workPhone || '-'}</td>
+                        <td className="px-6 py-4 text-[14px] text-slate-600">{v.phone || v.workPhone || v.mobile || '-'}</td>
                         <td className="px-6 py-4 text-[14px] text-slate-600">
                            {v.gstNumber ? (
                              <span title={v.gstNumber} className="cursor-help border-b border-dotted border-slate-400 font-mono">
@@ -280,27 +280,12 @@ const VendorsListView = ({ companyId }) => {
                               {getCurrencyDisplay(v.currency)} {(parseFloat(v.unusedCredits || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </span>
                         </td>
-                        <td className="px-6 py-4">
-                           <div className="flex items-center justify-center gap-2">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); navigate(`/vendors/${v.id}`); }} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
-                              >
-                                 <Edit size={14} /> Edit
-                              </button>
-                              <button 
-                                onClick={(e) => handleDelete(v.id, v.name, e)} 
-                                className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
-                              >
-                                 <Trash2 size={16} />
-                              </button>
-                           </div>
-                        </td>
+
                      </tr>
                    ))
                  ) : (
                    <tr>
-                     <td colSpan="8" className="px-6 py-40 text-center bg-white">
+                     <td colSpan="7" className="px-6 py-40 text-center bg-white">
                         <div className="flex flex-col items-center justify-center max-w-[600px] mx-auto animate-fade-in">
                            <div className="relative mb-10 group">
                              <div className="w-28 h-28 bg-blue-50/50 rounded-[2.5rem] flex items-center justify-center text-[#1e61f0] border border-blue-100 shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-3">

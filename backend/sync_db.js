@@ -1,16 +1,16 @@
-const { sequelize } = require('./models');
+const { PayrollSettings } = require('./models');
 
-async function sync() {
+async function syncDB() {
   try {
-    await sequelize.authenticate();
-    console.log('Connection established.');
-    await sequelize.sync({ alter: true });
-    console.log('Database synced with alter: true');
+    console.log("Syncing PayrollSettings table...");
+    await PayrollSettings.sync({ alter: true });
+    console.log("Successfully altered PayrollSettings table!");
     process.exit(0);
   } catch (err) {
-    console.error('Error syncing database:', err);
+    console.error("Error syncing DB:");
+    console.error(err);
     process.exit(1);
   }
 }
 
-sync();
+syncDB();

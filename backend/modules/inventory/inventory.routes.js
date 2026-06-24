@@ -106,6 +106,7 @@ router.get('/:companyId', inventoryController.getItems);
 router.post('/', inventoryController.createItem);
 router.put('/:itemId', inventoryController.updateItem);
 router.post('/stock/:itemId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), inventoryController.updateStock);
+router.post('/:itemId/adjust', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), inventoryController.adjustStock);
 router.get('/:itemId/history', inventoryController.getItemHistory);
 router.delete('/:itemId', authorizeRoles('ACCOUNTANT', 'ADMIN', 'SUPER_ADMIN', 'MANAGER'), inventoryController.deleteItem);
 

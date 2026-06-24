@@ -112,6 +112,18 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
       field: 'share_expires_at'
+    },
+    lastReminderDate: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    reminderCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    },
+    lastReminderType: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   });
 

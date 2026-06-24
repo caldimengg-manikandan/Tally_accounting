@@ -17,7 +17,7 @@ exports.getComponents = async (req, res) => {
     if (!companyId) return res.status(400).json({ error: 'Company ID is required' });
 
     const components = await SalaryComponent.findAll({
-      where: { CompanyId: companyId, isActive: true },
+      where: { CompanyId: companyId },
       order: [['displayOrder', 'ASC'], ['code', 'ASC']]
     });
 

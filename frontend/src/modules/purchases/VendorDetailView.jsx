@@ -847,7 +847,6 @@ const VendorDetailView = ({ companyId }) => {
                               { label: 'Bill', path: `/bills/new` },
                               { label: 'Bill Payment', path: `/bill-payments/new` },
                               { label: 'Expense', path: `/expenses/new` },
-                              { label: 'Recurring Bill', path: `/recurring-bills/new` },
                               { label: 'Recurring Expense', path: `/recurring-expenses/new` },
                               { label: 'Purchase Order', path: `/purchase-orders/new` },
                               { label: 'Vendor Credit', path: `/vendor-credits/new` },
@@ -970,7 +969,6 @@ const VendorDetailView = ({ companyId }) => {
                      { name: 'Bills', data: transactions.bills, cols: ['DATE', 'BILL#', 'ORDER NUMBER', 'VENDOR NAME', 'AMOUNT', 'BALANCE DUE', 'STATUS'] },
                      { name: 'Bill Payments', data: transactions.payments, cols: ['DATE', 'PAYMENT NUMBER', 'REFERENCE NUMBER', 'PAYMENT MODE', 'AMOUNT PAID', 'UNUSED AMOUNT', 'STATUS'] },
                      { name: 'Expenses', data: transactions.expenses, cols: ['DATE', 'EXPENSE ACCOUNT', 'INVOICE NUMBER', 'VENDOR NAME', 'PAID THROUGH', 'CUSTOMER NAME', 'AMOUNT', 'STATUS'] },
-                     { name: 'Recurring Bills', data: transactions.recurringBills, cols: ['PROFILE NAME', 'FREQUENCY', 'LAST BILL DATE', 'NEXT BILL DATE', 'STATUS'] },
                      { name: 'Recurring Expenses', data: transactions.recurringExpenses, cols: ['PROFILE NAME', 'EXPENSE ACCOUNT', 'FREQUENCY', 'LAST EXPENSE DATE', 'NEXT EXPENSE DATE', 'STATUS'] },
                      { name: 'Purchase Orders', data: transactions.orders, cols: ['PURCHASE ORDER#', 'REFERENCE NUMBER', 'DATE', 'DELIVERY DATE', 'AMOUNT', 'STATUS'] },
                      { name: 'Vendor Credits', data: transactions.vendorCredits, cols: ['DATE', 'CREDIT NOTE NUMBER', 'ORDER NUMBER', 'BALANCE', 'AMOUNT', 'STATUS'] },
@@ -1896,6 +1894,7 @@ const VendorDetailView = ({ companyId }) => {
             )}
 
             <div className="p-5 space-y-4 overflow-y-auto">
+              {addressType === 'billing' && (
               <div className="space-y-1">
                 <label className="text-[12px] font-medium text-slate-600">Attention</label>
                 <input 
@@ -1905,6 +1904,7 @@ const VendorDetailView = ({ companyId }) => {
                   className="w-full h-[34px] px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-500"
                 />
               </div>
+              )}
 
               <div className="space-y-1">
                 <label className="text-[12px] font-medium text-slate-600">Country/Region</label>

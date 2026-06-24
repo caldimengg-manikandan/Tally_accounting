@@ -3,7 +3,6 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const purchasesController = require('./purchases.controller');
 const recurringExpenseController = require('./recurringExpense.controller');
-const recurringBillController = require('./recurringBill.controller');
 const paymentMadeController = require('./paymentMade.controller');
 const vendorCreditController = require('./vendorCredit.controller');
 const { verifyToken, tenantAccess, authorizeRoles } = require('../../middleware/auth.middleware');
@@ -18,6 +17,7 @@ router.delete('/vendors/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), purchasesC
 
 // ─── 2. PURCHASE ORDERS ──────────────────────────────────────────────────
 router.get('/orders/next-number', purchasesController.getNextOrderNumber);
+router.post('/orders/batch-restock', purchasesController.batchRestock);
 router.get('/orders', purchasesController.getOrders);
 router.get('/orders/:id/pdf-preview', purchasesController.getPurchaseOrderPdfPreview);
 router.post('/orders', purchasesController.createOrder);
@@ -56,10 +56,6 @@ router.put('/recurring/:id', recurringExpenseController.update);
 router.delete('/recurring/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), recurringExpenseController.delete);
 router.post('/recurring/process-due', recurringExpenseController.processDue);
 
-router.get('/recurring-bills', recurringBillController.getByCompany);
-router.post('/recurring-bills', recurringBillController.create);
-router.put('/recurring-bills/:id', recurringBillController.update);
-router.delete('/recurring-bills/:id', authorizeRoles('ADMIN', 'SUPER_ADMIN'), recurringBillController.delete);
-router.post('/recurring-bills/process-due', recurringBillController.processDue);
+
 
 module.exports = router;

@@ -19,6 +19,7 @@ const commonCountries = [
 
 export default function EmployeeForm({ employee, onClose, onSave, companyId }) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [highestStep, setHighestStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: '', middleName: '', lastName: '', dob: '', bloodGroup: '', fatherName: '', motherName: '', maritalStatus: 'Single',
     email: '', personalEmail: '', phone: '', emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelation: '',
@@ -141,7 +142,10 @@ export default function EmployeeForm({ employee, onClose, onSave, companyId }) {
         if (savedDraft) {
           const parsed = JSON.parse(savedDraft);
           if (parsed.formData) setFormData(parsed.formData);
-          if (parsed.currentStep) setCurrentStep(parsed.currentStep);
+          if (parsed.currentStep) {
+            setCurrentStep(parsed.currentStep);
+            setHighestStep(parsed.currentStep);
+          }
         }
       } catch (e) {
         console.error("Failed to parse draft", e);
@@ -155,6 +159,12 @@ export default function EmployeeForm({ employee, onClose, onSave, companyId }) {
       localStorage.setItem(`empDraft_${companyId}`, JSON.stringify({ formData, currentStep }));
     }
   }, [formData, currentStep, employee, companyId]);
+
+  useEffect(() => {
+    if (currentStep > highestStep) {
+      setHighestStep(currentStep);
+    }
+  }, [currentStep, highestStep]);
 
   // Handle Text/Input Changes
   const handleChange = (e) => {
@@ -423,11 +433,23 @@ export default function EmployeeForm({ employee, onClose, onSave, companyId }) {
             const Icon = st.icon;
             return (
               <React.Fragment key={idx}>
-                <div className="flex flex-col items-center gap-2 relative">
+                <div 
+                  className={`flex flex-col items-center gap-2 relative ${stepNum <= highestStep ? 'cursor-pointer hover:opacity-80' : 'opacity-50 cursor-not-allowed'}`}
+                  onClick={() => {
+                    if (stepNum === currentStep) return;
+                    if (stepNum < currentStep) {
+                      setCurrentStep(stepNum);
+                    } else if (stepNum <= highestStep) {
+                      if (validateStep()) {
+                        setCurrentStep(stepNum);
+                      }
+                    }
+                  }}
+                >
                   <div className={`h-10 w-10 rounded-2xl flex items-center justify-center font-bold text-sm border transition-all duration-300
                     ${currentStep === stepNum 
                       ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/10' 
-                      : currentStep > stepNum 
+                      : stepNum <= highestStep && currentStep !== stepNum
                         ? 'bg-emerald-50 text-emerald-600 border-emerald-200' 
                         : 'bg-white text-slate-400 border-slate-200'}`}>
                     <Icon size={16} />
