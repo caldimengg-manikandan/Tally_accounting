@@ -31,7 +31,7 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-8">
-            {['Features', 'Solutions', 'Pricing', 'About'].map((item) => (
+            {['Features'].map((item) => (
               <a key={item} href={`#${item.toLowerCase()}`}
                 className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
                 {item}
@@ -61,7 +61,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-slate-100 py-4 px-4 flex flex-col gap-4">
-          {['Features', 'Solutions', 'Pricing', 'About'].map((item) => (
+          {['Features'].map((item) => (
             <a key={item} href={`#${item.toLowerCase()}`}
               onClick={() => setMobileMenuOpen(false)}
               className="text-sm font-medium text-slate-600 hover:text-slate-900 px-2">

@@ -734,7 +734,7 @@ export default function ProfessionalInvoiceView() {
                   subTotal: subTotal,
                   date: invoiceDate,
                   dueDate: dueDate,
-                  Customer: { email: customer?.email },
+                  Customer: { email: customer?.email, currency: customer?.currency },
                   customerName: customer?.displayName || customer?.name,
                   items: lineItems.filter(l => l.itemId).map(l => ({
                       name: l.description || '',
@@ -765,7 +765,7 @@ export default function ProfessionalInvoiceView() {
                      subTotal: subTotal,
                      date: invoiceDate,
                      dueDate: dueDate,
-                     Customer: { email: customer?.email },
+                     Customer: { email: customer?.email, currency: customer?.currency },
                      customerName: customer?.displayName || customer?.name,
                      items: lineItems.filter(l => l.itemId).map(l => ({
                          name: l.description || ``,
@@ -1458,7 +1458,7 @@ export default function ProfessionalInvoiceView() {
            <div className="w-80 space-y-4">
                <div className="flex justify-between items-center text-[13px]">
                  <span className="font-bold text-slate-900">Sub Total</span>
-                 <span className="font-bold text-slate-900 font-mono">{subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                 <span className="font-bold text-slate-900 font-mono">{currencySymbol} {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                </div>
  
                <div className="flex justify-between items-center text-[13px] py-2">
@@ -1476,7 +1476,7 @@ export default function ProfessionalInvoiceView() {
                       <option value="28">GST @ 28%</option>
                     </select>
                     <span className="text-slate-600 font-bold min-w-[60px] text-right">
-                      {gstPercent > 0 ? `+ ${gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '0.00'}
+                      {gstPercent > 0 ? `+ ${currencySymbol} ${gstAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : `${currencySymbol} 0.00`}
                     </span>
                  </div>
                </div>
@@ -1500,22 +1500,22 @@ export default function ProfessionalInvoiceView() {
                       <option value="5">TDS @ 5%</option>
                       <option value="10">TDS @ 10%</option>
                     </select>
-                    <span className="text-slate-600 font-bold">- 0.00</span>
+                    <span className="text-slate-600 font-bold">- {currencySymbol} 0.00</span>
                  </div>
                </div>
  
                <div className="flex justify-between items-center text-[13px]">
-                 <div className="flex items-center gap-2">
+                           <div className="flex items-center gap-2">
                    <div className="px-3 py-1.5 border border-dashed border-slate-300 rounded text-slate-600 text-[12px] font-bold">Adjustment</div>
                    <input type="number" value={adjustment} onChange={e => setAdjustment(e.target.value)} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded-lg text-right font-bold outline-none" />
                    <Info size={14} className="text-slate-500" />
                  </div>
-                 <span className="font-bold text-slate-900 font-mono">0.00</span>
+                 <span className="font-bold text-slate-900 font-mono">{parseFloat(adjustment || 0) >= 0 ? '+' : '-'} {currencySymbol} {Math.abs(parseFloat(adjustment || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                </div>
  
                <div className="pt-6 border-t border-slate-200 flex justify-between items-center mt-6">
                  <span className="text-[16px] font-bold text-slate-900">Total ( {currencyCode} )</span>
-                 <span className="text-[18px] font-bold text-slate-900 tracking-tight font-mono">{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                 <span className="text-[18px] font-bold text-slate-900 tracking-tight font-mono">{currencySymbol} {total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                </div>
             </div>
           </div>

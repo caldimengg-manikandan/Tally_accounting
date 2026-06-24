@@ -16,7 +16,7 @@ export default function WhySection() {
     {
       icon: ShieldCheck,
       title: 'Secure & Reliable',
-      description: 'Enterprise-grade security with role-based access control, comprehensive audit logs, and secure cloud infrastructure.',
+      description: 'Reliable security with role-based access control and comprehensive audit logs.',
     },
   ];
 

@@ -32,12 +32,14 @@ export default function DashboardPreview() {
             <div className="flex-1 py-4 px-3 space-y-1">
               {[
                 { icon: LayoutDashboard, label: 'Dashboard', active: true },
-                { icon: Users, label: 'Customers' },
                 { icon: ShoppingBag, label: 'Items' },
+                { icon: Users, label: 'Customers' },
                 { icon: FileText, label: 'Invoices' },
-                { icon: Receipt, label: 'Expenses' },
-                { icon: PieChart, label: 'Reports' },
+                { icon: Users, label: 'Vendors' },
+                { icon: Receipt, label: 'Bills' },
                 { icon: Wallet, label: 'Banking' },
+                { icon: Users, label: 'Payroll' },
+                { icon: PieChart, label: 'Reports' },
               ].map((item, idx) => (
                 <div key={idx} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium cursor-default ${
                   item.active ? 'bg-blue-50 text-blue-600' : 'text-slate-500'

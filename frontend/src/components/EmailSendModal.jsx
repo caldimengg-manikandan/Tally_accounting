@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mail, X, FileText, Send, RefreshCw, CheckCircle, Clock, ArrowLeft, Plus } from 'lucide-react';
 import useNotificationStore from '../store/notificationStore';
+import { getCurrencyDisplay } from '../utils/currencies';
 
 const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, apiFunc }) => {
     const addNotification = useNotificationStore(state => state.addNotification);
@@ -18,14 +19,20 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
 
     // Build professional HTML email body
     const buildEmailBody = (data, type) => {
+        const currencyCode = data.currencyCode || data.Customer?.currency || data.currency || 'INR';
+        const currencySymbol = getCurrencyDisplay(currencyCode);
+        const formatAmount = (amt) => {
+            const locale = (currencyCode === 'INR' || currencyCode?.startsWith('INR')) ? 'en-IN' : 'en-US';
+            return parseFloat(amt || 0).toLocaleString(locale, { minimumFractionDigits: 2 });
+        };
         const accentColor = type === 'Quote' ? '#4f46e5' : '#1d4ed8';
         const itemRows = (data.items && data.items.length > 0)
             ? data.items.map(item => `
                 <tr>
                   <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-size:13px;">${item.name || item.itemDetails || item.description || '—'}</td>
                   <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;text-align:center;">${item.quantity || 1}</td>
-                  <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;text-align:right;">₹${parseFloat(item.rate || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                  <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-size:13px;font-weight:700;text-align:right;">₹${parseFloat(item.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#475569;font-size:13px;text-align:right;">${currencySymbol}${formatAmount(item.rate)}</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-size:13px;font-weight:700;text-align:right;">${currencySymbol}${formatAmount(item.amount)}</td>
                 </tr>`).join('')
             : `<tr><td colspan="4" style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">No items listed</td></tr>`;
 
@@ -84,17 +91,17 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
         ${subtotal !== total ? `
         <tr>
           <td style="padding:6px 0;font-size:13px;color:#64748b;">Subtotal</td>
-          <td style="padding:6px 0;font-size:13px;color:#1e293b;text-align:right;">₹${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          <td style="padding:6px 0;font-size:13px;color:#1e293b;text-align:right;">${currencySymbol}${formatAmount(subtotal)}</td>
         </tr>
         ${tax > 0 ? `<tr>
           <td style="padding:6px 0;font-size:13px;color:#64748b;">(+) Tax / GST</td>
-          <td style="padding:6px 0;font-size:13px;color:#1e293b;text-align:right;">₹${tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          <td style="padding:6px 0;font-size:13px;color:#1e293b;text-align:right;">${currencySymbol}${formatAmount(tax)}</td>
         </tr>` : ''}
         <tr><td colspan="2" style="padding:4px 0;"><div style="height:1px;background:#e2e8f0;"></div></td></tr>
         ` : ''}
         <tr>
           <td style="padding:10px 0 4px;font-size:15px;font-weight:800;color:#1e293b;">Total</td>
-          <td style="padding:10px 0 4px;font-size:20px;font-weight:900;color:${accentColor};text-align:right;">₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          <td style="padding:10px 0 4px;font-size:20px;font-weight:900;color:${accentColor};text-align:right;">${currencySymbol}${formatAmount(total)}</td>
         </tr>
       </table>
     </div>
@@ -102,7 +109,7 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
     <div style="padding:24px 40px;">
       <div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;">
         <p style="margin:0 0 4px;font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">${type} Amount</p>
-        <p style="margin:0;font-size:36px;font-weight:900;color:${accentColor};">₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+        <p style="margin:0;font-size:36px;font-weight:900;color:${accentColor};">${currencySymbol}${formatAmount(total)}</p>
       </div>
     </div>
     `}

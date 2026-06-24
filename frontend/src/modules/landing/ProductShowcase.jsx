@@ -54,14 +54,14 @@ export default function ProductShowcase() {
                   <div className="text-[11px] font-semibold text-slate-500 mb-1 flex items-center justify-between">
                     Revenue <ArrowUpRight size={14} className="text-emerald-500" />
                   </div>
-                  <div className="text-2xl font-black text-slate-900">₹8.4M</div>
+                  <div className="text-2xl font-black text-slate-900">$84,000</div>
                   <div className="text-[10px] text-emerald-600 mt-1 font-medium">+14.2% from last month</div>
                 </div>
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="text-[11px] font-semibold text-slate-500 mb-1 flex items-center justify-between">
                     Expenses <ArrowDownRight size={14} className="text-rose-500" />
                   </div>
-                  <div className="text-2xl font-black text-slate-900">₹3.2M</div>
+                  <div className="text-2xl font-black text-slate-900">$32,000</div>
                   <div className="text-[10px] text-rose-600 mt-1 font-medium">+2.4% from last month</div>
                 </div>
               </div>
@@ -87,9 +87,9 @@ export default function ProductShowcase() {
                 <div className="text-[11px] font-semibold text-slate-500 mb-3">Recent Transactions</div>
                 <div className="space-y-3">
                   {[
-                    { name: 'Acme Corp', type: 'Invoice Paid', amount: '+₹45,000', color: 'text-emerald-600' },
-                    { name: 'AWS Cloud', type: 'Expense', amount: '-₹12,400', color: 'text-slate-900' },
-                    { name: 'Stripe Payout', type: 'Transfer', amount: '+₹1,24,000', color: 'text-emerald-600' },
+                    { name: 'Acme Corp', type: 'Invoice Paid', amount: '+$4,500', color: 'text-emerald-600' },
+                    { name: 'AWS Cloud', type: 'Expense', amount: '-$1,240', color: 'text-slate-900' },
+                    { name: 'Stripe Payout', type: 'Transfer', amount: '+$12,400', color: 'text-emerald-600' },
                   ].map((tx, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
                       <div className="flex items-center gap-3">

@@ -6,12 +6,6 @@ import DashboardPreview from './DashboardPreview';
 export default function HeroSection() {
   const navigate = useNavigate();
 
-  const metrics = [
-    { label: 'Invoices Raised', value: '₹3.2Cr', sub: 'This Quarter', up: true },
-    { label: 'GST Compliance', value: '100%', sub: 'Returns Filed', up: true },
-    { label: 'Cost Saved', value: '40hrs', sub: 'Per Month', up: true },
-  ];
-
   return (
     <section className="relative min-h-screen bg-gradient-to-b from-slate-50 via-white to-white overflow-hidden flex flex-col">
       {/* Soft background mesh */}
@@ -34,7 +28,7 @@ export default function HeroSection() {
         {/* Trust pill */}
         <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 border border-teal-100 mb-10">
           <Shield size={12} className="text-teal-500" />
-          <span className="text-[11px] text-teal-700 font-medium tracking-widest uppercase">GST Compliant · Indian GAAP · Made for Bharat</span>
+          <span className="text-[11px] text-teal-700 font-medium tracking-widest uppercase">Double Entry Accounting · Invoicing · Reports</span>
         </div>
 
         {/* Headline */}
@@ -48,7 +42,7 @@ export default function HeroSection() {
         </h1>
 
         <p className="mt-6 text-base md:text-lg text-slate-500 max-w-xl text-center leading-relaxed font-light">
-          CalTally connects your entire finance stack — invoicing, inventory, payroll, GST, and reporting — into a single intelligent workspace.
+          CalTally is a double-entry accounting and billing application — managing invoices, items, vouchers, payroll, and reporting.
         </p>
 
         {/* CTAs */}
@@ -64,20 +58,7 @@ export default function HeroSection() {
           </button>
         </div>
 
-        {/* Live metric pills */}
-        <div className="flex flex-wrap justify-center gap-4 mt-12">
-          {metrics.map((m, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white border border-slate-100 shadow-sm">
-              <div className="w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center">
-                <TrendingUp size={12} className="text-teal-500" />
-              </div>
-              <div>
-                <p className="text-slate-800 font-semibold text-sm">{m.value}</p>
-                <p className="text-slate-400 text-[10px]">{m.label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+
 
         {/* Dashboard Preview */}
         <div className="w-full mt-16 relative">

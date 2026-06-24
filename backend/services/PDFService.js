@@ -1,5 +1,36 @@
 const PDFDocument = require('pdfkit');
 
+const CURRENCY_SYMBOLS = {
+    'INR': '₹',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'AUD': 'A$',
+    'CAD': 'C$',
+    'CHF': 'Fr',
+    'CNY': '¥',
+    'AED': 'د.إ',
+    'SAR': '﷼',
+    'SGD': 'S$',
+    'KWD': 'د.ك',
+    'OMR': 'ر.ع.',
+    'BHD': '.د.ب',
+    'QAR': 'ر.ق'
+};
+
+function getCurrencySymbol(currency) {
+    if (!currency) return '₹';
+    const code = currency.split(/[ -]/)[0].trim().toUpperCase();
+    return CURRENCY_SYMBOLS[code] || code;
+}
+
+function formatAmount(amount, currencyCode) {
+    const code = currencyCode ? currencyCode.split(/[ -]/)[0].trim().toUpperCase() : 'INR';
+    const locale = (code === 'INR') ? 'en-IN' : 'en-US';
+    return parseFloat(amount || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 class PDFService {
     static async generateRetainerInvoice(retainer, items, company = {}) {
         return new Promise((resolve, reject) => {
@@ -7,6 +38,10 @@ class PDFService {
             let buffers = [];
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+            const currency = retainer.CustomerLedger?.currency || company.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
 
             const companyName = company.name || 'Your Company';
             const companyState = company.state || '';
@@ -39,7 +74,7 @@ class PDFService {
             
             doc.fontSize(18)
                .fillColor('#000000')
-               .text(`Rs. ${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 400, 145, { align: 'right' });
+               .text(`${currencySymbol} ${format(retainer.totalAmount)}`, 400, 145, { align: 'right' });
 
             // --- BILL TO ---
             doc.fillColor('#888888')
@@ -74,7 +109,7 @@ class PDFService {
             items.forEach((item, index) => {
                 doc.text(index + 1, 60, currentCursor + 10)
                    .text(item.description || 'Retainer Amount', 100, currentCursor + 10)
-                   .text(parseFloat(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 450, currentCursor + 10, { width: 90, align: 'right' });
+                   .text(format(item.amount), 450, currentCursor + 10, { width: 90, align: 'right' });
                 
                 currentCursor += 30;
                 doc.moveTo(50, currentCursor).lineTo(550, currentCursor).strokeColor('#eeeeee').stroke();
@@ -86,17 +121,17 @@ class PDFService {
                .fontSize(10)
                .text('Sub Total', 350, totalStart)
                .fillColor('#000000')
-               .text(parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 450, totalStart, { width: 90, align: 'right' });
+               .text(format(retainer.totalAmount), 450, totalStart, { width: 90, align: 'right' });
 
             doc.font('Helvetica-Bold')
                .fontSize(12)
                .text('Total', 350, totalStart + 25)
-               .text(`Rs. ${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totalStart + 25, { width: 90, align: 'right' });
+               .text(`${currencySymbol} ${format(retainer.totalAmount)}`, 450, totalStart + 25, { width: 90, align: 'right' });
 
             doc.rect(350, totalStart + 50, 200, 30).fill('#f9f9f9');
             doc.fillColor('#000000')
                .text('Balance Due', 360, totalStart + 60)
-               .text(`Rs. ${parseFloat(retainer.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, totalStart + 60, { width: 90, align: 'right' });
+               .text(`${currencySymbol} ${format(retainer.totalAmount)}`, 450, totalStart + 60, { width: 90, align: 'right' });
 
             // --- WORDS ---
             doc.fillColor('#888888')
@@ -107,7 +142,7 @@ class PDFService {
             doc.fillColor('#333333')
                .fontSize(10)
                .font('Helvetica-BoldOblique')
-               .text('Indian Rupee Two Thousand Only', 420, totalStart + 100);
+               .text(`${currency === 'INR' ? 'Indian Rupee Only' : currency + ' Only'}`, 420, totalStart + 100);
 
             // --- SIGNATURE ---
             doc.font('Helvetica-Bold')
@@ -126,6 +161,10 @@ class PDFService {
             let buffers = [];
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+            const currency = quote.Customer?.currency || company.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
 
             const companyName = company.name || 'Your Company';
             const companyState = company.state || '';
@@ -196,8 +235,8 @@ class PDFService {
                 doc.text(index + 1, 60, currentCursor + 10)
                    .text(item.itemDetails, 100, currentCursor + 10, { width: 240 })
                    .text(item.quantity, 350, currentCursor + 10, { width: 50, align: 'center' })
-                   .text(parseFloat(item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 400, currentCursor + 10, { width: 70, align: 'right' })
-                   .text(parseFloat(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, currentCursor + 10, { width: 80, align: 'right' });
+                   .text(format(item.rate), 400, currentCursor + 10, { width: 70, align: 'right' })
+                   .text(format(item.amount), 470, currentCursor + 10, { width: 80, align: 'right' });
                 
                 currentCursor += 30;
                 doc.moveTo(50, currentCursor).lineTo(550, currentCursor).strokeColor('#eeeeee').stroke();
@@ -209,19 +248,19 @@ class PDFService {
                .fontSize(10)
                .text('Sub Total', 350, totalStart)
                .fillColor('#000000')
-               .text(parseFloat(quote.subTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, totalStart, { width: 80, align: 'right' });
+               .text(format(quote.subTotal), 470, totalStart, { width: 80, align: 'right' });
 
             if (quote.taxAmount > 0) {
                 doc.fillColor('#555555')
                    .text(`Tax (${quote.selectedTax || 'GST'})`, 350, totalStart + 20)
                    .fillColor('#000000')
-                   .text(parseFloat(quote.taxAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, totalStart + 20, { width: 80, align: 'right' });
+                   .text(format(quote.taxAmount), 470, totalStart + 20, { width: 80, align: 'right' });
             }
 
             doc.font('Helvetica-Bold')
                .fontSize(12)
                .text('Total', 350, totalStart + 50)
-               .text(`Rs. ${parseFloat(quote.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 470, totalStart + 50, { width: 80, align: 'right' });
+               .text(`${currencySymbol} ${format(quote.totalAmount)}`, 470, totalStart + 50, { width: 80, align: 'right' });
 
             // --- TERMS & NOTES ---
             if (quote.termsConditions) {
@@ -251,6 +290,10 @@ class PDFService {
             let buffers = [];
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+            const currency = invoice.CustomerLedger?.currency || company?.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
 
             // --- HEADER ---
             doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold').text(company?.name || 'Indus CAI private Ltd', 50, 50);
@@ -288,16 +331,16 @@ class PDFService {
             doc.fillColor('#000000').font('Helvetica');
             items.forEach((item, index) => {
                 const itemName = item.Item?.name || 'Service Item';
-                doc.text(index + 1, 60, currentCursor + 10).text(`${itemName}\n${item.description || ''}`, 100, currentCursor + 10, { width: 240 }).text(item.quantity, 350, currentCursor + 10, { width: 50, align: 'center' }).text(parseFloat(item.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 400, currentCursor + 10, { width: 70, align: 'right' }).text(parseFloat(item.amount || (item.quantity * item.rate)).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, currentCursor + 10, { width: 80, align: 'right' });
+                doc.text(index + 1, 60, currentCursor + 10).text(`${itemName}\n${item.description || ''}`, 100, currentCursor + 10, { width: 240 }).text(item.quantity, 350, currentCursor + 10, { width: 50, align: 'center' }).text(format(item.rate), 400, currentCursor + 10, { width: 70, align: 'right' }).text(format(item.amount || (item.quantity * item.rate)), 470, currentCursor + 10, { width: 80, align: 'right' });
                 currentCursor += 40;
                 doc.moveTo(50, currentCursor).lineTo(550, currentCursor).strokeColor('#eeeeee').stroke();
             });
 
             // --- TOTALS ---
             const totalStart = Math.max(currentCursor + 20, 500);
-            doc.fillColor('#555555').fontSize(10).text('Sub Total', 350, totalStart).fillColor('#000000').text(parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, totalStart, { width: 80, align: 'right' });
-            doc.text(`GST (18%)`, 350, totalStart + 20).text(parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }), 470, totalStart + 20, { width: 80, align: 'right' });
-            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 50).text(`Rs. ${parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 470, totalStart + 50, { width: 80, align: 'right' });
+            doc.fillColor('#555555').fontSize(10).text('Sub Total', 350, totalStart).fillColor('#000000').text(format(invoice.subTotal || 0), 470, totalStart, { width: 80, align: 'right' });
+            doc.text(`GST (18%)`, 350, totalStart + 20).text(format(invoice.gstAmount || 0), 470, totalStart + 20, { width: 80, align: 'right' });
+            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 50).text(`${currencySymbol} ${format(invoice.totalAmount || 0)}`, 470, totalStart + 50, { width: 80, align: 'right' });
 
             doc.end();
         });
@@ -309,6 +352,10 @@ class PDFService {
             let buffers = [];
             doc.on('data', buffers.push.bind(buffers));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
+
+            const currency = challan.Customer?.currency || company?.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
 
             // --- HEADER ---
             doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold').text(company?.name || 'Indus CAI private Ltd', 50, 50);
@@ -332,15 +379,15 @@ class PDFService {
             doc.fillColor('#000000').font('Helvetica');
             items.forEach((item, index) => {
                 const itemName = item.Item?.name || 'Product Item';
-                doc.text(index + 1, 60, currentCursor + 10).text(`${itemName}\n${item.description || ''}`, 100, currentCursor + 10, { width: 240 }).text(item.quantity, 350, currentCursor + 10, { width: 50, align: 'center' }).text(parseFloat(item.rate).toLocaleString('en-IN'), 400, currentCursor + 10, { width: 70, align: 'right' }).text(parseFloat(item.amount).toLocaleString('en-IN'), 470, currentCursor + 10, { width: 80, align: 'right' });
+                doc.text(index + 1, 60, currentCursor + 10).text(`${itemName}\n${item.description || ''}`, 100, currentCursor + 10, { width: 240 }).text(item.quantity, 350, currentCursor + 10, { width: 50, align: 'center' }).text(format(item.rate), 400, currentCursor + 10, { width: 70, align: 'right' }).text(format(item.amount), 470, currentCursor + 10, { width: 80, align: 'right' });
                 currentCursor += 40;
                 doc.moveTo(50, currentCursor).lineTo(550, currentCursor).strokeColor('#eeeeee').stroke();
             });
 
             // --- TOTALS ---
             const totalStart = Math.max(currentCursor + 20, 500);
-            doc.fillColor('#555555').fontSize(10).text('Sub Total', 350, totalStart).fillColor('#000000').text(parseFloat(challan.subTotal || 0).toLocaleString('en-IN'), 470, totalStart, { width: 80, align: 'right' });
-            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 25).text(`Rs. ${parseFloat(challan.totalAmount || 0).toLocaleString('en-IN')}`, 470, totalStart + 25, { width: 80, align: 'right' });
+            doc.fillColor('#555555').fontSize(10).text('Sub Total', 350, totalStart).fillColor('#000000').text(format(challan.subTotal || 0), 470, totalStart, { width: 80, align: 'right' });
+            doc.font('Helvetica-Bold').fontSize(12).text('Total', 350, totalStart + 25).text(`${currencySymbol} ${format(challan.totalAmount || 0)}`, 470, totalStart + 25, { width: 80, align: 'right' });
 
             doc.end();
         });
@@ -354,268 +401,278 @@ class PDFService {
             doc.on('end', () => resolve(Buffer.concat(buffers)));
             doc.on('error', reject);
 
-            // ─── HEADER ──────────────────────────────────────────────────
-            doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold')
-               .text(company?.name || 'Our Company', 40, 40);
-            
-            let companyInfoY = 56;
-            doc.fontSize(9).font('Helvetica').fillColor('#444444');
-            if (company?.state) {
-                doc.text(company.state, 40, companyInfoY);
-                companyInfoY += 12;
-            }
-            if (company?.location) {
-                doc.text(company.location, 40, companyInfoY);
-                companyInfoY += 12;
-            }
-            if (company?.phone) {
-                doc.text(company.phone, 40, companyInfoY);
-                companyInfoY += 12;
-            }
-            if (company?.email) {
-                doc.text(company.email, 40, companyInfoY);
-                companyInfoY += 12;
-            }
+            const currency = vendor?.currency || company?.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
 
-            // Right side: TITLE
-            doc.fontSize(22).font('Helvetica-Bold').fillColor('#000000')
-               .text('PURCHASE ORDER', 250, 40, { width: 305, align: 'right' });
+            const companyName = company?.name || 'Our Company';
+            const vendorName = vendor?.name || order.vendorName || 'Vendor';
 
-            doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333')
-               .text(`# ${order.orderNumber || order.poNumber || 'PENDING'}`, 250, 66, { width: 305, align: 'right' });
-
-            // ─── ADDRESSES & DATES SECTION ────────────────────────────────
-            const addressY = 130;
-            
-            // 1. Vendor Address
-            doc.fillColor('#555555').fontSize(9).font('Helvetica-Bold')
-               .text('Vendor Address', 40, addressY);
-            
-            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
-               .text(vendor?.name || order.vendorName || 'Vendor', 40, addressY + 13);
-            
-            // Build vendor address lines
-            const vendorLines = [];
-            const rawAddr = vendor?.billingAddressJson || vendor?.billingAddress || vendor?.address;
-            if (rawAddr) {
-                try {
-                    const parsed = typeof rawAddr === 'string' && (rawAddr.startsWith('{') || rawAddr.startsWith('[')) ? JSON.parse(rawAddr) : rawAddr;
-                    if (parsed && typeof parsed === 'object') {
-                        if (parsed.attention) vendorLines.push(parsed.attention);
-                        const street = [parsed.street1 || parsed.address1, parsed.street2 || parsed.address2].filter(Boolean).join(', ');
-                        if (street) vendorLines.push(street);
-                        const cityStatePin = [parsed.city, parsed.state, parsed.pinCode || parsed.zip || parsed.zipCode || parsed.pincode].filter(Boolean).join(', ');
-                        if (cityStatePin) vendorLines.push(cityStatePin);
-                        if (parsed.country) vendorLines.push(parsed.country);
-                        if (parsed.phone) vendorLines.push(parsed.phone);
-                    } else if (typeof rawAddr === 'string') {
-                        vendorLines.push(rawAddr);
-                    }
-                } catch (e) {
-                    if (typeof rawAddr === 'string') vendorLines.push(rawAddr);
-                }
-            }
-            
-            // Date formatting helper to prevent timezone / local offset issues
+            // ── Date formatter (no timezone shift) ──────────────────
             const formatDate = (dateVal) => {
                 if (!dateVal) return '—';
                 try {
-                    if (typeof dateVal === 'string') {
-                        const match = dateVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
-                        if (match) {
-                            return `${match[3]}/${match[2]}/${match[1]}`;
-                        }
-                    }
+                    const match = String(dateVal).match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (match) return `${match[3]}/${match[2]}/${match[1]}`;
                     const d = new Date(dateVal);
                     if (isNaN(d.getTime())) return '—';
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const year = d.getFullYear();
-                    return `${day}/${month}/${year}`;
-                } catch (e) {
-                    return '—';
-                }
+                    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                } catch (e) { return '—'; }
             };
 
-            doc.font('Helvetica').fontSize(9).fillColor('#444444');
-            doc.x = 40;
-            doc.y = addressY + 26;
-            vendorLines.forEach(line => {
-                doc.text(line, { width: 170 });
-            });
-            let currentVendorY = doc.y;
+            const pageW = 515; // usable width (595 - 2×40)
+            const startY = 40;
+            const rightX = 40 + pageW / 2 + 6;
 
-            // 2. Deliver To Address
-            doc.fillColor('#555555').fontSize(9).font('Helvetica-Bold')
-               .text('Deliver To', 220, addressY);
+            // ─── HEADER BOX: Company (left) | PURCHASE ORDER (right) ────────
+            const headerH = 72;
+            doc.rect(40, startY, pageW, headerH).stroke('#000000');
+            doc.moveTo(40 + pageW / 2, startY).lineTo(40 + pageW / 2, startY + headerH).stroke('#000000');
 
-            // Build delivery address lines
+            // Left: Company details
+            doc.fillColor('#000000').fontSize(13).font('Helvetica-Bold')
+               .text(companyName, 46, startY + 8, { width: pageW / 2 - 12 });
+            doc.fontSize(8).font('Helvetica').fillColor('#444444');
+            let compY = startY + 26;
+            if (company?.street1)  { doc.text(company.street1, 46, compY, { width: pageW / 2 - 12 }); compY += 11; }
+            if (company?.city)     { doc.text([company.city, company.state].filter(Boolean).join(', '), 46, compY, { width: pageW / 2 - 12 }); compY += 11; }
+            if (company?.email)    { doc.text(company.email, 46, compY, { width: pageW / 2 - 12 }); compY += 11; }
+            if (company?.gstNumber){ doc.text(`GSTIN: ${company.gstNumber}`, 46, compY, { width: pageW / 2 - 12 }); }
+
+            // Right: PURCHASE ORDER title + meta
+            doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold')
+               .text('PURCHASE ORDER', rightX, startY + 8, { width: pageW / 2 - 12, align: 'center' });
+            doc.fontSize(9).font('Helvetica').fillColor('#333333')
+               .text(`Order No: ${order.orderNumber || order.poNumber || '—'}`, rightX, startY + 28, { width: pageW / 2 - 12 })
+               .text(`Date: ${formatDate(order.date)}`, rightX, startY + 40, { width: pageW / 2 - 12 });
+            if (order.deliveryDate) {
+                doc.text(`Delivery Date: ${formatDate(order.deliveryDate)}`, rightX, startY + 52, { width: pageW / 2 - 12 });
+            }
+            if (order.paymentTerms) {
+                doc.text(`Payment Terms: ${order.paymentTerms}`, rightX, startY + 64, { width: pageW / 2 - 12 });
+            }
+
+            // ─── VENDOR / DELIVER-TO BOX ───────────────────────────────────
+            const addrY = startY + headerH;
+            const addrH = 72;
+            doc.rect(40, addrY, pageW, addrH).stroke('#000000');
+            doc.moveTo(40 + pageW / 2, addrY).lineTo(40 + pageW / 2, addrY + addrH).stroke('#000000');
+
+            // Left: Vendor Address
+            doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold')
+               .text('Vendor Address:', 46, addrY + 6);
+            doc.fontSize(10).font('Helvetica-Bold')
+               .text(vendorName, 46, addrY + 18, { width: pageW / 2 - 12 });
+
+            const vendorLines = [];
+            const rawVendorAddr = vendor?.billingAddressJson || vendor?.billingAddress || vendor?.address;
+            if (rawVendorAddr) {
+                try {
+                    const p = typeof rawVendorAddr === 'string' && rawVendorAddr.startsWith('{') ? JSON.parse(rawVendorAddr) : rawVendorAddr;
+                    if (p && typeof p === 'object') {
+                        const street = [p.street1 || p.address1, p.street2 || p.address2].filter(Boolean).join(', ');
+                        if (street) vendorLines.push(street);
+                        const city = [p.city, p.state, p.pinCode || p.zip].filter(Boolean).join(', ');
+                        if (city) vendorLines.push(city);
+                        if (p.country) vendorLines.push(p.country);
+                    } else if (typeof rawVendorAddr === 'string') {
+                        vendorLines.push(rawVendorAddr);
+                    }
+                } catch (e) { if (typeof rawVendorAddr === 'string') vendorLines.push(rawVendorAddr); }
+            }
+            if (vendor?.country && !vendorLines.some(l => l.includes(vendor.country))) vendorLines.push(vendor.country || 'India');
+
+            doc.fontSize(8).font('Helvetica').fillColor('#333333');
+            let vY = addrY + 31;
+            vendorLines.slice(0, 3).forEach(line => { doc.text(line, 46, vY, { width: pageW / 2 - 12 }); vY += 11; });
+
+            // Right: Deliver To
+            doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold')
+               .text('Deliver To:', rightX, addrY + 6, { width: pageW / 2 - 12 });
+
             const deliveryLines = [];
             let parsedDelivery = null;
-            try {
-                if (order.deliveryAddressDataJson) {
-                    parsedDelivery = JSON.parse(order.deliveryAddressDataJson);
-                }
-            } catch (e) {}
-
+            try { if (order.deliveryAddressDataJson) parsedDelivery = JSON.parse(order.deliveryAddressDataJson); } catch (e) {}
             const isEmptyDelivery = !parsedDelivery || (!parsedDelivery.street1 && !parsedDelivery.city && !parsedDelivery.attention);
             if ((order.deliveryAddress === 'Organization' || !order.deliveryAddress) && isEmptyDelivery && company) {
                 parsedDelivery = {
-                    attention: company.name || '',
-                    street1: company.street1 || '',
-                    street2: company.street2 || '',
-                    city: company.city || '',
-                    state: company.state || '',
-                    zip: company.pincode || '',
-                    country: company.location || 'India',
-                    phone: company.phone || ''
+                    attention: company.name || '', street1: company.street1 || '',
+                    city: company.city || '', state: company.state || '',
+                    zip: company.pincode || '', country: company.location || 'India'
                 };
             }
-
             if (parsedDelivery) {
                 if (parsedDelivery.attention) deliveryLines.push(parsedDelivery.attention);
-                const street = [parsedDelivery.street1, parsedDelivery.street2].filter(Boolean).join(', ');
-                if (street) deliveryLines.push(street);
-                const cityStateZip = [parsedDelivery.city, parsedDelivery.state, parsedDelivery.zip || parsedDelivery.pincode || parsedDelivery.zipCode].filter(Boolean).join(', ');
-                if (cityStateZip) deliveryLines.push(cityStateZip);
+                const st = [parsedDelivery.street1, parsedDelivery.street2].filter(Boolean).join(', ');
+                if (st) deliveryLines.push(st);
+                const cv = [parsedDelivery.city, parsedDelivery.state, parsedDelivery.zip || parsedDelivery.zipCode].filter(Boolean).join(', ');
+                if (cv) deliveryLines.push(cv);
                 if (parsedDelivery.country) deliveryLines.push(parsedDelivery.country);
-                if (parsedDelivery.phone) deliveryLines.push(parsedDelivery.phone);
             } else if (order.deliveryAddressText) {
                 deliveryLines.push(order.deliveryAddressText);
             }
-            if (company?.email && !deliveryLines.includes(company.email)) {
-                deliveryLines.push(company.email);
-            }
 
-            doc.font('Helvetica').fontSize(9).fillColor('#444444');
-            doc.x = 220;
-            doc.y = addressY + 13;
-            deliveryLines.forEach(line => {
-                doc.text(line, { width: 180 });
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#000000')
+               .text(deliveryLines[0] || companyName, rightX, addrY + 18, { width: pageW / 2 - 12 });
+            doc.fontSize(8).font('Helvetica').fillColor('#333333');
+            let dY = addrY + 31;
+            deliveryLines.slice(1, 4).forEach(line => { doc.text(line, rightX, dY, { width: pageW / 2 - 12 }); dY += 11; });
+
+            // ─── ITEMS TABLE ────────────────────────────────────────────────
+            const tableY = addrY + addrH;
+
+            // Column layout (same visual structure as Sales Order)
+            const cols = { no: 28, desc: 165, account: 90, qty: 48, rate: 72, amount: 82 };
+            const colX = {
+                no:      40,
+                desc:    40 + cols.no,
+                account: 40 + cols.no + cols.desc,
+                qty:     40 + cols.no + cols.desc + cols.account,
+                rate:    40 + cols.no + cols.desc + cols.account + cols.qty,
+                amount:  40 + cols.no + cols.desc + cols.account + cols.qty + cols.rate,
+            };
+            const rowH = 22;
+
+            // Header row
+            doc.rect(40, tableY, pageW, rowH).fillAndStroke('#eeeeee', '#000000');
+            const colKeys    = ['no', 'desc', 'account', 'qty', 'rate', 'amount'];
+            const headers    = ['#', 'Item & Description', 'Account', 'Qty', 'Rate', 'Amount'];
+            const colAligns  = ['center', 'left', 'left', 'center', 'right', 'right'];
+
+            doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold');
+            colKeys.forEach((key, i) => {
+                doc.text(headers[i], colX[key] + 2, tableY + 6, { width: cols[key] - 4, align: colAligns[i] });
+                doc.moveTo(colX[key], tableY).lineTo(colX[key], tableY + rowH).stroke('#000000');
             });
-            let currentDeliveryY = doc.y;
+            doc.moveTo(40 + pageW, tableY).lineTo(40 + pageW, tableY + rowH).stroke('#000000');
+            doc.moveTo(40, tableY + rowH).lineTo(40 + pageW, tableY + rowH).stroke('#000000');
 
-            // 3. Date / Order Info
-            const orderDate = formatDate(order.date);
-            const deliveryDate = formatDate(order.deliveryDate);
-            
-            let dateY = addressY + 50;
-            doc.fillColor('#555555').fontSize(9).font('Helvetica');
-            
-            doc.text('Date :', 410, dateY);
-            doc.fillColor('#000000').font('Helvetica').text(orderDate, 470, dateY, { width: 85, align: 'right' });
-            dateY += 15;
-
-            doc.fillColor('#555555').text('Delivery Date :', 410, dateY);
-            doc.fillColor('#000000').text(deliveryDate, 470, dateY, { width: 85, align: 'right' });
-            dateY += 15;
-
-            if (order.paymentTerms) {
-                doc.fillColor('#555555').text('Payment Terms :', 410, dateY);
-                doc.fillColor('#000000').text(order.paymentTerms, 470, dateY, { width: 85, align: 'right' });
-                dateY += 15;
-            }
-            if (order.reference) {
-                doc.fillColor('#555555').text('Reference :', 410, dateY);
-                doc.fillColor('#000000').text(order.reference, 470, dateY, { width: 85, align: 'right' });
-                dateY += 15;
-            }
-
-            // ─── HORIZONTAL DIVIDER ───────────────────────────────────────
-            const maxAddressEnd = Math.max(currentVendorY, currentDeliveryY, dateY) + 15;
-            const dividerY = Math.max(maxAddressEnd, 235);
-            doc.moveTo(40, dividerY).lineTo(555, dividerY).strokeColor('#dddddd').lineWidth(0.5).stroke();
-
-            // ─── TABLE HEADER ─────────────────────────────────────────────
-            const tableTop = dividerY + 15;
-            doc.rect(40, tableTop, 515, 20).fill('#3c3c3c');
-            doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold')
-               .text('#', 50, tableTop + 6)
-               .text('Item & Description', 80, tableTop + 6)
-               .text('Qty', 340, tableTop + 6, { width: 50, align: 'right' })
-               .text('Rate', 400, tableTop + 6, { width: 70, align: 'right' })
-               .text('Amount', 480, tableTop + 6, { width: 75, align: 'right' });
-
-            // ─── TABLE ROWS ───────────────────────────────────────────────
-            let currentY = tableTop + 20;
+            // Data rows
             let parsedItems = items;
             if (!Array.isArray(items)) {
                 try { parsedItems = JSON.parse(items || '[]'); } catch (e) { parsedItems = []; }
             }
-            doc.fillColor('#000000').font('Helvetica');
 
-            parsedItems.forEach((item, idx) => {
-                const itemName = item.itemDetails || item.itemName || item.name || item.description || 'Item';
-                const qty = parseFloat(item.quantity || item.qty || 0);
-                const rate = parseFloat(item.rate || item.unitPrice || 0);
-                const amount = parseFloat(item.amount || item.total || (qty * rate) || 0);
+            let curY = tableY + rowH;
+            const minRows = Math.max(parsedItems.length, 8);
 
-                // Estimate row height
-                const textHeight = Math.max(20, Math.ceil(itemName.length / 45) * 12 + 8);
-                
-                doc.fillColor('#000000').fontSize(9)
-                   .text(idx + 1, 50, currentY + 6)
-                   .text(itemName, 80, currentY + 6, { width: 250 })
-                   .text(qty.toFixed(2), 340, currentY + 6, { width: 50, align: 'right' })
-                   .text(rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }), 400, currentY + 6, { width: 70, align: 'right' })
-                   .text(amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }), 480, currentY + 6, { width: 75, align: 'right' });
+            for (let i = 0; i < minRows; i++) {
+                const it = parsedItems[i];
+                doc.rect(40, curY, pageW, rowH).stroke('#cccccc');
 
-                currentY += textHeight;
-                doc.moveTo(40, currentY).lineTo(555, currentY).strokeColor('#eeeeee').lineWidth(0.5).stroke();
+                if (it) {
+                    const qty    = parseFloat(it.quantity || it.qty || 0);
+                    const rate   = parseFloat(it.rate || it.unitPrice || 0);
+                    const amount = parseFloat(it.amount || qty * rate || 0);
+                    const itemName = it.itemDetails || it.itemName || it.name || it.description || '—';
+                    const acct     = it.account || '';
+
+                    doc.fillColor('#000000').fontSize(8).font('Helvetica');
+                    doc.text(String(i + 1),                            colX.no      + 2, curY + 6, { width: cols.no - 4,      align: 'center' });
+                    doc.text(itemName,                                  colX.desc    + 2, curY + 6, { width: cols.desc - 4,    align: 'left' });
+                    doc.text(acct,                                      colX.account + 2, curY + 6, { width: cols.account - 4, align: 'left' });
+                    doc.text(qty.toString(),                            colX.qty     + 2, curY + 6, { width: cols.qty - 4,     align: 'center' });
+                    doc.text(format(rate), colX.rate + 2, curY + 6, { width: cols.rate - 4, align: 'right' });
+                    doc.font('Helvetica-Bold')
+                       .text(format(amount), colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
+                }
+
+                colKeys.forEach(key => {
+                    doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000');
+                });
+                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
+                curY += rowH;
+            }
+
+            // ─── TOTALS ──────────────────────────────────────────────────────
+            const subtotal     = parseFloat(order.subtotal || order.subTotal || 0);
+            const discountAmt  = parseFloat(order.discountAmount || 0);
+            const taxAmt       = parseFloat(order.taxAmount || 0);
+            const tdsAmt       = parseFloat(order.tdsAmount || 0);
+            const adjustment   = parseFloat(order.adjustment || 0);
+            const grandTotal   = parseFloat(order.totalAmount || 0);
+            const totalQty     = parsedItems.reduce((s, it) => s + parseFloat(it?.quantity || it?.qty || 0), 0);
+
+            // Total qty/subtotal row
+            doc.rect(40, curY, pageW, rowH).fillAndStroke('#f5f5f5', '#000000');
+            doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold')
+               .text('Total', colX.no + 2, curY + 6, { width: cols.no + cols.desc + cols.account - 4, align: 'right' })
+               .text(totalQty.toString(), colX.qty + 2, curY + 6, { width: cols.qty - 4, align: 'center' })
+               .text(format(subtotal), colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
+            colKeys.forEach(key => {
+                doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000');
             });
+            doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
+            curY += rowH;
 
-            if (parsedItems.length === 0) {
-                doc.fillColor('#888888').fontSize(9).font('Helvetica-Oblique')
-                   .text('No items found.', 80, currentY + 8);
-                currentY += 24;
+            // Optional detail rows (discount, tax, TDS, adjustment)
+            const addDetailRow = (label, valueStr) => {
+                doc.rect(40, curY, pageW, rowH).stroke('#000000');
+                doc.fillColor('#444444').fontSize(8).font('Helvetica')
+                   .text(label, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
+                doc.fillColor('#000000').font('Helvetica-Bold')
+                   .text(valueStr, colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
+                doc.moveTo(colX.amount, curY).lineTo(colX.amount, curY + rowH).stroke('#000000');
+                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
+                curY += rowH;
+            };
+
+            if (discountAmt > 0) addDetailRow('Discount', `-${format(discountAmt)}`);
+            if (taxAmt > 0)      addDetailRow(`Tax (${order.taxRate || ''}%)`, format(taxAmt));
+            if (tdsAmt > 0)      addDetailRow(`TDS (${order.tdsName || ''})`, `-${format(tdsAmt)}`);
+            if (adjustment !== 0) addDetailRow('Adjustment', format(adjustment));
+
+            // Grand Total row
+            const gtRowH = 26;
+            doc.rect(40, curY, pageW, gtRowH).fillAndStroke('#e0e0e0', '#000000');
+            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+               .text('Grand Total', colX.no + 2, curY + 7, { width: pageW - cols.amount - 4, align: 'right' })
+               .text(`${currencySymbol} ${format(grandTotal)}`, colX.amount + 2, curY + 7, { width: cols.amount - 4, align: 'right' });
+            doc.moveTo(colX.amount, curY).lineTo(colX.amount, curY + gtRowH).stroke('#000000');
+            doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + gtRowH).stroke('#000000');
+            curY += gtRowH;
+
+            // â”€â”€â”€ NOTES / TERMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            if (order.notes || order.terms) {
+                const notesH = 50;
+                doc.rect(40, curY, pageW, notesH).stroke('#000000');
+                if (order.notes && order.terms) {
+                    doc.moveTo(40 + pageW / 2, curY).lineTo(40 + pageW / 2, curY + notesH).stroke('#000000');
+                    doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold').text('Notes:', 46, curY + 4);
+                    doc.font('Helvetica').fontSize(7).text(order.notes, 46, curY + 14, { width: pageW / 2 - 12, lineGap: 1 });
+                    doc.font('Helvetica-Bold').fontSize(8).text('Terms & Conditions:', rightX, curY + 4, { width: pageW / 2 - 12 });
+                    doc.font('Helvetica').fontSize(7).text(order.terms, rightX, curY + 14, { width: pageW / 2 - 12, lineGap: 1 });
+                } else {
+                    const note = order.notes || order.terms;
+                    const label = order.notes ? 'Notes:' : 'Terms & Conditions:';
+                    doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold').text(label, 46, curY + 4);
+                    doc.font('Helvetica').fontSize(7).text(note, 46, curY + 14, { width: pageW - 12, lineGap: 1 });
+                }
+                curY += notesH;
             }
 
-            // ─── TOTALS ───────────────────────────────────────────────────
-            const totalStart = currentY + 15;
-            const subtotal = parseFloat(order.subtotal || order.subTotal || 0);
-            const discountAmt = parseFloat(order.discountAmount || 0);
-            const taxAmt = parseFloat(order.taxAmount || 0);
-            const adjustment = parseFloat(order.adjustment || 0);
-            const total = parseFloat(order.totalAmount || 0);
+            // â”€â”€â”€ SIGNATURE BLOCK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const sigH = 60;
+            doc.rect(40, curY, pageW, sigH).stroke('#000000');
+            doc.moveTo(40 + pageW / 2, curY).lineTo(40 + pageW / 2, curY + sigH).stroke('#000000');
 
-            let totY = totalStart;
-            
-            // Sub Total
-            doc.fillColor('#555555').fontSize(9).font('Helvetica')
-               .text('Sub Total', 380, totY)
-               .fillColor('#000000')
-               .text(`${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
-            totY += 15;
+            doc.fillColor('#555555').fontSize(8).font('Helvetica')
+               .text("Vendor's Signature & Stamp", 46, curY + 6);
+            doc.moveTo(46, curY + sigH - 12).lineTo(46 + pageW / 2 - 30, curY + sigH - 12).stroke('#000000');
 
-            if (discountAmt > 0) {
-                doc.fillColor('#555555').text(`Discount`, 380, totY).fillColor('#000000').text(`-${discountAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
-                totY += 15;
-            }
-            if (taxAmt > 0) {
-                doc.fillColor('#555555').text(`Tax`, 380, totY).fillColor('#000000').text(`${taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
-                totY += 15;
-            }
-            if (adjustment !== 0) {
-                doc.fillColor('#555555').text('Adjustment', 380, totY).fillColor('#000000').text(`${adjustment.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
-                totY += 15;
-            }
-
-            doc.moveTo(380, totY).lineTo(555, totY).strokeColor('#dddddd').lineWidth(0.5).stroke();
-            totY += 5;
-            
-            // Grand Total
-            doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold')
-               .text('Total', 380, totY)
-               .text(`Rs. ${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, totY, { width: 75, align: 'right' });
-
-            // ─── AUTHORIZED SIGNATURE ─────────────────────────────────────
-            const sigY = 700;
-            doc.fillColor('#000000').fontSize(9).font('Helvetica')
-               .text('Authorized Signature ____________________', 40, sigY);
+            doc.fillColor('#555555').fontSize(8).font('Helvetica')
+               .text('For Authorized Signatory', rightX, curY + 6, { width: pageW / 2 - 12, align: 'right' });
+            const sigLineStart = rightX + pageW / 2 - 12 - 100;
+            doc.moveTo(sigLineStart, curY + sigH - 12).lineTo(rightX + pageW / 2 - 12, curY + sigH - 12).stroke('#000000');
+            doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8)
+               .text(companyName, rightX, curY + sigH - 10, { width: pageW / 2 - 12, align: 'right' });
 
             doc.end();
         });
     }
+
+
+
 
     static async generateEmployeeProfile(employee, company) {
         return new Promise((resolve, reject) => {
@@ -655,7 +712,7 @@ class PDFService {
 
             const printField = (label, value, x) => {
                 doc.fillColor('#64748b').fontSize(8).font('Helvetica').text(label, x, y);
-                doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(value || '—', x, y + 10);
+                doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(value || 'â€”', x, y + 10);
             };
 
             // 1. Personal Details
@@ -704,10 +761,10 @@ class PDFService {
             ].filter(Boolean).join('\n');
 
             doc.fillColor('#64748b').fontSize(8).font('Helvetica').text('Present Address', 45, y);
-            doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(presentAddr || '—', 45, y + 10, { width: 240, lineGap: 2 });
+            doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(presentAddr || 'â€”', 45, y + 10, { width: 240, lineGap: 2 });
 
             doc.fillColor('#64748b').fontSize(8).font('Helvetica').text('Permanent Address', 300, y);
-            doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(permanentAddr || '—', 300, y + 10, { width: 240, lineGap: 2 });
+            doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text(permanentAddr || 'â€”', 300, y + 10, { width: 240, lineGap: 2 });
             y += 65;
 
             // 4. Employment Details
@@ -752,11 +809,11 @@ class PDFService {
             printSectionHeader('7. EDUCATION & EXPERIENCE');
             printField('Highest Qualification', employee.highestQualification, 45);
             printField('University/College', employee.universityCollege, 210);
-            printField('Year of Passing', employee.yearOfPassing ? employee.yearOfPassing.toString() : '—', 380);
+            printField('Year of Passing', employee.yearOfPassing ? employee.yearOfPassing.toString() : 'â€”', 380);
             y += 28;
 
             printField('Previous Company', employee.previousCompany, 45);
-            printField('Years of Experience', employee.previousExperience ? employee.previousExperience.toString() : '—', 210);
+            printField('Years of Experience', employee.previousExperience ? employee.previousExperience.toString() : 'â€”', 210);
             y += 35;
 
             doc.end();
@@ -770,250 +827,197 @@ class PDFService {
             doc.on('end', () => resolve(Buffer.concat(buffers)));
             doc.on('error', reject);
 
+            const currency = order.Customer?.currency || company?.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
+
             const companyName = company.name || order.companyName || 'Your Company';
             const customerName = order.customerName || order.Customer?.displayName || order.Customer?.name || 'Customer';
-            const customerAddress = (() => {
-                try {
-                    const raw = order.Customer?.billingAddress || order.billingAddress;
-                    if (!raw) return '';
-                    const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                    return [p.street1, p.street2, p.city, p.state, p.pinCode, p.country].filter(Boolean).join(', ');
-                } catch (e) { return ''; }
-            })();
-            const customerGST = order.Customer?.gstNumber || '';
-            const customerState = order.Customer?.state || '';
 
             const formatDate = (d) => {
-                if (!d) return '—';
+                if (!d) return 'â€”';
                 try {
                     const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
                     if (m) return `${m[3]}/${m[2]}/${m[1]}`;
                     return new Date(d).toLocaleDateString('en-IN');
-                } catch (e) { return '—'; }
+                } catch (e) { return 'â€”'; }
             };
 
-            // ─── TOP OUTER BORDER ───────────────────────────────────────────
-            const pageW = 555; // usable width (595 - 2*40)
-            const startY = 40;
-
-            // ─── HEADER BOX: Company (left) | SALES ORDER info (right) ─────
-            const headerH = 70;
-            doc.rect(40, startY, pageW, headerH).stroke('#000000');
-            // vertical divider at midpoint
-            doc.moveTo(40 + pageW / 2, startY).lineTo(40 + pageW / 2, startY + headerH).stroke('#000000');
-
-            // Left: Company name
-            doc.fillColor('#000000').fontSize(13).font('Helvetica-Bold')
-               .text(companyName, 46, startY + 8, { width: pageW / 2 - 12 });
-            doc.fontSize(8).font('Helvetica').fillColor('#444444')
-               .text(company.state || '', 46, startY + 26, { width: pageW / 2 - 12 })
-               .text(company.email || '', 46, startY + 37, { width: pageW / 2 - 12 });
-            if (company.gstNumber) {
-                doc.text(`GSTIN: ${company.gstNumber}`, 46, startY + 48, { width: pageW / 2 - 12 });
-            }
-
-            // Right: SALES ORDER title + meta
-            const rightX = 40 + pageW / 2 + 6;
+            // â”€â”€â”€ HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             doc.fillColor('#000000').fontSize(14).font('Helvetica-Bold')
-               .text('SALES ORDER', rightX, startY + 6, { width: pageW / 2 - 12, align: 'center' });
-            doc.fontSize(9).font('Helvetica')
-               .text(`Order No: ${order.orderNumber || '—'}`, rightX, startY + 26, { width: pageW / 2 - 12 })
-               .text(`Date: ${formatDate(order.date)}`, rightX, startY + 38, { width: pageW / 2 - 12 });
-            if (order.referenceNumber) {
-                doc.text(`Ref: ${order.referenceNumber}`, rightX, startY + 50, { width: pageW / 2 - 12 });
-            }
+               .text(companyName, 40, 40);
+
+            let companyInfoY = 58;
+            doc.fontSize(9).font('Helvetica').fillColor('#444444');
+            if (company.state)  { doc.text(company.state,  40, companyInfoY); companyInfoY += 12; }
+            if (company.location) { doc.text(company.location, 40, companyInfoY); companyInfoY += 12; }
+            if (company.email)  { doc.text(company.email,  40, companyInfoY); companyInfoY += 12; }
+
+            // Right side: TITLE
+            doc.fontSize(22).font('Helvetica-Bold').fillColor('#000000')
+               .text('SALES ORDER', 250, 40, { width: 305, align: 'right' });
+
+            doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333')
+               .text(`# ${order.orderNumber || 'PENDING'}`, 250, 68, { width: 305, align: 'right' });
+
+            // â”€â”€â”€ BILL TO / SHIP TO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const addressY = 130;
+
+            // Bill To
+            doc.fillColor('#555555').fontSize(9).font('Helvetica-Bold')
+               .text('Bill To', 40, addressY);
+            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
+               .text(customerName, 40, addressY + 13);
+
+            // Build customer address
+            const customerLines = [];
+            try {
+                const raw = order.Customer?.billingAddress || order.billingAddress;
+                if (raw) {
+                    const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    const street = [p.street1, p.street2].filter(Boolean).join(', ');
+                    if (street) customerLines.push(street);
+                    const cityState = [p.city, p.state, p.pinCode].filter(Boolean).join(', ');
+                    if (cityState) customerLines.push(cityState);
+                    if (p.country) customerLines.push(p.country);
+                }
+            } catch (e) {}
+
+            doc.font('Helvetica').fontSize(9).fillColor('#444444');
+            doc.x = 40; doc.y = addressY + 28;
+            customerLines.forEach(line => { doc.text(line, { width: 170 }); });
+
+            // Date / Order Info (right side)
+            let dateY = addressY + 13;
+            doc.fillColor('#555555').fontSize(9).font('Helvetica');
+            doc.text('Date :', 380, dateY);
+            doc.fillColor('#000000').text(formatDate(order.date), 455, dateY, { width: 100, align: 'right' });
+            dateY += 15;
+
             if (order.expectedShipmentDate) {
-                doc.text(`Shipment Date: ${formatDate(order.expectedShipmentDate)}`, rightX, startY + 60, { width: pageW / 2 - 12 });
+                doc.fillColor('#555555').text('Shipment Date :', 380, dateY);
+                doc.fillColor('#000000').text(formatDate(order.expectedShipmentDate), 455, dateY, { width: 100, align: 'right' });
+                dateY += 15;
+            }
+            if (order.paymentTerms) {
+                doc.fillColor('#555555').text('Payment Terms :', 380, dateY);
+                doc.fillColor('#000000').text(order.paymentTerms, 455, dateY, { width: 100, align: 'right' });
+                dateY += 15;
+            }
+            if (order.referenceNumber) {
+                doc.fillColor('#555555').text('Reference :', 380, dateY);
+                doc.fillColor('#000000').text(order.referenceNumber, 455, dateY, { width: 100, align: 'right' });
+                dateY += 15;
             }
 
-            // ─── BUYER / CONSIGNEE BOX ──────────────────────────────────────
-            const billY = startY + headerH;
-            const billH = 72;
-            doc.rect(40, billY, pageW, billH).stroke('#000000');
-            doc.moveTo(40 + pageW / 2, billY).lineTo(40 + pageW / 2, billY + billH).stroke('#000000');
+            // â”€â”€â”€ HORIZONTAL DIVIDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const dividerY = Math.max(doc.y + 10, dateY + 10, 230);
+            doc.moveTo(40, dividerY).lineTo(555, dividerY).strokeColor('#dddddd').lineWidth(0.5).stroke();
 
-            // Left: Buyer (Bill To)
-            doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold')
-               .text('Buyer (Bill To):', 46, billY + 6);
-            doc.fontSize(10).font('Helvetica-Bold')
-               .text(customerName, 46, billY + 18, { width: pageW / 2 - 12 });
-            doc.fontSize(8).font('Helvetica').fillColor('#333333')
-               .text(customerAddress, 46, billY + 31, { width: pageW / 2 - 12 });
-            if (customerGST) doc.text(`GSTIN/UIN: ${customerGST}`, 46, billY + 54, { width: pageW / 2 - 12 });
-            if (customerState) doc.text(`State: ${customerState}`, 46, billY + 63, { width: pageW / 2 - 12 });
+            // â”€â”€â”€ TABLE HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const tableTop = dividerY + 15;
+            doc.rect(40, tableTop, 515, 20).fill('#3c3c3c');
+            doc.fillColor('#ffffff').fontSize(9).font('Helvetica-Bold')
+               .text('#', 50, tableTop + 6)
+               .text('Item & Description', 80, tableTop + 6)
+               .text('Qty', 330, tableTop + 6, { width: 50, align: 'right' })
+               .text('Rate', 390, tableTop + 6, { width: 70, align: 'right' })
+               .text('Amount', 468, tableTop + 6, { width: 80, align: 'right' });
 
-            // Right: Consignee (Ship To) — same as buyer by default
-            doc.fillColor('#000000').fontSize(9).font('Helvetica-Bold')
-               .text('Consignee (Ship To):', rightX, billY + 6, { width: pageW / 2 - 12 });
-            doc.fontSize(10).font('Helvetica-Bold')
-               .text(customerName, rightX, billY + 18, { width: pageW / 2 - 12 });
-            doc.fontSize(8).font('Helvetica').fillColor('#333333')
-               .text(customerAddress, rightX, billY + 31, { width: pageW / 2 - 12 });
-            if (customerGST) doc.text(`GSTIN/UIN: ${customerGST}`, rightX, billY + 54, { width: pageW / 2 - 12 });
-            if (customerState) doc.text(`State: ${customerState}`, rightX, billY + 63, { width: pageW / 2 - 12 });
-
-            // ─── ITEMS TABLE ────────────────────────────────────────────────
-            const tableY = billY + billH;
-
-            // Column widths
-            const cols = { no: 30, desc: 155, hsn: 60, dueon: 65, qty: 50, rate: 70, per: 40, amount: 85 };
-            const colX = {
-                no: 40,
-                desc: 40 + cols.no,
-                hsn: 40 + cols.no + cols.desc,
-                dueon: 40 + cols.no + cols.desc + cols.hsn,
-                qty: 40 + cols.no + cols.desc + cols.hsn + cols.dueon,
-                rate: 40 + cols.no + cols.desc + cols.hsn + cols.dueon + cols.qty,
-                per: 40 + cols.no + cols.desc + cols.hsn + cols.dueon + cols.qty + cols.rate,
-                amount: 40 + cols.no + cols.desc + cols.hsn + cols.dueon + cols.qty + cols.rate + cols.per,
-            };
-            const rowH = 22;
-
-            // Header row
-            doc.rect(40, tableY, pageW, rowH).fillAndStroke('#eeeeee', '#000000');
-            const headers = ['Sl.\nNo.', 'Description of Goods', 'HSN/\nSAC', 'Due on', 'Qty', 'Rate', 'per', 'Amount'];
-            const colKeys = ['no', 'desc', 'hsn', 'dueon', 'qty', 'rate', 'per', 'amount'];
-            const colAligns = ['center', 'left', 'center', 'center', 'center', 'right', 'center', 'right'];
-
-            doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold');
-            colKeys.forEach((key, i) => {
-                doc.text(headers[i], colX[key] + 2, tableY + 4, { width: cols[key] - 4, align: colAligns[i] });
-                // vertical border
-                doc.moveTo(colX[key], tableY).lineTo(colX[key], tableY + rowH).stroke('#000000');
-            });
-            // right border
-            doc.moveTo(40 + pageW, tableY).lineTo(40 + pageW, tableY + rowH).stroke('#000000');
-            // bottom border of header
-            doc.moveTo(40, tableY + rowH).lineTo(40 + pageW, tableY + rowH).stroke('#000000');
-
-            // Data rows
+            // â”€â”€â”€ TABLE ROWS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             let parsedItems = items;
             if (!Array.isArray(items)) {
                 try { parsedItems = JSON.parse(items || '[]'); } catch (e) { parsedItems = []; }
             }
 
-            let curY = tableY + rowH;
-            const minRows = Math.max(parsedItems.length, 8);
+            let currentY = tableTop + 20;
+            doc.fillColor('#000000').font('Helvetica');
 
-            for (let i = 0; i < minRows; i++) {
-                const it = parsedItems[i];
-                const rowY = curY;
+            parsedItems.forEach((item, idx) => {
+                const itemName = item.detail || item.itemName || item.name || item.description || 'Item';
+                const qty      = parseFloat(item.quantity || item.qty || 0);
+                const rate     = parseFloat(item.rate || 0);
+                const amount   = parseFloat(item.amount || qty * rate || 0);
 
-                // draw row background (alternating)
-                if (it) {
-                    doc.rect(40, rowY, pageW, rowH).stroke('#cccccc');
-                } else {
-                    doc.rect(40, rowY, pageW, rowH).stroke('#cccccc');
-                }
+                const textHeight = Math.max(20, Math.ceil(itemName.length / 45) * 12 + 8);
 
-                if (it) {
-                    const qty = parseFloat(it.quantity || 0);
-                    const rate = parseFloat(it.rate || 0);
-                    const amount = parseFloat(it.amount || qty * rate || 0);
-                    const itemName = it.detail || it.name || it.description || '—';
-                    const dueOn = order.expectedShipmentDate
-                        ? formatDate(order.expectedShipmentDate)
-                        : (order.paymentTerms || '');
+                doc.fillColor('#000000').fontSize(9)
+                   .text(idx + 1, 50, currentY + 6)
+                   .text(itemName, 80, currentY + 6, { width: 240 })
+                   .text(qty.toString(), 330, currentY + 6, { width: 50, align: 'right' })
+                   .text(format(rate), 390, currentY + 6, { width: 70, align: 'right' })
+                   .text(format(amount), 468, currentY + 6, { width: 80, align: 'right' });
 
-                    doc.fillColor('#000000').fontSize(8).font('Helvetica');
-                    doc.text(String(i + 1), colX.no + 2, rowY + 6, { width: cols.no - 4, align: 'center' });
-                    doc.text(itemName, colX.desc + 2, rowY + 6, { width: cols.desc - 4, align: 'left' });
-                    doc.text(it.hsnCode || '', colX.hsn + 2, rowY + 6, { width: cols.hsn - 4, align: 'center' });
-                    doc.text(dueOn, colX.dueon + 2, rowY + 6, { width: cols.dueon - 4, align: 'center' });
-                    doc.text(qty.toString(), colX.qty + 2, rowY + 6, { width: cols.qty - 4, align: 'center' });
-                    doc.text(rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.rate + 2, rowY + 6, { width: cols.rate - 4, align: 'right' });
-                    doc.text('Nos', colX.per + 2, rowY + 6, { width: cols.per - 4, align: 'center' });
-                    doc.font('Helvetica-Bold').text(amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.amount + 2, rowY + 6, { width: cols.amount - 4, align: 'right' });
-                }
-
-                // column dividers
-                colKeys.forEach(key => {
-                    doc.moveTo(colX[key], rowY).lineTo(colX[key], rowY + rowH).stroke('#000000');
-                });
-                doc.moveTo(40 + pageW, rowY).lineTo(40 + pageW, rowY + rowH).stroke('#000000');
-
-                curY += rowH;
-            }
-
-            // ─── TOTALS ROW ────────────────────────────────────────────────
-            const subTotal = parseFloat(order.subTotal || 0);
-            const taxAmt = parseFloat(order.tax || order.taxAmount || 0);
-            const taxPct = order.taxPercent || 18;
-            const grandTotal = parseFloat(order.totalAmount || 0);
-            const totalQty = parsedItems.reduce((s, it) => s + parseFloat(it?.quantity || 0), 0);
-
-            // Total label row
-            doc.rect(40, curY, pageW, rowH).fillAndStroke('#f5f5f5', '#000000');
-            doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold')
-               .text('Total', colX.no + 2, curY + 6, { width: cols.no + cols.desc + cols.hsn + cols.dueon - 4, align: 'right' });
-            doc.text(totalQty.toString(), colX.qty + 2, curY + 6, { width: cols.qty - 4, align: 'center' });
-            doc.text('', colX.rate + 2, curY + 6, { width: cols.rate - 4 });
-            doc.text('', colX.per + 2, curY + 6, { width: cols.per - 4 });
-            doc.text(subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
-            colKeys.forEach(key => {
-                doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000');
+                currentY += textHeight;
+                doc.moveTo(40, currentY).lineTo(555, currentY).strokeColor('#eeeeee').lineWidth(0.5).stroke();
             });
-            doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
-            curY += rowH;
 
-            // GST row (if applicable)
+            if (parsedItems.length === 0) {
+                doc.fillColor('#888888').fontSize(9).font('Helvetica-Oblique')
+                   .text('No items found.', 80, currentY + 8);
+                currentY += 24;
+            }
+
+            // â”€â”€â”€ TOTALS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const totalStart  = currentY + 15;
+            const subTotal    = parseFloat(order.subTotal || 0);
+            const discountAmt = parseFloat(order.discountAmount || order.discount || 0);
+            const taxAmt      = parseFloat(order.taxAmount || order.tax || 0);
+            const taxPct      = order.taxPercent || order.taxRate || 0;
+            const grandTotal  = parseFloat(order.totalAmount || 0);
+
+            let totY = totalStart;
+
+            // Sub Total
+            doc.fillColor('#555555').fontSize(9).font('Helvetica')
+               .text('Sub Total', 380, totY)
+               .fillColor('#000000')
+               .text(format(subTotal), 468, totY, { width: 80, align: 'right' });
+            totY += 15;
+
+            if (discountAmt > 0) {
+                doc.fillColor('#555555').text('Discount', 380, totY)
+                   .fillColor('#000000').text(`-${format(discountAmt)}`, 468, totY, { width: 80, align: 'right' });
+                totY += 15;
+            }
+
             if (taxAmt > 0) {
-                doc.rect(40, curY, pageW, rowH).stroke('#000000');
-                doc.fillColor('#000000').fontSize(8).font('Helvetica')
-                   .text(`GST (${taxPct}%)`, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
-                doc.font('Helvetica-Bold')
-                   .text(taxAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
-                colKeys.forEach(key => {
-                    doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000');
-                });
-                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
-                curY += rowH;
+                const taxLabel = taxPct > 0 ? `Tax (${taxPct}%)` : 'Tax';
+                doc.fillColor('#555555').text(taxLabel, 380, totY)
+                   .fillColor('#000000').text(format(taxAmt), 468, totY, { width: 80, align: 'right' });
+                totY += 15;
             }
 
-            // Grand Total row
-            const gtRowH = 26;
-            doc.rect(40, curY, pageW, gtRowH).fillAndStroke('#e0e0e0', '#000000');
-            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold')
-               .text('Grand Total', colX.no + 2, curY + 7, { width: pageW - cols.amount - 4, align: 'right' });
-            doc.text(`Rs. ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, colX.amount + 2, curY + 7, { width: cols.amount - 4, align: 'right' });
-            doc.moveTo(colX.amount, curY).lineTo(colX.amount, curY + gtRowH).stroke('#000000');
-            doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + gtRowH).stroke('#000000');
-            curY += gtRowH;
+            // Divider line before grand total
+            doc.moveTo(380, totY).lineTo(555, totY).strokeColor('#dddddd').lineWidth(0.5).stroke();
+            totY += 5;
 
-            // ─── NOTES / TERMS ──────────────────────────────────────────────
+            // Grand Total
+            doc.fillColor('#000000').fontSize(11).font('Helvetica-Bold')
+               .text('Total', 380, totY)
+               .text(`${currencySymbol} ${format(grandTotal)}`, 468, totY, { width: 80, align: 'right' });
+
+            // â”€â”€â”€ NOTES / TERMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (order.customerNotes || order.termsConditions) {
-                const notesH = 50;
-                doc.rect(40, curY, pageW, notesH).stroke('#000000');
-                if (order.customerNotes && order.termsConditions) {
-                    doc.moveTo(40 + pageW / 2, curY).lineTo(40 + pageW / 2, curY + notesH).stroke('#000000');
-                    doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold').text('Customer Notes:', 46, curY + 4);
-                    doc.font('Helvetica').fontSize(7).text(order.customerNotes, 46, curY + 14, { width: pageW / 2 - 12, lineGap: 1 });
-                    doc.font('Helvetica-Bold').fontSize(8).text('Terms & Conditions:', rightX, curY + 4, { width: pageW / 2 - 12 });
-                    doc.font('Helvetica').fontSize(7).text(order.termsConditions, rightX, curY + 14, { width: pageW / 2 - 12, lineGap: 1 });
-                } else {
-                    const note = order.customerNotes || order.termsConditions;
-                    const label = order.customerNotes ? 'Customer Notes:' : 'Terms & Conditions:';
-                    doc.fillColor('#000000').fontSize(8).font('Helvetica-Bold').text(label, 46, curY + 4);
-                    doc.font('Helvetica').fontSize(7).text(note, 46, curY + 14, { width: pageW - 12, lineGap: 1 });
+                const notesY = totY + 40;
+                if (order.customerNotes) {
+                    doc.fillColor('#888888').fontSize(9).font('Helvetica-Oblique')
+                       .text('Notes:', 40, notesY);
+                    doc.fillColor('#555555').font('Helvetica').fontSize(9)
+                       .text(order.customerNotes, 40, notesY + 13, { width: 250 });
                 }
-                curY += notesH;
+                if (order.termsConditions) {
+                    doc.fillColor('#888888').fontSize(9).font('Helvetica-Oblique')
+                       .text('Terms & Conditions:', 310, notesY);
+                    doc.fillColor('#555555').font('Helvetica').fontSize(9)
+                       .text(order.termsConditions, 310, notesY + 13, { width: 240 });
+                }
             }
 
-            // ─── SIGNATURE BLOCK ────────────────────────────────────────────
-            const sigH = 60;
-            doc.rect(40, curY, pageW, sigH).stroke('#000000');
-            doc.moveTo(40 + pageW / 2, curY).lineTo(40 + pageW / 2, curY + sigH).stroke('#000000');
-
-            doc.fillColor('#555555').fontSize(8).font('Helvetica')
-               .text("Receiver's Signature & Stamp", 46, curY + 6);
-            doc.moveTo(46, curY + sigH - 12).lineTo(46 + pageW / 2 - 30, curY + sigH - 12).stroke('#000000');
-
-            doc.fillColor('#555555').fontSize(8).font('Helvetica')
-               .text('For Authorized Signatory', rightX, curY + 6, { width: pageW / 2 - 12, align: 'right' });
-            const sigLineStart = rightX + pageW / 2 - 12 - 100;
-            doc.moveTo(sigLineStart, curY + sigH - 12).lineTo(rightX + pageW / 2 - 12, curY + sigH - 12).stroke('#000000');
-            doc.fillColor('#000000').font('Helvetica-Bold').fontSize(8)
-               .text(order.salesperson || 'Authorized Signatory', rightX, curY + sigH - 10, { width: pageW / 2 - 12, align: 'right' });
+            // â”€â”€â”€ AUTHORIZED SIGNATURE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            const sigY = 710;
+            doc.fillColor('#000000').fontSize(9).font('Helvetica')
+               .text('Authorized Signature ____________________', 40, sigY);
 
             doc.end();
         });
@@ -1045,6 +1049,10 @@ class PDFService {
                        groupName.includes('cash') || 
                        (parseFloat(t.debit || 0) > 0 && !groupName.includes('debtors') && !groupName.includes('customer'));
             })?.Ledger;
+
+            const currency = customer?.currency || company?.baseCurrency || 'INR';
+            const currencySymbol = getCurrencySymbol(currency);
+            const format = (val) => formatAmount(val, currency);
 
             const customerName = customer?.name || 'Customer';
             const bankName = bank?.name || 'Bank Transfer';
@@ -1087,7 +1095,7 @@ class PDFService {
             doc.fillColor('#ffffff')
                .fontSize(22)
                .font('Helvetica-Bold')
-               .text(`Rs. ${parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 70, bannerY + 34);
+               .text(`${currencySymbol} ${format(amount)}`, 70, bannerY + 34);
 
             doc.fillColor('#e0e7ff')
                .fontSize(9)

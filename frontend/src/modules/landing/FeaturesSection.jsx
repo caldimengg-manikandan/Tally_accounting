@@ -3,11 +3,11 @@ import { BookOpen, Receipt, Wallet, ShoppingBag, Users, PieChart, ArrowRight } f
 
 export default function FeaturesSection() {
   const features = [
-    { icon: BookOpen, title: 'Smart Accounting', description: 'Automated double-entry journals, reconciliation, and ledger management — built for Indian GAAP.', accent: 'from-teal-500 to-cyan-500', bg: 'bg-teal-50', iconColor: 'text-teal-600' },
-    { icon: Receipt, title: 'Invoicing & GST', description: 'GST-compliant invoices, e-invoicing, recurring billing, and payment tracking in one place.', accent: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
-    { icon: Wallet, title: 'Expense Control', description: 'Categorize spending, manage vendor payables, and track every rupee leaving your business.', accent: 'from-rose-500 to-pink-500', bg: 'bg-rose-50', iconColor: 'text-rose-600' },
-    { icon: ShoppingBag, title: 'Inventory', description: 'Real-time stock tracking, multi-warehouse support, and automated reorder alerts.', accent: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', iconColor: 'text-amber-600' },
-    { icon: Users, title: 'Payroll', description: 'Process salaries, track attendance, generate payslips, and stay PF/ESI compliant.', accent: 'from-blue-500 to-sky-500', bg: 'bg-blue-50', iconColor: 'text-blue-600' },
+    { icon: BookOpen, title: 'Smart Accounting', description: 'Automated double-entry journals, reconciliation, and ledger management — built for double-entry bookkeeping.', accent: 'from-teal-500 to-cyan-500', bg: 'bg-teal-50', iconColor: 'text-teal-600' },
+    { icon: Receipt, title: 'Invoicing & GST', description: 'GST-compliant invoicing, sales orders, recurring billing, and payment tracking.', accent: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
+    { icon: Wallet, title: 'Expense Control', description: 'Categorize spending, manage vendor payables, and track every payment leaving your business.', accent: 'from-rose-500 to-pink-500', bg: 'bg-rose-50', iconColor: 'text-rose-600' },
+    { icon: ShoppingBag, title: 'Inventory', description: 'Real-time stock tracking and inventory item management.', accent: 'from-amber-500 to-orange-500', bg: 'bg-amber-50', iconColor: 'text-amber-600' },
+    { icon: Users, title: 'Payroll', description: 'Process salaries, track attendance, and generate payslips.', accent: 'from-blue-500 to-sky-500', bg: 'bg-blue-50', iconColor: 'text-blue-600' },
     { icon: PieChart, title: 'Reports & Analytics', description: 'P&L, Balance Sheet, Cash Flow, Trial Balance — real-time insights for smarter decisions.', accent: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
   ];
 
@@ -20,11 +20,11 @@ export default function FeaturesSection() {
             <span className="text-teal-600 text-[11px] font-semibold uppercase tracking-widest">Platform Features</span>
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-800 mt-3 leading-snug">
               Built for growing<br />
-              <span className="text-slate-400 font-light">Indian businesses.</span>
+              <span className="text-slate-400 font-light">businesses.</span>
             </h2>
           </div>
           <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
-            Every feature is designed around the real workflow of Indian SMEs — not adapted from foreign software.
+            Every feature is designed around the real workflow of growing businesses.
           </p>
         </div>
 

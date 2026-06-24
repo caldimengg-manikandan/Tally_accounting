@@ -223,7 +223,7 @@ ${cleanCompany}`
                     <div className="border border-slate-100 rounded-[2rem] p-16 bg-white h-full relative overflow-hidden flex flex-col justify-between">
                         
                         {/* Decorative Top Security Line */}
-                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 opacity-80" />
+                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-sky-500 to-blue-600 opacity-80" />
 
                         {/* Status Stamp */}
                         <div className="absolute top-20 right-20 rotate-[15deg] opacity-[0.06] no-print pointer-events-none">
@@ -233,7 +233,7 @@ ${cleanCompany}`
                         {/* Header Section */}
                         <div className="flex justify-between items-start mb-16">
                             <div className="space-y-4">
-                                <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-tr from-indigo-600 to-violet-600 border-2 border-indigo-500 shadow-[0_10px_25px_-5px_rgba(99,102,241,0.3)] flex items-center justify-center text-white font-extrabold text-2xl">
+                                <div className="w-16 h-16 rounded-[1.25rem] bg-gradient-to-tr from-blue-600 to-blue-700 border-2 border-blue-500 shadow-[0_10px_25px_-5px_rgba(30,97,240,0.3)] flex items-center justify-center text-white font-extrabold text-2xl">
                                     {sessionStorage.getItem('companyName')?.charAt(0) || 'M'}
                                 </div>
                                 <div className="space-y-1">
@@ -254,16 +254,16 @@ ${cleanCompany}`
                         </div>
 
                         {/* Receipt Core Information Banner */}
-                        <div className="bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 text-white rounded-[2rem] py-12 px-12 mb-12 shadow-[0_20px_45px_-10px_rgba(99,102,241,0.25)] border border-indigo-500 relative overflow-hidden flex items-center justify-between">
+                        <div className="bg-gradient-to-r from-blue-600 via-[#1e61f0] to-blue-700 text-white rounded-[2rem] py-12 px-12 mb-12 shadow-[0_20px_45px_-10px_rgba(30,97,240,0.25)] border border-blue-500 relative overflow-hidden flex items-center justify-between">
                             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent pointer-events-none" />
                             <div className="relative z-10 space-y-2">
-                                <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-100">Total Amount Received</p>
+                                <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100">Total Amount Received</p>
                                 <h4 className="text-[36px] font-black tracking-tighter text-white leading-none">
                                     {getCurrencyDisplay(customer?.currency)} {parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                 </h4>
                             </div>
                             <div className="relative z-10 text-right space-y-2">
-                                <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-100">Payment Date</p>
+                                <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100">Payment Date</p>
                                 <h4 className="text-[16px] font-bold font-mono text-slate-100 tracking-tight">
                                     {new Date(payment.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                 </h4>
@@ -274,38 +274,38 @@ ${cleanCompany}`
                         <div className="grid grid-cols-2 gap-6 mb-12">
                             <div className="flex flex-col gap-4">
                                 {/* Received From Card */}
-                                <div className="bg-indigo-50/10 border border-indigo-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:bg-indigo-50/20 transition-all">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100 shadow-inner">
+                                <div className="bg-blue-50/10 border border-blue-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:bg-blue-50/20 transition-all">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shadow-inner">
                                         <User size={18} />
                                     </div>
                                     <div className="space-y-0.5">
-                                        <p className="text-[9px] font-bold text-indigo-600/70 uppercase tracking-widest leading-none">Received From</p>
+                                        <p className="text-[9px] font-bold text-blue-600/70 uppercase tracking-widest leading-none">Received From</p>
                                         <p className="text-[15px] font-extrabold text-[#1e61f0] leading-tight">{customer?.name || 'Customer'}</p>
-                                        <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Premium Partner Account</p>
+                                        <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Premium Partner Account</p>
                                     </div>
                                 </div>
                                 
                                 {/* Settlement Account Card */}
-                                <div className="bg-violet-50/10 border border-violet-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:bg-violet-50/20 transition-all">
-                                    <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 border border-violet-100 shadow-inner">
+                                <div className="bg-blue-50/10 border border-blue-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:bg-blue-50/20 transition-all">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shadow-inner">
                                         <Banknote size={18} />
                                     </div>
                                     <div className="space-y-0.5">
-                                        <p className="text-[9px] font-bold text-violet-600/70 uppercase tracking-widest leading-none">Settlement Account</p>
+                                        <p className="text-[9px] font-bold text-blue-600/70 uppercase tracking-widest leading-none">Settlement Account</p>
                                         <p className="text-[15px] font-extrabold text-slate-800 leading-tight">{bank?.name || 'Bank Transfer'}</p>
-                                        <p className="text-[10px] text-violet-600 font-bold uppercase tracking-wider">Verified Payment</p>
+                                        <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Verified Payment</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Transaction Status Card */}
-                            <div className="bg-indigo-50/10 border border-indigo-100 rounded-2xl p-5 flex flex-col justify-center items-center text-center space-y-3.5 shadow-sm h-full">
+                            <div className="bg-blue-50/10 border border-blue-100 rounded-2xl p-5 flex flex-col justify-center items-center text-center space-y-3.5 shadow-sm h-full">
                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-md text-emerald-500 border border-slate-100 animate-pulse">
                                     <CheckCircle2 size={24} />
                                 </div>
                                 <div className="space-y-1">
-                                    <h3 className="text-[14px] font-extrabold text-indigo-800 tracking-tight uppercase leading-none">Transaction Cleared</h3>
-                                    <p className="text-[11px] text-indigo-600/80 font-medium max-w-[160px] leading-relaxed mx-auto">Payment successfully applied to invoice balance</p>
+                                    <h3 className="text-[14px] font-extrabold text-blue-800 tracking-tight uppercase leading-none">Transaction Cleared</h3>
+                                    <p className="text-[11px] text-blue-600/80 font-medium max-w-[160px] leading-relaxed mx-auto">Payment successfully applied to invoice balance</p>
                                 </div>
                             </div>
                         </div>
@@ -1018,7 +1018,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                                 ? 'bg-slate-300'
                                 : excessFund === 0
                                 ? 'bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-500'
-                                : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500'
+                                : 'bg-gradient-to-r from-blue-500 via-sky-500 to-blue-600'
                             }`} />
                             
                             <div className="flex justify-between items-center pb-3 border-b border-dashed border-slate-200/85">

@@ -192,7 +192,7 @@ exports.createInvoice = async (req, res, next) => {
         type: 'Sales',
         userId: req.user?.id,
         projectId
-      });
+      }, t);
       await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Confirmed' }, { transaction: t });
     }
 
@@ -311,7 +311,7 @@ exports.updateInvoice = async (req, res, next) => {
         type: 'Sales',
         userId: req.user?.id,
         projectId
-      });
+      }, t);
       await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Confirmed' }, { transaction: t });
     }
 
