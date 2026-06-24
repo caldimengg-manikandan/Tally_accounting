@@ -9,4 +9,10 @@ router.post('/create-order', verifyToken, tenantAccess, controller.createSubscri
 // Webhook route (must be public so Razorpay can reach it, security is handled by the HMAC signature)
 router.post('/webhook', controller.verifyPaymentWebhook);
 
+// Dev helper to mock payment completion
+router.post('/mock-success', verifyToken, tenantAccess, controller.mockSuccessPayment);
+
+// Get available subscription plans
+router.get('/plans', verifyToken, tenantAccess, controller.getPlans);
+
 module.exports = router;

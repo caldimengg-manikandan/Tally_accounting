@@ -9,7 +9,7 @@ import {
   Save, Send as SendIcon, UploadCloud, GripVertical, Paperclip,
   Image as ImageIcon, LayoutGrid, X, Settings, HelpCircle, MessageSquare, History, Package
 } from 'lucide-react';
-import { purchaseAPI, inventoryAPI, companyAPI, projectAPI, voucherAPI } from '../../services/api';
+import { purchaseAPI, inventoryAPI, companyAPI, projectAPI, voucherAPI, ledgerAPI } from '../../services/api';
 import ConfigurePaymentTermsModal from './ConfigurePaymentTermsModal';
 import CreateAccountModal from './CreateAccountModal';
 import VendorForm from './VendorForm';
@@ -65,6 +65,8 @@ const BillEntryView = ({ companyId }) => {
   // ── Search & Dropdown State ─────────────────────────────────────
   const [vendors, setVendors] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [projectCustomers, setProjectCustomers] = useState([]);
   const [inventoryItems, setInventoryItems] = useState([]);
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
   const [vendorSearch, setVendorSearch] = useState('');
@@ -223,6 +225,21 @@ const BillEntryView = ({ companyId }) => {
       });
     }
   }, [companyId]);
+
+  useEffect(() => {
+    if (isProjectModalOpen && companyId && projectCustomers.length === 0) {
+      ledgerAPI.getByCompany(companyId).then(res => {
+        const allLedgers = Array.isArray(res.data) ? res.data : [];
+        const customerLedgers = allLedgers.filter(l => 
+          l.Group?.name?.toLowerCase().includes('debtor') || 
+          l.groupName?.toLowerCase().includes('debtor') ||
+          l.Group?.name?.toLowerCase().includes('customer') ||
+          l.groupName?.toLowerCase().includes('customer')
+        );
+        setProjectCustomers(customerLedgers);
+      }).catch(err => console.error("Failed to load customer list for projects:", err));
+    }
+  }, [isProjectModalOpen, companyId, projectCustomers.length]);
 
   useEffect(() => {
     if (queryVendorId && vendors.length > 0) {
@@ -788,19 +805,36 @@ const BillEntryView = ({ companyId }) => {
                 <input type="text" value={formData.reference} onChange={(e) => setFormData({ ...formData, reference: e.target.value })} className="w-full max-w-[400px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none" />
 
                 <label className="text-slate-700 pt-2">Project</label>
-                <div className="relative w-full max-w-[400px]">
-                   <select 
-                     value={formData.projectId} 
-                     onChange={(e) => setFormData({ ...formData, projectId: e.target.value })} 
-                     className="w-full h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none bg-white appearance-none pr-8"
-                   >
-                      <option value="">Select or associate project</option>
-                      {projects.map(p => (
-                         <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                   </select>
-                   <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
-                </div>
+                 <div className="flex w-full max-w-[400px] gap-2">
+                    <div className="relative flex-1">
+                       <select 
+                         value={formData.projectId} 
+                         onChange={(e) => {
+                            if (e.target.value === 'NEW') {
+                               setIsProjectModalOpen(true);
+                            } else {
+                               setFormData({ ...formData, projectId: e.target.value });
+                            }
+                         }} 
+                         className="w-full h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none bg-white appearance-none pr-8"
+                       >
+                          <option value="">Select or associate project</option>
+                          {projects.map(p => (
+                             <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                          <option value="NEW" className="text-blue-600 font-bold font-sans">+ Create New Project</option>
+                       </select>
+                       <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                    </div>
+                    <button
+                       type="button"
+                       onClick={() => setIsProjectModalOpen(true)}
+                       className="h-9 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center transition-colors gap-1 text-[12px] font-bold"
+                       title="Create New Project"
+                    >
+                       <Plus size={14} /> Project
+                    </button>
+                 </div>
 
                 <label className="text-red-500 pt-2"><span className="text-slate-700">Bill Date</span>*</label>
                 <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full max-w-[400px] h-9 px-3 border border-slate-300 rounded text-slate-800 focus:border-blue-500 outline-none" />
@@ -1131,6 +1165,138 @@ const BillEntryView = ({ companyId }) => {
 
        {isVendorModalOpen && <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100] p-6 animate-in fade-in"><div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl h-[90vh] overflow-hidden flex flex-col slide-in-from-bottom-4 animate-in duration-300"><div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50"><h2 className="text-[16px] font-bold text-slate-800 flex items-center gap-2"><User size={18} className="text-blue-600" /> Create New Vendor</h2><button onClick={() => setIsVendorModalOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-200 transition-colors"><X size={16} /></button></div><div className="flex-1 overflow-y-auto custom-scrollbar bg-[#f8fafc]"><VendorForm standalone={false} onCancel={() => setIsVendorModalOpen(false)} onSaveSuccess={(newVendor) => { if (companyId) { purchaseAPI.getVendors(companyId).then(res => { setVendors(res.data || []); if (newVendor && newVendor.id) { setFormData(prev => ({ ...prev, vendorId: newVendor.id, vendorName: newVendor.name })); } }); } setIsVendorModalOpen(false); }} /></div></div></div>}
        {isItemModalOpen && <CreateItemModal isOpen={isItemModalOpen} onClose={() => setIsItemModalOpen(false)} onSuccess={handleItemCreatedSuccess} companyId={companyId} />}
+       {isProjectModalOpen && (
+          <CreateProjectModal 
+            isOpen={isProjectModalOpen} 
+            onClose={() => setIsProjectModalOpen(false)} 
+            companyId={companyId}
+            projectCustomers={projectCustomers}
+            onSave={(newProj) => {
+              setProjects(prev => [newProj, ...prev]);
+              setFormData(prev => ({ ...prev, projectId: newProj.id }));
+            }}
+          />
+        )}
+    </div>
+  );
+};
+
+const CreateProjectModal = ({ isOpen, onClose, onSave, companyId, projectCustomers }) => {
+  const [name, setName] = useState('');
+  const [projectCode, setProjectCode] = useState('');
+  const [customerLedgerId, setCustomerLedgerId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Project Name is required');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = {
+        name: name.trim(),
+        projectCode: projectCode.trim() || null,
+        customerLedgerId: customerLedgerId || null,
+        CompanyId: companyId,
+        billingMethod: 'Hourly Project Rate',
+        budgetType: 'None',
+        costBudget: 0,
+        revenueBudget: 0,
+        ratePerHour: 0,
+        startDate: null,
+        endDate: null,
+        tasks: [],
+        users: [],
+        addToWatchlist: false
+      };
+      const res = await projectAPI.create(payload);
+      onSave(res.data);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || 'Failed to create project');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[150] p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col slide-in-from-bottom-4 animate-in duration-300">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <h3 className="text-[15px] font-bold text-slate-800 flex items-center gap-2">
+            <Package size={18} className="text-blue-600" /> Create New Project
+          </h3>
+          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg text-slate-400"><X size={18}/></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-[13px]">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 font-medium">
+              {error}
+            </div>
+          )}
+          <div>
+            <label className="text-[12px] font-bold text-slate-500 mb-1 block uppercase tracking-wider">Project Name *</label>
+            <input 
+              required 
+              type="text" 
+              value={name} 
+              onChange={e => setName(e.target.value)} 
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 outline-none text-slate-800" 
+              placeholder="e.g. Website Redesign"
+            />
+          </div>
+          <div>
+            <label className="text-[12px] font-bold text-slate-500 mb-1 block uppercase tracking-wider">Project Code</label>
+            <input 
+              type="text" 
+              value={projectCode} 
+              onChange={e => setProjectCode(e.target.value)} 
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 outline-none text-slate-800" 
+              placeholder="e.g. WR-2026"
+            />
+          </div>
+          <div>
+            <label className="text-[12px] font-bold text-slate-500 mb-1 block uppercase tracking-wider">Customer Name</label>
+            <div className="relative">
+              <select 
+                value={customerLedgerId} 
+                onChange={e => setCustomerLedgerId(e.target.value)} 
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 outline-none bg-white text-slate-800 appearance-none pr-8"
+              >
+                <option value="">Select customer (optional)</option>
+                {projectCustomers.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-3 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+          <div className="pt-4 flex gap-3 border-t border-slate-100">
+            <button 
+              type="submit" 
+              disabled={saving} 
+              className="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-[13px] uppercase tracking-wider"
+            >
+              {saving ? 'Creating...' : 'Create Project'}
+            </button>
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-6 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors text-[13px] uppercase tracking-wider"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

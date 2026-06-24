@@ -18,6 +18,42 @@ class AccountingService {
       throw new Error('SECURITY ERROR: companyId is strictly required to record a journal entry.');
     }
 
+    // Period Locking Validation
+    const { PeriodLock, FinancialPeriod } = require('../models');
+    const entryDate = new Date(date || new Date());
+    const entryDateZero = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+
+    if (PeriodLock) {
+      const lock = await PeriodLock.findOne({
+        where: { CompanyId: companyId },
+        order: [['lockDate', 'DESC']],
+        transaction: dbTransaction
+      });
+      if (lock) {
+        const lockLimitDate = new Date(lock.lockDate);
+        const lockLimitDateZero = new Date(lockLimitDate.getFullYear(), lockLimitDate.getMonth(), lockLimitDate.getDate());
+        if (entryDateZero <= lockLimitDateZero) {
+          throw new Error(`PERIOD LOCKED: Transaction date (${entryDateZero.toLocaleDateString()}) is within a locked period (on or before ${lockLimitDateZero.toLocaleDateString()}).`);
+        }
+      }
+    }
+
+    if (FinancialPeriod) {
+      const { Op } = require('sequelize');
+      const lockedPeriod = await FinancialPeriod.findOne({
+        where: {
+          CompanyId: companyId,
+          isLocked: true,
+          startDate: { [Op.lte]: entryDateZero },
+          endDate: { [Op.gte]: entryDateZero }
+        },
+        transaction: dbTransaction
+      });
+      if (lockedPeriod) {
+        throw new Error(`PERIOD LOCKED: Transaction date (${entryDateZero.toLocaleDateString()}) falls within locked Financial Period: "${lockedPeriod.periodName}".`);
+      }
+    }
+
     // 1. Validate Balance (Dr = Cr)
     const totalDebit = entries.reduce((sum, e) => sum + (parseFloat(e.debit) || 0), 0);
     const totalCredit = entries.reduce((sum, e) => sum + (parseFloat(e.credit) || 0), 0);
@@ -147,6 +183,42 @@ class AccountingService {
     // 0. Validate CompanyId explicitly
     if (!companyId) {
       throw new Error('SECURITY ERROR: companyId is strictly required to update a journal entry.');
+    }
+
+    // Period Locking Validation
+    const { PeriodLock, FinancialPeriod } = require('../models');
+    const entryDate = new Date(date || new Date());
+    const entryDateZero = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+
+    if (PeriodLock) {
+      const lock = await PeriodLock.findOne({
+        where: { CompanyId: companyId },
+        order: [['lockDate', 'DESC']],
+        transaction: dbTransaction
+      });
+      if (lock) {
+        const lockLimitDate = new Date(lock.lockDate);
+        const lockLimitDateZero = new Date(lockLimitDate.getFullYear(), lockLimitDate.getMonth(), lockLimitDate.getDate());
+        if (entryDateZero <= lockLimitDateZero) {
+          throw new Error(`PERIOD LOCKED: Transaction date (${entryDateZero.toLocaleDateString()}) is within a locked period (on or before ${lockLimitDateZero.toLocaleDateString()}).`);
+        }
+      }
+    }
+
+    if (FinancialPeriod) {
+      const { Op } = require('sequelize');
+      const lockedPeriod = await FinancialPeriod.findOne({
+        where: {
+          CompanyId: companyId,
+          isLocked: true,
+          startDate: { [Op.lte]: entryDateZero },
+          endDate: { [Op.gte]: entryDateZero }
+        },
+        transaction: dbTransaction
+      });
+      if (lockedPeriod) {
+        throw new Error(`PERIOD LOCKED: Transaction date (${entryDateZero.toLocaleDateString()}) falls within locked Financial Period: "${lockedPeriod.periodName}".`);
+      }
     }
 
     // 1. Validate Balance (Dr = Cr)
@@ -295,6 +367,42 @@ class AccountingService {
 
     if (!voucher) throw new Error('Voucher not found');
     if (voucher.CompanyId !== companyId) throw new Error('Unauthorized');
+
+    // Period Lock Check for Deletion
+    const { PeriodLock, FinancialPeriod } = require('../models');
+    const entryDate = new Date(voucher.date);
+    const entryDateZero = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
+
+    if (PeriodLock) {
+      const lock = await PeriodLock.findOne({
+        where: { CompanyId: companyId },
+        order: [['lockDate', 'DESC']],
+        transaction: dbTransaction
+      });
+      if (lock) {
+        const lockLimitDate = new Date(lock.lockDate);
+        const lockLimitDateZero = new Date(lockLimitDate.getFullYear(), lockLimitDate.getMonth(), lockLimitDate.getDate());
+        if (entryDateZero <= lockLimitDateZero) {
+          throw new Error(`PERIOD LOCKED: Cannot delete transaction. Date (${entryDateZero.toLocaleDateString()}) is within a locked period.`);
+        }
+      }
+    }
+
+    if (FinancialPeriod) {
+      const { Op } = require('sequelize');
+      const lockedPeriod = await FinancialPeriod.findOne({
+        where: {
+          CompanyId: companyId,
+          isLocked: true,
+          startDate: { [Op.lte]: entryDateZero },
+          endDate: { [Op.gte]: entryDateZero }
+        },
+        transaction: dbTransaction
+      });
+      if (lockedPeriod) {
+        throw new Error(`PERIOD LOCKED: Cannot delete transaction. Date falls within locked Financial Period: "${lockedPeriod.periodName}".`);
+      }
+    }
 
     let totalDebit = 0;
     // 1. Reverse old transactions

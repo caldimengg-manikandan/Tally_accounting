@@ -1,4 +1,4 @@
-const { FinancialPeriod, AuditLog } = require('../../models');
+const { FinancialPeriod, PeriodLock, AuditLog } = require('../../models');
 
 exports.createFinancialPeriod = async (req, res, next) => {
   try {
@@ -65,6 +65,50 @@ exports.togglePeriodLock = async (req, res, next) => {
     }
 
     res.json(period);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.setLegacyPeriodLock = async (req, res, next) => {
+  try {
+    const { lockDate, reason } = req.body;
+    const companyId = req.companyId;
+
+    // Delete existing period lock for the company, then create new one
+    await PeriodLock.destroy({ where: { CompanyId: companyId } });
+
+    let lock = null;
+    if (lockDate) {
+      lock = await PeriodLock.create({
+        lockDate,
+        reason,
+        CompanyId: companyId
+      });
+    }
+
+    if (AuditLog) {
+      await AuditLog.create({
+        action: lockDate ? 'SET_PERIOD_LOCK' : 'REMOVE_PERIOD_LOCK',
+        tableName: 'PeriodLocks',
+        recordId: lock ? lock.id : null,
+        newData: { lockDate, reason },
+        CompanyId: companyId,
+        UserId: req.user.id
+      });
+    }
+
+    res.json(lock || { message: 'Period lock removed' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getLegacyPeriodLock = async (req, res, next) => {
+  try {
+    const companyId = req.companyId;
+    const lock = await PeriodLock.findOne({ where: { CompanyId: companyId } });
+    res.json(lock);
   } catch (err) {
     next(err);
   }

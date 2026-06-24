@@ -36,18 +36,14 @@ export default function CTASection() {
         </h2>
 
         <p className="text-slate-400 text-base mt-4 mb-10 max-w-md mx-auto leading-relaxed">
-          Join thousands of Indian SMEs who've replaced spreadsheets and manual ledgers with CalTally.
+          Join growing businesses who've replaced spreadsheets and manual ledgers with CalTally.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div className="flex justify-center">
           <button onClick={() => navigate('/login')}
             className="flex items-center gap-2 px-8 py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-200"
             style={{ background: 'linear-gradient(135deg, #0d9488, #6366f1)' }}>
             Create Free Account <ArrowRight size={15} />
-          </button>
-          <button onClick={() => navigate('/login')}
-            className="px-8 py-4 rounded-2xl text-sm font-medium text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-700 transition-all">
-            Talk to Sales
           </button>
         </div>
       </div>

@@ -16,7 +16,13 @@ async function runTests() {
 
   // Create dummy user and company for context
   const user = await User.create({ email: testEmail, name: 'Audit Test User', password: 'pwd', role: 'ADMIN' });
-  const company = await Company.create({ name: 'Audit Test Company', userId: user.id });
+  const company = await Company.create({ 
+    name: 'Audit Test Company', 
+    userId: user.id,
+    financialYearStart: new Date('2024-04-01'),
+    financialYearEnd: new Date('2025-03-31'),
+    booksBeginningFrom: new Date('2024-04-01')
+  });
 
   await new Promise((resolve, reject) => {
     namespace.run(async () => {

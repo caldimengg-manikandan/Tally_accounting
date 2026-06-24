@@ -11,10 +11,11 @@ import ConfirmModal from '../../components/ConfirmModal';
 import EmailSendModal from '../../components/EmailSendModal';
 import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import { getUser } from '../../stores/authStore';
 
-// ─────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // MANAGE SALESPERSONS MODAL (Internal)
-// ─────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSelect }) => {
   const [search, setSearch] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -94,7 +95,7 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
               filtered.map(s => (
                 <div key={s.id} onClick={() => { onSelect(s.name); onClose(); }} className="grid grid-cols-2 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer rounded transition-colors">
                   <span className="text-[13px] font-bold text-blue-600">{s.name}</span>
-                  <span className="text-[13px] text-slate-500 font-medium">{s.email || '—'}</span>
+                  <span className="text-[13px] text-slate-500 font-medium">{s.email || 'â€”'}</span>
                 </div>
               ))
             )}
@@ -106,9 +107,9 @@ const ManageSalespersonsModal = ({ isOpen, onClose, salespersons, onSave, onSele
   );
 };
 
-// ─────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // CUSTOMER SEARCH SELECTOR
-// ─────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNewCustomer }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -198,9 +199,9 @@ const CustomerSearchSelector = ({ value, onChange, customers, placeholder, onNew
     );
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ITEM SEARCH SELECTOR
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -304,6 +305,7 @@ const SalesOrdersView = ({ companyId }) => {
     const [customers, setCustomers] = useState([]);
     const [items, setItems] = useState([]);
     const [projects, setProjects] = useState([]);
+    const [currentCompany, setCurrentCompany] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -313,6 +315,26 @@ const SalesOrdersView = ({ companyId }) => {
     const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', type: 'info', showCancel: false });
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const { addNotification } = useNotificationStore();
+
+    const currentUserEmail = useMemo(() => {
+        try {
+            const u = getUser();
+            return u?.email || '';
+        } catch (e) {
+            return '';
+        }
+    }, []);
+
+    const formatDate = (dateStr, options = { day: '2-digit', month: '2-digit', year: 'numeric' }) => {
+        if (!dateStr) return '—';
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return '—';
+            return d.toLocaleDateString('en-IN', options);
+        } catch (e) {
+            return '—';
+        }
+    };
 
     // List view states moved to top level
     const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -347,11 +369,12 @@ const SalesOrdersView = ({ companyId }) => {
         }
         setLoading(true);
         try {
-            const [oRes, cRes, iRes, projRes] = await Promise.all([
+            const [oRes, cRes, iRes, projRes, compRes] = await Promise.all([
                 salesAPI.getOrders(companyId),
                 ledgerAPI.getByCompany(companyId),
                 inventoryAPI.getByCompany(companyId, 'sales'),
-                projectAPI.getByCompany(companyId)
+                projectAPI.getByCompany(companyId),
+                companyAPI.getById(companyId)
             ]);
 
             setOrders(Array.isArray(oRes.data) ? oRes.data : []);
@@ -363,6 +386,7 @@ const SalesOrdersView = ({ companyId }) => {
             ) : []);
             setItems(Array.isArray(iRes.data) ? iRes.data : []);
             setProjects(Array.isArray(projRes.data) ? projRes.data : []);
+            setCurrentCompany(compRes.data || null);
         } catch (err) {
             console.error('Fetch error:', err);
             addNotification('Failed to sync sales data.', 'error');
@@ -680,7 +704,7 @@ const SalesOrdersView = ({ companyId }) => {
                                         className="hover:bg-slate-50/80 transition-all cursor-pointer group border-b border-slate-50"
                                     >
                                         <td className="px-6 py-6 text-[13px] font-medium text-slate-500 tabular-nums whitespace-nowrap">
-                                            {new Date(order.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}
+                                            {formatDate(order.date, { day: '2-digit', month: '2-digit' })}
                                         </td>
                                         <td className="px-6 py-6">
                                             <div className="text-[14px] font-bold text-[#1e61f0] group-hover:underline uppercase tracking-tight">{order.orderNumber}</div>
@@ -727,32 +751,36 @@ const SalesOrdersView = ({ companyId }) => {
         );
     };
 
-    const renderFormView = () => (
-        <div className="flex flex-col h-full bg-[#f8fafc] relative">
-            {/* Form Header */}
-            <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20">
-                <div className="flex items-center gap-6">
-                    <button 
-                        onClick={() => navigate('/sales-orders')}
-                        className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
-                    >
-                        <ArrowLeft size={22} />
-                    </button>
-                    <div>
-                        <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">
-                            {formData.id ? 'Modify Sales Order' : 'Create Sales Order'}
-                        </h2>
-                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Orders</div>
+    const renderFormView = () => {
+        const customer = customers.find(c => c.id === formData.customerId);
+        const currencySymbol = getCurrencyDisplay(customer?.currency) || '₹';
+
+        return (
+            <div className="flex flex-col h-full bg-[#f8fafc] relative">
+                {/* Form Header */}
+                <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20">
+                    <div className="flex items-center gap-6">
+                        <button 
+                            onClick={() => navigate('/sales-orders')}
+                            className="p-2 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-900 transition-all"
+                        >
+                            <ArrowLeft size={22} />
+                        </button>
+                        <div>
+                            <h2 className="text-[18px] font-bold text-slate-900 tracking-tight">
+                                {formData.id ? 'Modify Sales Order' : 'Create Sales Order'}
+                            </h2>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sales / Orders</div>
+                        </div>
                     </div>
-                </div>
-                <div className="flex items-center gap-4">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Settings size={20}/></button>
-                    <div className="w-px h-6 bg-slate-200" />
-                    <button onClick={() => setView('list')} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                        <X size={24} />
-                    </button>
-                </div>
-            </header>
+                    <div className="flex items-center gap-4">
+                        <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Settings size={20}/></button>
+                        <div className="w-px h-6 bg-slate-200" />
+                        <button onClick={() => setView('list')} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                            <X size={24} />
+                        </button>
+                    </div>
+                </header>
 
             <div className="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
                 <div className="max-w-[1000px] mx-auto py-10 px-6">
@@ -981,7 +1009,7 @@ const SalesOrdersView = ({ companyId }) => {
                                         <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
                                         <div className="flex items-center gap-3">
                                             <div className="w-36" />
-                                            <span className="w-24 text-right font-bold text-slate-900 font-mono">{formData.subTotal.toFixed(2)}</span>
+                                            <span className="w-24 text-right font-bold text-slate-900 font-mono">{currencySymbol} {formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 
@@ -991,7 +1019,7 @@ const SalesOrdersView = ({ companyId }) => {
                                             <div className="w-36 flex justify-end">
                                                 <input type="number" value={formData.discount} onChange={e => setFormData({ ...formData, discount: parseFloat(e.target.value) || 0 })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
                                             </div>
-                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">- {(formData.subTotal * (parseFloat(formData.discount || 0) / 100)).toFixed(2)}</span>
+                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">- {currencySymbol} {(formData.subTotal * (parseFloat(formData.discount || 0) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 
@@ -1015,7 +1043,7 @@ const SalesOrdersView = ({ companyId }) => {
                                             </select>
                                             <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                         </div>
-                                        <span className="w-24 text-right font-bold text-slate-600 font-mono">+ {(parseFloat(formData.tax) || 0).toFixed(2)}</span>
+                                        <span className="w-24 text-right font-bold text-slate-600 font-mono">+ {currencySymbol} {(parseFloat(formData.tax) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     </div>
 
@@ -1025,7 +1053,7 @@ const SalesOrdersView = ({ companyId }) => {
                                             <div className="w-36 flex justify-end">
                                                 <input type="number" value={formData.adjustment} onChange={e => setFormData({ ...formData, adjustment: e.target.value })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
                                             </div>
-                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : ''}{parseFloat(formData.adjustment || 0).toFixed(2)}</span>
+                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : '-'} {currencySymbol} {Math.abs(parseFloat(formData.adjustment || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 
@@ -1071,7 +1099,8 @@ const SalesOrdersView = ({ companyId }) => {
                 </div>
             </footer>
         </div>
-    );
+        );
+    };
 
     const renderDetailView = () => {
         const order = selectedOrder;
@@ -1102,196 +1131,227 @@ const SalesOrdersView = ({ companyId }) => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
-                    <div id="printable-order" className="bg-white w-full max-w-[820px] mx-auto mb-20 border border-slate-300 shadow-2xl relative" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px', minHeight: '600px'}} >
+                 <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
 
-                        {/* ─── TALLY-STYLE HEADER ─── */}
-                        <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'2px solid #000'}} >
-                            <tbody>
-                                <tr>
-                                    <td style={{padding:'10px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
-                                        <div style={{fontWeight:'bold', fontSize:'15px'}} >{order.Customer?.companyName || order.Customer?.name || 'N/A'}</div>
-                                        <div style={{fontSize:'11px', color:'#333', marginTop:'2px'}} >
-                                            {(() => {
-                                                try {
-                                                    const addr = order.Customer?.billingAddress;
-                                                    if (!addr) return '';
-                                                    const p = typeof addr === 'string' ? JSON.parse(addr) : addr;
-                                                    return [p.street1, p.street2, p.city, p.state, p.pinCode].filter(Boolean).join(', ');
-                                                } catch (e) { return order.Customer?.billingAddress || ''; }
-                                            })()}
-                                        </div>
-                                        {order.Customer?.gstNumber && <div style={{marginTop:'4px', fontSize:'11px'}} >GSTIN: {order.Customer.gstNumber}</div>}
-                                        {order.Customer?.state && <div style={{fontSize:'11px'}} >State: {order.Customer.state}</div>}
-                                    </td>
-                                    <td style={{padding:'10px 14px', verticalAlign:'top', width:'50%', textAlign:'center'}} >
-                                        <div style={{fontWeight:'bold', fontSize:'16px', letterSpacing:'1px', marginBottom:'4px'}} >SALES ORDER</div>
-                                        <div style={{fontSize:'11px', color:'#555'}} >Order No: <strong>{order.orderNumber}</strong></div>
-                                        <div style={{fontSize:'11px', color:'#555'}} >Date: <strong>{new Date(order.date).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</strong></div>
-                                        {order.referenceNumber && <div style={{fontSize:'11px', color:'#555'}} >Ref: <strong>{order.referenceNumber}</strong></div>}
-                                        {order.expectedShipmentDate && <div style={{fontSize:'11px', color:'#555'}} >Shipment Date: <strong>{new Date(order.expectedShipmentDate).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'})}</strong></div>}
-                                    </td>
+                    {/* PDF PREVIEW PAPER â€” matches Purchase Order style */}
+                    <div id="printable-order" className="pdf-preview-paper bg-white w-full max-w-[800px] min-h-[1050px] shadow-lg border border-slate-200/80 p-12 relative overflow-hidden flex flex-col justify-between">
+
+                      {/* Draft ribbon */}
+                      {order.status?.toLowerCase() === 'draft' && (
+                        <div style={{position:'absolute',top:0,left:0,width:'120px',height:'120px',overflow:'hidden',pointerEvents:'none',zIndex:0}}>
+                          <div style={{position:'absolute',top:'20px',left:'-35px',width:'140px',background:'#f1f5f9',color:'#64748b',textAlign:'center',textTransform:'uppercase',fontSize:'9px',fontWeight:800,letterSpacing:'0.15em',padding:'4px 0',transform:'rotate(-45deg)',border:'1px dashed #cbd5e1'}}>Draft</div>
+                        </div>
+                      )}
+
+                      <div>
+                        {/* â”€â”€ Top Header: Company (left) | SALES ORDER (right) â”€â”€ */}
+                        <div className="flex justify-between items-start mb-12">
+                          <div className="space-y-1 relative z-10">
+                            <h3 className="text-[18px] font-extrabold text-slate-900 tracking-tight">{currentCompany?.name || order.Customer?.companyName || 'Company'}</h3>
+                            {currentCompany?.street1 && <p className="text-[13px] font-semibold text-slate-500">{currentCompany.street1}</p>}
+                            <p className="text-[13px] font-semibold text-slate-500">{currentCompany?.location || 'India'}</p>
+                            {currentCompany?.phone && <p className="text-[13px] font-semibold text-slate-500">{currentCompany.phone}</p>}
+                            <p className="text-[13px] font-semibold text-slate-500">{currentUserEmail || currentCompany?.email || ''}</p>
+                          </div>
+                          <div className="text-right">
+                            <h1 className="text-[28px] font-bold text-slate-800 uppercase tracking-wider mb-2" style={{fontFamily:'Georgia, serif'}}>SALES ORDER</h1>
+                            <p className="text-[15px] font-bold text-slate-500"># {order.orderNumber}</p>
+                          </div>
+                        </div>
+
+                        {/* â”€â”€ Customer Bill To / Ship To â”€â”€ */}
+                        <div className="grid grid-cols-2 gap-8 mb-12">
+                          {/* Bill To */}
+                          <div className="space-y-2">
+                            <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Bill To</h4>
+                            <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                              <p className="font-extrabold text-slate-950 text-[14px]">{order.Customer?.displayName || order.Customer?.name}</p>
+                              {(() => {
+                                try {
+                                  const raw = order.Customer?.billingAddress;
+                                  if (!raw) return null;
+                                  const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                  return (
+                                    <>
+                                      {p.street1 && <p className="font-semibold text-slate-700">{p.street1}</p>}
+                                      {p.street2 && <p className="font-semibold text-slate-700">{p.street2}</p>}
+                                      <p className="font-semibold text-slate-700">{[p.city, p.state, p.pinCode].filter(Boolean).join(', ')}</p>
+                                      {p.country && <p className="font-semibold text-slate-700">{p.country}</p>}
+                                    </>
+                                  );
+                                } catch(e) { return null; }
+                              })()}
+                              {order.Customer?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {order.Customer.gstNumber}</p>}
+                            </div>
+                          </div>
+
+                          {/* Ship To */}
+                          <div className="space-y-2">
+                            <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Ship To</h4>
+                            <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                              <p className="font-extrabold text-slate-950 text-[14px]">{order.Customer?.displayName || order.Customer?.name}</p>
+                              {(() => {
+                                try {
+                                  const raw = order.Customer?.shippingAddress || order.Customer?.billingAddress;
+                                  if (!raw) return null;
+                                  const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                                  return (
+                                    <>
+                                      {p.street1 && <p className="font-semibold text-slate-700">{p.street1}</p>}
+                                      {p.street2 && <p className="font-semibold text-slate-700">{p.street2}</p>}
+                                      <p className="font-semibold text-slate-700">{[p.city, p.state, p.pinCode].filter(Boolean).join(', ')}</p>
+                                      {p.country && <p className="font-semibold text-slate-700">{p.country}</p>}
+                                    </>
+                                  );
+                                } catch(e) { return null; }
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* â”€â”€ Meta Row: Date / Payment Terms / Reference â”€â”€ */}
+                        <div className="flex items-center gap-12 border-t border-b border-slate-100 py-4 mb-10 text-[13px] font-semibold">
+                          <div>
+                            <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Date</span>
+                            <span className="text-slate-700">{formatDate(order.date)}</span>
+                          </div>
+                          {order.expectedShipmentDate && (
+                            <div>
+                              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Shipment Date</span>
+                              <span className="text-slate-700">{formatDate(order.expectedShipmentDate)}</span>
+                            </div>
+                          )}
+                          {order.paymentTerms && (
+                            <div>
+                              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Payment Terms</span>
+                              <span className="text-slate-700">{order.paymentTerms}</span>
+                            </div>
+                          )}
+                          {order.referenceNumber && (
+                            <div>
+                              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Reference #</span>
+                              <span className="text-slate-700">{order.referenceNumber}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* â”€â”€ Items Table â”€â”€ */}
+                        <table className="w-full text-left mb-10">
+                          <thead>
+                            <tr className="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider">
+                              <th className="px-4 py-3 rounded-l">#</th>
+                              <th className="px-4 py-3">Item &amp; Description</th>
+                              <th className="px-4 py-3 text-right">Qty</th>
+                              <th className="px-4 py-3 text-right">Rate</th>
+                              <th className="px-4 py-3 text-right rounded-r">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-[13px] font-semibold text-slate-700">
+                            {itemsList.length > 0 ? (
+                              itemsList.map((it, idx) => (
+                                <tr key={idx}>
+                                  <td className="px-4 py-3.5 text-slate-400">{idx + 1}</td>
+                                  <td className="px-4 py-3.5">
+                                    <p className="font-extrabold text-slate-800">{it.detail || it.name || it.itemName}</p>
+                                    {it.description && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{it.description}</p>}
+                                    {it.hsnCode && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">HSN: {it.hsnCode}</p>}
+                                  </td>
+                                  <td className="px-4 py-3.5 text-right font-mono">{parseFloat(it.quantity || 0).toFixed(2)}</td>
+                                  <td className="px-4 py-3.5 text-right font-mono">{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                  <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">{parseFloat(it.amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                                 </tr>
-                            </tbody>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan="5" className="px-4 py-8 text-center text-slate-400 italic">No items found</td>
+                              </tr>
+                            )}
+                          </tbody>
                         </table>
 
-                        {/* ─── BUYER / CONSIGNEE SECTION ─── */}
-                        <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'1px solid #000'}} >
-                            <tbody>
-                                <tr>
-                                    <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
-                                        <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Buyer (Bill To):</div>
-                                        <div style={{fontWeight:'bold'}} >{order.Customer?.displayName || order.Customer?.name}</div>
-                                        <div style={{fontSize:'11px', color:'#333'}} >
-                                            {(() => {
-                                                try {
-                                                    const addr = order.Customer?.billingAddress;
-                                                    if (!addr) return '';
-                                                    const p = typeof addr === 'string' ? JSON.parse(addr) : addr;
-                                                    return [p.street1, p.street2, p.city, p.state, p.pinCode, p.country].filter(Boolean).join(', ');
-                                                } catch (e) { return ''; }
-                                            })()}
-                                        </div>
-                                        {order.Customer?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {order.Customer.gstNumber}</div>}
-                                        {order.Customer?.state && <div style={{fontSize:'11px'}} >State: {order.Customer.state}</div>}
-                                    </td>
-                                    <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
-                                        <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Consignee (Ship To):</div>
-                                        <div style={{fontWeight:'bold'}} >{order.Customer?.displayName || order.Customer?.name}</div>
-                                        <div style={{fontSize:'11px', color:'#333'}} >
-                                            {(() => {
-                                                try {
-                                                    const addr = order.Customer?.shippingAddress || order.Customer?.billingAddress;
-                                                    if (!addr) return '';
-                                                    const p = typeof addr === 'string' ? JSON.parse(addr) : addr;
-                                                    return [p.street1, p.street2, p.city, p.state, p.pinCode, p.country].filter(Boolean).join(', ');
-                                                } catch (e) { return ''; }
-                                            })()}
-                                        </div>
-                                        {order.Customer?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {order.Customer.gstNumber}</div>}
-                                        {order.Customer?.state && <div style={{fontSize:'11px'}} >State: {order.Customer.state}</div>}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        {/* â”€â”€ Totals â”€â”€ */}
+                        <div className="flex justify-end mb-16">
+                          <div className="w-80 space-y-2 text-[13px] font-bold text-slate-600">
+                            <div className="flex justify-between items-center py-1">
+                              <span>Sub Total</span>
+                              <span className="font-mono text-slate-800">{parseFloat(order.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                            </div>
+                            {parseFloat(order.discountAmount || 0) > 0 && (
+                              <div className="flex justify-between items-center py-1">
+                                <span>Discount {order.discount ? `(${order.discount}%)` : ''}</span>
+                                <span className="font-mono text-red-500">- {parseFloat(order.discountAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                              </div>
+                            )}
+                            {parseFloat(order.tax || order.taxAmount || 0) > 0 && (
+                              <div className="flex justify-between items-center py-1">
+                                <span>GST {order.taxPercent ? `(${order.taxPercent}%)` : ''}</span>
+                                <span className="font-mono text-slate-800">+ {parseFloat(order.tax || order.taxAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                              </div>
+                            )}
+                            {parseFloat(order.adjustment || 0) !== 0 && (
+                              <div className="flex justify-between items-center py-1">
+                                <span>Adjustment</span>
+                                <span className="font-mono text-slate-800">{parseFloat(order.adjustment || 0) > 0 ? '+' : ''}{parseFloat(order.adjustment || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">
+                              <span>Total</span>
+                              <span className="font-mono text-[#1e61f0]">{getCurrencyDisplay(order.Customer?.currency)} {parseFloat(order.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-                        {/* ─── LINE ITEMS TABLE ─── */}
-                        <table style={{width:'100%', borderCollapse:'collapse'}} >
-                            <thead>
-                                <tr style={{background:'#f0f0f0'}} >
-                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'40px'}} >Sl. No.</th>
-                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'left'}} >Description of Goods</th>
-                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'90px'}} >HSN/SAC</th>
-                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'90px'}} >Due on</th>
-                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'80px'}} >Quantity</th>
-                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'90px'}} >Rate</th>
-                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'50px'}} >per</th>
-                                    <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'100px'}} >Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {itemsList.length === 0 && (
-                                    <tr><td colSpan="8" style={{border:'1px solid #000', padding:'20px', textAlign:'center', color:'#999'}} >No items</td></tr>
-                                )}
-                                {itemsList.map((it, idx) => (
-                                    <tr key={idx} >
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{idx + 1}</td>
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', verticalAlign:'top'}} >
-                                            <div style={{fontWeight:'bold'}} >{it.detail}</div>
-                                            {it.description && <div style={{fontSize:'11px', color:'#555', marginTop:'2px'}} >{it.description}</div>}
-                                        </td>
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.hsnCode || ''}</td>
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >
-                                            {order.expectedShipmentDate ? new Date(order.expectedShipmentDate).toLocaleDateString('en-IN', {day:'2-digit', month:'2-digit', year:'numeric'}) : order.paymentTerms || ''}
-                                        </td>
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.quantity}</td>
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top'}} >{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >Nos</td>
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top', fontWeight:'bold'}} >{parseFloat(it.amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                {/* Sub Total row */}
-                                <tr style={{background:'#f9f9f9'}} >
-                                    <td colSpan="4" style={{border:'1px solid #000', padding:'6px 8px', fontWeight:'bold', textAlign:'right'}} >Total</td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', fontWeight:'bold'}} >
-                                        {itemsList.reduce((s, it) => s + parseFloat(it.quantity || 0), 0)}
-                                    </td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
-                                        {parseFloat(order.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                                    </td>
-                                </tr>
-                                {/* Tax row */}
-                                {parseFloat(order.tax || order.taxAmount || 0) > 0 && (
-                                    <tr>
-                                        <td colSpan="7" style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right'}} >
-                                            GST ({order.taxPercent || 18}%)
-                                        </td>
-                                        <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
-                                            {parseFloat(order.tax || order.taxAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                                        </td>
-                                    </tr>
-                                )}
-                                {/* Grand Total row */}
-                                <tr style={{background:'#e8e8e8'}} >
-                                    <td colSpan="7" style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >Grand Total</td>
-                                    <td style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >
-                                        {getCurrencyDisplay(order.Customer?.currency)}{' '}
-                                        {parseFloat(order.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-
-                        {/* ─── NOTES & TERMS ─── */}
+                      {/* ——— Notes / Terms + Signature ——— */}
+                      <div className="mt-8 pt-8 border-t border-slate-100">
                         {(order.customerNotes || order.termsConditions) && (
-                            <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
-                                <tbody>
-                                    <tr>
-                                        {order.customerNotes && (
-                                            <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight: order.termsConditions ? '1px solid #000' : 'none'}} >
-                                                <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Customer Notes:</div>
-                                                <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{order.customerNotes}</div>
-                                            </td>
-                                        )}
-                                        {order.termsConditions && (
-                                            <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
-                                                <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Terms & Conditions:</div>
-                                                <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{order.termsConditions}</div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                </tbody>
-                            </table>
+                          <div className="grid grid-cols-2 gap-6 mb-10 text-[12px]">
+                            {order.customerNotes && (
+                              <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
+                                <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
+                                  <FileText size={12} className="text-slate-400"/> Customer Notes
+                                </span>
+                                <p className="text-slate-600 font-semibold leading-relaxed">{order.customerNotes}</p>
+                              </div>
+                            )}
+                            {order.termsConditions && (
+                              <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
+                                <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
+                                  <ShieldCheck size={12} className="text-slate-400"/> Terms &amp; Conditions
+                                </span>
+                                <p className="text-slate-600 font-semibold leading-relaxed">{order.termsConditions}</p>
+                              </div>
+                            )}
+                          </div>
                         )}
 
-                        {/* ─── SIGNATURE BLOCK ─── */}
-                        <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
-                            <tbody>
-                                <tr>
-                                    <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', borderRight:'1px solid #000'}} >
-                                        <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >Receiver's Signature & Stamp</div>
-                                        <div style={{borderTop:'1px solid #000', width:'70%', marginTop:'32px'}} ></div>
-                                    </td>
-                                    <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', textAlign:'right'}} >
-                                        <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >For Authorized Signatory</div>
-                                        <div style={{borderTop:'1px solid #000', width:'60%', marginTop:'32px', marginLeft:'auto'}} ></div>
-                                        <div style={{fontSize:'11px', marginTop:'4px', textAlign:'right', fontWeight:'bold'}} >{order.salesperson || 'Authorized Signatory'}</div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div className="grid grid-cols-2 gap-12 mt-12 text-[13px] font-bold text-slate-400">
+                          {/* Receiver's Signature */}
+                          <div className="space-y-4">
+                            <p className="text-slate-500 text-[11px] uppercase tracking-widest">Receiver's Signature &amp; Stamp</p>
+                            <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
+                              Stamp &amp; Signature Space
+                            </div>
+                          </div>
 
-                        {/* ─── STATUS FOOTER ─── */}
-                        <div style={{padding:'6px 14px', background:'#f5f5f5', borderTop:'1px solid #ccc', fontSize:'10px', color:'#888', display:'flex', justifyContent:'space-between'}} >
-                            <span>Status: {order.status}</span>
-                            <span>Order ID: {order.id?.substring(0, 16)}</span>
+                          {/* Authorized Signatory */}
+                          <div className="text-right space-y-4 flex flex-col items-end">
+                            <p className="text-slate-500 text-[11px] uppercase tracking-widest">For {currentCompany?.name || 'Authorized Signatory'}</p>
+                            <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
+                              Authorized Signature Space
+                            </div>
+                            <p className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider">{currentCompany?.name || 'Authorized Signatory'}</p>
+                          </div>
                         </div>
+
+                        {/* Status footer */}
+                        <div className="mt-8 pt-4 border-t border-slate-100 flex justify-between text-[10px] text-slate-400 font-medium">
+                          <span>Status: {order.status}</span>
+                          <span>Order ID: {order.id?.substring?.(0,16) ?? order.id}</span>
+                        </div>
+                      </div>
                     </div>
-                </div>
+                 </div>
             </div>
         );
     };
@@ -1324,9 +1384,10 @@ const SalesOrdersView = ({ companyId }) => {
                     documentType="Sales Order"
                     documentData={{
                         number: selectedOrder.orderNumber,
-                        date: new Date(selectedOrder.date).toLocaleDateString('en-IN'),
+                        date: formatDate(selectedOrder.date),
                         customerName: selectedOrder.Customer?.displayName || selectedOrder.Customer?.name || '',
                         customerEmail: selectedOrder.Customer?.email || '',
+                        Customer: { email: selectedOrder.Customer?.email || '', currency: selectedOrder.Customer?.currency },
                         items: (selectedOrder.Items || []).map(it => ({
                             name: it.detail,
                             quantity: it.quantity,

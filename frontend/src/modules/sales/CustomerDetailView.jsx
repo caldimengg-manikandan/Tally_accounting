@@ -71,6 +71,7 @@ const CustomerDetailView = ({ companyId }) => {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isSideListCollapsed, setIsSideListCollapsed] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(1);
+  const [exchangeRateLoading, setExchangeRateLoading] = useState(false);
   const [quickAddForm, setQuickAddForm] = useState({ name: '', email: '', mobile: '', salutation: 'Mr.' });
   const [addressForm, setAddressForm] = useState({
     attention: '',
@@ -198,22 +199,33 @@ const CustomerDetailView = ({ companyId }) => {
 
   // 2.5 Fetch Live Exchange Rate for Receivables
   useEffect(() => {
-    if (!customer || !customer.currency || customer.currency.startsWith('INR')) {
+    if (!customer || !customer.currency) {
       setExchangeRate(1);
       return;
     }
-    
+    const currCode = customer.currency.split(/[ -]/)[0].trim();
+    if (currCode === 'INR') {
+      setExchangeRate(1);
+      return;
+    }
+
     const fetchRate = async () => {
+      setExchangeRateLoading(true);
       try {
-        const code = customer.currency.split(/[ -]/)[0].trim();
         const res = await fetch(`https://open.er-api.com/v6/latest/INR`);
         const data = await res.json();
-        if (data && data.rates && data.rates[code]) {
-          // 1 ForeignCurrency = (1/rateToInr) INR
-          setExchangeRate(1 / data.rates[code]);
+        if (data && data.rates && data.rates[currCode]) {
+          // data.rates[currCode] = units of currCode per 1 INR
+          // So 1 currCode = (1 / data.rates[currCode]) INR
+          setExchangeRate(1 / data.rates[currCode]);
+        } else {
+          setExchangeRate(null); // Rate not found for this currency
         }
       } catch (e) {
         console.error("Fetch rate failed in DetailView", e);
+        setExchangeRate(null);
+      } finally {
+        setExchangeRateLoading(false);
       }
     };
     fetchRate();
@@ -1087,10 +1099,10 @@ const CustomerDetailView = ({ companyId }) => {
                      <div className="space-y-2 group cursor-pointer max-w-fit" onClick={() => setIsEditingPaymentTerms(true)}>
                         <p className="text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em]">Payment due period</p>
                         {!isEditingPaymentTerms ? <p className="text-[18px] text-slate-900 font-bold tracking-tight flex items-center gap-3">{customer.paymentTerms || 'Due on Receipt'} <Edit size={14} className="text-blue-400 transition-opacity"/></p> : (
-                          <div className="flex items-center gap-2 pt-1 animate-fade-in">
+                          <div className="flex items-center gap-2 pt-1 animate-fade-in" onClick={e => e.stopPropagation()}>
                             <input autoFocus type="text" value={paymentTerms} onChange={e => setPaymentTerms(e.target.value)} className="px-4 py-2 border-2 border-blue-100 rounded-lg outline-none focus:border-blue-500 shadow-sm font-bold" />
-                            <button onClick={() => handleUpdateField('paymentTerms', paymentTerms)} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
-                            <button onClick={() => setIsEditingPaymentTerms(false)} className="p-2.5 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200"><X size={18}/></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleUpdateField('paymentTerms', paymentTerms); }} className="p-2.5 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100 hover:bg-blue-700"><Save size={18}/></button>
+                            <button onClick={(e) => { e.stopPropagation(); setIsEditingPaymentTerms(false); }} className="p-2.5 bg-slate-100 text-slate-400 rounded-lg hover:bg-slate-200"><X size={18}/></button>
                           </div>
                         )}
                      </div>
@@ -1107,32 +1119,61 @@ const CustomerDetailView = ({ companyId }) => {
                                 </tr>
                               </thead>
                               <tbody>
+                                {/* ── Primary currency row ── */}
                                 <tr className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                   <td className="px-8 py-6 font-bold text-slate-700">
                                     {(() => {
                                       const code = (customer.currency || 'INR').split(/[ -]/)[0].trim();
                                       const found = CURRENCIES.find(c => c.code === code);
-                                      return found ? found.display : (customer.currency || 'INR');
+                                      return found ? found.display : (customer.currency || 'INR - Indian Rupee');
                                     })()}
                                   </td>
                                   <td className="px-8 py-6 text-right font-bold text-[18px] text-slate-900 tabular-nums">
-                                    {getCurrencyDisplay(customer.currency)} {parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    {getCurrencyDisplay(customer.currency)}{' '}
+                                    {parseFloat(customer.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                   </td>
                                   <td className="px-8 py-6 text-right text-slate-400 font-bold tabular-nums">
                                     {getCurrencyDisplay(customer.currency)} 0.00
                                   </td>
                                 </tr>
-                                {customer.currency && !customer.currency.startsWith('INR') && (
-                                  <tr className="bg-blue-50/30 hover:bg-blue-50/50 transition-colors border-b border-slate-50">
-                                    <td className="px-8 py-6 font-black text-slate-900 text-[13px] tracking-tight">TOTAL (INR)</td>
-                                    <td className="px-8 py-6 text-right font-black text-[18px] text-blue-600 tabular-nums">
-                                      ₹ {(parseFloat(customer.currentBalance || 0) * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </td>
-                                    <td className="px-8 py-6 text-right text-blue-400 font-bold tabular-nums">
-                                      ₹ 0.00
-                                    </td>
-                                  </tr>
-                                )}
+
+                                {/* ── INR conversion row (only for non-INR customers) ── */}
+                                {(() => {
+                                  const currCode = (customer.currency || 'INR').split(/[ -]/)[0].trim();
+                                  if (currCode === 'INR') return null;
+                                  const balance = parseFloat(customer.currentBalance || 0);
+                                  return (
+                                    <tr className="bg-gradient-to-r from-blue-50/60 to-indigo-50/40 hover:from-blue-50 hover:to-indigo-50/70 transition-colors">
+                                      <td className="px-8 py-5">
+                                        <div className="flex flex-col gap-0.5">
+                                          <span className="font-black text-slate-800 text-[13px] tracking-tight">TOTAL (INR)</span>
+                                          {exchangeRateLoading ? (
+                                            <span className="text-[10px] text-blue-400 font-semibold flex items-center gap-1.5">
+                                              <span className="inline-block w-2.5 h-2.5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin"></span>
+                                              Fetching live rate…
+                                            </span>
+                                          ) : exchangeRate && exchangeRate !== 1 ? (
+                                            <span className="text-[10px] text-slate-400 font-semibold">
+                                              1 {currCode} = ₹{exchangeRate.toLocaleString(undefined, { maximumFractionDigits: 4 })} &nbsp;(live rate)
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      </td>
+                                      <td className="px-8 py-5 text-right tabular-nums">
+                                        {exchangeRateLoading ? (
+                                          <span className="inline-block w-5 h-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin align-middle"></span>
+                                        ) : exchangeRate != null ? (
+                                          <span className="font-black text-[18px] text-blue-600">
+                                            ₹{(balance * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                          </span>
+                                        ) : (
+                                          <span className="text-[13px] text-slate-400 font-semibold italic">Rate unavailable</span>
+                                        )}
+                                      </td>
+                                      <td className="px-8 py-5 text-right text-blue-400 font-bold tabular-nums">₹ 0.00</td>
+                                    </tr>
+                                  );
+                                })()}
                               </tbody>
                            </table>
                         </div>

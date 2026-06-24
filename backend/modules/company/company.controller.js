@@ -1,4 +1,5 @@
 const { Company, User, Group, Ledger, sequelize } = require('../../models');
+const AuditService = require('../../services/AuditService');
 
 exports.seedDefaultGroups = async (companyId, transaction = null) => {
   const { Group: GroupModel } = require('../../models');
@@ -261,6 +262,8 @@ exports.updateCompany = async (req, res, next) => {
       }
     }
 
+    const oldData = { ...company.get() };
+
     fieldsToUpdate.forEach(field => {
       if (req.body[field] !== undefined) {
         if (field === 'features') {
@@ -272,6 +275,18 @@ exports.updateCompany = async (req, res, next) => {
     });
 
     await company.save();
+
+    await AuditService.log({
+      action: 'UPDATE_COMPANY',
+      tableName: 'Companies',
+      recordId: company.id,
+      oldData,
+      newData: company.toJSON(),
+      companyId: company.id,
+      userId: req.user.id,
+      req
+    });
+
     res.json(company);
   } catch (err) {
     next(err);
@@ -404,7 +419,20 @@ exports.deleteCompany = async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied: Only the owner or SUPER_ADMIN can delete this company' });
     }
 
+    const oldData = company.toJSON();
     await company.destroy();
+
+    await AuditService.log({
+      action: 'DELETE_COMPANY',
+      tableName: 'Companies',
+      recordId: id,
+      oldData,
+      newData: null,
+      companyId: id,
+      userId: req.user.id,
+      req
+    });
+
     res.json({ message: 'Company deleted successfully' });
   } catch (err) {
     next(err);
