@@ -21,7 +21,7 @@ const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractio
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 export default function PayrollView({ companyId, showNewEmployeeForm }) {
-  const [activeTab, setActiveTab] = useState('employees'); // 'employees' | 'attendance' | 'structures' | 'process' | 'payslips' | 'settings'
+  const [activeTab, setActiveTab] = useState('settings'); // 'settings' | 'structures' | 'employees' | 'attendance' | 'process' | 'payslips'
   
   const [payrollSettings, setPayrollSettings] = useState({ pfEmployeeRate: 12.00, esiEmployeeRate: 0.75, ptMonthlyAmount: 200.00 });
   
@@ -61,13 +61,8 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
   
   // Forms & Modal states
   const [showHRA, setShowHRA] = useState(false);
-  const [showStructModal, setShowStructModal] = useState(false);
   const [showAttModal, setShowAttModal] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState(null); // Used specifically for attendance/structures
-  
-  const [structForm, setStructForm] = useState({
-    annualCTC: '', basic: '', hra: '', da: '', incentives: '', pfDeduction: '', esiDeduction: '', profTaxDeduction: ''
-  });
   
   const [attForm, setAttForm] = useState({
     date: new Date().toISOString().split('T')[0], status: 'Present', remarks: ''
@@ -212,50 +207,6 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
     }
   };
 
-  // Salary Structure save
-  const handleSaveStructure = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      await payrollAPI.saveSalaryStructure({
-        ...structForm,
-        employeeId: selectedEmp?.id,
-        companyId,
-      });
-      setSuccess('Salary structure saved successfully!');
-      setShowStructModal(false);
-      fetchData();
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save salary structure');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAutoCalculate = () => {
-    const ctc = parseFloat(structForm.annualCTC);
-    if (!ctc || isNaN(ctc)) return;
-    
-    const monthlyGross = Math.round(ctc / 12);
-    const basic = Math.round(monthlyGross * 0.50);
-    const hra = Math.round(basic * 0.50);
-    const pf = Math.min(Math.round(basic * 0.12), 1800);
-    const pt = 200;
-    const esi = 0; 
-    const incentives = monthlyGross - basic - hra;
-    
-    setStructForm({
-      ...structForm,
-      basic: basic.toString(),
-      hra: hra.toString(),
-      da: '0',
-      incentives: incentives.toString(),
-      pfDeduction: pf.toString(),
-      esiDeduction: esi.toString(),
-      profTaxDeduction: pt.toString()
-    });
-  };
-
   // Attendance save
   const handleSaveAttendance = async () => {
     setSaving(true);
@@ -365,10 +316,10 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
         {/* Tabs Menu */}
         <div className="flex border-b border-slate-100">
           {[
+            { id: 'settings', label: 'Taxes & Settings', icon: Sliders },
+            { id: 'structures', label: 'Salary Structures', icon: Settings },
             { id: 'employees', label: 'Employees', icon: Users },
             { id: 'attendance', label: 'Attendance logs', icon: Calendar },
-            { id: 'structures', label: 'Salary Structures', icon: Settings },
-            { id: 'settings', label: 'Taxes & Settings', icon: Sliders },
             { id: 'process', label: 'Process Payroll', icon: DollarSign },
             { id: 'payslips', label: 'Payslips', icon: FileText }
           ].map(tab => (
@@ -536,117 +487,6 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
             });
           }}
         />
-      )}
-
-      {/* MODAL 2: SETUP SALARY STRUCTURE */}
-      {showStructModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200/60 ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
-
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
-                  <Banknote size={24} strokeWidth={2} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-800 tracking-tight">Salary Structure</h2>
-                  <p className="text-sm font-medium text-slate-500 mt-0.5">{selectedEmp?.name} <span className="mx-2 text-slate-300">•</span> #{selectedEmp?.employeeId}</p>
-                </div>
-              </div>
-              <button onClick={() => setShowStructModal(false)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-200/50 hover:text-slate-600 transition-colors"><X size={20} strokeWidth={2.5} /></button>
-            </div>
-            
-            <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
-              {/* Auto-Calculate Section */}
-              <div className="bg-blue-50/50 rounded-2xl p-5 border border-blue-100 flex items-end gap-4">
-                <div className="flex-1">
-                  <label className="block text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-2">Annual CTC (₹)</label>
-                  <input type="number" value={structForm.annualCTC} onChange={e => setStructForm({ ...structForm, annualCTC: e.target.value })}
-                    className="w-full bg-white border border-blue-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all placeholder-slate-300" placeholder="e.g. 600000" />
-                </div>
-                <button onClick={handleAutoCalculate} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm tracking-wide hover:bg-blue-700 transition-all active:scale-95 shrink-0 flex items-center gap-2 h-[46px]">
-                  <Sliders size={16} />
-                  Auto-Calculate
-                </button>
-              </div>
-
-              {/* Earnings Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="h-6 w-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">
-                    <TrendingUp size={14} strokeWidth={3} />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Monthly Earnings</h3>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-5 p-5 rounded-2xl bg-slate-50/80 border border-slate-100">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Basic Pay (₹) <span className="text-rose-500">*</span></label>
-                    <input type="number" value={structForm.basic} onChange={e => setStructForm({ ...structForm, basic: e.target.value })}
-                      className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all placeholder-slate-300" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">HRA (₹)</label>
-                    <input type="number" value={structForm.hra} onChange={e => setStructForm({ ...structForm, hra: e.target.value })}
-                      className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all placeholder-slate-300" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">DA (₹)</label>
-                    <input type="number" value={structForm.da} onChange={e => setStructForm({ ...structForm, da: e.target.value })}
-                      className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all placeholder-slate-300" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Fixed Incentives (₹)</label>
-                    <input type="number" value={structForm.incentives} onChange={e => setStructForm({ ...structForm, incentives: e.target.value })}
-                      className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 transition-all placeholder-slate-300" placeholder="0.00" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Deductions Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="h-6 w-6 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shadow-sm">
-                    <TrendingDown size={14} strokeWidth={3} />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Standard Deductions</h3>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-5 p-5 rounded-2xl bg-rose-50/30 border border-rose-100/50">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">PF (₹)</label>
-                    <input type="number" value={structForm.pfDeduction} onChange={e => setStructForm({ ...structForm, pfDeduction: e.target.value })}
-                      className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition-all placeholder-slate-300" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">ESI (₹)</label>
-                    <input type="number" value={structForm.esiDeduction} onChange={e => setStructForm({ ...structForm, esiDeduction: e.target.value })}
-                      className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition-all placeholder-slate-300" placeholder="0.00" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Prof Tax (₹)</label>
-                    <input type="number" value={structForm.profTaxDeduction} onChange={e => setStructForm({ ...structForm, profTaxDeduction: e.target.value })}
-                      className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition-all placeholder-slate-300" placeholder="0.00" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="px-8 py-5 border-t border-slate-100 flex justify-between items-center bg-slate-50">
-              <div className="text-xs font-medium text-slate-500">
-                Gross Pay: <span className="text-emerald-600 font-bold ml-1 text-base tracking-tight">₹{(Number(structForm.basic || 0) + Number(structForm.hra || 0) + Number(structForm.da || 0) + Number(structForm.incentives || 0)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
-              </div>
-              <div className="flex gap-3">
-                <button onClick={() => setShowStructModal(false)} className="px-5 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
-                <button onClick={handleSaveStructure} disabled={saving} className="px-7 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm tracking-wide hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all active:scale-95 disabled:opacity-70 flex items-center gap-2">
-                  {saving && <Loader2 size={16} className="animate-spin" />}
-                  Save Structure
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
       )}
 
       {/* MODAL 3: LOG ATTENDANCE */}

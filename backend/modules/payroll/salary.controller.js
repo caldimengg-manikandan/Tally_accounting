@@ -31,7 +31,7 @@ exports.createComponent = async (req, res) => {
   try {
     const companyId = req.companyId;
     const { 
-      name, code, type, calculationType, calculationBase, 
+      name, code, type, componentNature, calculationType, calculationBase, 
       calculationValue, isStatutory, isTaxable, displayOrder, description 
     } = req.body;
 
@@ -52,6 +52,7 @@ exports.createComponent = async (req, res) => {
       name,
       code: code.toUpperCase(),
       type,
+      componentNature: componentNature || 'Fixed',
       calculationType,
       calculationBase: calculationType === 'Percentage' ? calculationBase : null,
       calculationValue: calculationValue || 0,
@@ -74,7 +75,7 @@ exports.updateComponent = async (req, res) => {
     const companyId = req.companyId;
     const { id } = req.params;
     const { 
-      name, code, type, calculationType, calculationBase, 
+      name, code, type, componentNature, calculationType, calculationBase, 
       calculationValue, isStatutory, isTaxable, displayOrder, description 
     } = req.body;
 
@@ -96,6 +97,7 @@ exports.updateComponent = async (req, res) => {
       ...(name && { name }),
       ...(code && { code: code.toUpperCase() }),
       ...(type && { type }),
+      ...(componentNature && { componentNature }),
       ...(calculationType && { calculationType }),
       calculationBase: calculationType === 'Percentage' ? calculationBase : (calculationType ? null : component.calculationBase),
       ...(calculationValue !== undefined && { calculationValue }),

@@ -1,16 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { salaryAPI } from '../../../../services/api';
-import { Plus, Edit2, Trash2, Check, AlertCircle, Info, Sparkles } from 'lucide-react';
+import { Plus, Edit2, Check, AlertCircle, Sparkles, Loader2, ArrowLeft } from 'lucide-react';
+
+const STANDARD_COMPONENTS = [
+  { code: 'BASIC', name: 'Basic Pay', type: 'Earning', calculationType: 'Percentage', calculationBase: 'CTC', calculationValue: 50, isTaxable: true, displayOrder: 1 },
+  { code: 'HRA', name: 'House Rent Allowance', type: 'Earning', calculationType: 'Percentage', calculationBase: 'BASIC', calculationValue: 50, isTaxable: true, displayOrder: 2 },
+  { code: 'CONVEYANCE', name: 'Conveyance Allowance', type: 'Earning', calculationType: 'Fixed', calculationValue: 1600, isTaxable: true, displayOrder: 3 },
+  { code: 'CEA', name: 'Children Education Allowance', type: 'Earning', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 4 },
+  { code: 'TA', name: 'Transport Allowance', type: 'Earning', calculationType: 'Fixed', calculationValue: 1600, isTaxable: true, displayOrder: 5 },
+  { code: 'TRAVELLING', name: 'Travelling Allowance', type: 'Earning', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 6 },
+  { code: 'FIXED', name: 'Fixed Allowance', type: 'Earning', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 7 },
+  { code: 'OVERTIME', name: 'Overtime Allowance', type: 'Earning', componentNature: 'Variable', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 8 },
+  { code: 'GRATUITY', name: 'Gratuity', type: 'Earning', componentNature: 'Variable', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 9 },
+  { code: 'BONUS', name: 'Bonus', type: 'Earning', componentNature: 'Variable', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 10 },
+  { code: 'COMM', name: 'Commission', type: 'Earning', componentNature: 'Variable', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 11 },
+  { code: 'LEAVE_ENCASHMENT', name: 'Leave Encashment', type: 'Earning', componentNature: 'Variable', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 12 },
+  { code: 'NOTICE_PAY', name: 'Notice Pay', type: 'Earning', componentNature: 'Variable', calculationType: 'Fixed', calculationValue: 0, isTaxable: true, displayOrder: 13 },
+  { code: 'HOLD_SALARY', name: 'Hold Salary', type: 'Deduction', componentNature: 'Variable', calculationType: 'Fixed', calculationValue: 0, isTaxable: false, displayOrder: 14 }
+];
 
 export default function SalaryComponentsTab() {
   const [components, setComponents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
   
-  // Form modal state
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' or 'edit'
+  // Full page view state
+  const [currentView, setCurrentView] = useState('list'); // 'list', 'add', 'edit'
   const [selectedComp, setSelectedComp] = useState(null);
 
   // Form fields
@@ -18,9 +35,10 @@ export default function SalaryComponentsTab() {
     name: '',
     code: '',
     type: 'Earning',
-    calculationType: 'Percentage',
-    calculationBase: 'CTC',
-    calculationValue: '',
+    componentNature: 'Fixed',
+    calculationType: 'Fixed',
+    calculationBase: 'BASIC',
+    calculationValue: 0,
     isStatutory: false,
     isTaxable: true,
     displayOrder: 0,
@@ -28,8 +46,10 @@ export default function SalaryComponentsTab() {
   });
 
   useEffect(() => {
-    fetchComponents();
-  }, []);
+    if (currentView === 'list') {
+      fetchComponents();
+    }
+  }, [currentView]);
 
   const fetchComponents = async () => {
     setLoading(true);
@@ -48,40 +68,106 @@ export default function SalaryComponentsTab() {
     }
   };
 
+  const mergedComponents = useMemo(() => {
+    const apiComponentsMap = new Map();
+    components.forEach(c => apiComponentsMap.set(c.code.toUpperCase(), c));
+    
+    const result = [];
+    
+    // Add standard components first
+    STANDARD_COMPONENTS.forEach(std => {
+      const dbComp = apiComponentsMap.get(std.code);
+      if (dbComp && dbComp.isActive !== false) {
+        result.push({ ...dbComp, isStandard: true, isActiveInDB: true });
+        apiComponentsMap.delete(std.code);
+      } else {
+        result.push({ ...std, isStandard: true, isActiveInDB: false, id: `std-${std.code}` });
+        if (dbComp) apiComponentsMap.delete(std.code); // Remove inactive from map
+      }
+    });
+
+    // Add remaining custom components
+    Array.from(apiComponentsMap.values()).forEach(c => {
+      if (c.isActive !== false) {
+        result.push({ ...c, isStandard: false, isActiveInDB: true });
+      }
+    });
+
+    return result;
+  }, [components]);
+
+  const handleToggleComponent = async (comp, isChecked) => {
+    setError(null);
+    setSuccess(null);
+    setTogglingId(comp.id);
+
+    try {
+      if (isChecked) {
+        // Create it
+        const payload = {
+          name: comp.name,
+          code: comp.code,
+          type: comp.type || 'Earning',
+          componentNature: comp.componentNature || 'Fixed',
+          calculationType: comp.calculationType || 'Fixed',
+          calculationBase: comp.calculationBase || (comp.code === 'BASIC' ? 'CTC' : 'BASIC'),
+          calculationValue: comp.calculationValue || 0,
+          isStatutory: comp.isStatutory || false,
+          isTaxable: comp.isTaxable !== false,
+          displayOrder: comp.displayOrder || 0
+        };
+        await salaryAPI.createComponent(payload);
+        setSuccess(`${comp.name} activated successfully`);
+      } else {
+        // Delete it
+        if (!comp.isActiveInDB || comp.id.startsWith('std-')) return;
+        await salaryAPI.deleteComponent(comp.id);
+        setSuccess(`${comp.name} deactivated successfully`);
+      }
+      await fetchComponents();
+    } catch (err) {
+      setError(err.response?.data?.error || `Failed to ${isChecked ? 'activate' : 'deactivate'} component. It might be used in a Salary Structure.`);
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setTogglingId(null);
+      setTimeout(() => setSuccess(null), 3000);
+    }
+  };
+
   const handleOpenAdd = () => {
-    setModalMode('add');
     setSelectedComp(null);
     setFormData({
       name: '',
       code: '',
       type: 'Earning',
-      calculationType: 'Percentage',
-      calculationBase: 'CTC',
-      calculationValue: '',
+      componentNature: 'Fixed',
+      calculationType: 'Fixed',
+      calculationBase: 'BASIC',
+      calculationValue: 0,
       isStatutory: false,
       isTaxable: true,
       displayOrder: components.length + 1,
       description: ''
     });
-    setShowModal(true);
+    setCurrentView('add');
   };
 
   const handleOpenEdit = (comp) => {
-    setModalMode('edit');
     setSelectedComp(comp);
     setFormData({
       name: comp.name,
       code: comp.code,
       type: comp.type,
+      componentNature: comp.componentNature || 'Fixed',
       calculationType: comp.calculationType,
-      calculationBase: comp.calculationBase || 'CTC',
-      calculationValue: parseFloat(comp.calculationValue),
+      calculationBase: comp.calculationBase || (comp.code === 'BASIC' ? 'CTC' : 'BASIC'),
+      calculationValue: parseFloat(comp.calculationValue) || 0,
       isStatutory: comp.isStatutory,
       isTaxable: comp.isTaxable,
       displayOrder: comp.displayOrder,
       description: comp.description || ''
     });
-    setShowModal(true);
+    setCurrentView('edit');
   };
 
   const handleInputChange = (e) => {
@@ -110,16 +196,15 @@ export default function SalaryComponentsTab() {
       };
 
       let res;
-      if (modalMode === 'add') {
+      if (currentView === 'add' || (selectedComp && !selectedComp.isActiveInDB)) {
         res = await salaryAPI.createComponent(payload);
       } else {
         res = await salaryAPI.updateComponent(selectedComp.id, payload);
       }
 
       if (res.data && res.data.success) {
-        setSuccess(res.data.message || `Salary component ${modalMode === 'add' ? 'created' : 'updated'} successfully`);
-        setShowModal(false);
-        fetchComponents();
+        setSuccess(res.data.message || `Salary component ${currentView === 'add' || !selectedComp?.isActiveInDB ? 'activated' : 'updated'} successfully`);
+        setCurrentView('list');
         setTimeout(() => setSuccess(null), 4000);
       }
     } catch (err) {
@@ -127,25 +212,203 @@ export default function SalaryComponentsTab() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this salary component?')) return;
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await salaryAPI.deleteComponent(id);
-      if (res.data && res.data.success) {
-        setSuccess('Salary component deleted successfully');
-        fetchComponents();
-        setTimeout(() => setSuccess(null), 4000);
-      }
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete component. It might be used by active salary structures.');
-      setTimeout(() => setError(null), 5000);
-    }
-  };
+  // Full Page View for Add/Edit Form
+  if (currentView === 'add' || currentView === 'edit') {
+    return (
+      <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {/* Header */}
+          <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50/50">
+            <button 
+              onClick={() => setCurrentView('list')}
+              className="p-2 hover:bg-slate-200 rounded-full text-slate-500 transition-colors cursor-pointer"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 className="text-xl font-bold text-slate-800">
+                {currentView === 'add' ? 'Add Salary Component' : (selectedComp && !selectedComp.isActiveInDB ? 'Review & Activate Component' : 'Edit Salary Component')}
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">Configure settings and calculation rules for this payroll component.</p>
+            </div>
+          </div>
 
+          {/* Form */}
+          <div className="p-8 max-w-3xl">
+            {error && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-800 px-5 py-4 rounded-xl flex items-center gap-3 shadow-sm mb-6 animation-fade-in">
+                <AlertCircle className="text-rose-600" size={18} />
+                <span className="text-sm font-semibold">{error}</span>
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* 1. Component Name & Code */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm text-slate-600 mb-1.5">{formData.type === 'Earning' ? 'Earning Name' : 'Deduction Name'} <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2.5 rounded-md border border-slate-300 outline-none focus:border-blue-500 transition-all text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-600 mb-1.5">Short Code <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    name="code"
+                    required
+                    value={formData.code}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2.5 rounded-md border border-slate-300 outline-none focus:border-blue-500 transition-all uppercase text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* 2. Type & Nature */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm text-slate-600 mb-1.5">Component Type</label>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2.5 rounded-md border border-slate-300 outline-none focus:border-blue-500 transition-all bg-white text-sm"
+                  >
+                    <option value="Earning">Earning (Adds to Gross)</option>
+                    <option value="Deduction">Deduction (Subtracts from Gross)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-600 mb-3">Component Nature</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="componentNature"
+                        value="Fixed"
+                        checked={formData.componentNature === 'Fixed'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, componentNature: e.target.value }))}
+                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="text-sm text-slate-800">Fixed</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="componentNature"
+                        value="Variable"
+                        checked={formData.componentNature === 'Variable'}
+                        onChange={(e) => setFormData(prev => ({ 
+                          ...prev, 
+                          componentNature: e.target.value,
+                          calculationType: 'Fixed' // Force flat amount for variable
+                        }))}
+                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="text-sm text-slate-800">Variable</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Calculation Type (Only show if Fixed) */}
+              {formData.componentNature === 'Fixed' && (
+                <div className="pt-2">
+                  <label className="block text-sm text-slate-600 mb-3">Calculation Type <span className="text-red-500">*</span></label>
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="calculationType"
+                        value="Fixed"
+                        checked={formData.calculationType === 'Fixed'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, calculationType: e.target.value }))}
+                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="text-sm text-slate-800">Flat Amount</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="calculationType"
+                        value="Percentage"
+                        checked={formData.calculationType !== 'Fixed'}
+                        onChange={(e) => setFormData(prev => ({ ...prev, calculationType: e.target.value }))}
+                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="text-sm text-slate-800">
+                        Percentage of {formData.calculationBase === 'CTC' ? 'CTC' : (formData.calculationBase === 'BASIC' ? 'Basic' : formData.calculationBase)}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. Value */}
+              <div className="pt-2 w-1/2 pr-3">
+                <label className="block text-sm text-slate-600 mb-1.5">
+                  {formData.calculationType === 'Fixed' ? 'Enter Amount' : 'Enter Percentage'} <span className="text-red-500">*</span>
+                </label>
+                <div className="flex shadow-sm rounded-md">
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="calculationValue"
+                    required
+                    value={formData.calculationValue}
+                    onChange={handleInputChange}
+                    className="flex-1 min-w-0 block w-full px-3 py-2.5 rounded-none rounded-l-md border border-slate-300 outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm text-slate-800"
+                  />
+                  <span className="inline-flex items-center px-4 rounded-r-md border border-l-0 border-slate-300 bg-slate-50 text-slate-500 text-sm font-medium">
+                    {formData.calculationType === 'Fixed' ? '₹' : '%'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 5. Tax Status */}
+              <div className="pt-4 pb-4">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    name="isTaxable"
+                    checked={formData.isTaxable}
+                    onChange={handleInputChange}
+                    className="rounded text-blue-600 focus:ring-blue-500 border-slate-300 w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-sm text-slate-800">This earning is subject to Income Tax</span>
+                </label>
+              </div>
+
+              {/* Form Actions */}
+              <div className="pt-6 mt-6 border-t border-slate-200 flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('list')}
+                  className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors cursor-pointer text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-600/20 transition-all cursor-pointer text-sm"
+                >
+                  {currentView === 'add' ? 'Add Component' : (selectedComp && !selectedComp.isActiveInDB ? 'Activate Component' : 'Update Component')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main List View
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Messages */}
       {success && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-4 rounded-xl flex items-center gap-3 shadow-sm animation-fade-in">
@@ -153,7 +416,7 @@ export default function SalaryComponentsTab() {
           <span className="text-sm font-semibold">{success}</span>
         </div>
       )}
-      {error && !showModal && (
+      {error && (
         <div className="bg-rose-50 border border-rose-200 text-rose-800 px-5 py-4 rounded-xl flex items-center gap-3 shadow-sm animation-fade-in">
           <AlertCircle className="text-rose-600" size={18} />
           <span className="text-sm font-semibold">{error}</span>
@@ -178,33 +441,27 @@ export default function SalaryComponentsTab() {
       </div>
 
       {/* Components List */}
-      {loading ? (
+      {loading && components.length === 0 ? (
         <div className="flex justify-center items-center h-48 bg-white rounded-2xl border border-slate-200">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      ) : components.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-          <Info className="mx-auto text-slate-400 mb-3" size={36} />
-          <p className="text-slate-700 font-bold text-sm">No components configured yet</p>
-          <p className="text-slate-500 text-xs mt-1">Click "Add Component" to start configuring payroll components.</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-white border-b border-slate-200 text-black font-bold text-[11px] uppercase tracking-wider">
+                <tr className="bg-white border-b border-slate-200 text-slate-500 font-bold text-[11px] uppercase tracking-wider">
+                  <th className="px-4 py-3 w-10 text-center"><Check size={14} className="mx-auto" /></th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Earning Type</th>
                   <th className="px-4 py-3">Calculation Type</th>
                   <th className="px-4 py-3">Consider for EPF</th>
                   <th className="px-4 py-3">Consider for ESI</th>
-                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600 text-sm font-medium bg-white">
-                {components.map((comp) => {
+                {mergedComponents.map((comp) => {
                   let epf = 'No';
                   let esi = 'No';
                   let earningType = comp.name;
@@ -226,150 +483,59 @@ export default function SalaryComponentsTab() {
 
                   // Calculation Type Text
                   let calcText = '';
-                  if (comp.calculationType === 'Percentage') {
-                    calcText = `Fixed; ${parseFloat(comp.calculationValue)}% of ${comp.calculationBase === 'CTC' ? 'CTC' : 'Basic'}`;
-                  } else if (comp.calculationType === 'Fixed') {
-                    calcText = comp.calculationValue && parseFloat(comp.calculationValue) > 0 
-                      ? `Fixed; Flat amount of ${parseFloat(comp.calculationValue)}`
-                      : `Fixed; Flat Amount`;
-                  } else {
+                  const natureStr = comp.componentNature || 'Fixed';
+                  
+                  if (natureStr === 'Variable') {
                     calcText = `Variable; Flat Amount`;
+                  } else {
+                    if (comp.calculationType === 'Percentage') {
+                      calcText = `Fixed; ${parseFloat(comp.calculationValue)}% of ${comp.calculationBase === 'CTC' ? 'CTC' : 'Basic'}`;
+                    } else {
+                      calcText = comp.calculationValue && parseFloat(comp.calculationValue) > 0 
+                        ? `Fixed; Flat amount of ${parseFloat(comp.calculationValue)}`
+                        : `Fixed; Flat Amount`;
+                    }
                   }
 
                   return (
                     <tr key={comp.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-4 text-blue-500 cursor-pointer hover:underline font-medium" onClick={() => handleOpenEdit(comp)}>
+                      <td className="px-4 py-4 text-center">
+                        {togglingId === comp.id ? (
+                          <Loader2 size={16} className="animate-spin mx-auto text-blue-500" />
+                        ) : (
+                          <input 
+                            type="checkbox"
+                            className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                            checked={comp.isActiveInDB}
+                            onChange={(e) => handleToggleComponent(comp, e.target.checked)}
+                          />
+                        )}
+                      </td>
+                      <td className="px-4 py-4 font-bold text-blue-600 cursor-pointer hover:underline" onClick={() => handleOpenEdit(comp)}>
                         {comp.name}
                       </td>
-                      <td className="px-4 py-4">{earningType}</td>
-                      <td className="px-4 py-4">{calcText}</td>
-                      <td className="px-4 py-4">{epf}</td>
-                      <td className="px-4 py-4">{esi}</td>
-                      <td className="px-4 py-4">
-                        <span className={`font-semibold ${comp.isActive !== false ? 'text-emerald-500' : 'text-slate-400'}`}>
-                          {comp.isActive !== false ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
+                      <td className="px-4 py-4 text-slate-800">{earningType}</td>
+                      <td className="px-4 py-4 text-slate-800">{calcText}</td>
+                      <td className="px-4 py-4 text-slate-800">{epf}</td>
+                      <td className="px-4 py-4 text-slate-800">{esi}</td>
                       <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end">
-                          <button
-                            onClick={() => handleOpenEdit(comp)}
-                            className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-300 hover:text-blue-500 hover:border-blue-200 transition-all cursor-pointer bg-white"
-                            title="Edit"
-                          >
-                            <span className="leading-none pb-2 text-sm">...</span>
-                          </button>
-                        </div>
+                        {comp.isActiveInDB && (
+                          <div className="flex items-center justify-end">
+                            <button
+                              onClick={() => handleOpenEdit(comp)}
+                              className="w-6 h-6 rounded border border-slate-200 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all cursor-pointer bg-white"
+                              title="Edit Details"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Modal - Simplified Layout */}
-      {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-base">
-                {modalMode === 'add' ? 'Add Salary Component' : 'Edit Salary Component'}
-              </h3>
-              <button 
-                onClick={() => setShowModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-medium text-lg cursor-pointer"
-              >
-                &times;
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-5 flex-1 text-sm text-slate-700">
-              {error && (
-                <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center gap-2">
-                  <AlertCircle className="text-rose-600 flex-shrink-0" size={16} />
-                  <span className="text-xs font-semibold">{error}</span>
-                </div>
-              )}
-
-              {/* 1. Component Name */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Component Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="e.g. Basic Salary"
-                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all shadow-sm"
-                />
-              </div>
-
-              {/* 2. Calculation Type */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Calculation Type</label>
-                <select
-                  name="calculationType"
-                  value={formData.calculationType === 'Fixed' ? 'Fixed' : 'Percentage'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, calculationType: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all bg-white shadow-sm"
-                >
-                  <option value="Percentage">Percentage (%)</option>
-                  <option value="Fixed">Flat Amount (₹)</option>
-                </select>
-              </div>
-
-              {/* 3. Value */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Value</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="calculationValue"
-                  required
-                  value={formData.calculationValue}
-                  onChange={handleInputChange}
-                  placeholder="Enter amount or percentage"
-                  className="w-full px-3 py-2.5 rounded-lg border border-slate-200 outline-none focus:border-blue-500 transition-all font-semibold text-slate-800 shadow-sm"
-                />
-              </div>
-
-              {/* 4. Tax Status */}
-              <div className="pt-2 pb-4">
-                <label className="flex items-center gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    name="isTaxable"
-                    checked={formData.isTaxable}
-                    onChange={handleInputChange}
-                    className="rounded text-blue-600 focus:ring-blue-500 border-slate-300 w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-sm font-medium text-slate-800">This earning is subject to Income Tax</span>
-                </label>
-              </div>
-
-              {/* Footer Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-all cursor-pointer shadow-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md shadow-blue-600/20 transition-all cursor-pointer uppercase tracking-wider"
-                >
-                  Update Component
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
