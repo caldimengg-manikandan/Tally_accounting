@@ -74,7 +74,7 @@ exports.getAll = async (req, res) => {
       empWhere[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
         { employeeId: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } }
+        { workEmail: { [Op.iLike]: `%${search}%` } }
       ];
     }
 

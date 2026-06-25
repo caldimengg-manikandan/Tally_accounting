@@ -86,6 +86,8 @@ export default function EmployeeForm({ employee, onClose, onSave, companyId }) {
     if (employee) {
       setFormData({
         ...employee,
+        email: employee.workEmail || '',
+        phone: employee.mobileNumber || '',
         middleName: employee.middleName || '',
         lastName: employee.lastName || '',
         dob: employee.dob || '',
