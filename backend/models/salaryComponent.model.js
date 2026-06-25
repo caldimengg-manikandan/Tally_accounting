@@ -23,6 +23,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('Earning', 'Deduction', 'Statutory'),
       allowNull: false
     },
+    componentNature: {
+      type: DataTypes.ENUM('Fixed', 'Variable'),
+      defaultValue: 'Fixed',
+      allowNull: false
+    },
     calculationType: {
       type: DataTypes.ENUM('Fixed', 'Percentage', 'Formula'),
       allowNull: false

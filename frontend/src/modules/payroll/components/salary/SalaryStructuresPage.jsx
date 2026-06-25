@@ -1,19 +1,12 @@
 import React, { useState } from 'react';
-import SalaryComponentsTab from './SalaryComponentsTab';
 import SalaryStructuresTab from './SalaryStructuresTab';
 import SalaryAssignmentsTab from './SalaryAssignmentsTab';
-import { Sparkles, Layers, UserCheck } from 'lucide-react';
+import { Layers, UserCheck } from 'lucide-react';
 
 export default function SalaryStructuresPage() {
-  const [activeTab, setActiveTab] = useState('components');
+  const [activeTab, setActiveTab] = useState('structures');
 
   const tabs = [
-    {
-      id: 'components',
-      label: 'Salary Components',
-      icon: Sparkles,
-      component: SalaryComponentsTab
-    },
     {
       id: 'structures',
       label: 'Salary Structures',
@@ -28,7 +21,7 @@ export default function SalaryStructuresPage() {
     }
   ];
 
-  const ActiveComponent = tabs.find(t => t.id === activeTab)?.component || SalaryComponentsTab;
+  const ActiveComponent = tabs.find(t => t.id === activeTab)?.component || SalaryStructuresTab;
 
   return (
     <div className="space-y-6">
