@@ -99,3 +99,17 @@ Failed to fetch /me: {"name":"SequelizeDatabaseError","parent":{"length":116,"na
     at async exports.login (C:\Users\navee\OneDrive\Desktop\tally\Tally_accounting\backend\modules\auth\auth.controller.js:188:18)
 ❌ Failed to bind to PORT: 5000 {"code":"EADDRINUSE","errno":-4091,"syscall":"listen","address":"0.0.0.0","port":5000}
 ❌ Failed to bind to PORT: 5000 {"code":"EADDRINUSE","errno":-4091,"syscall":"listen","address":"0.0.0.0","port":5000}
+[AUTH-LOGIN-6134f276701c] column User.pendingEmail does not exist Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.select (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async User.findAll (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async User.findOne (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1240:12)
+    at async exports.login (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\auth\auth.controller.js:188:18)
+[AUTH-LOGIN-3e92a32b8417] column User.pendingEmail does not exist Error
+    at Query.run (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at async PostgresQueryInterface.select (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async User.findAll (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async User.findOne (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\node_modules\sequelize\lib\model.js:1240:12)
+    at async exports.login (C:\Users\user\Documents\Tally_main_new\Tally_accounting\backend\modules\auth\auth.controller.js:188:18)
