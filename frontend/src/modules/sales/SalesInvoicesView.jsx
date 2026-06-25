@@ -537,138 +537,152 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         </div>
                       </div>
 
-                    {/* ─── BUYER / CONSIGNEE SECTION ─── */}
-                    <table style={{width:'100%', borderCollapse:'collapse', borderBottom:'1px solid #000'}} >
-                        <tbody>
-                            <tr>
-                                <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight:'1px solid #000'}} >
-                                    <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Buyer (Bill To):</div>
-                                    <div style={{fontWeight:'bold'}} >{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</div>
-                                    <div style={{fontSize:'11px', color:'#333'}} >
-                                        {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
-                                    </div>
-                                    {invoice.CustomerLedger?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {invoice.CustomerLedger.gstNumber}</div>}
-                                    {invoice.CustomerLedger?.state && <div style={{fontSize:'11px'}} >State: {invoice.CustomerLedger.state}</div>}
-                                </td>
-                                <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
-                                    <div style={{fontWeight:'bold', fontSize:'11px', textDecoration:'underline', marginBottom:'4px'}} >Consignee (Ship To):</div>
-                                    <div style={{fontWeight:'bold'}} >{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</div>
-                                    <div style={{fontSize:'11px', color:'#333'}} >
-                                        {formatAddress(invoice.CustomerLedger?.shippingAddress || invoice.CustomerLedger?.address) || 'No shipping address provided.'}
-                                    </div>
-                                    {invoice.CustomerLedger?.gstNumber && <div style={{fontSize:'11px', marginTop:'3px'}} >GSTIN/UIN: {invoice.CustomerLedger.gstNumber}</div>}
-                                    {invoice.CustomerLedger?.state && <div style={{fontSize:'11px'}} >State: {invoice.CustomerLedger.state}</div>}
-                                </td>
+{/* —— Customer Bill To / Ship To —— */}
+                    <div className="grid grid-cols-2 gap-8 mb-12">
+                      {/* Bill To */}
+                      <div className="space-y-2">
+                        <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Bill To</h4>
+                        <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                          <p className="font-extrabold text-slate-950 text-[14px]">{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</p>
+                          <p className="font-semibold text-slate-700">
+                            {formatAddress(invoice.CustomerLedger?.billingAddress || invoice.CustomerLedger?.address) || 'No billing address provided.'}
+                          </p>
+                          {invoice.CustomerLedger?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {invoice.CustomerLedger.gstNumber}</p>}
+                          {invoice.CustomerLedger?.state && <p className="text-[12px] mt-1">State: {invoice.CustomerLedger.state}</p>}
+                        </div>
+                      </div>
+
+                      {/* Ship To */}
+                      <div className="space-y-2">
+                        <h4 className="text-[11px] font-bold text-blue-600 uppercase tracking-widest">Ship To</h4>
+                        <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
+                          <p className="font-extrabold text-slate-950 text-[14px]">{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</p>
+                          <p className="font-semibold text-slate-700">
+                            {formatAddress(invoice.CustomerLedger?.shippingAddress || invoice.CustomerLedger?.address) || 'No shipping address provided.'}
+                          </p>
+                          {invoice.CustomerLedger?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {invoice.CustomerLedger.gstNumber}</p>}
+                          {invoice.CustomerLedger?.state && <p className="text-[12px] mt-1">State: {invoice.CustomerLedger.state}</p>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* —— Meta Row: Date / Due Date / Order No —— */}
+                    <div className="flex items-center gap-12 border-t border-b border-slate-100 py-4 mb-10 text-[13px] font-semibold">
+                      <div>
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Date</span>
+                        <span className="text-slate-700">{new Date(invoice.date).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</span>
+                      </div>
+                      {invoice.dueDate && (
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Due Date</span>
+                          <span className="text-slate-700">{new Date(invoice.dueDate).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</span>
+                        </div>
+                      )}
+                      {invoice.orderNumber && (
+                        <div>
+                          <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5">Order No</span>
+                          <span className="text-slate-700">{invoice.orderNumber}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* —— Items Table —— */}
+                    <table className="w-full text-left mb-10">
+                      <thead>
+                        <tr className="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider">
+                          <th className="px-4 py-3 rounded-l">#</th>
+                          <th className="px-4 py-3">Item &amp; Description</th>
+                          <th className="px-4 py-3 text-center">Qty</th>
+                          <th className="px-4 py-3 text-right">Rate</th>
+                          <th className="px-4 py-3 text-right rounded-r">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-[13px] font-semibold text-slate-700">
+                        {items.length > 0 ? (
+                          items.map((it, idx) => (
+                            <tr key={idx}>
+                              <td className="px-4 py-3.5 text-slate-400">{idx + 1}</td>
+                              <td className="px-4 py-3.5">
+                                <p className="font-extrabold text-slate-800">{it.Item?.name || 'Service Item'}</p>
+                                {it.description && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{it.description}</p>}
+                                {it.Item?.hsnCode && <p className="text-[11px] text-slate-400 mt-0.5 font-medium">HSN: {it.Item.hsnCode}</p>}
+                              </td>
+                              <td className="px-4 py-3.5 text-center font-mono">{parseFloat(it.quantity || 0).toFixed(2)} {it.Item?.unit || 'Nos'}</td>
+                              <td className="px-4 py-3.5 text-right font-mono">{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                              <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                             </tr>
-                        </tbody>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="5" className="px-4 py-8 text-center text-slate-400 italic">No items found</td>
+                          </tr>
+                        )}
+                      </tbody>
                     </table>
 
-                    {/* ─── LINE ITEMS TABLE ─── */}
-                    <table style={{width:'100%', borderCollapse:'collapse'}} >
-                        <thead>
-                            <tr style={{background:'#f0f0f0'}} >
-                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'40px'}} >Sl. No.</th>
-                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'left'}} >Description of Goods</th>
-                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'90px'}} >HSN/SAC</th>
-                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'80px'}} >Quantity</th>
-                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'90px'}} >Rate</th>
-                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', width:'50px'}} >per</th>
-                                <th style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', width:'100px'}} >Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {items.length === 0 && (
-                                <tr><td colSpan="7" style={{border:'1px solid #000', padding:'20px', textAlign:'center', color:'#999'}} >No items</td></tr>
-                            )}
-                            {items.map((it, idx) => (
-                                <tr key={idx} >
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{idx + 1}</td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', verticalAlign:'top'}} >
-                                        <div style={{fontWeight:'bold'}} >{it.Item?.name || 'Service Item'}</div>
-                                        {it.description && <div style={{fontSize:'11px', color:'#555', marginTop:'2px'}} >{it.description}</div>}
-                                    </td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.Item?.hsnCode || ''}</td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{parseFloat(it.quantity || 1).toFixed(2)}</td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top'}} >{parseFloat(it.rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', verticalAlign:'top'}} >{it.Item?.unit || 'Nos'}</td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', verticalAlign:'top', fontWeight:'bold'}} >{parseFloat(it.amount || (it.quantity * it.rate)).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot>
-                            {/* Sub Total row */}
-                            <tr style={{background:'#f9f9f9'}} >
-                                <td colSpan="3" style={{border:'1px solid #000', padding:'6px 8px', fontWeight:'bold', textAlign:'right'}} >Total</td>
-                                <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'center', fontWeight:'bold'}} >
-                                    {items.reduce((s, it) => s + parseFloat(it.quantity || 0), 0).toFixed(2)}
-                                </td>
-                                <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
-                                <td style={{border:'1px solid #000', padding:'6px 8px'}} ></td>
-                                <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
-                                    {parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                                </td>
-                            </tr>
-                            {/* GST row */}
-                            {parseFloat(invoice.gstAmount || 0) > 0 && (
-                                <tr>
-                                    <td colSpan="6" style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right'}} >
-                                        GST (18%)
-                                    </td>
-                                    <td style={{border:'1px solid #000', padding:'6px 8px', textAlign:'right', fontWeight:'bold'}} >
-                                        {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                                    </td>
-                                </tr>
-                            )}
-                            {/* Grand Total row */}
-                            <tr style={{background:'#e8e8e8'}} >
-                                <td colSpan="6" style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >Grand Total</td>
-                                <td style={{border:'2px solid #000', padding:'8px', textAlign:'right', fontWeight:'bold', fontSize:'13px'}} >
-                                    {getCurrencyDisplay(invoice.CustomerLedger?.currency)}{' '}
-                                    {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                    {/* —— Totals —— */}
+                    <div className="flex justify-end mb-16">
+                      <div className="w-80 space-y-2 text-[13px] font-bold text-slate-600">
+                        <div className="flex justify-between items-center py-1">
+                          <span>Sub Total</span>
+                          <span className="font-mono text-slate-800">{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        </div>
+                        {parseFloat(invoice.gstAmount || 0) > 0 && (
+                          <div className="flex justify-between items-center py-1">
+                            <span>GST (18%)</span>
+                            <span className="font-mono text-slate-800">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">
+                          <span>Grand Total</span>
+                          <span className="font-mono text-[#1e61f0]">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                    {/* ─── NOTES & TERMS ─── */}
-                    {(invoice.customerNotes || invoice.termsConditions) && (
-                        <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
-                            <tbody>
-                                <tr>
-                                    {invoice.customerNotes && (
-                                        <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%', borderRight: invoice.termsConditions ? '1px solid #000' : 'none'}} >
-                                            <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Customer Notes:</div>
-                                            <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{invoice.customerNotes}</div>
-                                        </td>
-                                    )}
-                                    {invoice.termsConditions && (
-                                        <td style={{padding:'8px 14px', verticalAlign:'top', width:'50%'}} >
-                                            <div style={{fontWeight:'bold', fontSize:'11px', marginBottom:'3px'}} >Terms & Conditions:</div>
-                                            <div style={{fontSize:'11px', color:'#333', whiteSpace:'pre-wrap'}} >{invoice.termsConditions}</div>
-                                        </td>
-                                    )}
-                                </tr>
-                            </tbody>
-                        </table>
-                    )}
+                    {/* ——— Notes / Terms + Signature ——— */}
+                    <div className="mt-8 pt-8 border-t border-slate-100">
+                      {(invoice.customerNotes || invoice.termsConditions) && (
+                        <div className="grid grid-cols-2 gap-6 mb-10 text-[12px]">
+                          {invoice.customerNotes && (
+                            <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
+                              <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
+                                <FileText size={12} className="text-slate-400"/> Customer Notes
+                              </span>
+                              <p className="text-slate-600 font-semibold leading-relaxed">{invoice.customerNotes}</p>
+                            </div>
+                          )}
+                          {invoice.termsConditions && (
+                            <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100/80">
+                              <span className="text-[10px] uppercase font-bold block text-slate-400 tracking-widest mb-2 flex items-center gap-1.5">
+                                <ShieldCheck size={12} className="text-slate-400"/> Terms &amp; Conditions
+                              </span>
+                              <p className="text-slate-600 font-semibold leading-relaxed">{invoice.termsConditions}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                    {/* ─── SIGNATURE BLOCK ─── */}
-                    <table style={{width:'100%', borderCollapse:'collapse', borderTop:'1px solid #000', marginTop:'0'}} >
-                        <tbody>
-                            <tr>
-                                <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', borderRight:'1px solid #000'}} >
-                                    <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >Receiver's Signature & Stamp</div>
-                                    <div style={{borderTop:'1px solid #000', width:'70%', marginTop:'32px'}} ></div>
-                                </td>
-                                <td style={{padding:'16px 14px 28px', verticalAlign:'bottom', width:'50%', textAlign:'right'}} >
-                                    <div style={{fontSize:'11px', color:'#555', marginBottom:'4px'}} >For Authorized Signatory</div>
-                                    <div style={{borderTop:'1px solid #000', width:'60%', marginTop:'32px', marginLeft:'auto'}} ></div>
-                                    <div style={{fontSize:'11px', marginTop:'4px', textAlign:'right', fontWeight:'bold'}} >{invoice.salesperson || company?.name || 'Authorized Signatory'}</div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                 </div>
+                      <div className="grid grid-cols-2 gap-12 mt-12 text-[13px] font-bold text-slate-400">
+                        {/* Receiver's Signature */}
+                        <div className="space-y-4">
+                          <p className="text-slate-500 text-[11px] uppercase tracking-widest">Receiver's Signature &amp; Stamp</p>
+                          <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
+                            Stamp &amp; Signature Space
+                          </div>
+                        </div>
+
+                        {/* Authorized Signatory */}
+                        <div className="text-right space-y-4 flex flex-col items-end">
+                          <p className="text-slate-500 text-[11px] uppercase tracking-widest">For {invoice.salesperson || company?.name || 'Authorized Signatory'}</p>
+                          <div className="w-56 h-20 border border-dashed border-slate-200 rounded-xl bg-slate-50/20 flex items-center justify-center text-[11px] font-medium text-slate-400 italic">
+                            Authorized Signature Space
+                          </div>
+                          <p className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider">{invoice.salesperson || company?.name || 'Authorized Signatory'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
                  {/* Online Payments & Settlement Panel (no-print) */}
                  <div className="w-full max-w-[820px] mx-auto bg-white border border-slate-200 rounded-2xl shadow-md p-6 space-y-6 no-print mt-8">
