@@ -516,7 +516,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
               <ArrowLeft size={16} /> Go Back
             </button>
           )}
-          {!firstTime && (
+          {!firstTime ? (
             <button 
               onClick={() => window.location.href = '/dashboard'}
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 font-semibold px-4 py-2 border border-slate-200 rounded-lg bg-white shadow-sm hover:bg-slate-50 transition-colors"

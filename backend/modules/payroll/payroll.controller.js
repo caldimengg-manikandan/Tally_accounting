@@ -602,13 +602,20 @@ exports.testCalculation = async (req, res) => {
     let pfDeduction = 0;
     let pfEmployer = 0;
     if (settings.pfApplicable) {
-      pfDeduction = Math.round(basicAmount * (parseFloat(settings.pfEmployeeRate) / 100));
-      pfEmployer = Math.round(basicAmount * (parseFloat(settings.pfEmployerRate) / 100));
+      const computedPfDeduction = basicAmount * (parseFloat(settings.pfEmployeeRate) / 100);
+      const computedPfEmployer = basicAmount * (parseFloat(settings.pfEmployerRate) / 100);
+      const cap = parseFloat(settings.pfCap) || 1800;
+      
+      pfDeduction = computedPfDeduction > cap ? cap : Math.round(computedPfDeduction);
+      pfEmployer = computedPfEmployer > cap ? cap : Math.round(computedPfEmployer);
     }
     
     let esiDeduction = 0;
     if (settings.esiApplicable) {
-      esiDeduction = Math.round(grossAmount * (parseFloat(settings.esiEmployeeRate) / 100));
+      const esiThreshold = parseFloat(settings.esiThreshold) || 21000;
+      if (grossAmount <= esiThreshold) {
+        esiDeduction = Math.round(grossAmount * (parseFloat(settings.esiEmployeeRate) / 100));
+      }
     }
     
     const ptDeduction = parseFloat(settings.ptMonthlyAmount) || 0;

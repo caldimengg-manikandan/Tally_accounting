@@ -60,24 +60,6 @@ export default function CompletionSummary({ result, onClose }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
-        <button onClick={onClose} className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-white hover:shadow-md transition-all text-slate-600 hover:text-blue-600">
-          <Eye size={24} />
-          <span className="text-xs font-bold">View & Approve Slips</span>
-        </button>
-        <button onClick={() => window.print()} className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-white hover:shadow-md transition-all text-slate-600 hover:text-blue-600">
-          <Download size={24} />
-          <span className="text-xs font-bold">Download Report</span>
-        </button>
-        <button onClick={() => window.location.reload()} className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-white hover:shadow-md transition-all text-slate-600 hover:text-blue-600">
-          <RotateCcw size={24} />
-          <span className="text-xs font-bold">Process Another</span>
-        </button>
-        <button onClick={onClose} className="flex flex-col items-center justify-center gap-2 p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-white hover:shadow-md transition-all text-slate-600 hover:text-slate-900">
-          <Home size={24} />
-          <span className="text-xs font-bold">Back to Dashboard</span>
-        </button>
-      </div>
     </div>
   );
 }

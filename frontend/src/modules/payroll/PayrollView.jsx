@@ -11,7 +11,7 @@ import EmployeeList from './components/EmployeeList';
 import EmployeeForm from './components/EmployeeForm';
 import EmployeeDetails from './components/EmployeeDetails';
 import EmployeeImport from './components/EmployeeImport';
-import AttendanceLogsPage from './components/AttendanceLogsPage';
+
 import SalaryStructuresPage from './components/salary/SalaryStructuresPage';
 import PayrollSettingsForm from './components/PayrollSettingsForm';
 import ProcessPayrollForm from './components/step4/ProcessPayrollForm';
@@ -319,7 +319,7 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
             { id: 'settings', label: 'Taxes & Settings', icon: Sliders },
             { id: 'structures', label: 'Salary Structures', icon: Settings },
             { id: 'employees', label: 'Employees', icon: Users },
-            { id: 'attendance', label: 'Attendance logs', icon: Calendar },
+
             { id: 'process', label: 'Process Payroll', icon: DollarSign },
             { id: 'payslips', label: 'Payslips', icon: FileText }
           ].map(tab => (
@@ -373,13 +373,7 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
               />
             )}
 
-            {/* TAB 2: ATTENDANCE - Full Attendance Logs Module */}
-            {activeTab === 'attendance' && (
-              <AttendanceLogsPage
-                companyId={companyId}
-                employees={allEmployees}
-              />
-            )}
+
 
             {/* TAB 3: SALARY STRUCTURES (Dynamic) */}
             {activeTab === 'structures' && (
