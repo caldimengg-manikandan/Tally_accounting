@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Lock, Shield, Eye, EyeOff, Loader2, Save, Terminal, MailCheck, Chrome } from 'lucide-react';
 import useNotificationStore from '../../store/notificationStore';
 import { usersAPI, authAPI } from '../../services/api';
+import { useTheme } from '../../context/ThemeContext';
 
 const ProfileSettings = () => {
   const { addNotification } = useNotificationStore();
@@ -11,7 +12,7 @@ const ProfileSettings = () => {
   const [isOAuthUser, setIsOAuthUser] = useState(false); // true = signed in via Google, no password yet
 
   // Theme & Language
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+  const { theme, setTheme } = useTheme();
   const [language, setLanguage] = useState('English');
 
   // User Profile details
@@ -131,12 +132,10 @@ const ProfileSettings = () => {
     }
   };
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'light' ? 'dark' : 'light';
+  const handleThemeChange = (e) => {
+    const nextTheme = e.target.value;
     setTheme(nextTheme);
-    localStorage.setItem('theme', nextTheme);
-    document.documentElement.className = nextTheme;
-    addNotification(`Theme switched to ${nextTheme === 'light' ? 'Light' : 'Dark'} Mode`, 'info');
+    addNotification(`Theme switched to ${nextTheme} Mode`, 'info');
   };
 
   // Shared class helpers
@@ -245,12 +244,15 @@ const ProfileSettings = () => {
                 <div className="text-[12px] font-bold text-slate-700 dark:text-slate-200">Interface Display Mode</div>
                 <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Toggle light vs dark theme layouts</div>
               </div>
-              <button
-                onClick={toggleTheme}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+              <select
+                value={theme}
+                onChange={handleThemeChange}
+                className="px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold uppercase tracking-wider bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 cursor-pointer outline-none"
               >
-                Switch to {theme === 'light' ? 'Dark' : 'Light'} Mode
-              </button>
+                <option value="light">Light Mode</option>
+                <option value="dark">Dark Mode</option>
+                <option value="system">System Default</option>
+              </select>
             </div>
 
             <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700">

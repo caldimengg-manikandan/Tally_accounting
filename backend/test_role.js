@@ -1,19 +1,28 @@
-const axios = require('axios');
+const { Company, User, UserCompany } = require('./models');
 
 async function test() {
-  try {
-    // We don't know Naveen's password, but we know the admin's.
-    // Or we can just bypass the HTTP request and query the DB directly to check if there is an issue with the query.
-    // But wait, the issue is likely just nodemon not restarting.
-    // Let me query the user directly to verify his role.
-    const { User, Company } = require('./models');
-    
-    // Find the latest user
-    const users = await User.findAll({ order: [['createdAt', 'DESC']], limit: 1 });
-    console.log('Latest user:', users[0].email, 'Role:', users[0].role);
-
-  } catch (e) {
-    console.error(e);
+  const company = await Company.findOne({
+    include: [{
+      model: User,
+      through: { model: UserCompany, attributes: ['role'] },
+      attributes: ['id', 'name', 'email', 'role', 'activeCompanyId', 'createdAt']
+    }]
+  });
+  
+  if (!company) {
+    console.log("No company found");
+    return;
   }
+  
+  const users = company.Users.map(u => {
+    const raw = u.get({ plain: true });
+    console.log("u.UserCompany:", u.UserCompany?.role);
+    console.log("raw.UserCompany:", raw.UserCompany?.role);
+    raw.role = (raw.UserCompany && raw.UserCompany.role) || raw.role || 'VIEWER';
+    return raw;
+  });
+  
+  console.log("Mapped users:", JSON.stringify(users, null, 2));
 }
-test();
+
+test().catch(console.error).finally(() => process.exit(0));

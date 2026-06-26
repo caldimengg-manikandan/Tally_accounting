@@ -33,7 +33,7 @@ export default function HeroSection() {
 
         {/* Headline */}
         <h1 className="text-center max-w-4xl">
-          <span className="block text-4xl md:text-[64px] font-light text-slate-800 leading-[1.1] tracking-tight">
+          <span className="block text-4xl md:text-[64px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-slate-600 leading-[1.1] tracking-tight">
             One platform.
           </span>
           <span className="block text-4xl md:text-[64px] font-bold leading-[1.1] tracking-tight mt-1 bg-gradient-to-r from-teal-600 via-indigo-500 to-sky-500 bg-clip-text text-transparent">

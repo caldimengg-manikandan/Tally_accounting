@@ -10,6 +10,7 @@ import { INDIAN_STATES } from '../../utils/indianStates';
 import { CURRENCIES } from '../../utils/currencies';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
+import UserManagement from '../settings/UserManagement';
 
 const validateGSTIN = (gstin) => {
   if (!gstin) return true;
@@ -516,7 +517,7 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
               <ArrowLeft size={16} /> Go Back
             </button>
           )}
-          {!firstTime && (
+          {!firstTime ? (
             <button 
               onClick={() => window.location.href = '/dashboard'}
               className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 font-semibold px-4 py-2 border border-slate-200 rounded-lg bg-white shadow-sm hover:bg-slate-50 transition-colors"
@@ -814,133 +815,8 @@ const CompanyInfoView = ({ firstTime = false, onCompanyCreated }) => {
 
         {/* TAB 4: USERS & ROLES */}
         {activeTab === 'users' && isAdmin && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-bold text-slate-800">Users & Roles Management</h2>
-                <p className="text-xs text-slate-500 mt-1">Manage team access and assign roles for the active workspace.</p>
-              </div>
-              <button 
-                onClick={() => setShowInviteModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all"
-              >
-                <UserPlus size={16} /> Invite User
-              </button>
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-black uppercase text-slate-500 tracking-wider">
-                    <th className="px-6 py-4">Name & Email</th>
-                    <th className="px-6 py-4">Role</th>
-                    <th className="px-6 py-4">Joined At</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {companyUsers.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-slate-800 text-[13px]">{u.name || 'No Name'}</div>
-                        <div className="text-xs text-slate-400">{u.email}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleUpdateRole(u.id, e.target.value)}
-                          disabled={u.email === userObj.email}
-                          className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[12px] font-bold text-slate-700 outline-none focus:border-blue-500 cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed"
-                        >
-                          <option value="ADMIN">ADMIN</option>
-                          <option value="ACCOUNTANT">ACCOUNTANT</option>
-                          <option value="MANAGER">MANAGER</option>
-                          <option value="EMPLOYEE">EMPLOYEE</option>
-                          <option value="VIEWER">VIEWER</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 text-[12px] text-slate-500 font-medium">
-                        {new Date(u.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                         <button 
-                           onClick={() => handleRemoveUser(u.id)}
-                           disabled={u.email === userObj.email}
-                           className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                           title="Remove User"
-                         >
-                           <Trash2 size={16} />
-                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {companyUsers.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic font-medium text-sm">
-                        No users found in this company.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <UserManagement companyId={activeCompanyId} />
         )}
-
-        {/* INVITE USER MODAL */}
-        {showInviteModal && (
-          <div className="fixed inset-0 z-[2000] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-fade-up">
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
-                  <UserPlus size={20} className="text-blue-600" /> Invite New User
-                </h3>
-                <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-slate-700 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-1">Email Address <span className="text-red-500">*</span></label>
-                  <input type="email" value={inviteData.email} onChange={e => setInviteData(p => ({ ...p, email: e.target.value }))} className="w-full h-10 px-3 border border-slate-200 rounded-lg focus:border-blue-500 outline-none text-[13px]" placeholder="employee@company.com" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-1">Full Name</label>
-                  <input type="text" value={inviteData.name} onChange={e => setInviteData(p => ({ ...p, name: e.target.value }))} className="w-full h-10 px-3 border border-slate-200 rounded-lg focus:border-blue-500 outline-none text-[13px]" placeholder="John Doe" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-1">Initial Password <span className="text-red-500">*</span></label>
-                  <input type="text" value={inviteData.password} onChange={e => setInviteData(p => ({ ...p, password: e.target.value }))} className="w-full h-10 px-3 border border-slate-200 rounded-lg focus:border-blue-500 outline-none text-[13px]" placeholder="Set a temporary password" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-1">Access Role <span className="text-red-500">*</span></label>
-                  <select value={inviteData.role} onChange={e => setInviteData(p => ({ ...p, role: e.target.value }))} className="w-full h-10 px-3 border border-slate-200 rounded-lg focus:border-blue-500 outline-none text-[13px]">
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="ACCOUNTANT">ACCOUNTANT</option>
-                    <option value="MANAGER">MANAGER</option>
-                    <option value="EMPLOYEE">EMPLOYEE</option>
-                    <option value="VIEWER">VIEWER</option>
-                  </select>
-                </div>
-              </div>
-              <div className="p-6 pt-0 flex justify-end gap-3 mt-2">
-                <button onClick={() => setShowInviteModal(false)} className="px-5 py-2 rounded-lg border border-slate-200 text-slate-600 font-bold text-[12px] hover:bg-slate-50 uppercase tracking-wider">Cancel</button>
-                <button onClick={handleInviteUser} disabled={loading} className="px-6 py-2 rounded-lg bg-blue-600 text-white font-bold text-[12px] hover:bg-blue-700 flex items-center gap-2 uppercase tracking-wider">
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : 'Send Invite'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CONFIRM MODAL */}
-        <ConfirmModal
-          isOpen={confirmModal.isOpen}
-          title="Remove User"
-          message="Are you sure you want to remove this user from the company?"
-          onConfirm={confirmRemoveUser}
-          onClose={() => setConfirmModal({ isOpen: false, userId: null })}
-        />
 
       </div>
     </div>
