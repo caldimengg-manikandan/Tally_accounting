@@ -190,7 +190,7 @@ export default function PayrollSettingsForm({ companyId, initialSettings, onSave
                   <div className="pt-4 border-t border-slate-200">
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">PF Wage Calculation Rule</label>
                     <select
-                      value={formData.pfCap === 1800 ? 'capped' : 'uncapped'}
+                      value={parseFloat(formData.pfCap) === 1800 ? 'capped' : 'uncapped'}
                       onChange={(e) => setFormData({ ...formData, pfCap: e.target.value === 'capped' ? 1800 : 9999999 })}
                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all shadow-sm"
                     >
