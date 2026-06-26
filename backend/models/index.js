@@ -72,6 +72,7 @@ const AppNotification = require('./appNotification.model')(sequelize, DataTypes)
 const PeriodLock = require('./periodLock.model')(sequelize);
 const FinancialPeriod = require('./financialPeriod.model')(sequelize, DataTypes);
 const UserCompany = require('./userCompany.model')(sequelize, DataTypes);
+const CustomRole = require('./customRole.model')(sequelize, DataTypes);
 
 
 // ─── Associations ────────────────────────────────────────────────────────────
@@ -452,6 +453,13 @@ Company.hasMany(DepreciationLog, { foreignKey: 'CompanyId' });
 DepreciationLog.belongsTo(Company, { foreignKey: 'CompanyId' });
 FixedAsset.hasMany(DepreciationLog, { foreignKey: 'FixedAssetId', onDelete: 'CASCADE' });
 DepreciationLog.belongsTo(FixedAsset, { foreignKey: 'FixedAssetId' });
+// FixedAsset - BOM relationship
+BOM.belongsTo(FixedAsset, { as: 'Machinery', foreignKey: 'fixedAssetId' });
+
+// CustomRole Relationships
+Company.hasMany(CustomRole, { foreignKey: 'CompanyId' });
+CustomRole.belongsTo(Company, { foreignKey: 'CompanyId' });
+UserCompany.belongsTo(CustomRole, { foreignKey: 'customRoleId', as: 'CustomRole' });
 DepreciationLog.belongsTo(Voucher, { foreignKey: 'VoucherId', onDelete: 'SET NULL' });
 
 // 22. Manufacturing / BOM
@@ -643,6 +651,6 @@ module.exports = {
   AppNotification,
   PeriodLock,
   FinancialPeriod,
+  CustomRole,
   UserCompany
 };
-

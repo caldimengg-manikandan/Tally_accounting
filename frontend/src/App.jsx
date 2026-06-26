@@ -350,7 +350,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
             <div className={`transition-transform duration-300 ${expanded ? 'rotate-0' : '-rotate-90'}`}>
               <ChevronDown size={14} className="text-slate-400" />
             </div>
-            <span className={`text-[11px] font-bold text-slate-800 uppercase tracking-[0.2em]`}>{group}</span>
+            <span className={`text-[11px] font-bold text-slate-800 dark:text-slate-300 uppercase tracking-[0.2em]`}>{group}</span>
           </div>
         </button>
       )}
@@ -371,7 +371,7 @@ const NavGroup = ({ group, icon: Icon, items, collapsed, pathname, location, nav
                   <button
                     title={item.label}
                     className={`text-left text-[12px] font-medium tracking-tight truncate
-                      ${active ? 'text-blue-600 font-bold' : 'text-slate-800 group-hover/item:text-slate-900'}`}
+                      ${active ? 'text-blue-600 font-bold' : 'text-slate-600 dark:text-slate-400 group-hover/item:text-slate-900 dark:group-hover/item:text-slate-200'}`}
                   >
                     {item.label}
                   </button>
@@ -413,7 +413,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
     
     {collapsed ? (
       <>
-        <span className={`text-[10px] font-bold leading-none text-center truncate w-full px-1 uppercase tracking-tighter ${active ? 'text-white' : 'text-slate-800'}`}>
+        <span className={`text-[10px] font-bold leading-none text-center truncate w-full px-1 uppercase tracking-tighter ${active ? 'text-white' : 'text-slate-800 dark:text-slate-300'}`}>
           {label.length > 8 ? label.substring(0, 7) + '..' : label}
         </span>
         {hasChildren && (
@@ -421,7 +421,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, onPlusClick, collapsed, s
         )}
       </>
     ) : (
-       <span className={`text-[12px] font-medium tracking-tight ${active ? 'text-blue-600 font-bold' : 'text-slate-800 group-hover:text-slate-900'}`}>{label}</span>
+       <span className={`text-[12px] font-medium tracking-tight ${active ? 'text-blue-600 font-bold' : 'text-slate-800 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white'}`}>{label}</span>
     )}
 
     {showPlus && !collapsed && (
@@ -494,6 +494,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
 
   return (
     <div 
+      className="caltally-app"
       style={{ 
         display: 'flex', 
         height: '100vh', 
@@ -504,7 +505,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
     >
 
       {/* ─── SIDEBAR ─────────────────────────────────────────── */}
-      <aside className="no-print bg-white/85 backdrop-blur-md border-r border-slate-100" style={{
+      <aside className="no-print bg-white/85 dark:bg-slate-900/90 backdrop-blur-md border-r border-slate-100 dark:border-slate-800" style={{
         width: sidebarW,
         minWidth: sidebarW,
         display: 'flex',
@@ -514,13 +515,13 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         zIndex: 60,
       }}>
 
-        <div className={`flex items-center h-20 border-b border-slate-50 overflow-hidden transition-all duration-300 ${collapsed ? 'justify-center' : 'px-8 gap-3'}`}>
+        <div className={`flex items-center h-20 border-b border-slate-50 dark:border-slate-800/50 overflow-hidden transition-all duration-300 ${collapsed ? 'justify-center' : 'px-8 gap-3'}`}>
           <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-slate-900/10 border-2 border-slate-50">
             <Building2 size={22} color="#fff" strokeWidth={2.5} />
           </div>
           {!collapsed && (
             <div className="flex flex-col items-start leading-[1.1] animate-fade-in">
-              <div className="text-[15px] font-black text-slate-900 tracking-tight uppercase">CalTally</div>
+              <div className="text-[15px] font-black text-slate-900 dark:text-white tracking-tight uppercase">CalTally</div>
             </div>
           )}
         </div>
@@ -600,7 +601,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         <button 
           onClick={() => setCollapsed(!collapsed)}
           title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          className={`absolute -right-3 bottom-24 w-6 h-10 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-300 transition-all shadow-sm z-[60] cursor-pointer
+          className={`absolute -right-3 bottom-24 w-6 h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500 transition-all shadow-sm z-[60] cursor-pointer
             ${collapsed ? 'rotate-180' : ''}`}
         >
           <PanelLeftClose size={14} strokeWidth={3} />
@@ -613,13 +614,13 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Top Header */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 relative z-[60] shrink-0 no-print">
+        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-10 relative z-[60] shrink-0 no-print">
           <div className="flex items-center gap-4">
           </div>
 
           {/* Right side */}
           <div className="flex items-center gap-6">
-            <div className="text-[11px] font-bold text-gray-500 uppercase tracking-widest border-r border-gray-100 pr-6 mr-1">
+            <div className="text-[11px] font-bold text-gray-500 dark:text-slate-400 uppercase tracking-widest border-r border-gray-100 dark:border-slate-700 pr-6 mr-1">
                {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </div>
              <div className="flex items-center gap-3 relative" ref={profileDropdownRef}>
@@ -642,8 +643,8 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
                 {profileDropdownOpen && (
                   <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl z-[70] py-2 animate-zoom-in">
                     <div className="px-4 py-2 border-b border-slate-50">
-                      <p className="text-[12px] font-bold text-slate-700 truncate">{user.name || user.username || (user.email ? user.email.split('@')[0] : 'Administrator')}</p>
-                      <p className="text-[10px] text-slate-400 capitalize mt-0.5">{user.role || 'User'}</p>
+                      <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200 truncate">{user.name || user.username || (user.email ? user.email.split('@')[0] : 'Administrator')}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 capitalize mt-0.5">{user.role || 'User'}</p>
                     </div>
 
                     <button
@@ -663,7 +664,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
         </header>
 
         {/* Page content */}
-        <main className="bg-[#f8fafc]" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
+        <main className="bg-[#f8fafc] dark:bg-slate-950" style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
           <div className="animate-in fade-in duration-500">
             {children}
           </div>

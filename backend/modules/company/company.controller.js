@@ -137,7 +137,7 @@ exports.createCompany = async (req, res, next) => {
     const userIdToFind = req.user?.id || userId;
     const userInstance = userIdToFind ? await User.findByPk(userIdToFind, { transaction }) : null;
     if (userInstance) {
-      await company.addUser(userInstance, { transaction });
+      await company.addUser(userInstance, { through: { role: 'ADMIN' }, transaction });
       
       // Auto-set as active company if user doesn't have one
       if (!userInstance.activeCompanyId) {
@@ -191,7 +191,10 @@ exports.getCompanies = async (req, res, next) => {
 
 exports.getCompanyById = async (req, res, next) => {
   try {
-    const company = await Company.findByPk(req.params.id);
+    const { Company, SubscriptionPlan } = require('../../models');
+    const company = await Company.findByPk(req.params.id, {
+      include: [{ model: SubscriptionPlan, as: 'SubscriptionPlan' }]
+    });
     if (!company) return res.status(404).json({ error: 'Company not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {

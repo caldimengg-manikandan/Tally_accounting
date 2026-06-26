@@ -10,9 +10,9 @@ import {
   ArrowLeftRight, FileStack, Repeat, Package, Target
 } from 'lucide-react';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, Cell, PieChart, Pie
 } from 'recharts';
+import { useTheme } from '../../context/ThemeContext';
 import { reportsAPI, voucherAPI, ledgerAPI, projectAPI } from '../../services/api';
 import AIAssistant from '../../components/AIAssistant';
 
@@ -168,7 +168,7 @@ const DashboardView = ({ companyId: propCompanyId }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError]     = useState(null);
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
+  const { isDark: darkMode, theme, setTheme } = useTheme();
   const [activeChart, setActiveChart] = useState('cashflow');
   const [activeDropdown, setActiveDropdown] = useState(null); // 'vouchers' | 'ledgers' | 'projects' | 'banks'
   const [dropdownItems, setDropdownItems] = useState({
@@ -222,10 +222,6 @@ const DashboardView = ({ companyId: propCompanyId }) => {
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem('darkMode', darkMode);
-  }, [darkMode]);
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (!companyId) return;
@@ -290,14 +286,17 @@ const DashboardView = ({ companyId: propCompanyId }) => {
             </p>
           </div>
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setDarkMode(v => !v)}
-              className={`px-3.5 py-2 rounded-lg text-[11px] font-bold transition-all border
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              className={`px-3.5 py-2 rounded-lg text-[11px] font-bold transition-all border outline-none cursor-pointer
                 ${darkMode ? 'bg-slate-700 text-slate-200 border-slate-600 hover:bg-slate-600'
                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
             >
-              {darkMode ? '☀️ Light' : '🌙 Dark'}
-            </button>
+              <option value="light">☀️ Light</option>
+              <option value="dark">🌙 Dark</option>
+              <option value="system">💻 System</option>
+            </select>
             <button
               onClick={() => fetchData(true)}
               disabled={refreshing}

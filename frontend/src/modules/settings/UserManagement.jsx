@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Trash2, Edit2, ShieldAlert, Loader2, Save, X } from 'lucide-react';
-import { usersAPI } from '../../services/api';
+import { usersAPI, rolesAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
+import RoleBuilderModal from './RoleBuilderModal';
 
 const ROLE_OPTIONS = [
   { value: 'ADMIN', label: 'Company Administrator' },
@@ -15,14 +16,17 @@ const ROLE_OPTIONS = [
 const UserManagement = ({ companyId }) => {
   const { addNotification } = useNotificationStore();
   const [users, setUsers] = useState([]);
+  const [customRoles, setCustomRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
   const [editingUser, setEditingUser] = useState(null); // User object being edited
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
   // Invite Form
-  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'ACCOUNTANT' });
+  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'ACCOUNTANT', customRoleId: '' });
   // Edit Role Form
   const [editRoleValue, setEditRoleValue] = useState('ACCOUNTANT');
+  const [editCustomRoleId, setEditCustomRoleId] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -31,17 +35,45 @@ const UserManagement = ({ companyId }) => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await usersAPI.getCompanyUsers();
-      setUsers(res.data.users || []);
+      const [resUsers, resRoles] = await Promise.all([
+        usersAPI.getCompanyUsers(),
+        rolesAPI.getRoles()
+      ]);
+      setUsers(resUsers.data.users || []);
+      setCustomRoles(resRoles.data || []);
     } catch (err) {
       console.error(err);
-      addNotification('Failed to fetch workspace users', 'error');
+      addNotification('Failed to fetch workspace data', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  const getCombinedRoleOptions = () => {
+    const activeCustom = customRoles.filter(r => r.isActive).map(r => ({
+      value: `custom_${r.id}`,
+      label: r.name,
+      isCustom: true,
+      baseRole: r.baseRole
+    }));
+    return [...ROLE_OPTIONS, ...activeCustom, { value: 'NEW_ROLE', label: '+ Add New Custom Role' }];
+  };
+
   const handleInviteChange = (key, val) => {
+    if (key === 'role' && val === 'NEW_ROLE') {
+      setIsRoleModalOpen(true);
+      return;
+    }
+    if (key === 'role' && val.startsWith('custom_')) {
+      const customId = val.split('_')[1];
+      const selected = customRoles.find(r => r.id === parseInt(customId) || r.id === customId);
+      setInviteForm(prev => ({ ...prev, role: selected.baseRole, customRoleId: customId }));
+      return;
+    }
+    if (key === 'role') {
+      setInviteForm(prev => ({ ...prev, role: val, customRoleId: null }));
+      return;
+    }
     setInviteForm(prev => ({ ...prev, [key]: val }));
   };
 
@@ -54,7 +86,7 @@ const UserManagement = ({ companyId }) => {
     try {
       await usersAPI.inviteUser(inviteForm);
       addNotification(`Invitation sent to ${inviteForm.email} successfully!`, 'success');
-      setInviteForm({ email: '', name: '', role: 'ACCOUNTANT' });
+      setInviteForm({ email: '', name: '', role: 'ACCOUNTANT', customRoleId: '' });
       fetchUsers();
     } catch (err) {
       console.error(err);
@@ -67,7 +99,14 @@ const UserManagement = ({ companyId }) => {
   const saveRoleUpdate = async () => {
     if (!editingUser) return;
     try {
-      await usersAPI.updateUserRole(editingUser.id, { role: editRoleValue });
+      let roleData = { role: editRoleValue };
+      if (editRoleValue.startsWith('custom_')) {
+        const customId = editRoleValue.split('_')[1];
+        const selected = customRoles.find(r => r.id === parseInt(customId) || r.id === customId);
+        roleData = { role: selected.baseRole, customRoleId: customId };
+      }
+
+      await usersAPI.updateUserRole(editingUser.id, roleData);
       addNotification('User role updated successfully', 'success');
       setEditingUser(null);
       fetchUsers();
@@ -102,10 +141,10 @@ const UserManagement = ({ companyId }) => {
 
   return (
     <div className="w-full box-border">
-      <header className="mb-8 border-b border-slate-100 pb-5">
+      <header className="mb-8 border-b border-slate-100 dark:border-slate-700 pb-5">
         <div className="flex items-center gap-2.5">
           <Users className="text-blue-600" size={24} />
-          <h1 className="text-xl font-bold text-slate-800">Users & Roles</h1>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Users & Roles</h1>
         </div>
         <p className="text-[12px] text-slate-400 mt-1">
           Manage employee and auditor memberships, invite new colleagues, assign role-based access permissions, and revoke workspace access.
@@ -115,15 +154,15 @@ const UserManagement = ({ companyId }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Users list table */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-800">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-800 dark:text-slate-100">
             Workspace Members
           </h2>
 
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
+                  <tr className="border-b border-slate-100 dark:border-slate-700 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
                     <th className="p-4">Name & Email</th>
                     <th className="p-4">Role Permission</th>
                     <th className="p-4 text-right">Actions</th>
@@ -133,7 +172,7 @@ const UserManagement = ({ companyId }) => {
                   {users.map(user => (
                     <tr key={user.id} className="text-slate-700 hover:bg-slate-50/30">
                       <td className="p-4">
-                        <div className="font-bold text-slate-800">{user.name}</div>
+                        <div className="font-bold text-slate-800 dark:text-slate-100">{user.name}</div>
                         <div className="text-[11px] text-slate-400 font-mono">{user.email}</div>
                       </td>
                       <td className="p-4">
@@ -142,9 +181,9 @@ const UserManagement = ({ companyId }) => {
                             <select
                               value={editRoleValue}
                               onChange={e => setEditRoleValue(e.target.value)}
-                              className="h-8 border border-slate-200 rounded px-2 text-[12px] text-slate-800 outline-none focus:border-blue-500 bg-white"
+                              className="h-8 border border-slate-200 rounded px-2 text-[12px] text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500 bg-white dark:bg-slate-700"
                             >
-                              {ROLE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                              {getCombinedRoleOptions().filter(opt => opt.value !== 'NEW_ROLE').map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                             </select>
                             <button 
                               onClick={saveRoleUpdate}
@@ -154,7 +193,7 @@ const UserManagement = ({ companyId }) => {
                             </button>
                             <button 
                               onClick={() => setEditingUser(null)}
-                              className="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-slate-200"
+                              className="p-1.5 bg-slate-100 text-slate-500 dark:text-slate-400 rounded hover:bg-slate-200"
                             >
                               <X size={14} />
                             </button>
@@ -167,8 +206,10 @@ const UserManagement = ({ companyId }) => {
                                 ? 'bg-amber-100 text-amber-800'
                                 : user.role === 'ACCOUNTANT'
                                   ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-slate-100 text-slate-800'}`}>
-                            {user.role}
+                                  : 'bg-slate-100 text-slate-800 dark:text-slate-100'}`}>
+                            {user.customRoleId 
+                              ? (customRoles.find(r => r.id === parseInt(user.customRoleId))?.name || user.role)
+                              : user.role}
                           </span>
                         )}
                       </td>
@@ -179,7 +220,7 @@ const UserManagement = ({ companyId }) => {
                               setEditingUser(user);
                               setEditRoleValue(user.role);
                             }}
-                            className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 inline-flex"
+                            className="p-2 border border-slate-200 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-50 inline-flex"
                           >
                             <Edit2 size={13} />
                           </button>
@@ -201,40 +242,40 @@ const UserManagement = ({ companyId }) => {
 
         {/* Invite User Side Panel */}
         <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-1.5">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm space-y-4">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-700 pb-3 flex items-center gap-1.5">
               <UserPlus size={16} className="text-blue-500" /> Invite User
             </h2>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Full Name *</label>
+                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Full Name *</label>
                 <input
                   type="text"
                   value={inviteForm.name}
                   onChange={e => handleInviteChange('name', e.target.value)}
                   placeholder="e.g. John Doe"
-                  className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 outline-none focus:border-blue-500"
+                  className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Email Address *</label>
+                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Email Address *</label>
                 <input
                   type="email"
                   value={inviteForm.email}
                   onChange={e => handleInviteChange('email', e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 outline-none focus:border-blue-500"
+                  className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Workspace Role</label>
+                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Workspace Role</label>
                 <select
-                  value={inviteForm.role}
+                  value={inviteForm.customRoleId ? `custom_${inviteForm.customRoleId}` : inviteForm.role}
                   onChange={e => handleInviteChange('role', e.target.value)}
-                  className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 outline-none focus:border-blue-500 bg-white"
+                  className="w-full h-10 border border-slate-200 rounded-lg px-3 text-[13px] text-slate-800 dark:text-slate-100 outline-none focus:border-blue-500 bg-white dark:bg-slate-700"
                 >
-                  {ROLE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  {getCombinedRoleOptions().map(opt => <option key={opt.value} value={opt.value} className={opt.value === 'NEW_ROLE' ? 'font-bold text-blue-600' : ''}>{opt.label}</option>)}
                 </select>
               </div>
 
@@ -252,7 +293,7 @@ const UserManagement = ({ companyId }) => {
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-1.5">
               <ShieldAlert size={16} className="text-amber-500" /> Permission Scope
             </h3>
-            <ul className="space-y-2 text-[11px] text-slate-500 leading-relaxed list-disc pl-4">
+            <ul className="space-y-2 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed list-disc pl-4">
               <li><strong>Administrators</strong> have unrestricted control over billing, settings, and users.</li>
               <li><strong>Accountants</strong> can post transactions, record manual journals, and view Daybooks.</li>
               <li><strong>Auditors</strong> have view-only access to reports, ledger logs, and audit logs.</li>
@@ -260,6 +301,12 @@ const UserManagement = ({ companyId }) => {
           </div>
         </div>
       </div>
+      
+      <RoleBuilderModal 
+        isOpen={isRoleModalOpen} 
+        onClose={() => setIsRoleModalOpen(false)} 
+        onSaved={fetchUsers} 
+      />
     </div>
   );
 };

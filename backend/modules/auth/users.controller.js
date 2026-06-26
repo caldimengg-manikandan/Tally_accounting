@@ -9,14 +9,15 @@ exports.getCompanyUsers = async (req, res, next) => {
     const company = await Company.findByPk(req.companyId, {
       include: [{
         model: User,
-        through: { model: UserCompany, attributes: ['role'] },
+        through: { model: UserCompany, attributes: ['role', 'customRoleId'] },
         attributes: ['id', 'name', 'email', 'role', 'activeCompanyId', 'createdAt']
       }]
     });
     if (!company) return res.status(404).json({ error: 'Company not found' });
     const users = company.Users.map(u => {
       const raw = u.get({ plain: true });
-      raw.role = (u.UserCompany && u.UserCompany.role) || raw.role || 'VIEWER';
+      raw.role = (raw.UserCompany && raw.UserCompany.role) || raw.role || 'VIEWER';
+      raw.customRoleId = raw.UserCompany && raw.UserCompany.customRoleId;
       return raw;
     });
     res.json({ users });
@@ -28,7 +29,7 @@ exports.getCompanyUsers = async (req, res, next) => {
 // Invite/add a user to the active company (ADMIN only)
 exports.inviteUser = async (req, res, next) => {
   try {
-    const { email, name, password, role } = req.body;
+    const { email, name, password, role, customRoleId } = req.body;
 
     const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
     if (role && !VALID_ROLES.includes(role)) {
@@ -44,7 +45,8 @@ exports.inviteUser = async (req, res, next) => {
       await UserCompany.upsert({
         userId: user.id,
         companyId: req.companyId,
-        role: role || 'VIEWER'
+        role: role || 'VIEWER',
+        customRoleId: customRoleId || null
       });
 
       // Update name and role if provided during the re-invite
@@ -109,7 +111,8 @@ exports.inviteUser = async (req, res, next) => {
       await UserCompany.create({
         userId: user.id,
         companyId: req.companyId,
-        role: role || 'VIEWER'
+        role: role || 'VIEWER',
+        customRoleId: customRoleId || null
       });
     }
 
@@ -163,9 +166,9 @@ exports.inviteUser = async (req, res, next) => {
 // Update the role of a user within the active company (ADMIN only)
 exports.updateUserRole = async (req, res, next) => {
   try {
-    const { role } = req.body;
+    const { role, customRoleId } = req.body;
     const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
-    if (!VALID_ROLES.includes(role)) {
+    if (role && !VALID_ROLES.includes(role)) {
       return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
     }
 
@@ -180,8 +183,9 @@ exports.updateUserRole = async (req, res, next) => {
       return res.status(403).json({ error: 'User does not belong to your company' });
     }
 
-    const oldData = { id: user.id, role: userCompanyRel.role };
-    userCompanyRel.role = role;
+    const oldData = { id: user.id, role: userCompanyRel.role, customRoleId: userCompanyRel.customRoleId };
+    if (role) userCompanyRel.role = role;
+    userCompanyRel.customRoleId = customRoleId || null;
     await userCompanyRel.save();
 
     await AuditService.log({
