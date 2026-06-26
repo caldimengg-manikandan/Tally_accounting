@@ -340,9 +340,18 @@ export default function SalaryComponentsTab() {
                         onChange={(e) => setFormData(prev => ({ ...prev, calculationType: e.target.value }))}
                         className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
                       />
-                      <span className="text-sm text-slate-800">
-                        Percentage of {formData.calculationBase === 'CTC' ? 'CTC' : (formData.calculationBase === 'BASIC' ? 'Basic' : formData.calculationBase)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-slate-800">Percentage of</span>
+                        <select
+                          name="calculationBase"
+                          value={formData.calculationBase || 'BASIC'}
+                          onChange={(e) => setFormData(prev => ({ ...prev, calculationBase: e.target.value }))}
+                          className="px-2 py-1 text-sm rounded border border-slate-300 outline-none focus:border-blue-500 max-w-[200px]"
+                        >
+                          <option value="CTC">Cost to Company (CTC)</option>
+                          <option value="BASIC">Basic Pay</option>
+                        </select>
+                      </div>
                     </label>
                   </div>
                 </div>

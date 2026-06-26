@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api';
+import { setUser as syncAuthStore } from '../stores/authStore';
 
 const AuthContext = createContext(null);
 
@@ -23,6 +24,7 @@ export const AuthProvider = ({ children }) => {
         if (response.data.success) {
           setUser(response.data.user);
           setCompany(response.data.company); // Includes plan and subscriptionStatus
+          syncAuthStore(response.data.user);
         }
       } catch (error) {
         console.error('Failed to fetch auth data', error);
@@ -41,6 +43,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', response.data.token);
       setUser(response.data.user);
       setCompany(response.data.company);
+      syncAuthStore(response.data.user);
     }
     return response;
   };
@@ -49,6 +52,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setUser(null);
     setCompany(null);
+    syncAuthStore(null);
   };
 
   return (

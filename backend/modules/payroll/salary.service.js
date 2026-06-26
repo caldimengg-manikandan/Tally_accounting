@@ -22,6 +22,8 @@ class SalaryService {
     let pfCap = 1800;
     let esiThreshold = 21000;
     let ptAmount = 200;
+    let pfEmployerRate = 12;
+    let pfEmployeeRate = 12;
     
     if (companyId) {
       const { PayrollSettings } = require('../../models');
@@ -30,6 +32,8 @@ class SalaryService {
         pfCap = Number(settings.pfCap) || 1800;
         esiThreshold = Number(settings.esiThreshold) || 21000;
         ptAmount = Number(settings.ptMonthlyAmount) || 200;
+        if (settings.pfEmployerRate !== undefined) pfEmployerRate = Number(settings.pfEmployerRate);
+        if (settings.pfEmployeeRate !== undefined) pfEmployeeRate = Number(settings.pfEmployeeRate);
       }
     }
 
@@ -119,18 +123,50 @@ class SalaryService {
       }
     });
 
-    // Step 3: Calculate SPECIAL_ALLOWANCE balancing figure (Gross target = Monthly CTC)
-    // Gross target can be Monthly CTC if there are no employer contribution components.
-    // If there is an employer PF component, it should subtract it, but by default:
-    const targetGross = proratedMonthlyCtc;
+    // Step 3: Calculate SPECIAL_ALLOWANCE balancing figure
+    // In standard Indian Payroll (like Zoho), Employer PF is part of the CTC.
+    // Therefore, Target Gross = Monthly CTC - Employer PF
+    let employerPf = 0;
+    const basicAmount = breakdown['BASIC'] || 0;
+    if (basicAmount > 0 && pfEmployerRate > 0) {
+      const computedPf = (basicAmount * pfEmployerRate) / 100;
+      const actualCap = pfCap * prorationFactor;
+      employerPf = computedPf > actualCap ? Number(actualCap.toFixed(2)) : Number(computedPf.toFixed(2));
+    }
+    
+    // Add Employer PF to breakdown for records, but it does NOT go into Gross Earnings
+    breakdown['PF_EMPLOYER'] = employerPf;
+
+    const targetGross = proratedMonthlyCtc - employerPf;
+    let balancingComponentFound = false;
     earnings.forEach(e => {
       if (e.code === 'SPECIAL_ALLOWANCE' || e.code === 'FIXED' || e.calculationBase === 'RemainingGross') {
+        balancingComponentFound = true;
         const remaining = targetGross - currentGrossEarnings;
         e.monthlyAmount = remaining > 0 ? Number(remaining.toFixed(2)) : 0;
         breakdown[e.code] = e.monthlyAmount;
         currentGrossEarnings += e.monthlyAmount;
       }
     });
+
+    // Auto-inject Special Allowance if there is leftover CTC and no balancing component was included
+    if (!balancingComponentFound) {
+      const remaining = targetGross - currentGrossEarnings;
+      if (remaining > 0) {
+        const specialAmount = Number(remaining.toFixed(2));
+        earnings.push({
+          id: 'auto-special-allowance',
+          name: 'Special Allowance',
+          code: 'SPECIAL_ALLOWANCE',
+          type: 'Earning',
+          calculationType: 'Balancing',
+          monthlyAmount: specialAmount,
+          isTaxable: true
+        });
+        breakdown['SPECIAL_ALLOWANCE'] = specialAmount;
+        currentGrossEarnings += specialAmount;
+      }
+    }
 
     // Final total Gross
     const grossEarnings = Number(currentGrossEarnings.toFixed(2));
@@ -148,7 +184,7 @@ class SalaryService {
         type: 'Deduction',
         calculationType: 'Percentage',
         calculationBase: 'BASIC',
-        calculationValue: 12,
+        calculationValue: pfEmployeeRate,
         isStatutory: true,
         displayOrder: 1,
         monthlyAmount: 0

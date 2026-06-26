@@ -446,8 +446,8 @@ const VendorDetailView = ({ companyId }) => {
              orders: (ordersRes.data || []).filter(o => String(o.LedgerId) === String(selectedId)),
              recurringBills: [],
              recurringExpenses: [],
-             vendorCredits: [],
-             journals: []
+             vendorCredits: (vouchersRes.data || []).filter(v => (v.voucherType === 'Debit Note' || v.voucherType === 'Vendor Credit') && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId))),
+             journals: (vouchersRes.data || []).filter(v => v.voucherType === 'Journal' && v.Transactions?.some(t => String(t.LedgerId) === String(selectedId)))
            });
          } else if (activeTab === 'Statement') {
            const res = await reportsAPI.ledgerStatement(selectedId, statementFromDate, statementToDate);

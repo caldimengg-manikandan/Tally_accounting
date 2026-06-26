@@ -309,7 +309,7 @@ async function _issueTokens(req, res, user, extraFields = {}) {
   }
 
   let activeCoId = user.activeCompanyId;
-  if (!activeCoId && userCompanies.length === 1) {
+  if (!activeCoId && userCompanies.length > 0) {
     activeCoId = userCompanies[0].id;
     user.activeCompanyId = activeCoId;
     await user.save();

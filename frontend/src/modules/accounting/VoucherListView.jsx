@@ -157,7 +157,7 @@ const VoucherListView = ({
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:!from-slate-900 dark:!to-slate-950">
 
       {/* ── DELETE CONFIRMATION MODAL (portal → renders at body level) ── */}
       {deleteTarget && createPortal(
@@ -251,7 +251,7 @@ const VoucherListView = ({
         </div>,
         document.body
       )}
-      <div style={{ maxWidth: 1600, margin: '0 auto', padding: '32px 32px' }}>
+      <div className="max-w-[1600px] mx-auto px-8 py-8">
 
         {/* ── PAGE HEADER ───────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
@@ -298,12 +298,12 @@ const VoucherListView = ({
             {/* Total card */}
             <div
               onClick={() => setTypeFilter('')}
-              style={{
-                ...summaryCard,
-                background: typeFilter === '' ? '#2563eb' : '#fff',
-                cursor: 'pointer',
-                boxShadow: typeFilter === '' ? '0 4px 16px rgba(37,99,235,0.25)' : summaryCard.boxShadow,
-              }}
+              className={`flex-1 min-w-[140px] cursor-pointer rounded-2xl p-4 transition-all duration-200 ${
+                typeFilter === '' 
+                  ? 'bg-blue-600 border border-blue-600 shadow-[0_4px_16px_rgba(37,99,235,0.25)]' 
+                  : 'bg-white border border-slate-100 dark:!bg-slate-900 dark:!border-slate-800'
+              }`}
+              style={{ ...summaryCard }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div style={{ ...summaryLabel, color: typeFilter === '' ? 'rgba(255,255,255,0.6)' : '#64748b' }}>ALL VOUCHERS</div>
@@ -326,13 +326,14 @@ const VoucherListView = ({
                 <div
                   key={type}
                   onClick={() => setTypeFilter(active ? '' : type)}
+                  className={`flex-1 min-w-[140px] cursor-pointer rounded-2xl p-4 transition-all duration-200 ${
+                    active 
+                      ? 'border-[1.5px]' 
+                      : 'bg-white border-[1.5px] border-slate-100 dark:!bg-slate-900 dark:!border-slate-800'
+                  }`}
                   style={{
                     ...summaryCard,
-                    background: active ? cfg.bg : '#fff',
-                    border: active ? `1.5px solid ${cfg.border}` : '1.5px solid #f1f5f9',
-                    cursor: 'pointer',
-                    boxShadow: active ? `0 4px 16px ${cfg.dot}33` : summaryCard.boxShadow,
-                    transform: active ? 'translateY(-1px)' : 'none',
+                    ...(active ? { background: cfg.bg, borderColor: cfg.border, boxShadow: `0 4px 16px ${cfg.dot}33`, transform: 'translateY(-1px)' } : { boxShadow: summaryCard.boxShadow })
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -352,12 +353,7 @@ const VoucherListView = ({
         )}
 
         {/* ── SEARCH & FILTERS BAR ──────────────────────── */}
-        <div style={{
-          background: '#fff', borderRadius: 16, border: '1px solid #f1f5f9',
-          boxShadow: '0 1px 8px rgba(0,0,0,0.05)',
-          padding: '14px 20px', marginBottom: 16,
-          display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap'
-        }}>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_1px_8px_rgba(0,0,0,0.05)] p-4 mb-4 flex items-center gap-4 flex-wrap dark:!bg-slate-900 dark:!border-slate-800">
           {/* Search */}
           <div style={{ position: 'relative', flex: '1', minWidth: 220 }}>
             <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#c0c9d8' }} />
@@ -445,13 +441,10 @@ const VoucherListView = ({
         </div>
 
         {/* ── DATA TABLE ────────────────────────────────── */}
-        <div style={{
-          background: '#fff', borderRadius: 20, border: '1px solid #f1f5f9',
-          boxShadow: '0 2px 24px rgba(0,0,0,0.06)', overflow: 'hidden'
-        }}>
+        <div className="bg-white rounded-[20px] border border-slate-100 shadow-[0_2px_24px_rgba(0,0,0,0.06)] overflow-hidden dark:!bg-slate-900 dark:!border-slate-800">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#fafbfc', borderBottom: '1px solid #f1f5f9' }}>
+              <tr className="bg-slate-50 border-b border-slate-100 dark:!bg-slate-950 dark:!border-slate-800">
                 {[
                   { label: 'Voucher No.', field: 'voucherNumber', align: 'left'  },
                   { label: 'Date',        field: 'date',          align: 'left'  },

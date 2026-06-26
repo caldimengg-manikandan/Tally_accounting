@@ -313,8 +313,16 @@ exports.updateStructure = async (req, res) => {
         { where: { SalaryStructureId: id }, transaction }
       );
 
+      // Deduplicate components by SalaryComponentId before creating to avoid UI bugs
+      const uniqueComponents = [];
+      const seenCompIds = new Set();
       for (const item of components) {
-        if (!item.SalaryComponentId) continue;
+        if (!item.SalaryComponentId || seenCompIds.has(item.SalaryComponentId)) continue;
+        seenCompIds.add(item.SalaryComponentId);
+        uniqueComponents.push(item);
+      }
+
+      for (const item of uniqueComponents) {
         
         // Upsert or re-create
         await SalaryStructureComponent.create({
@@ -540,10 +548,11 @@ exports.calculatePreview = async (req, res) => {
       }));
     }
 
-    const result = SalaryService.calculateSalaryBreakdown(
+    const result = await SalaryService.calculateSalaryBreakdown(
       Number(ctcAmount),
       targetComponents,
-      basicAmount ? Number(basicAmount) : null
+      basicAmount ? Number(basicAmount) : null,
+      companyId
     );
 
     res.json({ success: true, data: result });

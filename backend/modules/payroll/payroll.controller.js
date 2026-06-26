@@ -107,6 +107,7 @@ exports.createEmployee = async (req, res, next) => {
     const payload = { ...req.body };
     if (payload.previousExperience === '') payload.previousExperience = null;
     if (payload.yearOfPassing === '') payload.yearOfPassing = null;
+    delete payload.email; // Prevent Sequelize error
 
     const employee = await Employee.create({
       ...payload,
@@ -229,8 +230,9 @@ exports.updateEmployee = async (req, res, next) => {
     
     // Validate uniqueness of email/PAN/Aadhaar excluding current employee
     if (!req.body.isDraft) {
-      if (req.body.email && req.body.email !== employee.email) {
-        const emailExists = await Employee.count({ where: { email: req.body.email }, paranoid: false });
+      const emailToCheck = req.body.workEmail || req.body.email;
+      if (emailToCheck && emailToCheck !== employee.workEmail) {
+        const emailExists = await Employee.count({ where: { workEmail: emailToCheck }, paranoid: false });
         if (emailExists > 0) return res.status(400).json({ error: 'Work Email already exists.' });
       }
       if (req.body.panNumber && req.body.panNumber !== employee.panNumber) {
@@ -256,6 +258,7 @@ exports.updateEmployee = async (req, res, next) => {
       ModifiedBy: req.user?.id 
     };
     delete updateData.employeeId;
+    delete updateData.email; // Prevent Sequelize error
     
     await employee.update(updateData);
     res.json(employee);
@@ -384,7 +387,7 @@ exports.importEmployees = async (req, res) => {
         continue;
       }
       
-      const emailDup = await Employee.count({ where: { email }, paranoid: false, transaction });
+      const emailDup = await Employee.count({ where: { workEmail: email }, paranoid: false, transaction });
       if (emailDup > 0) {
         errors.push({ row: rowNum, error: `Email ${email} already exists` });
         continue;
@@ -563,7 +566,7 @@ exports.saveSettings = async (req, res) => {
   try {
     const { companyId } = req.params;
     const { 
-      pfEmployeeRate, pfEmployerRate, pfApplicable, pfRegistrationNumber,
+      pfEmployeeRate, pfEmployerRate, pfApplicable, pfRegistrationNumber, pfCap,
       esiEmployeeRate, esiEmployerRate, esiApplicable, esiRegistrationNumber,
       ptMonthlyAmount, standardDeduction, incomeTaxSlabs,
       tanNumber, payrollFrequency, allowanceExemptions
@@ -571,7 +574,7 @@ exports.saveSettings = async (req, res) => {
     
     let settings = await PayrollSettings.findOne({ where: { CompanyId: companyId } });
     const payload = {
-      pfEmployeeRate, pfEmployerRate, pfApplicable, pfRegistrationNumber,
+      pfEmployeeRate, pfEmployerRate, pfApplicable, pfRegistrationNumber, pfCap,
       esiEmployeeRate, esiEmployerRate, esiApplicable, esiRegistrationNumber,
       ptMonthlyAmount, standardDeduction, incomeTaxSlabs,
       tanNumber, payrollFrequency, allowanceExemptions,
