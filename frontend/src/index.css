@@ -239,8 +239,8 @@ body {
 .dark ::-webkit-scrollbar-track { background: #2A2A3E; }
 .dark ::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 4px; }
 
-/* Smooth dark mode transition */
-*, *::before, *::after {
+/* Smooth dark mode transition - restricted to body and specific wrappers to prevent blinking/lagging on mount */
+.dark {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease;
 }
 

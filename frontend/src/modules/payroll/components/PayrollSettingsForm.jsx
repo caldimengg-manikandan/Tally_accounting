@@ -341,7 +341,7 @@ export default function PayrollSettingsForm({ companyId, initialSettings, onSave
       </div>
 
       {/* Right Column: Test Calculation Tool */}
-      <div className="lg:w-80 space-y-6">
+      <div className="w-full lg:w-96 shrink-0 space-y-6">
         <div className="bg-gradient-to-b from-blue-900 to-slate-900 rounded-3xl p-6 shadow-xl text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 -mr-8 -mt-8 text-white/5">
             <Calculator size={120} />

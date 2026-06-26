@@ -442,9 +442,9 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                     <span className="text-[13px] font-bold text-slate-800">{invoice.invoiceNumber}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                    {canEdit && <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Edit2 size={16}/></button>}
+                    {canEdit && <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Edit2 size={16}/></button>}
                     <button onClick={() => setCurrentView('email')} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Mail size={16}/></button>
-                    <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Printer size={16}/></button>
+                    <button onClick={() => window.print()} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Printer size={16}/></button>
                     <span className="w-px h-6 bg-slate-200 mx-1" />
                     {canDelete && <button onClick={() => setIsDeleteModalOpen(true)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Trash2 size={16}/></button>}
                 </div>
@@ -452,15 +452,21 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
 
             {/* Sub-Toolbar (Zoho Style) */}
             <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center gap-3 no-print">
-                 {canEdit && <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">Edit</button>}
-                 <button onClick={() => setCurrentView('email')} className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><Send size={14}/> Send Email</button>
-                 <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm">PDF/Print <ChevronDown size={14}/></button>
-                 <button className="px-3 py-1.5 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"><DollarSign size={14}/> Record Payment</button>
+                 {canEdit && <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">Edit</button>}
+                 <button onClick={() => setCurrentView('email')} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"><Send size={14}/> Send Email</button>
+                 <button onClick={() => window.print()} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">PDF/Print <ChevronDown size={14}/></button>
+                 <button onClick={() => {
+                     localStorage.setItem('payment_draft', JSON.stringify({
+                         customerId: invoice.customerLedgerId || invoice.CustomerLedger?.id,
+                         amount: parseFloat(invoice.balance || invoice.totalAmount || 0)
+                     }));
+                     navigate('/payments/new');
+                 }} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"><DollarSign size={14}/> Record Payment</button>
                  {parseFloat(invoice.balance || invoice.totalAmount) > 0 && invoice.status !== 'Draft' && (
                      <button 
                          onClick={handleGenerateLink}
                          disabled={generatingLink}
-                         className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-500 text-white rounded text-[12px] font-bold transition-all uppercase tracking-widest shadow-sm flex items-center gap-2"
+                         className="h-9 w-44 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-500 text-white rounded text-[12px] font-bold transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"
                      >
                          {generatingLink ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14}/>} Generate Payment Link
                      </button>
@@ -498,7 +504,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             {/* Document Scrolling Area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col items-center custom-scrollbar print:p-0 print:bg-white transition-all bg-slate-100">
                  {/* Main Scrollable Invoice Document */}
-                 <div id="printable-invoice" className="bg-white w-full max-w-[900px] mx-auto mb-20 border border-slate-300 shadow-2xl relative p-12" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px', minHeight: '600px'}} >
+                 <div id="printable-invoice" className="pdf-preview-paper bg-white w-full max-w-[800px] mx-auto mb-20 border border-slate-200/80 shadow-lg relative p-12 overflow-hidden flex flex-col justify-between" style={{fontFamily: 'Arial, sans-serif', fontSize: '12px', minHeight: '1050px'}} >
                     
                     {/* Status Ribbon (no-print) */}
                     {(() => {
@@ -526,6 +532,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         </div>
                     )}
 
+                    <div>
                       {/* —— Top Header: Company (left) | TAX INVOICE (right) —— */}
                       <div className="flex justify-between items-start mb-12">
                         <div className="space-y-1 relative z-10">
@@ -638,10 +645,11 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                           </div>
                         )}
                         <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">
-                          <span>Grand Total</span>
+                          <span>Grand Total (Unified Sheet)</span>
                           <span className="font-mono text-[#1e61f0]">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                         </div>
                       </div>
+                    </div>
                     </div>
 
                     {/* ——— Notes / Terms + Signature ——— */}
@@ -686,10 +694,9 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                 {/* Online Payments & Settlement Panel (no-print) */}
-                 <div className="w-full max-w-[820px] mx-auto bg-white border border-slate-200 rounded-2xl shadow-md p-6 space-y-6 no-print mt-8">
+                    {/* Online Payments & Settlement Panel (no-print) */}
+                    <div className="w-full border-t border-slate-200 pt-8 mt-12 space-y-6 no-print">
                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
                              <CreditCard className="text-blue-600" size={18} /> Online Payments & Portal Link
@@ -806,9 +813,10 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 text-xs text-center font-medium leading-relaxed">
                                  No payment captures or installments recorded yet.
                              </div>
-                         )}
-                     </div>
-                 </div>
+                          )}
+                      </div>
+                    </div>
+                  </div>
 
                  <div className="mt-8 mb-20 text-[11px] font-bold text-slate-300 uppercase tracking-[0.3em] flex items-center gap-3 no-print opacity-50">
                      Document ID: {invoice.id} <ChevronDown size={14} />
