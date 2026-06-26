@@ -13,6 +13,7 @@ import {
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import usePermissions from '../../hooks/usePermissions';
 
 const formatAddress = (address) => {
     if (!address) return '';
@@ -43,6 +44,7 @@ const formatAddress = (address) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRefresh }) => {
+    const { canCreate } = usePermissions();
     const [searchTerm, setSearchTerm] = useState('');
     
     const filtered = invoices.filter(inv => 
@@ -61,12 +63,14 @@ const InvoicesList = ({ invoices, loading, selectedId, onSelect, navigate, onRef
                         </button>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button 
-                            onClick={() => navigate('/sales-invoices/new')}
-                            className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
-                        >
-                            <Plus size={18} />
-                        </button>
+                        {canCreate && (
+                            <button 
+                                onClick={() => navigate('/sales-invoices/new')}
+                                className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
+                            >
+                                <Plus size={18} />
+                            </button>
+                        )}
                         <button className="p-1.5 hover:bg-slate-50 rounded-md text-slate-400 border border-transparent hover:border-slate-100">
                             <MoreHorizontal size={18} />
                         </button>
@@ -358,8 +362,8 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
+    const { canEdit, canDelete } = usePermissions();
     const { addNotification } = useNotificationStore();
-    const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
     const [currentView, setCurrentView] = useState('detail'); // 'detail' or 'email'
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -438,17 +442,17 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                     <span className="text-[13px] font-bold text-slate-800">{invoice.invoiceNumber}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Edit2 size={16}/></button>
+                    {canEdit && <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Edit2 size={16}/></button>}
                     <button onClick={() => setCurrentView('email')} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Mail size={16}/></button>
                     <button onClick={() => window.print()} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><Printer size={16}/></button>
                     <span className="w-px h-6 bg-slate-200 mx-1" />
-                    <button onClick={() => setIsDeleteModalOpen(true)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Trash2 size={16}/></button>
+                    {canDelete && <button onClick={() => setIsDeleteModalOpen(true)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Trash2 size={16}/></button>}
                 </div>
             </div>
 
             {/* Sub-Toolbar (Zoho Style) */}
             <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center gap-3 no-print">
-                 <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">Edit</button>
+                 {canEdit && <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">Edit</button>}
                  <button onClick={() => setCurrentView('email')} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"><Send size={14}/> Send Email</button>
                  <button onClick={() => window.print()} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">PDF/Print <ChevronDown size={14}/></button>
                  <button onClick={() => {

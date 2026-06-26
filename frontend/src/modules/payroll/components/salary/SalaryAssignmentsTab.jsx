@@ -103,7 +103,7 @@ export default function SalaryAssignmentsTab() {
   const handleOpenAssign = () => {
     setFormData({
       employeeId: '',
-      salaryStructureId: structures[0]?.id || '',
+      salaryStructureId: '',
       ctcAmount: '',
       effectiveFrom: new Date().toISOString().split('T')[0],
       remarks: ''

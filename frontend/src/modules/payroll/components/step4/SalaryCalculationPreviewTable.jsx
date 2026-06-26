@@ -25,14 +25,16 @@ export default function SalaryCalculationPreviewTable({ calculations, month, onB
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4 w-10"></th>
-                <th className="px-6 py-4">Employee</th>
-                <th className="px-6 py-4 text-right">Gross Earnings</th>
-                <th className="px-6 py-4 text-right">PF (Emp)</th>
-                <th className="px-6 py-4 text-right">Income Tax</th>
-                <th className="px-6 py-4 text-right">Prof Tax</th>
-                <th className="px-6 py-4 text-right">Total Deductions</th>
-                <th className="px-6 py-4 text-right text-slate-800">Net Salary</th>
+                <th className="px-4 py-4 w-10"></th>
+                <th className="px-4 py-4">Employee</th>
+                <th className="px-4 py-4 text-right">Basic</th>
+                <th className="px-4 py-4 text-right">HRA</th>
+                <th className="px-4 py-4 text-right">Special</th>
+                <th className="px-4 py-4 text-right text-emerald-600">Gross</th>
+                <th className="px-4 py-4 text-right">PF</th>
+                <th className="px-4 py-4 text-right">Tax</th>
+                <th className="px-4 py-4 text-right text-rose-600">Deductions</th>
+                <th className="px-4 py-4 text-right text-slate-800">Net Salary</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm font-medium">
@@ -42,20 +44,22 @@ export default function SalaryCalculationPreviewTable({ calculations, month, onB
                     onClick={() => setExpandedRow(expandedRow === calc.employee_id ? null : calc.employee_id)}
                     className={`hover:bg-slate-50 cursor-pointer transition-colors ${expandedRow === calc.employee_id ? 'bg-slate-50' : ''}`}
                   >
-                    <td className="px-6 py-4 text-slate-400">
+                    <td className="px-4 py-4 text-slate-400">
                       {expandedRow === calc.employee_id ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                     </td>
-                    <td className="px-6 py-4 font-bold text-slate-800">{calc.name}</td>
-                    <td className="px-6 py-4 text-right text-emerald-600 font-bold">{formatCurrency(calc.gross_salary)}</td>
-                    <td className="px-6 py-4 text-right text-rose-500">{formatCurrency(calc.pf_employee)}</td>
-                    <td className="px-6 py-4 text-right text-rose-500">{formatCurrency(calc.income_tax)}</td>
-                    <td className="px-6 py-4 text-right text-rose-500">{formatCurrency(calc.professional_tax)}</td>
-                    <td className="px-6 py-4 text-right text-rose-600 font-bold">{formatCurrency(calc.total_deductions)}</td>
-                    <td className="px-6 py-4 text-right font-black text-blue-700">{formatCurrency(calc.net_salary)}</td>
+                    <td className="px-4 py-4 font-bold text-slate-800">{calc.name}</td>
+                    <td className="px-4 py-4 text-right text-slate-600">{formatCurrency(calc.components?.basic || 0)}</td>
+                    <td className="px-4 py-4 text-right text-slate-600">{formatCurrency(calc.components?.hra || 0)}</td>
+                    <td className="px-4 py-4 text-right text-slate-600">{formatCurrency(calc.components?.special || 0)}</td>
+                    <td className="px-4 py-4 text-right text-emerald-600 font-bold">{formatCurrency(calc.gross_salary)}</td>
+                    <td className="px-4 py-4 text-right text-rose-500">{formatCurrency(calc.pf_employee)}</td>
+                    <td className="px-4 py-4 text-right text-rose-500">{formatCurrency((calc.income_tax || 0) + (calc.professional_tax || 0))}</td>
+                    <td className="px-4 py-4 text-right text-rose-600 font-bold">{formatCurrency(calc.total_deductions)}</td>
+                    <td className="px-4 py-4 text-right font-black text-blue-700">{formatCurrency(calc.net_salary)}</td>
                   </tr>
                   {expandedRow === calc.employee_id && (
                     <tr className="bg-slate-50/80 border-b border-slate-100">
-                      <td colSpan={8} className="px-12 py-6">
+                      <td colSpan={10} className="px-12 py-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 bg-white rounded-xl border border-slate-200 shadow-sm">
                           <div>
                             <h5 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Info size={14}/> Earnings Breakdown</h5>

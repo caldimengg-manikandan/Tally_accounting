@@ -185,6 +185,14 @@ export const usersAPI = {
   requestEmailChange: (newEmail) => api.post('/users/request-email-change', { newEmail })
 };
 
+// ─── Roles ─────────────────────────────────────────
+export const rolesAPI = {
+  getRoles: () => api.get('/roles'),
+  createRole: (data) => api.post('/roles', data),
+  updateRole: (id, data) => api.put(`/roles/${id}`, data)
+};
+
+
 // ─── Companies ─────────────────────────────────────
 export const companyAPI = {
   create: (data) => api.post('/companies', data),

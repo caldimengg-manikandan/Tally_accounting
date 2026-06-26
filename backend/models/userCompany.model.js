@@ -15,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       primaryKey: true,
       field: 'companyId'
+    },
+    customRoleId: {
+      type: DataTypes.INTEGER,
+      allowNull: true
     }
   });
 

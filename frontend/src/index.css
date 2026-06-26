@@ -243,3 +243,64 @@ body {
 .dark {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease;
 }
+
+/* ══ GLOBAL DARK MODE OVERRIDES (PHASE 2) ════════════════════
+   Instead of modifying every single operational module's JSX files,
+   we intercept Tailwind's standard background and text classes when 
+   the .dark root class is present. This brings the entire app into 
+   Dark Mode cleanly.
+═══════════════════════════════════════════════════════════════ */
+
+.dark .caltally-app .bg-white,
+.dark .caltally-app .bg-\[\#fcfdfe\],
+.dark .caltally-app .bg-\[\#ffffff\] { @apply !bg-slate-800; }
+
+.dark .caltally-app .bg-slate-50,
+.dark .caltally-app .bg-\[\#f4f5f7\] { @apply !bg-slate-900; }
+
+.dark .caltally-app .bg-slate-100 { @apply !bg-slate-800/80; }
+
+.dark .caltally-app .text-slate-900,
+.dark .caltally-app .text-slate-800 { @apply !text-slate-100; }
+
+.dark .caltally-app .text-slate-700 { @apply !text-slate-200; }
+
+.dark .caltally-app .text-slate-600,
+.dark .caltally-app .text-slate-500 { @apply !text-slate-400; }
+
+.dark .caltally-app .border-slate-50,
+.dark .caltally-app .border-slate-100,
+.dark .caltally-app .border-slate-200,
+.dark .caltally-app .border-slate-300 { @apply !border-slate-700; }
+
+.dark .caltally-app .divide-slate-50 > :not([hidden]) ~ :not([hidden]),
+.dark .caltally-app .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .caltally-app .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  @apply !border-slate-700;
+}
+
+/* Inputs & Selects specific contrast */
+.dark .caltally-app input, 
+.dark .caltally-app select, 
+.dark .caltally-app textarea {
+  @apply !bg-slate-700 !text-slate-100 !border-slate-600;
+}
+
+.dark .caltally-app input::placeholder, 
+.dark .caltally-app textarea::placeholder {
+  @apply !text-slate-500;
+}
+
+/* ── Dark Mode AG-Grid Enhancements ── */
+.dark .ag-theme-alpine {
+  --ag-background-color: #1e293b; /* slate-800 */
+  --ag-header-background-color: #0f172a; /* slate-900 */
+  --ag-header-foreground-color: #94a3b8; /* slate-400 */
+  --ag-foreground-color: #f1f5f9; /* slate-100 */
+  --ag-border-color: #334155; /* slate-700 */
+  --ag-row-border-color: #334155; /* slate-700 */
+  --ag-row-hover-color: #0f172a; /* slate-900 */
+  --ag-odd-row-background-color: #1e293b; /* slate-800 */
+  --ag-selected-row-background-color: #1e3a8a; /* blue-900 */
+}
+

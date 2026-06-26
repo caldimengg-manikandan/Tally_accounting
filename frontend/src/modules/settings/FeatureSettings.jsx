@@ -60,10 +60,10 @@ const FeatureSettings = ({ companyId, onNavigateToUpgrade }) => {
 
   return (
     <div className="w-full box-border">
-      <header className="mb-8 border-b border-slate-100 pb-5">
+      <header className="mb-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5">
         <div className="flex items-center gap-2.5">
           <Sliders className="text-blue-600" size={24} />
-          <h1 className="text-xl font-bold text-slate-800">Feature Access Control</h1>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">Feature Access Control</h1>
         </div>
         <p className="text-[12px] text-slate-400 mt-1">
           Review which accounting, inventory, and integration modules are active in your current subscription tier.
@@ -77,20 +77,20 @@ const FeatureSettings = ({ companyId, onNavigateToUpgrade }) => {
           return (
             <div 
               key={feat.id}
-              className={`p-5 rounded-2xl border transition-all flex flex-col justify-between min-h-[140px] bg-white
+              className={`p-5 rounded-xl border transition-all flex flex-col justify-between min-h-[140px] bg-white dark:bg-slate-700
                 ${unlocked 
-                  ? 'border-slate-200 hover:border-slate-300' 
-                  : 'border-slate-200/60 opacity-75'}`}
+                  ? 'border-slate-200 dark:border-slate-600 hover:border-slate-300' 
+                  : 'border-slate-200 dark:border-slate-600/60 opacity-75'}`}
             >
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-bold text-slate-800">{feat.label}</span>
+                  <span className="text-[13px] font-bold text-slate-800 dark:text-slate-100">{feat.label}</span>
                   {unlocked ? (
                     <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold text-[9px] rounded-full uppercase tracking-wider flex items-center gap-1">
                       <CheckCircle size={10} /> Unlocked
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-500 font-bold text-[9px] rounded-full uppercase tracking-wider flex items-center gap-1">
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-500 dark:text-slate-400 font-bold text-[9px] rounded-full uppercase tracking-wider flex items-center gap-1">
                       <Lock size={10} /> Locks at {feat.tier}
                     </span>
                   )}

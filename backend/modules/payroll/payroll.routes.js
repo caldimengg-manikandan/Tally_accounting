@@ -61,6 +61,7 @@ router.get('/:companyId/employees-selection', authorizeRoles(...ALL_ROLES), sala
 router.post('/:companyId/calculate-single', authorizeRoles(...WRITE_ROLES), salarySlipController.calculateSingleSalary);
 router.post('/:companyId/process-month', authorizeRoles(...WRITE_ROLES), salarySlipController.processMonth);
 router.get('/slips/detail/:slipId', authorizeRoles(...ALL_ROLES), salarySlipController.getSalarySlipDetails);
+router.get('/slips/:slipId/pdf', authorizeRoles(...ALL_ROLES), salarySlipController.exportPayslipPDF);
 router.get('/:companyId/slips', authorizeRoles(...ALL_ROLES), salarySlipController.getAllSlipsForMonth);
 
 // Employees CRUD

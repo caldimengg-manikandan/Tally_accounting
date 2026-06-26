@@ -12,6 +12,7 @@ export default function PayrollSettingsForm({ companyId, initialSettings, onSave
     pfApplicable: true,
     pfEmployeeRate: 12.00,
     pfEmployerRate: 12.00,
+    pfCap: 1800,
     pfRegistrationNumber: '',
     esiApplicable: false,
     esiEmployeeRate: 0.75,
@@ -184,6 +185,22 @@ export default function PayrollSettingsForm({ companyId, initialSettings, onSave
                         className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-blue-500 transition-all" />
                       <p className="text-xs text-slate-400 mt-2 font-medium">Standard is 12.00%</p>
                     </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">PF Wage Calculation Rule</label>
+                    <select
+                      value={formData.pfCap === 1800 ? 'capped' : 'uncapped'}
+                      onChange={(e) => setFormData({ ...formData, pfCap: e.target.value === 'capped' ? 1800 : 9999999 })}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-500 transition-all shadow-sm"
+                    >
+                      <option value="capped">Restrict PF Wage to ₹15,000 (Max ₹1,800/month)</option>
+                      <option value="uncapped">Calculate exactly 12% on Actual Basic Wage (Uncapped)</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-2">
+                      <span className="font-bold text-slate-700">Capped (Default):</span> Recommended. The maximum PF deducted will be exactly ₹1,800. <br/>
+                      <span className="font-bold text-slate-700">Uncapped:</span> Voluntary PF. Deducts exactly 12% of the employee's full Basic Salary, regardless of how high it is.
+                    </p>
                   </div>
                 </div>
               )}

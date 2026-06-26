@@ -9,14 +9,15 @@ exports.getCompanyUsers = async (req, res, next) => {
     const company = await Company.findByPk(req.companyId, {
       include: [{
         model: User,
-        through: { model: UserCompany, attributes: ['role'] },
+        through: { model: UserCompany, attributes: ['role', 'customRoleId'] },
         attributes: ['id', 'name', 'email', 'role', 'activeCompanyId', 'createdAt']
       }]
     });
     if (!company) return res.status(404).json({ error: 'Company not found' });
     const users = company.Users.map(u => {
       const raw = u.get({ plain: true });
-      raw.role = (u.UserCompany && u.UserCompany.role) || raw.role || 'VIEWER';
+      raw.role = (raw.UserCompany && raw.UserCompany.role) || raw.role || 'VIEWER';
+      raw.customRoleId = raw.UserCompany && raw.UserCompany.customRoleId;
       return raw;
     });
     res.json({ users });
@@ -28,7 +29,7 @@ exports.getCompanyUsers = async (req, res, next) => {
 // Invite/add a user to the active company (ADMIN only)
 exports.inviteUser = async (req, res, next) => {
   try {
-    const { email, name, password, role } = req.body;
+    const { email, name, password, role, customRoleId } = req.body;
 
     const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
     if (role && !VALID_ROLES.includes(role)) {
@@ -44,8 +45,23 @@ exports.inviteUser = async (req, res, next) => {
       await UserCompany.upsert({
         userId: user.id,
         companyId: req.companyId,
-        role: role || 'VIEWER'
+        role: role || 'VIEWER',
+        customRoleId: customRoleId || null
       });
+
+      // Update name and role if provided during the re-invite
+      let updated = false;
+      if (name && user.name !== name) {
+        user.name = name;
+        updated = true;
+      }
+      if (role && user.role !== role) {
+        user.role = role;
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+      }
 
       await AuditService.log({
         action: 'ADD_EXISTING_USER_TO_COMPANY',
@@ -57,23 +73,24 @@ exports.inviteUser = async (req, res, next) => {
         req
       });
 
-      // Send email to existing user notifying them they've been added to this company
+      // Send email to notify the existing user they were added to a new workspace
+      const company = await Company.findByPk(req.companyId);
       const companyName = company?.name || 'our organization';
       MailService.sendMail({
-        to: email,
+        to: user.email,
         subject: `You have been added to ${companyName} on CalTally`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-            <h2 style="color: #2563eb; margin-top: 0;">New Workspace Access!</h2>
-            <p>Hi <strong>${user.name || name}</strong>,</p>
-            <p>You have been added to the workspace <strong>${companyName}</strong> on CalTally with the role of <strong>${role || 'Viewer'}</strong>.</p>
-            <p>You can now switch to this company from your Dashboard or Company Hub after logging in.</p>
-            <p><strong>Login URL:</strong> <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="color: #2563eb; text-decoration: none;">http://localhost:5173/login</a></p>
+            <h2 style="color: #2563eb; margin-top: 0;">Workspace Invitation</h2>
+            <p>Hi <strong>${user.name || 'User'}</strong>,</p>
+            <p>You have been granted access to the <strong>${companyName}</strong> workspace on the CalTally ERP platform with the role of <strong>${user.role}</strong>.</p>
+            <p>Since you already have a CalTally account, simply log in with your existing password. You will now be able to switch to this new workspace from your dashboard.</p>
+            <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login" style="display:inline-block; background:#2563eb; color:#fff; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:bold; margin: 15px 0;">Log In to CalTally</a>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <p style="margin-bottom: 0;">Regards,<br><strong>CalTally Operations Team</strong></p>
+            <p style="margin-bottom: 0; font-size: 12px; color: #64748b;">Regards,<br><strong>CalTally Operations Team</strong></p>
           </div>
         `
-      }).catch(mailErr => console.error('✉️ Failed to send addition email to existing user:', mailErr));
+      }).catch(mailErr => console.error('✉️ Failed to send workspace addition email:', mailErr));
 
       return res.status(200).json({ message: 'Existing user added to company', user: { id: user.id, email: user.email } });
     }
@@ -94,7 +111,8 @@ exports.inviteUser = async (req, res, next) => {
       await UserCompany.create({
         userId: user.id,
         companyId: req.companyId,
-        role: role || 'VIEWER'
+        role: role || 'VIEWER',
+        customRoleId: customRoleId || null
       });
     }
 
@@ -148,9 +166,9 @@ exports.inviteUser = async (req, res, next) => {
 // Update the role of a user within the active company (ADMIN only)
 exports.updateUserRole = async (req, res, next) => {
   try {
-    const { role } = req.body;
+    const { role, customRoleId } = req.body;
     const VALID_ROLES = ['ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'];
-    if (!VALID_ROLES.includes(role)) {
+    if (role && !VALID_ROLES.includes(role)) {
       return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
     }
 
@@ -165,8 +183,9 @@ exports.updateUserRole = async (req, res, next) => {
       return res.status(403).json({ error: 'User does not belong to your company' });
     }
 
-    const oldData = { id: user.id, role: userCompanyRel.role };
-    userCompanyRel.role = role;
+    const oldData = { id: user.id, role: userCompanyRel.role, customRoleId: userCompanyRel.customRoleId };
+    if (role) userCompanyRel.role = role;
+    userCompanyRel.customRoleId = customRoleId || null;
     await userCompanyRel.save();
 
     await AuditService.log({

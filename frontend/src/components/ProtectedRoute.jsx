@@ -1,12 +1,15 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
+import usePermissions from '../hooks/usePermissions';
+import { getUser } from '../stores/authStore';
 
 export const ProtectedRoute = ({ children, requiredRole, requiredFeature }) => {
-  const { user, company, loading } = useAuth();
+  const { user: contextUser, company, loading } = useAuth();
   const location = useLocation();
+  const user = contextUser || getUser();
 
-  if (loading) {
+  if (loading && !user) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
@@ -29,5 +32,50 @@ export const ProtectedRoute = ({ children, requiredRole, requiredFeature }) => {
     }
   }
 
+  return children;
+};
+
+export const WriteProtectedRoute = ({ children }) => {
+  const { user: contextUser, company, loading } = useAuth();
+  const location = useLocation();
+  const { canCreate, canEdit } = usePermissions();
+  const user = contextUser || getUser();
+
+  if (loading && !user) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Prevent creation if canCreate is false
+  if (location.pathname.includes('/new') && !canCreate) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Prevent editing if canEdit is false
+  if (location.pathname.includes('/edit') && !canEdit) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+export const ReadProtectedRoute = ({ children }) => {
+  const { user: contextUser, company, loading } = useAuth();
+  const location = useLocation();
+  const user = contextUser || getUser();
+
+  if (loading && !user) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If a user can login, they can read the dashboard/modules they navigate to.
+  // The module filtering in App.jsx and backend APIs handles deeper read access.
   return children;
 };

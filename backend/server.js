@@ -56,6 +56,8 @@ app.use(helmet({
 // Build allowed origins dynamically from env — never hardcode production domains here
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175'
 ];
 if (process.env.ADDITIONAL_ALLOWED_ORIGINS) {
   // Support comma-separated list in env: ADDITIONAL_ALLOWED_ORIGINS=https://app.example.com,https://www.example.com
@@ -138,6 +140,7 @@ app.use('/api/ledgers', require('./modules/accounting/ledger.routes'));
 app.use('/api/vouchers', require('./modules/accounting/voucher.routes'));
 app.use('/api/accounting', require('./modules/accounting/accounting.routes'));
 app.use('/api/settings', require('./modules/settings/settings.routes'));
+app.use('/api/roles', require('./modules/roles/roles.routes'));
 
 app.use('/api/reports', require('./modules/reports/reports.routes'));
 app.use('/api/sales', require('./modules/sales/sales.routes'));
@@ -286,6 +289,16 @@ const startServer = async () => {
     try {
       await sequelize.authenticate();
       console.log('✅ Database connection authenticated.');
+      await sequelize.models.User.sync({ alter: true });
+      await sequelize.models.Company.sync({ alter: true });
+      
+      try {
+        await sequelize.models.CustomRole.sync({ alter: true });
+        await sequelize.query('ALTER TABLE "UserCompanies" ADD COLUMN IF NOT EXISTS "customRoleId" INTEGER;');
+      } catch(e) {
+        console.error('Safe Column Add Error:', e.message);
+      }
+      
       await sequelize.sync(syncOptions);
       const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
       console.log(`✅ Ledger Database Synced [${connectedTo}]`);

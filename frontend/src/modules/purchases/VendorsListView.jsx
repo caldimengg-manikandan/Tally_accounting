@@ -9,8 +9,10 @@ import { purchaseAPI, ledgerAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 import ConfirmModal from '../../components/ConfirmModal';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import usePermissions from '../../hooks/usePermissions';
 
 const VendorsListView = ({ companyId }) => {
+  const { canCreate } = usePermissions();
   const navigate = useNavigate();
   const { addNotification } = useNotificationStore();
   const [vendors, setVendors] = useState([]);
@@ -155,12 +157,14 @@ const VendorsListView = ({ companyId }) => {
              <ChevronDown size={18} className="text-blue-600 mt-1" />
           </div>
           <div className="flex items-center gap-2">
-             <button 
-               onClick={() => navigate('/vendors/new')}
-               className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
-             >
-                <Plus size={18} strokeWidth={2.5}/> New
-             </button>
+             {canCreate && (
+               <button 
+                 onClick={() => navigate('/vendors/new')}
+                 className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+               >
+                  <Plus size={18} strokeWidth={2.5}/> New
+               </button>
+             )}
              
              <div className="relative">
                 <button 
@@ -248,7 +252,7 @@ const VendorsListView = ({ companyId }) => {
                    <th className="px-6 py-4">GSTIN</th>
                    <th className="px-6 py-4 text-right">Payables</th>
                    <th className="px-6 py-4 text-right">Unused Credits (BCY)</th>
-
+                   <th className="px-6 py-4 w-10"></th>
                 </tr>
              </thead>
              <tbody className="divide-y divide-slate-100">
@@ -280,7 +284,15 @@ const VendorsListView = ({ companyId }) => {
                               {getCurrencyDisplay(v.currency)} {(parseFloat(v.unusedCredits || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </span>
                         </td>
-
+                        <td className="px-6 py-4 text-right">
+                           <button 
+                             onClick={(e) => handleDelete(v.id, v.name, e)}
+                             className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                             title="Delete Vendor"
+                           >
+                              <Trash2 size={16} />
+                           </button>
+                        </td>
                      </tr>
                    ))
                  ) : (
@@ -303,12 +315,14 @@ const VendorsListView = ({ companyId }) => {
                               Company: {companyId || 'none'} | Vendors: {vendors.length}
                            </div>
                            <div className="flex items-center gap-5">
-                              <button 
-                                onClick={() => navigate('/vendors/new')}
-                                className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-8 py-3 rounded-xl font-bold text-[15px] flex items-center gap-2.5 transition-all shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-[0.98]"
-                              >
-                                 <Plus size={20} strokeWidth={3}/> Onboard New Vendor
-                              </button>
+                              {canCreate && (
+                                <button 
+                                  onClick={() => navigate('/vendors/new')}
+                                  className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-8 py-3 rounded-xl font-bold text-[15px] flex items-center gap-2.5 transition-all shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-[0.98]"
+                                >
+                                   <Plus size={20} strokeWidth={3}/> Onboard New Vendor
+                                </button>
+                              )}
                            </div>
                         </div>
                      </td>

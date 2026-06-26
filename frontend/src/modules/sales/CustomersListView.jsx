@@ -9,8 +9,10 @@ import {
 import { ledgerAPI, groupAPI } from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
 import { getCurrencyDisplay } from '../../utils/currencies';
+import usePermissions from '../../hooks/usePermissions';
 
 const CustomersListView = ({ companyId }) => {
+  const { canCreate, canEdit, canDelete } = usePermissions();
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -160,12 +162,14 @@ const CustomersListView = ({ companyId }) => {
              <ChevronDown size={18} className="text-blue-600 mt-1" />
           </div>
           <div className="flex items-center gap-2">
-             <button 
-               onClick={() => navigate('/customers/new')}
-               className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
-             >
-                <Plus size={18} strokeWidth={2.5}/> New
-             </button>
+             {canCreate && (
+               <button 
+                 onClick={() => navigate('/customers/new')}
+                 className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-4 py-2 rounded-md font-medium flex items-center gap-1.5 transition-all shadow-sm"
+               >
+                  <Plus size={18} strokeWidth={2.5}/> New
+               </button>
+             )}
              
              <div className="relative">
                 <button 
@@ -339,19 +343,23 @@ const CustomersListView = ({ companyId }) => {
                         </td>
                         <td className="px-6 py-4">
                            <div className="flex items-center justify-center gap-2">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); navigate(`/customers/${c.id}`); }} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
-                              >
-                                 <Edit size={14} /> Edit
-                              </button>
-                              <button 
-                                onClick={(e) => handleDelete(c.id, c.name, e)} 
-                                className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
-                                title="Delete Customer"
-                              >
-                                 <Trash2 size={16} />
-                              </button>
+                              {canEdit && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/customers/${c.id}`); }} 
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
+                                >
+                                   <Edit size={14} /> Edit
+                                </button>
+                              )}
+                              {canDelete && (
+                                <button 
+                                  onClick={(e) => handleDelete(c.id, c.name, e)} 
+                                  className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
+                                  title="Delete Customer"
+                                >
+                                   <Trash2 size={16} />
+                                </button>
+                              )}
                            </div>
                         </td>
                      </tr>
@@ -373,12 +381,14 @@ const CustomersListView = ({ companyId }) => {
                                Centralize your customer profiles, track outstanding receivables, and streamline your sales workflow—all from a single, intuitive workspace.
                             </p>
                             <div className="flex items-center gap-5">
-                               <button 
-                                 onClick={() => navigate('/customers/new')}
-                                 className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-8 py-3 rounded-xl font-bold text-[15px] flex items-center gap-2.5 transition-all shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-[0.98]"
-                               >
-                                  <Plus size={20} strokeWidth={3}/> Onboard New Customer
-                               </button>
+                               {canCreate && (
+                                 <button 
+                                   onClick={() => navigate('/customers/new')}
+                                   className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-8 py-3 rounded-xl font-bold text-[15px] flex items-center gap-2.5 transition-all shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 active:scale-[0.98]"
+                                 >
+                                    <Plus size={20} strokeWidth={3}/> Onboard New Customer
+                                 </button>
+                               )}
                             </div>
                          </div>
                       </td>

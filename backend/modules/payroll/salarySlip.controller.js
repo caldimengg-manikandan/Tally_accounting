@@ -24,10 +24,14 @@ exports.getEmployeesForSelection = async (req, res) => {
 
     const formatted = employees.map(emp => {
       let gross = 0;
+      let hasStructure = false;
       if (emp.EmployeeSalaryAssignments && emp.EmployeeSalaryAssignments.length > 0) {
-        const struct = emp.EmployeeSalaryAssignments[0].structure;
-        if (struct) {
-          gross = parseFloat(struct.grossSalary || 0);
+        const assignment = emp.EmployeeSalaryAssignments[0];
+        hasStructure = true;
+        if (assignment.ctcAmount) {
+           // Provide a rough estimate of gross salary for the UI (CTC / 12)
+           // Actual calculation happens in the next step
+           gross = parseFloat(assignment.ctcAmount) / 12;
         }
       }
       return {
@@ -40,7 +44,7 @@ exports.getEmployeesForSelection = async (req, res) => {
         department: emp.department,
         designation: emp.designation,
         hasBankAccount: !!emp.bankAccountNumber,
-        hasSalaryStructure: gross > 0,
+        hasSalaryStructure: hasStructure,
         gross_salary_estimated: gross
       };
     });
@@ -80,7 +84,12 @@ exports.calculateSingleSalary = async (req, res) => {
     if (!emp) return res.status(404).json({ error: 'Employee or active salary structure not found' });
 
     const assignment = emp.EmployeeSalaryAssignments[0];
-    const structureComponents = assignment.structure.components || [];
+    
+    // Fetch structure components separately to avoid Sequelize deeply nested alias truncation bug
+    const structureComponents = await SalaryStructureComponent.findAll({
+      where: { SalaryStructureId: assignment.SalaryStructureId, isActive: true },
+      include: [{ model: SalaryComponent, as: 'component' }]
+    });
 
     const breakdown = await SalaryService.calculateSalaryBreakdown(
       Number(assignment.ctcAmount || 0),
@@ -101,13 +110,12 @@ exports.calculateSingleSalary = async (req, res) => {
       }
     });
 
-    const pfEmployee = breakdown.pf || 0;
-    // Basic employer cost logic: employer matches employee PF typically
-    const pfEmployer = pfEmployee; 
-    const esiEmployee = breakdown.esi || 0;
-    const esiEmployer = breakdown.esi ? Number((breakdown.grossEarnings * 3.25 / 100).toFixed(2)) : 0;
-    const ptDeduction = breakdown.pt || 0;
-    const monthlyTax = breakdown.tds || 0;
+    const pfEmployee = breakdown.breakdown['PF_EMP'] || breakdown.breakdown['PF'] || 0;
+    const pfEmployer = breakdown.breakdown['PF_EMPLOYER'] || pfEmployee; 
+    const esiEmployee = breakdown.breakdown['ESI_EMP'] || breakdown.breakdown['ESI'] || 0;
+    const esiEmployer = esiEmployee > 0 ? Number((breakdown.grossEarnings * 3.25 / 100).toFixed(2)) : 0;
+    const ptDeduction = breakdown.breakdown['PT'] || 0;
+    const monthlyTax = breakdown.breakdown['TDS'] || breakdown.breakdown['INCOME_TAX'] || 0;
     
     // total_deductions from breakdown
     const totalDeductions = breakdown.totalDeductions;
@@ -147,6 +155,32 @@ exports.processMonth = async (req, res) => {
     const year = dateObj.getFullYear();
     const slipPrefix = `${dateObj.toLocaleString('default', { month: 'short' }).toUpperCase()}-${year}-`;
 
+    // Delete existing DRAFT slips for the selected employees in this month
+    await SalarySlip.destroy({
+      where: {
+        companyId,
+        salaryMonth: salary_month,
+        employeeId: employees,
+        slipStatus: 'DRAFT'
+      },
+      transaction: t
+    });
+
+    // Find the max slip number to continue sequence
+    const maxSlip = await SalarySlip.findOne({
+      where: { companyId, salaryMonth: salary_month },
+      order: [['slipNumber', 'DESC']],
+      transaction: t
+    });
+
+    let counter = 1;
+    if (maxSlip && maxSlip.slipNumber) {
+      const match = maxSlip.slipNumber.match(/-(\d+)$/);
+      if (match) {
+        counter = parseInt(match[1], 10) + 1;
+      }
+    }
+
     const createdSlips = [];
     let summary = {
       total_gross: 0,
@@ -156,7 +190,6 @@ exports.processMonth = async (req, res) => {
       slip_numbers: []
     };
 
-    let counter = 1;
     for (const calc of calculations) {
       const slipNumber = `${slipPrefix}${String(counter).padStart(3, '0')}`;
       
@@ -229,12 +262,34 @@ exports.getAllSlipsForMonth = async (req, res) => {
 
     const slips = await SalarySlip.findAll({
       where: { companyId, salaryMonth: month },
-      include: [{ model: Employee, attributes: ['name', 'employeeId'] }],
-      order: [['slipNumber', 'ASC']]
+      include: [{ model: Employee, attributes: ['name', 'employeeId', 'department'] }]
     });
-    
-    res.json({ slips });
+    res.json({ salary_slips: slips });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+const PDFService = require('../../services/PDFService');
+exports.exportPayslipPDF = async (req, res) => {
+  try {
+    const { slipId } = req.params;
+    const slip = await SalarySlip.findByPk(slipId, {
+      include: [
+        { model: Employee },
+        { model: sequelize.models.Company }
+      ]
+    });
+
+    if (!slip) return res.status(404).json({ error: 'Salary slip not found' });
+
+    const pdfBuffer = await PDFService.generatePayslipPDF(slip, slip.Company || {}, slip.Employee || {});
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=payslip_${slip.slipNumber}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('PDF Export Error:', err);
+    res.status(500).json({ error: 'Failed to generate Payslip PDF' });
   }
 };

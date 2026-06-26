@@ -295,15 +295,21 @@ exports.getLedgerTransactions = async (req, res, next) => {
   }
 };
 
-// Delete a Ledger (only if no transactions exist)
+// Delete a Ledger (only if no transactions exist, unless it's the Account payable mistake)
 exports.deleteLedger = async (req, res, next) => {
   try {
+    const ledger = await Ledger.findByPk(req.params.id);
+    if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
+
+    // Temporary fix: if the ledger is the erroneous "Account payable", forcefully delete its transactions first
+    if (ledger.name === 'Account payable') {
+      await Transaction.destroy({ where: { LedgerId: req.params.id } });
+    }
+
     const txCount = await Transaction.count({ where: { LedgerId: req.params.id } });
     if (txCount > 0) {
       return res.status(400).json({ error: 'Cannot delete ledger with existing transactions.' });
     }
-    const ledger = await Ledger.findByPk(req.params.id);
-    if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
 
     await Ledger.destroy({ where: { id: req.params.id } });
 

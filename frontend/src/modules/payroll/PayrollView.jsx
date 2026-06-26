@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Users, Plus, Check, X, AlertCircle, Loader2, RefreshCcw, DollarSign, Calendar, FileText, Settings, UserCheck, Info, Pencil, Sliders, Banknote, TrendingUp, TrendingDown
+  Users, Plus, Check, X, AlertCircle, Loader2, RefreshCcw, DollarSign, Calendar, FileText, Settings, UserCheck, Info, Pencil, Sliders, Banknote, TrendingUp, TrendingDown, Download
 } from 'lucide-react';
 import { payrollAPI, ledgerAPI } from '../../services/api';
 import CreatableSelect from '../../components/CreatableSelect';
@@ -409,11 +409,12 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
                       <th className="px-6 py-4 text-right">Deductions</th>
                       <th className="px-6 py-4 text-right">Net Payable</th>
                       <th className="px-6 py-4 text-center">Status</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-700">
                     {payslips.length === 0 ? (
-                      <tr><td colSpan={6} className="py-16 text-center text-slate-500 font-medium">No processed payslips found. Process payroll first.</td></tr>
+                      <tr><td colSpan={7} className="py-16 text-center text-slate-500 font-medium">No processed payslips found. Process payroll first.</td></tr>
                     ) : payslips.map(slip => {
                       const gross = parseFloat(slip.basic||0) + parseFloat(slip.hra||0) + parseFloat(slip.da||0) + parseFloat(slip.incentives||0);
                       const ded = parseFloat(slip.pf||0) + parseFloat(slip.esi||0) + parseFloat(slip.profTax||0);
@@ -431,6 +432,15 @@ export default function PayrollView({ companyId, showNewEmployeeForm }) {
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase tracking-wider">
                               {slip.status}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button 
+                              onClick={() => window.open(`http://localhost:5000/api/payroll/slips/${slip.id}/pdf`, '_blank')}
+                              className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center justify-end gap-1 ml-auto"
+                              title="Download Payslip PDF"
+                            >
+                              <Download size={16} /> PDF
+                            </button>
                           </td>
                         </tr>
                       );

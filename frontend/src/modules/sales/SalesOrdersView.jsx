@@ -12,6 +12,7 @@ import EmailSendModal from '../../components/EmailSendModal';
 import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
 import { getUser } from '../../stores/authStore';
+import usePermissions from '../../hooks/usePermissions';
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // MANAGE SALESPERSONS MODAL (Internal)
@@ -296,6 +297,7 @@ const ItemSearchSelector = ({ value, onChange, items, placeholder, onNewItem }) 
 };
 
 const SalesOrdersView = ({ companyId }) => {
+    const { canCreate, canEdit, canDelete } = usePermissions();
     const navigate = useNavigate();
     const location = useLocation();
     const [view, setView] = useState(location.pathname === '/sales-orders/new' ? 'form' : 'list'); // 'list', 'form', 'detail'
@@ -627,12 +629,14 @@ const SalesOrdersView = ({ companyId }) => {
                         <ChevronDown size={18} className="text-blue-600 mt-1" />
                     </div>
                     <div className="flex items-center gap-3">
-                        <button 
-                            onClick={() => navigate('/sales-orders/new')}
-                            className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-5 py-2.5 rounded-md font-bold text-[12px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm"
-                        >
-                            <Plus size={18} strokeWidth={2.5} /> New Order
-                        </button>
+                        {canCreate && (
+                            <button 
+                                onClick={() => navigate('/sales-orders/new')}
+                                className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-5 py-2.5 rounded-md font-bold text-[12px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm"
+                            >
+                                <Plus size={18} strokeWidth={2.5} /> New Order
+                            </button>
+                        )}
                         <div className="relative">
                             <button 
                                 onClick={(e) => { e.stopPropagation(); setIsOptionsOpen(!isOptionsOpen); }}
@@ -727,18 +731,22 @@ const SalesOrdersView = ({ companyId }) => {
                                         </td>
                                         <td className="px-6 py-6" onClick={e => e.stopPropagation()}>
                                             <div className="flex items-center justify-center gap-2">
-                                                <button 
-                                                    onClick={() => openForm(order)} 
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
-                                                >
-                                                    <Edit2 size={13} /> Edit
-                                                </button>
-                                                <button 
-                                                    onClick={() => { setDeleteId(order.id); setIsDeleteModalOpen(true); }}
-                                                    className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                {canEdit && (
+                                                    <button 
+                                                        onClick={() => openForm(order)} 
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 rounded shadow-sm transition-all text-[12px] font-medium"
+                                                    >
+                                                        <Edit2 size={13} /> Edit
+                                                    </button>
+                                                )}
+                                                {canDelete && (
+                                                    <button 
+                                                        onClick={() => { setDeleteId(order.id); setIsDeleteModalOpen(true); }}
+                                                        className="flex items-center justify-center p-1.5 bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 rounded shadow-sm transition-all"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

@@ -51,14 +51,12 @@ const SettingsDashboard = () => {
   }, []);
 
   const menuItems = [
-    { id: 'company', label: 'Company Profile', icon: Building2, roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER'] },
+    { id: 'company', label: 'Company Profile', icon: Building2, roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'] },
     { id: 'users', label: 'Users & Roles', icon: Users, roles: ['ADMIN', 'SUPER_ADMIN'] },
     { id: 'subscription', label: 'Subscription & Billing', icon: CreditCard, roles: ['ADMIN', 'SUPER_ADMIN'] },
     { id: 'features', label: 'Feature Access', icon: Sliders, roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'MANAGER'] },
-    { id: 'profile', label: 'My Profile & Security', icon: User, roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER'] },
-    { id: 'notifications', label: 'Notifications', icon: Bell, roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'MANAGER'] },
+    { id: 'profile', label: 'My Profile & Security', icon: User, roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'MANAGER', 'AUDITOR', 'VIEWER', 'EMPLOYEE'] },
     { id: 'gateways', label: 'Payment Gateways', icon: CreditCard, roles: ['ADMIN', 'SUPER_ADMIN'] },
-    { id: 'backup', label: 'Backup & Restore', icon: Database, roles: ['ADMIN', 'SUPER_ADMIN'] },
   ];
 
   // Filter items by user role
@@ -99,13 +97,13 @@ const SettingsDashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
       {/* Left Sidebar Pane - Desktop */}
-      <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-slate-200 shrink-0">
-        <div className="h-16 flex items-center px-6 border-b border-slate-100 bg-slate-50/50">
+      <aside className="hidden md:flex md:flex-col md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shrink-0 print:hidden">
+        <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Workspace Settings</span>
-            <span className="text-sm font-extrabold text-slate-800 truncate max-w-[200px]" title={companyName}>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Workspace Settings</span>
+            <span className="text-sm font-extrabold text-slate-800 dark:text-white truncate max-w-[200px]" title={companyName}>
               {companyName || 'No Company Active'}
             </span>
           </div>
@@ -121,8 +119,8 @@ const SettingsDashboard = () => {
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200
                   ${isActive 
-                    ? 'bg-blue-50 text-blue-600 shadow-sm shadow-blue-500/5' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm shadow-blue-500/5' 
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200'}`}
               >
                 <Icon size={18} className={isActive ? 'text-blue-600' : 'text-slate-400'} />
                 {item.label}
@@ -135,10 +133,10 @@ const SettingsDashboard = () => {
       {/* Mobile Sidebar Navigation */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden bg-slate-900/40 backdrop-blur-sm">
-          <div className="w-64 bg-white h-full flex flex-col p-4 shadow-xl animate-in slide-in-from-left duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Menu</span>
-              <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-slate-600">
+          <div className="w-64 bg-white dark:bg-slate-900 h-full flex flex-col p-4 shadow-xl animate-in slide-in-from-left duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Menu</span>
+              <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                 <X size={20} />
               </button>
             </div>
@@ -155,8 +153,8 @@ const SettingsDashboard = () => {
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-semibold transition-all
                       ${isActive 
-                        ? 'bg-blue-50 text-blue-600' 
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-slate-200'}`}
                   >
                     <Icon size={18} />
                     {item.label}
@@ -168,25 +166,24 @@ const SettingsDashboard = () => {
         </div>
       )}
 
-      {/* Main Content Workspace Pane */}
-      <main className="flex-1 flex flex-col overflow-y-auto min-w-0">
-        {/* Mobile Header Banner */}
-        <div className="md:hidden h-16 bg-white border-b border-slate-200 px-4 flex items-center justify-between shrink-0">
-          <div className="flex flex-col">
-            <span className="text-[8px] font-bold text-slate-400 uppercase">Settings</span>
-            <span className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{companyName}</span>
-          </div>
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col bg-white dark:bg-slate-950 overflow-hidden relative">
+        <header className="md:hidden h-16 flex items-center px-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <button 
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50"
+            className="p-2 -ml-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
           >
-            <Menu size={18} />
+            <Menu size={20} />
           </button>
-        </div>
+          <div className="ml-3 font-bold text-slate-800 dark:text-white text-sm">
+            {menuItems.find(m => m.id === activeTab)?.label}
+          </div>
+        </header>
 
-        {/* Dynamic Inner Panel Viewport */}
-        <div className="flex-1 py-6 px-4 md:py-8 md:px-8 max-w-5xl mx-auto w-full box-border">
-          {renderActiveComponent()}
+        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-20">
+          <div className="max-w-6xl mx-auto min-h-full">
+            {renderActiveComponent()}
+          </div>
         </div>
       </main>
     </div>

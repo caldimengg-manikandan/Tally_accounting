@@ -27,8 +27,12 @@ const AuthPage = ({ onLogin }) => {
       if (isLogin) {
         const res = await login(email, password);
         setUser(res.data.user);
-        if (res.data.companies && res.data.companies.length > 0) {
-          sessionStorage.setItem('companyId', res.data.companies[0].id);
+        const activeId = res.data.user?.activeCompanyId;
+        const fallbackCo = res.data.companies?.[0];
+        if (activeId) {
+          sessionStorage.setItem('companyId', activeId);
+        } else if (fallbackCo) {
+          sessionStorage.setItem('companyId', fallbackCo.id);
         } else {
           sessionStorage.removeItem('companyId');
           sessionStorage.removeItem('companyName');
@@ -56,8 +60,12 @@ const AuthPage = ({ onLogin }) => {
     try {
       const res = await googleLogin(credentialResponse.credential);
       setUser(res.data.user);
-      if (res.data.companies && res.data.companies.length > 0) {
-        sessionStorage.setItem('companyId', res.data.companies[0].id);
+      const activeId = res.data.user?.activeCompanyId;
+      const fallbackCo = res.data.companies?.[0];
+      if (activeId) {
+        sessionStorage.setItem('companyId', activeId);
+      } else if (fallbackCo) {
+        sessionStorage.setItem('companyId', fallbackCo.id);
       } else {
         sessionStorage.removeItem('companyId');
         sessionStorage.removeItem('companyName');
