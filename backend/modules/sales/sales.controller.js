@@ -11,7 +11,7 @@ exports.createOrder = async (req, res, next) => {
       companyId, customerId, orderNumber, referenceNumber, date, 
       expectedShipmentDate, paymentTerms, deliveryMethod, salesperson, 
       customerNotes, termsConditions, subTotal, discount, tax, taxPercent,
-      adjustment, totalAmount, status, items, attachments, projectId 
+      adjustment, totalAmount, tcsApplicable, tcsRate, tcsAmount, status, items, attachments, projectId 
     } = req.body;
 
     const order = await SalesOrder.create({
@@ -32,6 +32,9 @@ exports.createOrder = async (req, res, next) => {
       taxPercent: parseFloat(taxPercent || 0),
       adjustment,
       totalAmount,
+      tcsApplicable,
+      tcsRate,
+      tcsAmount,
       status: status || 'Draft',
       attachments,
       ProjectId: projectId || null
@@ -86,7 +89,7 @@ exports.updateOrder = async (req, res, next) => {
       customerId, orderNumber, referenceNumber, date, 
       expectedShipmentDate, paymentTerms, deliveryMethod, salesperson, 
       customerNotes, termsConditions, subTotal, discount, tax, taxPercent,
-      adjustment, totalAmount, status, items, attachments, projectId
+      adjustment, totalAmount, tcsApplicable, tcsRate, tcsAmount, status, items, attachments, projectId
     } = req.body;
 
     const order = await SalesOrder.findByPk(orderId);
@@ -115,6 +118,9 @@ exports.updateOrder = async (req, res, next) => {
       taxPercent: taxPercent !== undefined ? parseFloat(taxPercent || 0) : order.taxPercent,
       adjustment,
       totalAmount,
+      tcsApplicable,
+      tcsRate,
+      tcsAmount,
       status: status || order.status,
       attachments,
       ProjectId: projectId || null
@@ -152,6 +158,7 @@ exports.createInvoice = async (req, res, next) => {
       companyId, customerLedgerId, invoiceNumber, date, dueDate, 
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount, 
+      tcsApplicable, tcsRate, tcsAmount,
       customerNotes, termsConditions, status, items, projectId 
     } = req.body;
 
@@ -160,6 +167,7 @@ exports.createInvoice = async (req, res, next) => {
       CompanyId: companyId, customerLedgerId, invoiceNumber, date, dueDate,
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount,
+      tcsApplicable, tcsRate, tcsAmount,
       customerNotes, termsConditions, status: status || 'Draft',
       balance: totalAmount, // Initialize balance
       ProjectId: projectId || null
@@ -246,6 +254,7 @@ exports.updateInvoice = async (req, res, next) => {
       customerLedgerId, invoiceNumber, date, dueDate, 
       orderNumber, terms, salesperson, subject, subTotal, 
       discountAmount, gstAmount, adjustment, totalAmount, 
+      tcsApplicable, tcsRate, tcsAmount,
       customerNotes, termsConditions, status, items, projectId 
     } = req.body;
 

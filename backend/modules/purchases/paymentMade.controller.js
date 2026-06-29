@@ -103,15 +103,21 @@ exports.getUnpaidBills = async (req, res, next) => {
             order: [['date', 'ASC']]
         });
 
-        // Filter: only bills that have a credit transaction for this vendor
+        // Filter: only bills that have a credit transaction for this vendor or where the bill itself is linked to the vendor
         const vendorBills = bills.filter(bill =>
+            bill.LedgerId == vendorId || 
+            bill.supplierLedgerId == vendorId ||
             bill.Transactions.some(t => t.LedgerId == vendorId && parseFloat(t.credit || 0) > 0)
         );
 
         // 2. For each bill, calculate the amount paid so far
         const billsWithBalance = await Promise.all(vendorBills.map(async (bill) => {
             // The credit transaction to the vendor = bill amount
-            const vendorTx = bill.Transactions.find(t => t.LedgerId == vendorId && parseFloat(t.credit || 0) > 0);
+            let vendorTx = bill.Transactions.find(t => t.LedgerId == vendorId && parseFloat(t.credit || 0) > 0);
+            if (!vendorTx) {
+                 // Fallback: just find the main credit transaction for the bill
+                 vendorTx = bill.Transactions.find(t => parseFloat(t.credit || 0) > 0);
+            }
             const billAmount = parseFloat(vendorTx?.credit || 0);
 
             const paymentWhere = {
@@ -133,6 +139,8 @@ exports.getUnpaidBills = async (req, res, next) => {
 
             const amountPaid = payments.reduce((sum, p) => sum + parseFloat(p.debit || 0), 0);
             const balance = billAmount - amountPaid;
+
+            console.log(`[DEBUG UnpaidBills] Bill: ${bill.id}, Vendor: ${vendorId}, BillAmt: ${billAmount}, AmtPaid: ${amountPaid}, Balance: ${balance}`);
 
             // Parse dueDate, reference, and notes from narration JSON if present
             let dueDate = null;
@@ -158,7 +166,9 @@ exports.getUnpaidBills = async (req, res, next) => {
             };
         }));
 
-        res.json(billsWithBalance.filter(b => b.balance > 0.01));
+        const result = billsWithBalance.filter(b => b.balance > 0.01);
+        console.log(`[DEBUG UnpaidBills] Returning ${result.length} bills out of ${billsWithBalance.length}`);
+        res.json(result);
     } catch (err) {
         console.error(err);
         next(err);

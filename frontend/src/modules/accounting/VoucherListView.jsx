@@ -10,7 +10,7 @@ import {
 import { voucherAPI } from '../../services/api';
 import useNotificationStore from '../../store/notificationStore';
 
-const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra', 'Debit Note', 'Credit Note', 'Sales', 'Purchase'];
+const VOUCHER_TYPES = ['Journal', 'Payment', 'Receipt', 'Contra', 'Sales', 'Purchase'];
 
 const TYPE_CONFIG = {
   Receipt:      { bg: '#ecfdf5', text: '#065f46', border: '#a7f3d0', dot: '#10b981', icon: TrendingUp   },
@@ -55,7 +55,17 @@ const VoucherListView = ({
     setLoading(true);
     try {
       const res = await voucherAPI.getByCompany(companyId);
-      setAllData(Array.isArray(res.data) ? res.data : []);
+      const processedData = (Array.isArray(res.data) ? res.data : []).map(v => {
+        let cleanNarration = v.narration || '';
+        if (cleanNarration.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(cleanNarration);
+            if (parsed.notes !== undefined) cleanNarration = parsed.notes;
+          } catch(e) {}
+        }
+        return { ...v, _rawNarration: v.narration, narration: cleanNarration };
+      });
+      setAllData(processedData);
     } catch (err) { console.error(err); }
     setLoading(false);
   }, [companyId]);

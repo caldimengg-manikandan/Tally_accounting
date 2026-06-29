@@ -227,6 +227,15 @@ module.exports = (sequelize, DataTypes) => {
     tds_rate: {
       type: DataTypes.DOUBLE,
       allowNull: true
+    },
+    tcsApplicable: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false
+    },
+    tcsRate: {
+      type: DataTypes.DOUBLE,
+      allowNull: true
     }
   }, {
     paranoid: true

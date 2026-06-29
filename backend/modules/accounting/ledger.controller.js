@@ -132,6 +132,9 @@ exports.createLedger = async (req, res, next) => {
       bankName: req.body.bankName,
       ifsc: req.body.ifsc,
       accountCode: req.body.accountCode,
+      tdsApplicable: req.body.tdsApplicable,
+      tds_section: req.body.tds_section,
+      tds_rate: req.body.tds_rate,
       GroupId: finalGroupId,
       CompanyId: targetCompanyId
     });
@@ -233,7 +236,7 @@ exports.getLedgerBalance = async (req, res, next) => {
 exports.updateLedger = async (req, res, next) => {
   console.log(`[UPDATE_LEDGER] ID: ${req.params.id}, Body:`, JSON.stringify(req.body, null, 2));
   try {
-    const { name, groupId, openingBalance, openingBalanceType, description, address, gstNumber, accountNumber, bankName, ifsc, accountCode } = req.body;
+    const { name, groupId, openingBalance, openingBalanceType, description, address, gstNumber, accountNumber, bankName, ifsc, accountCode, tdsApplicable, tds_section, tds_rate } = req.body;
     const ledger = await Ledger.findByPk(req.params.id);
     if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
     
@@ -251,7 +254,10 @@ exports.updateLedger = async (req, res, next) => {
       accountNumber: accountNumber !== undefined ? accountNumber : ledger.accountNumber,
       bankName: bankName !== undefined ? bankName : ledger.bankName,
       ifsc: ifsc !== undefined ? ifsc : ledger.ifsc,
-      accountCode: accountCode !== undefined ? accountCode : ledger.accountCode
+      accountCode: accountCode !== undefined ? accountCode : ledger.accountCode,
+      tdsApplicable: tdsApplicable !== undefined ? tdsApplicable : ledger.tdsApplicable,
+      tds_section: tds_section !== undefined ? tds_section : ledger.tds_section,
+      tds_rate: tds_rate !== undefined ? tds_rate : ledger.tds_rate
     });
 
     await AuditService.log({

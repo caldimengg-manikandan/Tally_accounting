@@ -30,6 +30,8 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
 
   // Tax & Terms
   const [pan, setPan] = useState('');
+  const [tcsApplicable, setTcsApplicable] = useState(false);
+  const [tcsRate, setTcsRate] = useState('');
   const [gstNumber, setGstNumber] = useState('');
   const [gstError, setGstError] = useState('');
   const [currency, setCurrency] = useState('INR- Indian Rupee');
@@ -99,6 +101,8 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
        setMobile(customerToEdit.mobile || '');
        setWebsite(customerToEdit.website || '');
        setPan(customerToEdit.pan || '');
+       setTcsApplicable(customerToEdit.tcsApplicable || false);
+       setTcsRate(customerToEdit.tcsRate || '');
        setGstNumber(customerToEdit.gstNumber || '');
        setCurrency(customerToEdit.currency || 'INR- Indian Rupee');
        setPaymentTerms(customerToEdit.paymentTerms || 'Due on Receipt');
@@ -197,6 +201,8 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
         mobile,
         website,
         pan,
+        tcsApplicable,
+        tcsRate,
         gstNumber: gstNumber.trim(),
         companyId,
         groupName: 'Sundry Debtors',
@@ -431,10 +437,6 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Billing Address</h4>
                             <div className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-medium text-slate-400">Attention</label>
-                                    <input value={billingAddress.attention} onChange={e => setBillingAddress({...billingAddress, attention: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none focus:border-blue-300 font-medium" />
-                                </div>
-                                <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">Country/Region</label>
                                     <select value={billingAddress.country} onChange={e => setBillingAddress({...billingAddress, country: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none bg-white font-medium">
                                         <option value="">Select Country</option>
@@ -529,10 +531,6 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                                 </button>
                             </div>
                             <div className="space-y-4 opacity-90">
-                                <div className="space-y-1">
-                                    <label className="text-[11px] font-medium text-slate-400">Attention</label>
-                                    <input value={shippingAddress.attention} onChange={e => setShippingAddress({...shippingAddress, attention: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none focus:border-blue-300 font-medium" />
-                                </div>
                                 <div className="space-y-1">
                                     <label className="text-[11px] font-medium text-slate-400">Country/Region</label>
                                     <select value={shippingAddress.country} onChange={e => setShippingAddress({...shippingAddress, country: e.target.value})} className="w-full h-9 px-3 border border-slate-100 rounded text-[13px] outline-none bg-white font-medium">
@@ -685,6 +683,37 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             />
                         </div>
 
+                        {/* TCS */}
+                        <div className="flex items-center">
+                            <div className="w-48 flex items-center gap-1.5">
+                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">TCS Applicable</label>
+                            </div>
+                            <div className="flex-1 flex items-center gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={tcsApplicable} 
+                                        onChange={e => setTcsApplicable(e.target.checked)} 
+                                        className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                                    />
+                                    <span className="text-[13px] font-medium text-slate-700">Enable TCS for this customer</span>
+                                </label>
+                                {tcsApplicable && (
+                                    <div className="flex items-center gap-2 animate-slide-down ml-4">
+                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">TCS Rate (%)</label>
+                                        <input 
+                                            type="number"
+                                            value={tcsRate} 
+                                            onChange={e => setTcsRate(e.target.value)}
+                                            className="w-24 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium text-slate-700" 
+                                            placeholder="e.g. 1"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+
                         {/* Currency */}
                         <div className="flex items-center">
                             <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Currency</label>
@@ -700,39 +729,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             </div>
                         </div>
 
-                        {/* Accounts Receivable */}
-                        <div className="flex items-center">
-                            <div className="w-48 flex items-center gap-1.5">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Accounts Receivable</label>
-                                <Info size={12} className="text-slate-300" />
-                            </div>
-                            <div className="flex-1 relative">
-                                <select 
-                                    value={receivableAccount} 
-                                    onChange={e => setReceivableAccount(e.target.value)} 
-                                    className="w-full h-9 px-3 border border-slate-200 rounded text-[13px] outline-none bg-white font-medium appearance-none focus:border-blue-400"
-                                >
-                                    <option>Accounts Receivable</option>
-                                    {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
-                                </select>
-                                <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
-                            </div>
-                        </div>
 
-                        {/* Opening Balance */}
-                        <div className="flex items-center">
-                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Opening Balance</label>
-                            <div className="flex-1 flex items-center h-9 border border-slate-200 rounded overflow-hidden focus-within:border-blue-400">
-                                <span className="bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-400 border-r border-slate-100">
-                                    {currency ? currency.split(/[ -]/)[0].trim() : 'INR'}
-                                </span>
-                                <input 
-                                    type="number"
-                                    value={openingBalance} onChange={e => setOpeningBalance(e.target.value)}
-                                    className="flex-1 px-3 py-2 outline-none text-[13px] font-medium" 
-                                />
-                            </div>
-                        </div>
 
                         {/* Exchange Rate - only shown for non-INR currencies */}
                         {(currency && !currency.startsWith('INR')) && (
@@ -809,45 +806,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
                             </div>
                         </div>
 
-                        {/* Enable Portal */}
-                        <div className="flex items-start pt-2">
-                            <div className="w-48 flex items-center gap-1.5">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Enable Portal?</label>
-                                <Info size={12} className="text-slate-300" />
-                            </div>
-                            <div className="flex-1 flex items-center gap-2">
-                                <input 
-                                    type="checkbox"
-                                    checked={portalEnabled}
-                                    onChange={e => setPortalEnabled(e.target.checked)}
-                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                <span className="text-[13px] text-slate-600">Allow portal access for this customer</span>
-                            </div>
-                        </div>
 
-                        {/* Documents */}
-                        <div className="flex items-start pt-4">
-                            <label className="w-48 text-[11px] font-bold text-slate-500 uppercase tracking-widest pt-2">Documents</label>
-                            <div className="flex-1 space-y-2">
-                                <button className="flex items-center gap-2 px-4 py-1.5 border border-slate-200 rounded-md text-[13px] font-medium text-slate-600 hover:bg-slate-50">
-                                    <Upload size={14} /> Upload File
-                                </button>
-                                <p className="text-[11px] text-slate-400">You can upload a maximum of 10 files, 10MB each</p>
-                            </div>
-                        </div>
-
-                        {/* Add more details link */}
-                        <div className="pt-4">
-                            <button className="text-[13px] font-medium text-blue-600 hover:underline">Add more details</button>
-                        </div>
-                        
-                        {/* Footer info text */}
-                        <div className="pt-8">
-                           <p className="text-[12px] text-slate-500 italic">
-                               Customer Owner: Assign a user as the customer owner to provide access only to the data of this customer. <span className="text-blue-500 cursor-pointer hover:underline">Learn More</span>
-                           </p>
-                        </div>
                     </div>
                 </section>
             </div>
@@ -857,9 +816,7 @@ const CustomerForm = ({ onSaveSuccess, onCancel, customerToEdit = null, standalo
     {/* Action Bar */}
     <div className="sticky bottom-0 bg-white border-t border-slate-100 shadow-[0_-5px_25px_rgba(0,0,0,0.05)] z-[60]">
         <div className={`max-w-[1000px] mx-auto ${standalone ? 'px-6 py-4' : 'px-8 py-3'} flex justify-between items-center`}>
-             <div className="flex items-center gap-2 text-slate-400 text-[11px] font-medium uppercase tracking-wider">
-                <ShieldCheck size={14} className="text-blue-500" /> Encrypted & Secure Record Storage
-             </div>
+             <div></div>
              <div className="flex items-center gap-3">
                 <button onClick={onCancel} className="px-6 py-2 text-slate-500 text-[13px] font-bold hover:bg-slate-50 rounded">Discard</button>
                 <button 

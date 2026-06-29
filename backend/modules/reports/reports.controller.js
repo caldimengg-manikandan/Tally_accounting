@@ -789,12 +789,14 @@ exports.getDashboardStats = async (req, res, next) => {
       const credit = parseFloat(l.totalCredit || 0);
       const closing = opening + debit - credit;
 
-      if (name.includes('output gst') || name.includes('gst output') || name.includes('gst payable') || name.includes('cgst') || name.includes('sgst') || name.includes('igst')) {
+      if (name.includes('output gst') || name.includes('gst output') || name.includes('gst payable')) {
         if (closing < 0) gstPayable += Math.abs(closing);
         else gstReceivable += closing;
-      }
-      if (name.includes('input gst') || name.includes('gst input') || name.includes('gst receivable') || name.includes('itc')) {
+      } else if (name.includes('input gst') || name.includes('gst input') || name.includes('gst receivable') || name.includes('itc')) {
         gstReceivable += Math.max(0, closing);
+      } else if (name.includes('cgst') || name.includes('sgst') || name.includes('igst')) {
+        if (closing < 0) gstPayable += Math.abs(closing);
+        else gstReceivable += closing;
       }
     });
 

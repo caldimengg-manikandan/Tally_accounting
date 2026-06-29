@@ -286,7 +286,7 @@ export const paymentMadeAPI = {
   update: (id, data) => api.put(`/${data.companyId || sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`, data),
   delete: (id) => api.delete(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}`),
   markAsPaid: (id) => api.patch(`/${sessionStorage.getItem('companyId')}/purchases/payments-made/${id}/mark-paid`),
-  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/${companyId}/purchases/unpaid-bills/${vendorId}`, { params: { excludePaymentId } }),
+  getUnpaidBills: (vendorId, companyId, excludePaymentId = null) => api.get(`/${companyId}/purchases/unpaid-bills/${vendorId}`, { params: { companyId, excludePaymentId } }),
   getNextNumber: (companyId) => api.get(`/${companyId}/purchases/payments-made/next-number`),
 };
 

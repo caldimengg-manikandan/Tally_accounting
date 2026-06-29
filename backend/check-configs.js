@@ -4,9 +4,9 @@ const sequelize = new Sequelize('postgresql://tally_db_9r2n_user:TYvXg4eOwSLjwHH
   dialectOptions: { ssl: { require: true, rejectUnauthorized: false } }
 });
 
-sequelize.query('SELECT name, "tdsApplicable", tds_section, tds_rate FROM "Ledgers" WHERE "tdsApplicable" = true')
+sequelize.query('SELECT * FROM "TDSConfigs"')
   .then(res => {
-    console.log('Ledgers with TDS:', res[0]);
+    console.log('TDSConfigs:', res[0]);
     process.exit();
   })
   .catch(console.error);

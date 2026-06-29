@@ -457,7 +457,7 @@ class AccountingService {
    * Enhanced with: Negative Stock Protection, Integrated Inventory, and Audit Trails.
    */
   static async recordTaxInvoice({
-    companyId, customerLedgerId, date, narration, items, type = 'Sales', userId, projectId
+    companyId, customerLedgerId, date, narration, items, type = 'Sales', userId, projectId, tcsAmount = 0
   }, dbTransaction = null) {
     const { Item, StockMovement } = require('../models');
     const options = dbTransaction ? { transaction: dbTransaction } : {};
@@ -490,7 +490,8 @@ class AccountingService {
       processedItems.push({ ...itemData, item, taxable, tax });
     }
 
-    const grandTotal = totalTaxableValue + totalGstAmount;
+    const tcsAmt = parseFloat(tcsAmount || 0);
+    const grandTotal = totalTaxableValue + totalGstAmount + tcsAmt;
 
     // 2. Identify States for GST Automation
     const { Company, Group } = require('../models');
@@ -577,6 +578,14 @@ class AccountingService {
       }
     }
 
+    if (tcsAmt > 0) {
+      const taxGroup = await Group.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%Duties%' } }, ...options });
+      let tcsLedger = await Ledger.findOne({ where: { CompanyId: companyId, name: { [Op.like]: '%TCS Payable%' } }, ...options });
+      if (!tcsLedger) {
+        tcsLedger = await Ledger.create({ name: 'TCS Payable', category: 'Liability', groupName: 'Duties & Taxes', GroupId: taxGroup?.id, CompanyId: companyId, currentBalance: 0 }, options);
+      }
+      journalEntries.push({ ledgerId: tcsLedger.id, debit: 0, credit: tcsAmt });
+    }
 
     // 4. Post to Universal Journal Engine (which handles Audit)
     const voucher = await this.recordJournalEntry({
