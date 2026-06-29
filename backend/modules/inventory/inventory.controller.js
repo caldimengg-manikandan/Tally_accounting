@@ -98,9 +98,9 @@ exports.getItems = async (req, res, next) => {
     
     const where = { CompanyId: companyId };
     if (type === 'sales') {
-      where.salesInformation = true;
+      where.salesInformation = { [Op.or]: [true, null] };
     } else if (type === 'purchase') {
-      where.purchaseInformation = true;
+      where.purchaseInformation = { [Op.or]: [true, null] };
     }
     
     const items = await Item.findAll({ where });

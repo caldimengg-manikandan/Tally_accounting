@@ -21,6 +21,7 @@ const UserManagement = ({ companyId }) => {
   const [inviting, setInviting] = useState(false);
   const [editingUser, setEditingUser] = useState(null); // User object being edited
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
   // Invite Form
   const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'ACCOUNTANT', customRoleId: '' });
@@ -116,17 +117,26 @@ const UserManagement = ({ companyId }) => {
     }
   };
 
-  const removeUser = async (user) => {
-    if (!window.confirm(`Are you absolutely sure you want to remove "${user.name}" from this company?`)) {
-      return;
-    }
+  const removeUser = (user) => {
+    setUserToDelete(user);
+  };
+
+  const confirmRemoveUser = async () => {
+    if (!userToDelete) return;
     try {
-      await usersAPI.removeUser(user.id);
+      await usersAPI.removeUser(userToDelete.id);
       addNotification('User removed from company successfully', 'success');
       fetchUsers();
     } catch (err) {
       console.error(err);
-      addNotification(err.response?.data?.error || 'Failed to remove user', 'error');
+      if (err.response?.status === 404 || err.response?.data?.error === 'User not found') {
+        addNotification('User is already removed', 'success');
+        fetchUsers();
+      } else {
+        addNotification(err.response?.data?.error || 'Failed to remove user', 'error');
+      }
+    } finally {
+      setUserToDelete(null);
     }
   };
 
@@ -307,6 +317,36 @@ const UserManagement = ({ companyId }) => {
         onClose={() => setIsRoleModalOpen(false)} 
         onSaved={fetchUsers} 
       />
+
+      {userToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+                <Trash2 size={20} className="text-rose-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Remove User</h3>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              Are you absolutely sure you want to remove <span className="font-bold text-slate-700 dark:text-slate-200">"{userToDelete.name}"</span> from this company? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button 
+                onClick={() => setUserToDelete(null)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmRemoveUser}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 transition-colors shadow-sm"
+              >
+                Remove User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
