@@ -323,7 +323,7 @@ export default function BudgetsView({ showNew }) {
             </button>
             <div>
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Create Accounting Budget</h1>
-              <p className="text-slate-500 text-xs mt-0.5 font-medium">Define target spending caps for your ledgers and account groups</p>
+              <p className="text-slate-500 text-[13px] mt-0.5 font-medium">Define target spending caps for your ledgers and account groups</p>
             </div>
           </div>
 
@@ -331,23 +331,23 @@ export default function BudgetsView({ showNew }) {
             <form onSubmit={handleCreateBudget} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Budget Name *</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Budget Name *</label>
                   <input 
                     type="text" 
                     required 
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g. FY26 Indirect Expenses"
-                    className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                    className="border border-slate-200 rounded-xl px-4 py-3.5 text-[13px] font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fiscal Year *</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Fiscal Year *</label>
                   <select 
                     value={formData.fiscalYear}
                     onChange={e => setFormData({ ...formData, fiscalYear: e.target.value })}
-                    className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                    className="border border-slate-200 rounded-xl px-4 py-3.5 text-[13px] font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
                   >
                     <option value="2025-2026">2025 - 2026 (Apr - Mar)</option>
                     <option value="2026-2027">2026 - 2027 (Apr - Mar)</option>
@@ -357,11 +357,11 @@ export default function BudgetsView({ showNew }) {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filing Period *</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Filing Period *</label>
                   <select 
                     value={formData.period}
                     onChange={e => setFormData({ ...formData, period: e.target.value })}
-                    className="border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
+                    className="border border-slate-200 rounded-xl px-4 py-3.5 text-[13px] font-semibold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-slate-50/30 focus:bg-white"
                   >
                     <option value="Monthly">Monthly</option>
                     <option value="Quarterly">Quarterly</option>
@@ -373,15 +373,15 @@ export default function BudgetsView({ showNew }) {
 
               {/* Items / Selection */}
               <div className="border-t border-slate-100/85 pt-6 space-y-5">
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Budget Account Allocations</h3>
+                <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-wider">Budget Account Allocations</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-blue-50/30 border border-blue-100/30 p-6 rounded-[1.5rem] shadow-sm">
                   <div className="md:col-span-3 flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Budget Type</label>
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Budget Type</label>
                     <select 
                       value={itemType}
                       onChange={e => setItemType(e.target.value)}
-                      className="border border-slate-200 rounded-xl px-3 py-3 text-xs font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white"
+                      className="border border-slate-200 rounded-xl px-3 py-3 text-[13px] font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white"
                     >
                       <option value="Ledger">Ledger Account</option>
                       <option value="Group">Account Group</option>
@@ -389,14 +389,14 @@ export default function BudgetsView({ showNew }) {
                   </div>
 
                   <div className="md:col-span-5 flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
                       Select {itemType}
                     </label>
                     {itemType === 'Ledger' ? (
                       <select 
                         value={selectedLedgerId}
                         onChange={e => setSelectedLedgerId(e.target.value)}
-                        className="border border-slate-200 rounded-xl px-3 py-3 text-xs font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white"
+                        className="border border-slate-200 rounded-xl px-3 py-3 text-[13px] font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white"
                       >
                         <option value="">-- Choose Account --</option>
                         {ledgers.map(l => (
@@ -407,7 +407,7 @@ export default function BudgetsView({ showNew }) {
                       <select 
                         value={selectedGroupId}
                         onChange={e => setSelectedGroupId(e.target.value)}
-                        className="border border-slate-200 rounded-xl px-3 py-3 text-xs font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white"
+                        className="border border-slate-200 rounded-xl px-3 py-3 text-[13px] font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white"
                       >
                         <option value="">-- Choose Group --</option>
                         {groups.map(g => (
@@ -418,13 +418,13 @@ export default function BudgetsView({ showNew }) {
                   </div>
 
                   <div className="md:col-span-2 flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Cap (₹)</label>
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Target Cap (₹)</label>
                     <input 
                       type="number" 
                       value={targetAmount}
                       onChange={e => setTargetAmount(e.target.value)}
                       placeholder="e.g. 1000"
-                      className="border border-slate-200 rounded-xl px-3 py-3 text-xs font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white"
+                      className="border border-slate-200 rounded-xl px-3 py-3 text-[13px] font-bold text-slate-700 outline-none hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all bg-white"
                     />
                   </div>
 
@@ -432,7 +432,7 @@ export default function BudgetsView({ showNew }) {
                     <button 
                       type="button" 
                       onClick={addItem}
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-1.5 hover:scale-[1.02]"
+                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl font-bold text-[13px] uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-1.5 hover:scale-[1.02]"
                     >
                       <Plus size={15} /> Add Item
                     </button>
@@ -442,7 +442,7 @@ export default function BudgetsView({ showNew }) {
                 {/* Selected items table */}
                 <div className="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-md">
                   <table className="w-full text-left border-collapse">
-                    <thead className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                    <thead className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 border-b border-slate-100 bg-slate-50/50">
                       <tr>
                         <th className="px-6 py-4">Budget Item Name</th>
                         <th className="px-6 py-4">Type</th>
@@ -450,7 +450,7 @@ export default function BudgetsView({ showNew }) {
                         <th className="px-6 py-4 text-center">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50 text-[12.5px] font-semibold text-slate-700">
+                    <tbody className="divide-y divide-slate-50 text-[13px] font-semibold text-slate-700">
                       {formData.items.length > 0 ? (
                         formData.items.map((item, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/40 transition-colors">
@@ -474,7 +474,7 @@ export default function BudgetsView({ showNew }) {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={4} className="text-center py-12 text-slate-400 text-xs italic font-medium">
+                          <td colSpan={4} className="text-center py-12 text-slate-400 text-[13px] italic font-medium">
                             No allocations defined. Choose a Ledger or Group above to add them to this budget.
                           </td>
                         </tr>
@@ -488,14 +488,14 @@ export default function BudgetsView({ showNew }) {
                 <button 
                   type="button" 
                   onClick={() => setActiveView('list')}
-                  className="px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 font-bold text-xs uppercase tracking-widest transition-all"
+                  className="px-6 py-3.5 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 font-bold text-[13px] uppercase tracking-widest transition-all"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
                   disabled={loading}
-                  className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all disabled:opacity-50 hover:scale-[1.01]"
+                  className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-[13px] uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all disabled:opacity-50 hover:scale-[1.01]"
                 >
                   {loading ? 'Establishing...' : 'Establish Budget'}
                 </button>

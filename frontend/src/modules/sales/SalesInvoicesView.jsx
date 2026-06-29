@@ -364,6 +364,7 @@ const InvoiceEmailView = ({ invoice, company, onCancel, onSent }) => {
 const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
     const { canEdit, canDelete } = usePermissions();
     const { addNotification } = useNotificationStore();
+    const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
     const [currentView, setCurrentView] = useState('detail'); // 'detail' or 'email'
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -636,17 +637,17 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                       <div className="w-80 space-y-2 text-[13px] font-bold text-slate-600">
                         <div className="flex justify-between items-center py-1">
                           <span>Sub Total</span>
-                          <span className="font-mono text-slate-800">{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          <span className="font-mono text-slate-800 whitespace-nowrap">{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                         </div>
                         {parseFloat(invoice.gstAmount || 0) > 0 && (
                           <div className="flex justify-between items-center py-1">
                             <span>GST (18%)</span>
-                            <span className="font-mono text-slate-800">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                            <span className="font-mono text-slate-800 whitespace-nowrap">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                           </div>
                         )}
                         <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">
-                          <span>Grand Total (Unified Sheet)</span>
-                          <span className="font-mono text-[#1e61f0]">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          <span className="whitespace-nowrap mr-4">Grand Total</span>
+                          <span className="font-mono text-[#1e61f0] whitespace-nowrap">{getCurrencyDisplay(invoice.CustomerLedger?.currency)} {parseFloat(invoice.totalAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                         </div>
                       </div>
                     </div>

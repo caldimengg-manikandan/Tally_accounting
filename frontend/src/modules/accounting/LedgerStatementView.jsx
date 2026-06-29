@@ -21,6 +21,7 @@ export default function LedgerStatementView() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [error, setError] = useState('');
+  const [expandedNarration, setExpandedNarration] = useState(null); // stores entry id
 
   // Sidebar List State
   const [ledgers, setLedgers] = useState([]);
@@ -304,7 +305,20 @@ export default function LedgerStatementView() {
                               {e.voucherType}
                             </span>
                           </td>
-                          <td className="px-8 py-4 text-slate-500 max-w-xs truncate font-medium">{e.narration}</td>
+                          <td
+                            className="px-8 py-4 text-slate-500 font-medium cursor-pointer select-none"
+                            onClick={() => setExpandedNarration(expandedNarration === e.id ? null : e.id)}
+                            title={expandedNarration === e.id ? 'Click to collapse' : 'Click to expand'}
+                          >
+                            <div className={`${expandedNarration === e.id ? 'whitespace-normal break-words' : 'max-w-xs truncate'} transition-all`}>
+                              {e.narration || '—'}
+                            </div>
+                            {e.narration && e.narration.length > 40 && (
+                              <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-0.5 block">
+                                {expandedNarration === e.id ? '▲ collapse' : '▼ expand'}
+                              </span>
+                            )}
+                          </td>
                           <td className="px-8 py-4 text-right font-bold text-blue-600">
                             {e.debit > 0 ? fmt(e.debit, data?.ledger?.currency) : '—'}
                           </td>

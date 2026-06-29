@@ -217,7 +217,7 @@ const BillEntryView = ({ companyId }) => {
         setVendors(res.data || []);
       }).catch(err => console.error("Failed to fetch vendors:", err?.response?.status, err?.response?.data?.error || err.message));
       projectAPI.getByCompany(companyId).then(res => setProjects(res.data || []));
-      inventoryAPI.getByCompany(companyId, 'purchase').then(res => {
+      inventoryAPI.getByCompany(companyId).then(res => {
         setInventoryItems(res.data || []);
       });
       companyAPI.getById(companyId).then(res => {
@@ -913,9 +913,7 @@ const BillEntryView = ({ companyId }) => {
                                   <div className="absolute top-full left-1 w-[400px] bg-white border border-slate-200 shadow-xl z-50 rounded overflow-hidden flex flex-col">
                                      <div className="max-h-[250px] overflow-y-auto custom-scrollbar flex-1">
                                         {inventoryItems.filter(inv => {
-                                           const matchesSearch = inv.name.toLowerCase().includes((item.itemName || '').toLowerCase());
-                                           const isPurchaseItem = inv.purchaseInformation !== false && inv.purchaseInformation !== 0 && inv.purchaseInformation !== 'false';
-                                           return matchesSearch && isPurchaseItem;
+                                           return inv.name.toLowerCase().includes((item.itemName || '').toLowerCase());
                                         }).map(invItem => (
                                            <div key={invItem.id || invItem._id} onClick={() => handleItemSelect(item.id, invItem)} className={`px-4 py-2 text-[13px] cursor-pointer border-b border-slate-100 last:border-0 ${item.itemName === invItem.name ? 'bg-blue-500 text-white' : 'hover:bg-slate-50'}`}>
                                               <div className="font-medium">{invItem.name}</div>
