@@ -463,15 +463,35 @@ const SalesOrdersView = ({ companyId }) => {
         setSaving(true);
         try {
             const payload = { ...formData, companyId, status: statusValue };
+            let savedOrder;
             if (formData.id) {
-                await salesAPI.updateOrder(formData.id, payload);
+                const res = await salesAPI.updateOrder(formData.id, payload);
+                savedOrder = res.data;
                 addNotification('Sales Order updated.', 'success');
             } else {
-                await salesAPI.createOrder(payload);
+                const res = await salesAPI.createOrder(payload);
+                savedOrder = res.data;
                 addNotification('Sales Order created.', 'success');
             }
-            setView('list');
+            
             fetchData();
+            
+            if (statusValue === 'Sent') {
+                const customer = customers.find(c => c.id === formData.customerId);
+                const detailedOrder = {
+                    ...formData,
+                    ...savedOrder,
+                    id: savedOrder?.id || formData.id,
+                    Customer: customer,
+                    Items: formData.items,
+                    LedgerId: formData.customerId
+                };
+                setSelectedOrder(detailedOrder);
+                setView('detail');
+                setTimeout(() => setIsEmailModalOpen(true), 100);
+            } else {
+                setView('list');
+            }
         } catch (err) {
             addNotification('Failed to save sales order.', 'error');
         } finally {
@@ -800,10 +820,9 @@ const SalesOrdersView = ({ companyId }) => {
                     </div>
                 </header>
 
-            <div className="flex-1 bg-[#f8fafc] overflow-y-auto no-scrollbar">
-                <div className="max-w-[1000px] mx-auto py-10 px-6">
-                    <div className="bg-white rounded border border-slate-200 shadow-2xl shadow-slate-200/50 p-12 space-y-12 animate-fade-in">
-                        
+            <div className="flex-1 bg-white overflow-y-auto no-scrollbar pb-32">
+                <div className="max-w-[1200px] mx-auto pt-6 px-10">
+                    <div className="space-y-12 animate-fade-in">
                         {/* Section Header */}
                         <div className="flex items-center gap-4 mb-8">
                             <h3 className="text-[14px] font-bold text-slate-800">Primary Details</h3>
@@ -1022,27 +1041,30 @@ const SalesOrdersView = ({ companyId }) => {
                                     </div>
                              </div>
 
-                             <div className="w-96 space-y-4">
-                                    <div className="flex justify-between items-center text-[13px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Sub Total</span>
-                                        <div className="flex items-center gap-3">
+                             <div className="w-[480px] space-y-4">
+                                    <div className="flex justify-between items-start text-[13px]">
+                                        <div className="flex flex-col gap-1 whitespace-nowrap">
+                                            <span className="text-slate-700">Sub Total</span>
+                                            <span className="text-slate-600">Total Quantity : {formData.items ? formData.items.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0) : 0}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 pt-0.5">
                                             <div className="w-36" />
-                                            <span className="w-24 text-right font-bold text-slate-900 font-mono">{currencySymbol} {formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">{currencySymbol} {formData.subTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Discount (%)</span>
+                                        <span className="text-slate-700">Discount (%)</span>
                                         <div className="flex items-center gap-3">
                                             <div className="w-36 flex justify-end">
                                                 <input type="number" value={formData.discount} onChange={e => setFormData({ ...formData, discount: parseFloat(e.target.value) || 0 })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
                                             </div>
-                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">- {currencySymbol} {(formData.subTotal * (parseFloat(formData.discount || 0) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">- {currencySymbol} {(formData.subTotal * (parseFloat(formData.discount || 0) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Tax (GST)</span>
+                                        <span className="text-slate-700">Tax (GST)</span>
                                         <div className="flex items-center gap-3">
                                             <div className="relative w-36">
                                                 <select 
@@ -1053,7 +1075,7 @@ const SalesOrdersView = ({ companyId }) => {
                                                     }}
                                                     className="w-full h-9 px-3 bg-white border border-slate-200 rounded text-[12px] font-bold text-slate-700 outline-none focus:border-blue-400 transition-all appearance-none"
                                             >
-                                                    <option value="0">GST (0%)</option>
+                                                    <option value="0">Select a Tax (0%)</option>
                                                     <option value="5">GST (5%)</option>
                                                     <option value="12">GST (12%)</option>
                                                     <option value="18">GST (18%)</option>
@@ -1061,29 +1083,29 @@ const SalesOrdersView = ({ companyId }) => {
                                             </select>
                                             <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                         </div>
-                                        <span className="w-24 text-right font-bold text-slate-600 font-mono">+ {currencySymbol} {(parseFloat(formData.tax) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">+ {currencySymbol} {(parseFloat(formData.tax) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest">Adjustment</span>
+                                        <span className="text-slate-700">Adjustment</span>
                                         <div className="flex items-center gap-3">
                                             <div className="w-36 flex justify-end">
                                                 <input type="number" value={formData.adjustment} onChange={e => setFormData({ ...formData, adjustment: e.target.value })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
                                             </div>
-                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : '-'} {currencySymbol} {Math.abs(parseFloat(formData.adjustment || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                            <span className="w-32 whitespace-nowrap text-right text-slate-700 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : '-'} {currencySymbol} {Math.abs(parseFloat(formData.adjustment || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 
                                     <div className="flex justify-between items-center text-[13px] py-1">
-                                        <label className="flex items-center gap-2 cursor-pointer">
+                                        <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
                                             <input 
                                                 type="checkbox" 
                                                 checked={formData.tcsApplicable} 
                                                 onChange={e => setFormData({ ...formData, tcsApplicable: e.target.checked })} 
                                                 className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
                                             />
-                                            <span className="font-bold text-slate-500 uppercase tracking-widest">Apply TCS</span>
+                                            <span className="text-slate-700">Apply TCS</span>
                                         </label>
                                         <div className="flex items-center gap-3">
                                             <div className="w-36 flex justify-end">
@@ -1100,7 +1122,7 @@ const SalesOrdersView = ({ companyId }) => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">
+                                            <span className="w-32 whitespace-nowrap text-right font-bold text-slate-600 font-mono">
                                                 {formData.tcsApplicable ? `+ ${currencySymbol} ${(formData.tcsAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}
                                             </span>
                                         </div>
@@ -1445,6 +1467,10 @@ const SalesOrdersView = ({ companyId }) => {
                         })),
                         subTotal: selectedOrder.subTotal,
                         taxAmount: selectedOrder.tax || selectedOrder.taxAmount,
+                        discount: selectedOrder.discount,
+                        discountAmount: selectedOrder.discountAmount,
+                        adjustment: selectedOrder.adjustment,
+                        tcsAmount: selectedOrder.tcsAmount,
                         total: selectedOrder.totalAmount
                     }}
                     apiFunc={(_id, payload) => mailAPI.send({
