@@ -74,6 +74,18 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0
     },
+    tcsApplicable: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    tcsRate: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0
+    },
+    tcsAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      defaultValue: 0
+    },
     totalAmount: {
       type: DataTypes.DECIMAL(15, 2),
       defaultValue: 0

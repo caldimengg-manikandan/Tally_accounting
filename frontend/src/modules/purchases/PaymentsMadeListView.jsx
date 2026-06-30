@@ -31,6 +31,39 @@ function numberToWords(num) {
     return 'Indian Rupee ' + str.trim() + ' Only';
 }
 
+const formatBillingAddress = (addressField) => {
+    if (!addressField) return '';
+    const trimmed = addressField.trim();
+    if (trimmed.startsWith('{')) {
+      try {
+        const addr = JSON.parse(trimmed);
+        const parts = [];
+        if (addr.attention) parts.push(addr.attention);
+        
+        const streetLine = addr.street1 || addr.address1;
+        if (streetLine) parts.push(streetLine);
+        
+        const streetLine2 = addr.street2 || addr.address2;
+        if (streetLine2) parts.push(streetLine2);
+        
+        const cityStateZip = [
+          addr.city || '',
+          addr.state || '',
+          addr.zip || addr.pincode || ''
+        ].filter(Boolean).join(' ');
+        if (cityStateZip) parts.push(cityStateZip);
+        
+        if (addr.country) parts.push(addr.country);
+        
+        return parts.join('\n');
+      } catch (e) {
+        console.error("Failed to parse address JSON:", e);
+        return addressField;
+      }
+    }
+    return addressField;
+};
+
 const PaymentsMadeListView = ({ companyId }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -538,10 +571,14 @@ const PaymentsMadeListView = ({ companyId }) => {
                                             <div className="mb-10">
                                                 <h4 className="text-[12px] text-slate-500 mb-2">Paid To</h4>
                                                 <h3 className="text-[14px] font-bold text-slate-800">{vendorName}</h3>
-                                                <div className="text-[12px] text-slate-500 mt-1 leading-relaxed">
-                                                    <p>{vendorTx?.Ledger?.city || 'City'}</p>
-                                                    <p>{vendorTx?.Ledger?.state || 'State'}</p>
-                                                    <p>{vendorTx?.Ledger?.country || 'India'}</p>
+                                                <div className="text-[12px] text-slate-500 mt-1 leading-relaxed whitespace-pre-line">
+                                                    {formatBillingAddress(vendorTx?.Ledger?.billingAddress || vendorTx?.Ledger?.address || vendorTx?.Ledger?.billingAddressJson) || (
+                                                      <>
+                                                        <p>{vendorTx?.Ledger?.city || ''}</p>
+                                                        <p>{vendorTx?.Ledger?.state || ''}</p>
+                                                        <p>{vendorTx?.Ledger?.country || ''}</p>
+                                                      </>
+                                                    )}
                                                 </div>
                                             </div>
 

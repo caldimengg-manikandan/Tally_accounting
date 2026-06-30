@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,   // UUID or integer — store as string
       allowNull: true
     },
-    oldData: {
+    oldData: {    
       type: DataTypes.TEXT,     // Store JSON as text — compatible with SQLite
       allowNull: true,
       get() {

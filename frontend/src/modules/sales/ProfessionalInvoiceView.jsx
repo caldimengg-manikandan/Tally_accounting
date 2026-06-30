@@ -403,7 +403,6 @@ export default function ProfessionalInvoiceView() {
   const [adjustment,      setAdjustment]      = useState(0);
   const [taxType,         setTaxType]         = useState('GST');
   const [gstPercent,      setGstPercent]      = useState(0); // Default 0% - applied only when a tax is selected
-  const [tdsPercent,      setTdsPercent]      = useState(0); // Added for TDS/TCS
   const [taxId,           setTaxId]           = useState('');
 
   const [notes,      setNotes]      = useState('Thanks for your business.');
@@ -588,8 +587,8 @@ export default function ProfessionalInvoiceView() {
                 if (parsed.discountPercent) setDiscountPercent(parsed.discountPercent);
                 if (parsed.adjustment) setAdjustment(parsed.adjustment);
                 if (parsed.gstPercent) setGstPercent(parsed.gstPercent);
-                if (parsed.tdsPercent) setTdsPercent(parsed.tdsPercent);
-                if (parsed.tdsType) setTdsType(parsed.tdsType);
+                if (parsed.tcsApplicable) setTcsApplicable(parsed.tcsApplicable);
+                if (parsed.tcsRate) setTcsRate(parsed.tcsRate);
                 if (parsed.notes) setNotes(parsed.notes);
                 if (parsed.termsText) setTermsText(parsed.termsText);
                 if (parsed.currencyCode) setCurrencyCode(parsed.currencyCode);
@@ -611,11 +610,11 @@ export default function ProfessionalInvoiceView() {
         customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms,
         salesperson, subject, lineItems, discountPercent, adjustment,
         gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate,
-        tdsPercent, tdsType
+        tcsApplicable, tcsRate
       };
       localStorage.setItem('invoice_draft_new', JSON.stringify(draft));
     }
-  }, [id, loading, customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate]);
+  }, [id, loading, customerId, invoiceNo, orderNo, invoiceDate, dueDate, terms, salesperson, subject, lineItems, discountPercent, adjustment, gstPercent, notes, termsText, currencyCode, currencySymbol, exchangeRate, tcsApplicable, tcsRate]);
 
   // ─── Calculation Logic ──────────────────────────────────────────
   const filteredCustomers = useMemo(() => {
@@ -638,13 +637,11 @@ export default function ProfessionalInvoiceView() {
 
   const discountAmount = useMemo(() => (subTotal * (discountPercent / 100)), [subTotal, discountPercent]);
   const gstAmount      = useMemo(() => ((subTotal - discountAmount) * (gstPercent / 100)), [subTotal, discountAmount, gstPercent]);
-  const tdsAmount      = useMemo(() => ((subTotal - discountAmount) * (tdsPercent / 100)), [subTotal, discountAmount, tdsPercent]);
+  const tcsAmount      = useMemo(() => (tcsApplicable ? ((subTotal - discountAmount + gstAmount) * (parseFloat(tcsRate || 0) / 100)) : 0), [subTotal, discountAmount, gstAmount, tcsApplicable, tcsRate]);
   const total = useMemo(() => {
-     let t = subTotal - discountAmount + gstAmount + parseFloat(adjustment || 0);
-     if (tdsType === 'TCS') t += tdsAmount;
-     else if (tdsType === 'TDS') t -= tdsAmount;
+     let t = subTotal - discountAmount + gstAmount + parseFloat(adjustment || 0) + tcsAmount;
      return t;
-  }, [subTotal, discountAmount, gstAmount, adjustment, tdsAmount, tdsType]);
+  }, [subTotal, discountAmount, gstAmount, adjustment, tcsAmount]);
 
   const totalQuantity = useMemo(() => lineItems.reduce((acc, line) => acc + parseFloat(line.quantity || 0), 0), [lineItems]);
 
@@ -1541,32 +1538,31 @@ export default function ProfessionalInvoiceView() {
  
                <div className="flex justify-between items-center text-[13px] py-2">
                  <div className="flex items-center gap-4">
-                   <label className="flex items-center gap-2 cursor-pointer">
-                     <input type="radio" checked={tdsType === 'TDS'} onChange={() => setTdsType('TDS')} className="accent-blue-600 w-4 h-4" />
-                     <span className="text-[13px] font-bold text-slate-700">TDS</span>
-                   </label>
-                   <label className="flex items-center gap-2 cursor-pointer">
-                     <input type="radio" checked={tdsType === 'TCS'} onChange={() => setTdsType('TCS')} className="accent-blue-600 w-4 h-4" />
-                     <span className="text-[13px] font-bold text-slate-700">TCS</span>
-                   </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={tcsApplicable} 
+                            onChange={e => setTcsApplicable(e.target.checked)} 
+                            className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                        />
+                        <span className="text-[13px] font-bold text-slate-700">Apply TCS</span>
+                    </label>
                  </div>
+                 {tcsApplicable && (
                  <div className="flex items-center gap-2">
-                    <select 
-                       value={tdsPercent}
-                       onChange={(e) => setTdsPercent(parseFloat(e.target.value) || 0)}
-                       className="h-9 px-3 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-500 outline-none min-w-[140px] focus:border-blue-500 transition-all cursor-pointer"
-                    >
-                      <option value="0">Select a Tax</option>
-                      <option value="1">{tdsType} @ 1%</option>
-                      <option value="2">{tdsType} @ 2%</option>
-                      <option value="5">{tdsType} @ 5%</option>
-                      <option value="10">{tdsType} @ 10%</option>
-                    </select>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">TCS Rate (%)</label>
+                    <input 
+                        type="number"
+                        value={tcsRate} 
+                        onChange={e => setTcsRate(e.target.value)}
+                        className="w-24 h-9 px-3 border border-slate-200 rounded text-[13px] outline-none focus:border-blue-400 font-medium text-slate-700" 
+                        placeholder="e.g. 1"
+                    />
                     <span className="text-slate-600 font-bold min-w-[60px] text-right">
-                      {tdsType === 'TDS' ? '- ' : '+ '}
-                      {tdsAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      + {tcsAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                  </div>
+                 )}
                </div>
  
                <div className="flex justify-between items-center text-[13px]">

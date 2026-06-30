@@ -357,6 +357,9 @@ const SalesOrdersView = ({ companyId }) => {
         taxPercent: 18,
         tax: 0,
         adjustment: 0,
+        tcsApplicable: false,
+        tcsRate: '',
+        tcsAmount: 0,
         totalAmount: 0,
         status: 'Draft',
         customerNotes: '',
@@ -409,9 +412,10 @@ const SalesOrdersView = ({ companyId }) => {
         const discountAmt = subTotal * (parseFloat(formData.discount || 0) / 100);
         const taxableAmount = subTotal - discountAmt;
         const tax = taxableAmount * (parseFloat(formData.taxPercent || 0) / 100);
-        const total = taxableAmount + tax + (parseFloat(formData.adjustment || 0));
-        setFormData(prev => ({ ...prev, subTotal, tax, totalAmount: total }));
-    }, [formData.items, formData.discount, formData.taxPercent, formData.adjustment]);
+        const tcsAmt = formData.tcsApplicable ? (taxableAmount + tax) * (parseFloat(formData.tcsRate || 0) / 100) : 0;
+        const total = taxableAmount + tax + (parseFloat(formData.adjustment || 0)) + tcsAmt;
+        setFormData(prev => ({ ...prev, subTotal, tax, tcsAmount: tcsAmt, totalAmount: total }));
+    }, [formData.items, formData.discount, formData.taxPercent, formData.adjustment, formData.tcsApplicable, formData.tcsRate]);
 
     const handleItemUpdate = (id, field, value) => {
         setFormData(prev => {
@@ -526,6 +530,9 @@ const SalesOrdersView = ({ companyId }) => {
             taxPercent: 18,
             tax: 0,
             adjustment: 0,
+            tcsApplicable: false,
+            tcsRate: '',
+            tcsAmount: 0,
             totalAmount: 0,
             status: 'Draft',
             customerNotes: '',
@@ -552,6 +559,9 @@ const SalesOrdersView = ({ companyId }) => {
                 taxPercent: parseFloat(order.taxPercent) || 0,
                 tax: parseFloat(order.tax) || 0,
                 adjustment: parseFloat(order.adjustment) || 0,
+                tcsApplicable: order.tcsApplicable || false,
+                tcsRate: order.tcsRate || '',
+                tcsAmount: parseFloat(order.tcsAmount) || 0,
                 totalAmount: parseFloat(order.totalAmount) || 0,
             });
         } else {
@@ -1062,6 +1072,37 @@ const SalesOrdersView = ({ companyId }) => {
                                                 <input type="number" value={formData.adjustment} onChange={e => setFormData({ ...formData, adjustment: e.target.value })} className="w-24 h-9 px-3 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" />
                                             </div>
                                             <span className="w-24 text-right font-bold text-slate-600 font-mono">{parseFloat(formData.adjustment || 0) >= 0 ? '+' : '-'} {currencySymbol} {Math.abs(parseFloat(formData.adjustment || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-[13px] py-1">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={formData.tcsApplicable} 
+                                                onChange={e => setFormData({ ...formData, tcsApplicable: e.target.checked })} 
+                                                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                                            />
+                                            <span className="font-bold text-slate-500 uppercase tracking-widest">Apply TCS</span>
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-36 flex justify-end">
+                                                {formData.tcsApplicable && (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Rate %</span>
+                                                        <input 
+                                                            type="number"
+                                                            value={formData.tcsRate} 
+                                                            onChange={e => setFormData({ ...formData, tcsRate: e.target.value })}
+                                                            className="w-16 h-9 px-2 bg-white border border-slate-200 rounded text-right font-bold outline-none focus:border-blue-400 transition-all tabular-nums" 
+                                                            placeholder="e.g. 1"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <span className="w-24 text-right font-bold text-slate-600 font-mono">
+                                                {formData.tcsApplicable ? `+ ${currencySymbol} ${(formData.tcsAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}
+                                            </span>
                                         </div>
                                     </div>
 

@@ -599,8 +599,13 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                            if (matched) {
                                               newTdsName = matched.name;
                                               newTdsRate = matched.rate;
+                                           } else {
+                                              // Fallback if the option isn't explicitly in the hardcoded list
+                                              newTdsName = `TDS - ${vendor.tds_section}`;
+                                              newTdsRate = Number(vendor.tds_rate) || 0;
                                            }
-                                        } else if (vendor.tdsApplicable === false) {
+                                        } else {
+                                           // Clear if vendor has no TDS or missing section
                                            newTdsName = '';
                                            newTdsRate = 0;
                                         }
@@ -1248,10 +1253,25 @@ const PurchaseOrderEntryView = ({ companyId }) => {
                                  }}
                                  className={`w-full h-9 px-3 flex items-center justify-between border rounded bg-white cursor-pointer group transition-all ${isTDSDropdownOpen ? 'border-blue-500 ring-1 ring-blue-500' : 'border-slate-300 hover:border-slate-400'}`}
                                >
-                                  <span className={`text-[13px] truncate ${formData.tdsName ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
-                                     {formData.tdsName ? `${formData.tdsName} [${formData.tdsRate}%]` : 'Select a Tax'}
-                                  </span>
-                                  <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTDSDropdownOpen ? 'rotate-180 text-blue-500' : ''}`} />
+                                  <div className="flex items-center flex-1 min-w-0 overflow-hidden pr-2">
+                                     <span className={`text-[13px] truncate ${formData.tdsName ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
+                                        {formData.tdsName ? `${formData.tdsName} [${formData.tdsRate}%]` : 'Select a Tax'}
+                                     </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                     {formData.tdsName && (
+                                        <X 
+                                          size={14} 
+                                          className="text-red-400 hover:text-red-600 transition-colors" 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setFormData({ ...formData, tdsName: '', tdsRate: 0 });
+                                          }}
+                                        />
+                                     )}
+                                     {formData.tdsName && <div className="w-px h-4 bg-slate-200"></div>}
+                                     <ChevronDown size={14} className={`text-slate-400 transition-transform ${isTDSDropdownOpen ? 'rotate-180 text-blue-500' : ''}`} />
+                                  </div>
                                </div>
 
                                {isTDSDropdownOpen && (

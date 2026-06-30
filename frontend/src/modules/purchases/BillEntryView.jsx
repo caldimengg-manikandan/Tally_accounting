@@ -117,6 +117,7 @@ const BillEntryView = ({ companyId }) => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [savedPO, setSavedPO] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState(null);
   const [vendorPanelTab, setVendorPanelTab] = useState('details');
   const [isAddressExpanded, setIsAddressExpanded] = useState(false);
   const [isContactPersonsExpanded, setIsContactPersonsExpanded] = useState(false);
@@ -593,12 +594,14 @@ const BillEntryView = ({ companyId }) => {
   };
 
   const handleSaveOrder = async (statusOrSendEmail = 'draft') => {
+    setFormError(null);
     if (!formData.vendorId) {
       alert('Please select a vendor');
       return;
     }
     if (!formData.billNumber || !formData.billNumber.trim()) {
-      alert('Please enter a Bill number');
+      setFormError('Please enter the bill number.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (items.some(item => !item.itemName || item.qty <= 0)) {
@@ -691,6 +694,18 @@ const BillEntryView = ({ companyId }) => {
           </div>
        </div>
 
+        {formError && (
+           <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-100 rounded text-red-600 text-[13px] font-medium flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                 <span className="w-1 h-1 bg-red-600 rounded-full"></span>
+                 {formError}
+              </div>
+              <button onClick={() => setFormError(null)} className="text-red-400 hover:text-red-600">
+                 <X size={16} />
+              </button>
+           </div>
+        )}
+
        <div className="flex relative">
           <div className="flex-1 px-8 py-6 max-w-[1200px]">
              {/* Form Grid */}
@@ -769,8 +784,11 @@ const BillEntryView = ({ companyId }) => {
                                      if (matched) {
                                         newTdsName = matched.name;
                                         newTdsRate = matched.rate;
+                                     } else {
+                                        newTdsName = `TDS - ${vendor.tds_section}`;
+                                        newTdsRate = Number(vendor.tds_rate) || 0;
                                      }
-                                  } else if (vendor.tdsApplicable === false) {
+                                  } else {
                                      newTdsName = '';
                                      newTdsRate = 0;
                                   }
@@ -779,7 +797,9 @@ const BillEntryView = ({ companyId }) => {
                                      ...formData, 
                                      vendorId: vendor.id, 
                                      vendorName: vendor.name,
-                                     paymentTerms: vendor.paymentTerms || 'Due on Receipt'
+                                     paymentTerms: vendor.paymentTerms || 'Due on Receipt',
+                                     tdsName: newTdsName,
+                                     tdsRate: newTdsRate
                                   });
                                   setSelectedVendor(vendor);
                                   setVendorSearch('');

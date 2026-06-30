@@ -6,7 +6,8 @@ import {
   Settings, CheckSquare, Square, X,
   ArrowRight, Printer, Mail, FileText,
   MoreVertical, AlertCircle, Edit, Trash2,
-  ChevronRight, Hash, Calendar, ArrowLeft
+  ChevronRight, Hash, Calendar, ArrowLeft,
+  Paperclip, MessageSquare
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { purchaseAPI, voucherAPI, companyAPI } from '../../services/api';
@@ -630,31 +631,40 @@ const BillsView = ({ companyId }) => {
                                     onClick={() => setSelectedBillId(bill.id)}
                                     className={`p-4 border-b border-slate-50 cursor-pointer transition-all relative group overflow-hidden ${selectedBillId === bill.id ? 'bg-blue-50/50 border-l-[3px] border-l-blue-600' : 'hover:bg-slate-50/80 border-l-[3px] border-l-transparent'}`}
                                 >
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className={`text-[13px] font-bold ${selectedBillId === bill.id ? 'text-blue-700' : 'text-slate-800'}`}>
-                                            {bill.Ledger?.name}
-                                        </span>
-                                        <span className="text-[13px] font-bold text-slate-900 group-hover:scale-110 transition-transform tabular-nums">
-                                            ₹{parseFloat(bill.totalAmount || 0).toLocaleString()}
-                                        </span>
+                                    <div className="flex items-start gap-3">
+                                        <div className="mt-0.5" onClick={(e) => e.stopPropagation()}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedBills.includes(bill.id)}
+                                                onChange={() => toggleSelectBill(bill.id)}
+                                                className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-center mb-0.5">
+                                                <span className={`text-[13px] font-medium truncate pr-2 ${selectedBillId === bill.id ? 'text-blue-700' : 'text-slate-800'}`}>
+                                                    {bill.Ledger?.name}
+                                                </span>
+                                                <span className="text-[13px] font-medium text-slate-800 flex-shrink-0 tabular-nums">
+                                                    ₹{parseFloat(bill.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center text-[12px] text-slate-500 mb-1">
+                                                <span>{bill.voucherNumber}</span>
+                                                <span className="mx-1.5">•</span>
+                                                <span>{new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'2-digit', year:'numeric' })}</span>
+                                            </div>
+                                            <div>
+                                                <span className={`text-[11px] font-bold uppercase tracking-wider
+                                                   ${(bill.status || '').toUpperCase() === 'PAID' ? 'text-emerald-500' : 
+                                                     (bill.status || '').toUpperCase() === 'DRAFT' ? 'text-slate-500' : 
+                                                     (bill.status || '').toUpperCase() === 'PARTIALLY_PAID' ? 'text-yellow-600' : 
+                                                     'text-blue-500'}`}>
+                                                   {(bill.status || 'Open').replace('_', ' ')}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[12px] text-slate-400 font-medium">#{bill.voucherNumber}</span>
-                                        <span className="text-[11px] text-slate-400 font-bold">{new Date(bill.date).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}</span>
-                                    </div>
-                                    <div className="mt-2 flex items-center justify-between">
-                                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-[0.1em] border
-                                             ${(bill.status || '').toUpperCase() === 'PAID' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                                               (bill.status || '').toUpperCase() === 'DRAFT' ? 'bg-slate-50 text-slate-600 border-slate-100' : 
-                                               (bill.status || '').toUpperCase() === 'PARTIALLY_PAID' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' : 
-                                               'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                                             {(bill.status || 'Open').replace('_', ' ')}
-                                         </span>
-                                        <ChevronRight size={14} className={`transition-all duration-300 ${selectedBillId === bill.id ? 'translate-x-0 opacity-100 text-blue-500' : '-translate-x-2 opacity-0 text-slate-200'}`} />
-                                    </div>
-                                    
-                                    {/* Selected Pulse indicator */}
-                                    {selectedBillId === bill.id && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full mr-2 shadow-[0_0_8px_rgba(37,99,235,0.4)] animate-pulse" />}
                                 </div>
                             ))}
                         </div>
@@ -671,61 +681,58 @@ const BillsView = ({ companyId }) => {
                             ) : (
                                 <div className="animate-in fade-in duration-500 flex flex-col min-h-full">
                                     
-                                    {/* A. Detail Action Bar */}
-                                    <div className="sticky top-0 bg-white border-b border-slate-100 p-4 flex items-center justify-between px-8 z-30 shadow-[0_1px_5px_rgba(0,0,0,0.02)] no-print">
-                                        <div className="flex items-center gap-4">
+                                    {/* A. Detail Top Bar */}
+                                    <div className="sticky top-0 bg-white border-b border-slate-100 flex flex-col z-30 shadow-[0_1px_5px_rgba(0,0,0,0.02)] no-print">
+                                        <div className="p-4 flex items-center justify-between px-8">
                                             <h2 className="text-[18px] font-bold text-slate-800">{billDetail?.voucherNumber}</h2>
-                                            <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${parseFloat(billDetail?.balanceDue) > 0 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                                            {parseFloat(billDetail?.balanceDue) > 0 ? 'Open' : 'Settled'}
+                                            
+                                            <div className="flex items-center gap-3 ml-4">
+                                                <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all">
+                                                    <Paperclip size={16} />
+                                                </button>
+                                                <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all">
+                                                    <MessageSquare size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => setLayoutMode('table')}
+                                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all ml-2 border border-transparent hover:border-red-100"
+                                                >
+                                                    <X size={20} />
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-6">
-                                            {/* Unified Actions Toolbar to match screenshot */}
-                                            <div className="flex items-center bg-slate-50/50 border border-slate-200 rounded-xl p-1 gap-1">
+                                        
+                                        {/* A.1 Sub Action Bar */}
+                                        <div className="flex items-center justify-between px-8 py-2 bg-slate-50/30 border-t border-slate-50">
+                                            <div className="flex items-center gap-2">
                                                 <button 
                                                     onClick={() => billDetail && navigate('/bills/edit/' + billDetail.id)}
-                                                    className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold"
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-slate-700 hover:text-blue-600 hover:bg-white rounded-lg transition-colors text-[13px] font-medium border border-transparent hover:border-slate-200"
                                                 >
                                                     <Edit size={14} /> Edit
                                                 </button>
-                                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
                                                 <button 
                                                     onClick={handleDownloadPDF}
-                                                    className="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold"
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-slate-700 hover:text-blue-600 hover:bg-white rounded-lg transition-colors text-[13px] font-medium border border-transparent hover:border-slate-200"
                                                 >
-                                                    <Printer size={14} /> PDF
+                                                    <Printer size={14} /> PDF/Print
                                                 </button>
-                                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
                                                 <button 
-                                                    onClick={() => billDetail && navigate('/payments-made/new', { state: { 
-                                                        vendorId: billDetail.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.LedgerId || billDetail?.Ledger?.id,
-                                                        billDetail: billDetail 
-                                                    } })}
-                                                    className="flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[12px] font-bold"
+                                                    onClick={() => {
+                                                        if (!billDetail) return;
+                                                        const vendorLedger = billDetail.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.Ledger || billDetail.Ledger;
+                                                        navigate('/payments-made/new', { state: { 
+                                                            vendorId: vendorLedger?.id,
+                                                            vendorName: vendorLedger?.name,
+                                                            billDetail: billDetail 
+                                                        } });
+                                                    }}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-slate-700 hover:text-blue-600 hover:bg-white rounded-lg transition-colors text-[13px] font-medium border border-transparent hover:border-slate-200"
                                                 >
                                                     <Plus size={14} /> Record Payment
                                                 </button>
-                                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
-                                                <button className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors">
+                                                <button className="p-1.5 text-slate-600 hover:text-slate-800 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200">
                                                     <MoreHorizontal size={14} />
-                                                </button>
-                                            </div>
-
-                                            <div className="flex items-center gap-3 ml-4 border-l border-slate-200 pl-6">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Journal View</span>
-                                                    <button 
-                                                        onClick={() => setShowVoucher(!showVoucher)}
-                                                        className={`w-10 h-5 rounded-full relative transition-colors ${showVoucher ? 'bg-blue-600' : 'bg-slate-200'}`}
-                                                    >
-                                                        <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${showVoucher ? 'left-6' : 'left-1'}`} />
-                                                    </button>
-                                                </div>
-                                                <button 
-                                                    onClick={() => setLayoutMode('table')}
-                                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                >
-                                                    <X size={20} />
                                                 </button>
                                             </div>
                                         </div>
@@ -744,16 +751,33 @@ const BillsView = ({ companyId }) => {
                                                 </div>
                                             </div>
                                             <button 
-                                            onClick={() => billDetail && navigate('/payments-made/new', { state: { 
-                                                vendorId: billDetail.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.LedgerId || billDetail?.Ledger?.id,
-                                                billDetail: billDetail 
-                                            } })}
+                                            onClick={() => {
+                                                if (!billDetail) return;
+                                                const vendorLedger = billDetail.Transactions?.find(t => parseFloat(t.credit || 0) > 0)?.Ledger || billDetail.Ledger;
+                                                navigate('/payments-made/new', { state: { 
+                                                    vendorId: vendorLedger?.id,
+                                                    vendorName: vendorLedger?.name,
+                                                    billDetail: billDetail 
+                                                } });
+                                            }}
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all shadow-lg shadow-blue-100 active:scale-95"
                                             >
                                                 Record Payment
                                             </button>
                                         </div>
                                     )}
+
+                                    <div className="flex justify-end px-8 mt-4 mb-2 no-print">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[11px] font-bold text-slate-800 italic">Show PDF View</span>
+                                            <button 
+                                                onClick={() => setShowVoucher(!showVoucher)}
+                                                className={`w-10 h-5 rounded-full relative transition-colors ${!showVoucher ? 'bg-blue-600' : 'bg-slate-200'}`}
+                                            >
+                                                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${!showVoucher ? 'left-6' : 'left-1'}`} />
+                                            </button>
+                                        </div>
+                                    </div>
 
                                     {/* C. NAVIGATION REMOVED - Using Unified Scroll View */}
 
