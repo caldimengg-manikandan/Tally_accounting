@@ -102,24 +102,30 @@ const CustomerOverviewSidebar = ({
             </div>
 
             {/* Email Address */}
-            <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
-              <Mail size={13} className="text-slate-500 stroke-[2] shrink-0" />
-              <span className="truncate hover:text-blue-600 cursor-pointer transition-colors">
-                {customer.email || 'naveenswathi1811@gmail.com'}
-              </span>
-            </div>
+            {customer.email && (
+              <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
+                <Mail size={13} className="text-slate-500 stroke-[2] shrink-0" />
+                <span className="truncate hover:text-blue-600 cursor-pointer transition-colors">
+                  {customer.email}
+                </span>
+              </div>
+            )}
 
             {/* Primary Phone */}
-            <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
-              <Phone size={13} className="text-slate-500 stroke-[2] shrink-0" />
-              <span>{customer.phone || '+91-2345178906'}</span>
-            </div>
+            {(customer.workPhone || customer.phone) && (
+              <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
+                <Phone size={13} className="text-slate-500 stroke-[2] shrink-0" />
+                <span>{customer.workPhone || customer.phone}</span>
+              </div>
+            )}
 
             {/* Mobile Phone */}
-            <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
-              <Smartphone size={13} className="text-slate-500 stroke-[2] shrink-0" />
-              <span>{customer.mobile || '+91-2345178906'}</span>
-            </div>
+            {customer.mobile && (
+              <div className="flex items-center gap-2 text-[13px] text-slate-800 font-medium">
+                <Smartphone size={13} className="text-slate-500 stroke-[2] shrink-0" />
+                <span>{customer.mobile}</span>
+              </div>
+            )}
 
             {/* Invite to Portal Link */}
             <div className="pt-2">
@@ -193,7 +199,7 @@ const CustomerOverviewSidebar = ({
             </div>
 
             {/* Shipping Address container */}
-            <div className="space-y-1">
+            <div className="space-y-1 relative group pr-6">
               <h4 className="text-[13.5px] font-semibold text-slate-900">
                 Shipping Address
               </h4>
@@ -219,6 +225,15 @@ const CustomerOverviewSidebar = ({
                   </button>
                 </p>
               )}
+
+              {/* Inline edit pencil icon */}
+              <button 
+                onClick={() => onEditAddress && onEditAddress('shipping')}
+                className="absolute right-0 top-0.5 p-1 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded transition-all"
+                title="Edit Address"
+              >
+                <Edit2 size={13} className="stroke-[2.5]" />
+              </button>
             </div>
 
             {/* Add Additional Address link */}
@@ -342,24 +357,6 @@ const CustomerOverviewSidebar = ({
                   </p>
                 </div>
 
-                {/* ─── CUSTOMER PORTAL BANNER ─── */}
-                <div className="p-4 border border-green-200 bg-green-50/30 rounded-xl flex flex-col gap-3">
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-green-700 shrink-0">
-                      <Laptop size={18} />
-                    </div>
-                    <div className="text-[13px] text-slate-800 leading-relaxed font-medium">
-                      Customer Portal allows your customers to keep track of all the transactions between them and your business.{' '}
-                      <button className="text-blue-600 font-semibold hover:underline">Learn More</button>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={onEnablePortal}
-                    className="px-4 py-1.5 bg-white border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm max-w-fit"
-                  >
-                    Enable Portal
-                  </button>
-                </div>
               </div>
             )}
           </div>

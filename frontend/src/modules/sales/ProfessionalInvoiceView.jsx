@@ -404,6 +404,8 @@ export default function ProfessionalInvoiceView() {
   const [taxType,         setTaxType]         = useState('GST');
   const [gstPercent,      setGstPercent]      = useState(0); // Default 0% - applied only when a tax is selected
   const [taxId,           setTaxId]           = useState('');
+  const [tcsApplicable,   setTcsApplicable]   = useState(false);
+  const [tcsRate,         setTcsRate]         = useState(0);
 
   const [notes,      setNotes]      = useState('Thanks for your business.');
   const [termsText,  setTermsText]  = useState('');

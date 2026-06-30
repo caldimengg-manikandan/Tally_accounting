@@ -9,7 +9,7 @@ import {
   Camera, Image as ImageIcon, X, LayoutDashboard, Share2,
   Sparkles, DollarSign, Printer, Download, Filter, Save, Loader2,
   ChevronRight, Calendar, User, Users, Briefcase, Bold, Italic, Underline,
-  CheckCircle2, AlertCircle, PlusCircle, Trash
+  CheckCircle2, AlertCircle, PlusCircle, Trash, ArrowDown
 } from 'lucide-react';
 import { 
   ledgerAPI, salesAPI, quoteAPI, retainerInvoiceAPI, 
@@ -582,17 +582,7 @@ const CustomerDetailView = ({ companyId }) => {
                </div>
                <div className="flex items-center gap-3">
                   <button onClick={() => navigate(`/customers/${customer.id}`)} className="px-4 py-1.5 border border-slate-200 rounded text-[13px] font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">Edit</button>
-                  <button className="p-2 border border-slate-200 rounded text-slate-400 hover:text-slate-600 transition-colors"><Paperclip size={18}/></button>
-                  
-                  <div className="bg-[#1e61f0] text-white rounded-lg flex items-center shadow-lg shadow-blue-100 overflow-hidden transition-all hover:bg-blue-700">
-                     <button className="px-5 py-2.5 text-[13px] font-bold border-r border-blue-500/30">New Transaction</button>
-                     <button className="px-3 py-2.5"><ChevronDown size={16}/></button>
-                  </div>
 
-                  <button className="px-4 py-2 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50 shadow-sm transition-all">
-                     More <ChevronDown size={16} className="text-slate-400"/>
-                  </button>
-                  <div className="w-px h-6 bg-slate-200 mx-1"></div>
                   <button className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors duration-150" onClick={() => navigate('/customers')}><X size={20}/></button>
                </div>
             </header>
@@ -1216,9 +1206,9 @@ const CustomerDetailView = ({ companyId }) => {
 
       {/* ─── ADDRESS DRAWER / POPUP MODAL ─── */}
       {isAddressDrawerOpen && (
-        <>
-          <div className="absolute top-[300px] left-[720px] z-[100] animate-fade-in shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-xl border border-slate-200">
-            <div className="bg-white rounded-xl w-full max-w-[480px] overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fade-in" onClick={() => setIsAddressDrawerOpen(false)} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-[480px] overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
               <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <h2 className="text-[14px] font-bold text-slate-800 tracking-tight">
                   {addressType === 'billing' ? 'Billing Address' : 'Shipping Address'}
@@ -1382,7 +1372,6 @@ const CustomerDetailView = ({ companyId }) => {
               </div>
             </div>
           </div>
-        </>
       )}
       {/* ─── QUICK ADD DRAWER ──────────────────────────────── */}
       {isQuickAddOpen && (
@@ -1468,6 +1457,8 @@ const CustomerDetailView = ({ companyId }) => {
           addNotification({ message: 'Email sent successfully', type: 'success' });
         }}
       />
+
+
 
       <ConfirmModal 
         isOpen={isDeleteModalOpen}
