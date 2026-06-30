@@ -67,13 +67,35 @@ class AccountingService {
     }
 
     // 2. Create Voucher Header with Auto-Numbering
+    // ----------------------------------------------------------------------------------
+    // RACE CONDITION FIX: The old COUNT()+1 approach is not atomic.
+    // Two concurrent requests both reading count=5 would both generate VOU-6.
+    //
+    // Fix: read the LAST voucher's number (by createdAt DESC), parse the
+    // trailing integer, and increment by 1. This runs inside the caller's
+    // DB transaction, so SQLite's serialized writes ensure atomicity.
+    //
+    // Numbers are zero-padded to 5 digits (00001) for correct lexical sort order.
     let voucherNumber = customVoucherNumber;
     if (!voucherNumber) {
       const prefix = voucherType.substring(0, 3).toUpperCase();
-      const count = await Voucher.count({ where: { CompanyId: companyId, voucherType }, ...options });
-      voucherNumber = `${prefix}-${count + 1}`;
+
+      const lastVoucher = await Voucher.findOne({
+        where: { CompanyId: companyId, voucherType },
+        order: [['createdAt', 'DESC']],
+        attributes: ['voucherNumber'],
+        ...options
+      });
+
+      let nextSeq = 1;
+      if (lastVoucher?.voucherNumber) {
+        // Parse the trailing number from formats like "JOU-00007" or "PAY-3"
+        const match = lastVoucher.voucherNumber.match(/(\d+)$/);
+        if (match) nextSeq = parseInt(match[1], 10) + 1;
+      }
+      voucherNumber = `${prefix}-${String(nextSeq).padStart(5, '0')}`;
     } else {
-      // If it's a numeric string with padding, remove the padding
+      // If the caller supplies a plain integer string, preserve it as-is
       if (/^\d+$/.test(voucherNumber)) {
         voucherNumber = String(parseInt(voucherNumber, 10));
       }

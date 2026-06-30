@@ -24,9 +24,42 @@ exports.getTrialBalance = async (req, res, next) => {
       required: false
     };
 
+    // ── CostCenter filter ───────────────────────────────────────────────
     if (costCenterId) {
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       transactionInclude.where = { CostCenterId: uuidPattern.test(costCenterId) ? costCenterId : '00000000-0000-0000-0000-000000000000' };
+    }
+
+    // ── DATE FILTER FIX ───────────────────────────────────────────────
+    // Previously, from/to were parsed but NEVER applied to the transaction
+    // query, so every Trial Balance showed all-time figures regardless of
+    // the date range the user selected.
+    //
+    // Fix: pre-fetch VoucherIds whose date falls within [from, to], then
+    // restrict the transaction aggregation to those IDs only. This runs as
+    // two small indexed queries instead of a cross-join scan.
+    if (from && to) {
+      const tbStart = new Date(from);
+      const tbEnd   = new Date(to);
+      tbEnd.setHours(23, 59, 59, 999);
+
+      const vouchersInRange = await Voucher.findAll({
+        where: {
+          CompanyId: companyId,
+          date: { [Op.between]: [tbStart, tbEnd] },
+          ...(Voucher.rawAttributes.deletedAt ? {} : {}) // paranoid respected automatically
+        },
+        attributes: ['id'],
+        raw: true
+      });
+
+      const voucherIds = vouchersInRange.map(v => v.id);
+      // Merge with any existing CostCenter where clause
+      transactionInclude.where = {
+        ...(transactionInclude.where || {}),
+        // If no vouchers in range, use a sentinel UUID that matches nothing
+        VoucherId: { [Op.in]: voucherIds.length > 0 ? voucherIds : ['00000000-0000-0000-0000-000000000000'] }
+      };
     }
 
     const ledgers = await Ledger.findAll({
@@ -245,7 +278,7 @@ exports.getProfitAndLoss = async (req, res, next) => {
             ledgerId: l.id,
             name: l.name,
             group: primaryGroup,
-            amount: Math.abs(netCredit)
+            amount: netCredit
           };
           income.push(entry);
           totalIncome += entry.amount;
@@ -257,7 +290,7 @@ exports.getProfitAndLoss = async (req, res, next) => {
             ledgerId: l.id,
             name: l.name,
             group: primaryGroup,
-            amount: Math.abs(netDebit)
+            amount: netDebit
           };
           expenses.push(entry);
           totalExpenses += entry.amount;
@@ -331,15 +364,28 @@ exports.getBalanceSheet = async (req, res, next) => {
       include: [Group]
     });
 
-    // 3. Fetch all transactions
+    // 3. DATE-SCOPED TRANSACTION QUERY ───────────────────────────────────────
+    //
+    // Balance Sheet is CUMULATIVE up to a specific date (endDate).
+    // Previously this fetched ALL transactions from all time, causing:
+    //   a) Full table scan for every request (performance)
+    //   b) Future transactions incorrectly inflating current balances
+    //
+    // Fix: scope transactions to vouchers dated <= endDate.
+    // This is correct accounting: a Balance Sheet as of date X shows the
+    // position INCLUDING all history up to X, not just the selected period.
+    const bsVoucherWhere = {
+      CompanyId: companyId,
+      date: { [Op.lte]: endDate }   // Cumulative up to endDate
+    };
+
     const txs = await Transaction.findAll({
-      include: [
-        {
-          model: Voucher,
-          where: { CompanyId: companyId },
-          attributes: ['date']
-        }
-      ]
+      include: [{
+        model: Voucher,
+        where: bsVoucherWhere,
+        attributes: ['date'],
+        required: true   // INNER JOIN: exclude orphan transactions without a voucher
+      }]
     });
 
     const ledgerTotals = {};
@@ -411,35 +457,31 @@ exports.getBalanceSheet = async (req, res, next) => {
     const assets = [];
     const liabilities = [];
 
-    // Push asset side groups
-    assets.push({ ledgerName: 'Fixed Assets', balance: Math.max(0, groupBalances['Fixed Assets']) });
-    assets.push({ ledgerName: 'Current Assets', balance: Math.max(0, groupBalances['Current Assets']) });
-    assets.push({ ledgerName: 'Investments', balance: Math.max(0, groupBalances['Investments']) });
+    // ── NEGATIVE BALANCE FIX ────────────────────────────────────────────────
+    // Previously Math.max(0, balance) was used, which hid negative balances
+    // (e.g., overdraft accounts, fully depreciated assets). Tally and all
+    // standard ERPs show negative values as-is; the balance sheet must
+    // reconcile Assets = Liabilities + Capital regardless of sign.
+    assets.push({ ledgerName: 'Fixed Assets',    balance: groupBalances['Fixed Assets'] });
+    assets.push({ ledgerName: 'Current Assets',  balance: groupBalances['Current Assets'] });
+    assets.push({ ledgerName: 'Investments',     balance: groupBalances['Investments'] });
 
-    // Push liabilities side groups
-    liabilities.push({ ledgerName: 'Capital Account', balance: Math.max(0, groupBalances['Capital Account']) });
-    
+    liabilities.push({ ledgerName: 'Capital Account',      balance: groupBalances['Capital Account'] });
+
     // Add Net Profit/Loss
     if (netProfit > 0) {
       liabilities.push({ ledgerName: 'Profit & Loss A/c (Net Profit)', balance: netProfit });
     } else if (netProfit < 0) {
-      liabilities.push({ ledgerName: 'Profit & Loss A/c (Net Loss)', balance: -netProfit });
+      liabilities.push({ ledgerName: 'Profit & Loss A/c (Net Loss)', balance: netProfit }); // negative shown as-is
     } else {
       liabilities.push({ ledgerName: 'Profit & Loss A/c', balance: 0 });
     }
 
-    liabilities.push({ ledgerName: 'Current Liabilities', balance: Math.max(0, groupBalances['Current Liabilities']) });
-    liabilities.push({ ledgerName: 'Loans (Liability)', balance: Math.max(0, groupBalances['Loans (Liability)']) });
+    liabilities.push({ ledgerName: 'Current Liabilities', balance: groupBalances['Current Liabilities'] });
+    liabilities.push({ ledgerName: 'Loans (Liability)',   balance: groupBalances['Loans (Liability)'] });
 
-    const totalAssets = assets.reduce((s, a) => s + a.balance, 0);
-    
-    // Liabilities total = Capital + Profit/Loss + Current Liabilities + Loans
-    let totalLiabilities = liabilities.reduce((s, l) => {
-      if (l.ledgerName.includes('Net Loss')) {
-        return s - l.balance; // Subtract Net Loss
-      }
-      return s + l.balance;
-    }, 0);
+    const totalAssets      = assets.reduce((s, a) => s + a.balance, 0);
+    const totalLiabilities = liabilities.reduce((s, l) => s + l.balance, 0);
 
     const result = {
       assets,

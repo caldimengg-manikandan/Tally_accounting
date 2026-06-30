@@ -226,6 +226,37 @@ cron.schedule('0 8 * * *', async () => {
   await ReminderService.processPaymentReminders();
 });
 
+// Run monthly on the 1st at 2:00 AM — automatic depreciation run for all companies
+cron.schedule('0 2 1 * *', async () => {
+  console.log('--- RUNNING AUTOMATIC MONTHLY DEPRECIATION CRON ---');
+  try {
+    const { Company } = require('./models');
+    const fixedAssetsController = require('./modules/fixed_assets/fixedAssets.controller');
+    const companies = await Company.findAll();
+    for (const company of companies) {
+      const mockReq = {
+        params: { companyId: company.id },
+        companyId: company.id,
+        body: { date: new Date() },
+        user: { id: null }
+      };
+      const mockRes = {
+        status: () => ({ json: (r) => console.log(`Auto-depreciation response for ${company.name}:`, r) }),
+        json: (r) => console.log(`Auto-depreciation response for ${company.name}:`, r)
+      };
+      try {
+        await fixedAssetsController.depreciateBatch(mockReq, mockRes, (err) => {
+          if (err) console.error(`Error in auto-depreciation for ${company.name}:`, err.message);
+        });
+      } catch (err) {
+        console.error(`Failed to auto-depreciate for ${company.name}:`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('Auto-depreciation cron failed:', err.message);
+  }
+});
+
 // Extra 1: Run every day at 1am — purge expired refresh tokens to prevent DB bloat
 cron.schedule('0 1 * * *', async () => {
   try {

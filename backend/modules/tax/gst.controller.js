@@ -5,10 +5,19 @@ const { Op } = require('sequelize');
 exports.getGSTR1 = async (req, res, next) => {
   try {
     const { companyId } = req.params;
+    const { from, to } = req.query;
+
+    const whereClause = { CompanyId: companyId, status: { [Op.notIn]: ['Draft', 'Void'] } };
+    if (from && to) {
+      const tbStart = new Date(from);
+      const tbEnd = new Date(to);
+      tbEnd.setHours(23, 59, 59, 999);
+      whereClause.date = { [Op.between]: [tbStart, tbEnd] };
+    }
 
     // Find all Sales Invoices
     const invoices = await SalesInvoice.findAll({
-      where: { CompanyId: companyId, status: { [Op.notIn]: ['Draft', 'Void'] } },
+      where: whereClause,
       include: [
         { model: Ledger, as: 'CustomerLedger', attributes: ['id', 'name', 'gstNumber', 'state'] },
         { model: SalesInvoiceItem, as: 'items', include: [Item] }
@@ -111,10 +120,19 @@ exports.getGSTR1 = async (req, res, next) => {
 exports.getGSTR2A = async (req, res, next) => {
   try {
     const { companyId } = req.params;
+    const { from, to } = req.query;
+
+    const whereClause = { CompanyId: companyId, voucherType: 'Purchase' };
+    if (from && to) {
+      const tbStart = new Date(from);
+      const tbEnd = new Date(to);
+      tbEnd.setHours(23, 59, 59, 999);
+      whereClause.date = { [Op.between]: [tbStart, tbEnd] };
+    }
 
     // Find all Purchase Vouchers (Bills)
     const vouchers = await Voucher.findAll({
-      where: { CompanyId: companyId, voucherType: 'Purchase' },
+      where: whereClause,
       include: [{
         model: Transaction,
         include: [{ model: Ledger, attributes: ['id', 'name', 'gstNumber', 'state'] }]
@@ -179,6 +197,7 @@ exports.getGSTR2A = async (req, res, next) => {
 exports.getGSTR3B = async (req, res, next) => {
   try {
     const { companyId } = req.params;
+    const { from, to } = req.query;
 
     // Fetch all transaction lines for duties and taxes
     const taxGroup = await Group.findOne({
@@ -191,9 +210,26 @@ exports.getGSTR3B = async (req, res, next) => {
       subGroups.forEach(sg => taxGroupIds.push(sg.id));
     }
 
+    const txInclude = {
+      model: Transaction
+    };
+
+    if (from && to) {
+      const tbStart = new Date(from);
+      const tbEnd = new Date(to);
+      tbEnd.setHours(23, 59, 59, 999);
+      txInclude.include = [{
+        model: Voucher,
+        where: {
+          date: { [Op.between]: [tbStart, tbEnd] }
+        },
+        required: true
+      }];
+    }
+
     const taxLedgers = await Ledger.findAll({
       where: { CompanyId: companyId, GroupId: { [Op.in]: taxGroupIds } },
-      include: [{ model: Transaction }]
+      include: [txInclude]
     });
 
     let outputCGST = 0, outputSGST = 0, outputIGST = 0;

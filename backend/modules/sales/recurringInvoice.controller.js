@@ -228,8 +228,8 @@ exports.processDueInvoices = async (req, res, next) => {
             };
           }), { transaction: t });
 
-          // Trigger Accounting Logic
-          await AccountingService.recordTaxInvoice({
+          // Trigger Accounting Logic & Update VoucherId link
+          const accountingResult = await AccountingService.recordTaxInvoice({
             companyId: template.CompanyId,
             customerLedgerId: customer?.id,
             date: now,
@@ -238,6 +238,9 @@ exports.processDueInvoices = async (req, res, next) => {
             type: 'Sales',
             userId: null // System generated
           }, t);
+          if (accountingResult && accountingResult.voucherId) {
+            await createdInvoice.update({ VoucherId: accountingResult.voucherId }, { transaction: t });
+          }
         }
       }
 

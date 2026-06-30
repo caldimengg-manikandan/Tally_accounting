@@ -6,7 +6,7 @@ async function killLocks() {
     ssl: { rejectUnauthorized: false }
   });
 
-  await client.connect();
+  await client.connect( );
   const res = await client.query(`
     SELECT pg_terminate_backend(pid)
     FROM pg_stat_activity
