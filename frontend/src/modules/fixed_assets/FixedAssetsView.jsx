@@ -459,7 +459,7 @@ export default function FixedAssetsView() {
                     <tbody className="divide-y divide-slate-50 text-[12.5px] font-semibold text-slate-700">
                       {filteredAssets.length > 0 ? (
                         filteredAssets.map((asset) => (
-                          <tr key={asset.id} className="hover:bg-slate-50/40 hover:scale-[1.001] transition-all border-b border-slate-50">
+                          <tr key={asset.id} className="hover:bg-slate-50/40 transition-colors border-b border-slate-50">
                             <td className="px-6 py-3.5">
                               <span className="font-bold text-slate-900 block text-[13px]">{asset.name}</span>
                               <span className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 block tracking-wider">
