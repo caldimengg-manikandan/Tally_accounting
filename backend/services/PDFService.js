@@ -967,6 +967,9 @@ class PDFService {
             const subTotal = parseFloat(order.subTotal || 0);
             const taxAmt = parseFloat(order.tax || order.taxAmount || 0);
             const taxPct = order.taxPercent || 18;
+            const discountAmt = order.discountAmount !== undefined ? parseFloat(order.discountAmount || 0) : (subTotal * parseFloat(order.discount || 0) / 100);
+            const adjustment = parseFloat(order.adjustment || 0);
+            const tcsAmount = parseFloat(order.tcsAmount || 0);
             const grandTotal = parseFloat(order.totalAmount || 0);
             const totalQty = parsedItems.reduce((s, it) => s + parseFloat(it?.quantity || 0), 0);
 
@@ -984,6 +987,18 @@ class PDFService {
             doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
             curY += rowH;
 
+            // Discount row (if applicable)
+            if (discountAmt > 0) {
+                doc.rect(40, curY, pageW, rowH).stroke('#000000');
+                doc.fillColor('#000000').fontSize(8).font('Helvetica')
+                   .text(`Discount`, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
+                doc.font('Helvetica-Bold')
+                   .text(`- ${discountAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
+                colKeys.forEach(key => doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000'));
+                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
+                curY += rowH;
+            }
+
             // GST row (if applicable)
             if (taxAmt > 0) {
                 doc.rect(40, curY, pageW, rowH).stroke('#000000');
@@ -994,6 +1009,30 @@ class PDFService {
                 colKeys.forEach(key => {
                     doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000');
                 });
+                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
+                curY += rowH;
+            }
+
+            // Adjustment row (if applicable)
+            if (adjustment !== 0) {
+                doc.rect(40, curY, pageW, rowH).stroke('#000000');
+                doc.fillColor('#000000').fontSize(8).font('Helvetica')
+                   .text(`Adjustment`, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
+                doc.font('Helvetica-Bold')
+                   .text(`${adjustment >= 0 ? '+' : '-'} ${Math.abs(adjustment).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
+                colKeys.forEach(key => doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000'));
+                doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
+                curY += rowH;
+            }
+
+            // TCS row (if applicable)
+            if (tcsAmount > 0) {
+                doc.rect(40, curY, pageW, rowH).stroke('#000000');
+                doc.fillColor('#000000').fontSize(8).font('Helvetica')
+                   .text(`TCS`, colX.no + 2, curY + 6, { width: pageW - cols.amount - 4, align: 'right' });
+                doc.font('Helvetica-Bold')
+                   .text(tcsAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 }), colX.amount + 2, curY + 6, { width: cols.amount - 4, align: 'right' });
+                colKeys.forEach(key => doc.moveTo(colX[key], curY).lineTo(colX[key], curY + rowH).stroke('#000000'));
                 doc.moveTo(40 + pageW, curY).lineTo(40 + pageW, curY + rowH).stroke('#000000');
                 curY += rowH;
             }

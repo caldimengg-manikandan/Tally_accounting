@@ -533,7 +533,7 @@ const AppShell = ({ children, onLogout, companies = [], currentCompanyId, onComp
 
             // FEATURE GATING LOGIC (SaaS Plan)
             const features = company?.SubscriptionPlan?.features || [];
-            if (section.group === 'Items' && !features.includes('INVENTORY')) return false;
+            // if (section.group === 'Items' && !features.includes('INVENTORY')) return false;
             
             // RBAC FILTERING LOGIC
             const role = (user.Role?.name || user.role || 'VIEWER').toUpperCase();

@@ -2,12 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mail, X, FileText, Send, RefreshCw, CheckCircle, Clock, ArrowLeft, Plus } from 'lucide-react';
 import useNotificationStore from '../store/notificationStore';
 import { getCurrencyDisplay } from '../utils/currencies';
+import { getUser } from '../stores/authStore';
 
 const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, apiFunc }) => {
     const addNotification = useNotificationStore(state => state.addNotification);
     const addActivity = useNotificationStore(state => state.addActivity);
+    
+    // Get current user details
+    const currentUser = (() => { try { return getUser() || {}; } catch { return {}; } })();
+    const userName = currentUser.name || 'User';
+    const userEmail = currentUser.email || 'contact@company.com';
+
     const [customerEmail, setCustomerEmail] = useState('');
-    const [ccEmails, setCcEmails] = useState(['finance@induspvtltd.in']);
+    const [ccEmails, setCcEmails] = useState([]);
     const [ccInput, setCcInput] = useState('');
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
@@ -38,114 +45,50 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
 
         const subtotal = parseFloat(data.subTotal || 0) || (data.items || []).reduce((s, i) => s + parseFloat(i.amount || 0), 0);
         const tax = parseFloat(data.taxAmount || data.tax || 0);
-        const total = parseFloat(data.total || 0);
+        const discountPercent = parseFloat(data.discount || 0);
+        const discountAmount = data.discountAmount !== undefined ? parseFloat(data.discountAmount) : (subtotal * discountPercent / 100);
+        const adjustment = parseFloat(data.adjustment || 0);
+        const tcsAmount = parseFloat(data.tcsAmount || 0);
+        const total = parseFloat(data.totalAmount || data.total || 0);
 
+        const dateStr = data.date || new Date().toLocaleDateString('en-IN');
+        const companyName = currentUser.companyName || currentUser.Company?.name || currentUser.company?.name || '';
+        
         return `
-<div style="font-family:'Helvetica Neue',Arial,sans-serif;background:#f8fafc;padding:32px 16px;min-height:100%;">
-  <div style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+<div style="font-family: Arial, sans-serif; font-size: 13px; color: #333333; line-height: 1.6; white-space: pre-wrap;">Dear ${data.customerName || 'Customer'},
 
-    <!-- Header -->
-    <div style="background:${accentColor};padding:36px 40px 32px;position:relative;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);letter-spacing:0.12em;text-transform:uppercase;">From Indus Pvt Ltd</p>
-          <h1 style="margin:0;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">${type} #${data.number}</h1>
-        </div>
-        <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:14px 20px;text-align:right;">
-          <p style="margin:0 0 2px;font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">${type === 'Quote' ? 'Quote' : 'Invoice'} Date</p>
-          <p style="margin:0;font-size:15px;color:#ffffff;font-weight:700;">${data.date || new Date().toLocaleDateString('en-IN')}</p>
-          ${data.dueDate || data.expiryDate ? `<p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.7);">Due: <strong style="color:#ffffff;">${data.dueDate || data.expiryDate}</strong></p>` : ''}
-        </div>
-      </div>
-    </div>
+The ${type.toLowerCase()} (${data.number}) is attached with this email.
+An overview of the ${type.toLowerCase()} is available below.
 
-    <!-- Greeting -->
-    <div style="padding:32px 40px 20px;">
-      <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#1e293b;">Dear ${data.customerName || 'Valued Customer'},</p>
-      <p style="margin:0;font-size:14px;color:#64748b;line-height:1.7;">Thank you for choosing us. Please find your ${type.toLowerCase()} details below. You can view, download, and pay from the secure link provided.</p>
-    </div>
+------------------------------------------------------
 
-    <!-- Divider -->
-    <div style="margin:0 40px;height:1px;background:#f1f5f9;"></div>
+${type} # : ${data.number}
 
-    <!-- Items Table -->
-    ${(data.items && data.items.length > 0) ? `
-    <div style="padding:24px 40px;">
-      <p style="margin:0 0 16px;font-size:11px;font-weight:800;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;">Items &amp; Services</p>
-      <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:12px;overflow:hidden;">
-        <thead>
-          <tr style="background:#f1f5f9;">
-            <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Description</th>
-            <th style="padding:10px 16px;text-align:center;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Qty</th>
-            <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Rate</th>
-            <th style="padding:10px 16px;text-align:right;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemRows}
-        </tbody>
-      </table>
+------------------------------------------------------
 
-      <!-- Totals -->
-      <table style="width:100%;margin-top:16px;border-collapse:collapse;">
-        ${subtotal !== total ? `
-        <tr>
-          <td style="padding:6px 0;font-size:13px;color:#64748b;">Subtotal</td>
-          <td style="padding:6px 0;font-size:13px;color:#1e293b;text-align:right;">${currencySymbol}${formatAmount(subtotal)}</td>
-        </tr>
-        ${tax > 0 ? `<tr>
-          <td style="padding:6px 0;font-size:13px;color:#64748b;">(+) Tax / GST</td>
-          <td style="padding:6px 0;font-size:13px;color:#1e293b;text-align:right;">${currencySymbol}${formatAmount(tax)}</td>
-        </tr>` : ''}
-        <tr><td colspan="2" style="padding:4px 0;"><div style="height:1px;background:#e2e8f0;"></div></td></tr>
-        ` : ''}
-        <tr>
-          <td style="padding:10px 0 4px;font-size:15px;font-weight:800;color:#1e293b;">Total</td>
-          <td style="padding:10px 0 4px;font-size:20px;font-weight:900;color:${accentColor};text-align:right;">${currencySymbol}${formatAmount(total)}</td>
-        </tr>
-      </table>
-    </div>
-    ` : `
-    <div style="padding:24px 40px;">
-      <div style="background:#f8fafc;border-radius:12px;padding:28px;text-align:center;">
-        <p style="margin:0 0 4px;font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">${type} Amount</p>
-        <p style="margin:0;font-size:36px;font-weight:900;color:${accentColor};">${currencySymbol}${formatAmount(total)}</p>
-      </div>
-    </div>
-    `}
+Order Date : ${dateStr}
+Amount : ${currencySymbol}${formatAmount(total)}(in ${currencyCode})
 
-    <!-- CTA Button -->
-    <div style="padding:8px 40px 36px;text-align:center;">
-      <a href="#" style="display:inline-block;background:${accentColor};color:#ffffff;padding:16px 48px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;">
-        ${type === 'Quote' ? 'View & Accept Quote' : 'View &amp; Pay Invoice'}
-      </a>
-    </div>
+------------------------------------------------------
 
-    <!-- Divider -->
-    <div style="margin:0 40px;height:1px;background:#f1f5f9;"></div>
+Please go through it and confirm the order. We look forward to working with you again.
 
-    <!-- Footer -->
-    <div style="padding:24px 40px 32px;display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#1e293b;">Indus Pvt Ltd</p>
-        <p style="margin:0;font-size:12px;color:#94a3b8;">contact@induspvtltd.in</p>
-      </div>
-      <p style="margin:0;font-size:11px;color:#cbd5e1;text-align:right;">This is an automated email.<br/>Please do not reply directly.</p>
-    </div>
+Regards,
 
-  </div>
-</div>`;
+${userName}
+${companyName}</div>
+`;
     };
 
     useEffect(() => {
         if (isOpen && documentData) {
             const email = documentData.Customer?.email || documentData.customerEmail || '';
             setCustomerEmail(email);
-            setCcEmails(['finance@induspvtltd.in']);
+            setCcEmails([]);
             setCcInput('');
             const defaultSub = documentType === 'Quote'
-                ? `Quote Estimate ${documentData.number} from Indus Pvt Ltd`
-                : `${documentType} - ${documentData.number} from Indus Pvt Ltd`;
+                ? `Quote Estimate ${documentData.number} from ${userName}`
+                : `${documentType} - ${documentData.number} from ${userName}`;
             setSubject(defaultSub);
             setBody(buildEmailBody(documentData, documentType));
             setSentPreview(null);
@@ -326,7 +269,7 @@ const EmailSendModal = ({ isOpen, onClose, documentData, documentType, onSend, a
                     {/* From */}
                     <div className="flex items-center px-7 py-3 hover:bg-slate-50/50 transition-colors">
                         <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">From</label>
-                        <input readOnly value="Indus Pvt Ltd <contact@induspvtltd.in>" className="flex-1 bg-transparent border-none outline-none text-[13px] text-slate-500 cursor-default" />
+                        <input readOnly value={`${userName} <${userEmail}>`} className="flex-1 bg-transparent border-none outline-none text-[13px] text-slate-500 cursor-default" />
                     </div>
 
                     {/* Send To */}
