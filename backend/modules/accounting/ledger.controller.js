@@ -102,20 +102,26 @@ exports.createLedger = async (req, res, next) => {
       }
     }
 
-    // ── Duplicate-name check ─────────────────────────────────────────────────
-    // Prevent two ledgers with the same name in the same group+company.
-    // (Case-insensitive match)
-    if (name && finalGroupId && targetCompanyId) {
+    // ── Duplicate-name check (company-wide, case-insensitive) ───────────────
+    // Tally standard: ledger names must be unique within the entire company,
+    // not just within a group. Two ledgers named "Cash" in different groups
+    // would cause ambiguity in voucher entry and reports.
+    if (name && targetCompanyId) {
       const existing = await Ledger.findOne({
         where: {
-          name: { [Op.like]: name.trim() },
-          GroupId: finalGroupId,
-          CompanyId: targetCompanyId
+          [Op.and]: [
+            sequelize.where(
+              sequelize.fn('LOWER', sequelize.col('name')),
+              name.trim().toLowerCase()
+            ),
+            { CompanyId: targetCompanyId }
+          ]
         }
       });
       if (existing) {
-        console.log(`[CREATE_LEDGER] Duplicate detected: "${name}" already exists in group ${finalGroupId}. Returning existing.`);
-        return res.status(200).json({ ...existing.toJSON(), _duplicate: true });
+        return res.status(409).json({
+          error: `A ledger named "${name.trim()}" already exists in this company. Ledger names must be unique across all groups.`
+        });
       }
     }
 
@@ -241,23 +247,57 @@ exports.updateLedger = async (req, res, next) => {
     if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
     
     const oldData = ledger.toJSON();
-    await ledger.update({ 
-      ...req.body, // Spread first
-      name: name || ledger.name, 
-      GroupId: groupId || ledger.GroupId, 
-      openingBalance: openingBalance !== undefined ? openingBalance : ledger.openingBalance,
-      openingBalanceType: openingBalanceType || ledger.openingBalanceType,
-      currentBalance: openingBalance !== undefined ? openingBalance : ledger.currentBalance,
-      description: description !== undefined ? description : ledger.description,
-      address: address !== undefined ? address : ledger.address,
-      gstNumber: gstNumber !== undefined ? gstNumber : ledger.gstNumber,
-      accountNumber: accountNumber !== undefined ? accountNumber : ledger.accountNumber,
-      bankName: bankName !== undefined ? bankName : ledger.bankName,
-      ifsc: ifsc !== undefined ? ifsc : ledger.ifsc,
-      accountCode: accountCode !== undefined ? accountCode : ledger.accountCode,
-      tdsApplicable: tdsApplicable !== undefined ? tdsApplicable : ledger.tdsApplicable,
-      tds_section: tds_section !== undefined ? tds_section : ledger.tds_section,
-      tds_rate: tds_rate !== undefined ? tds_rate : ledger.tds_rate
+    // ── Explicit whitelist of updatable fields (no ...req.body spread) ────────
+    // Only the fields listed here can be changed via this endpoint.
+    // This prevents mass-assignment of sensitive fields like CompanyId, GroupId chain, deletedAt.
+    const { email, mobile, workPhone, phone, website, pan, creditLimit, language,
+            billingAddress, shippingAddress, billingAddressJson, shippingAddressJson,
+            contactPersonsJson, bankDetailsJson,
+            state, registrationType, customerType, salutation, firstName, lastName,
+            companyName, department, designation } = req.body;
+
+    await ledger.update({
+      name:                name                !== undefined ? name.trim()            : ledger.name,
+      GroupId:             groupId             !== undefined ? groupId                 : ledger.GroupId,
+      openingBalance:      openingBalance      !== undefined ? openingBalance          : ledger.openingBalance,
+      openingBalanceType:  openingBalanceType  !== undefined ? openingBalanceType      : ledger.openingBalanceType,
+      currentBalance:      openingBalance      !== undefined ? openingBalance          : ledger.currentBalance,
+      description:         description         !== undefined ? description             : ledger.description,
+      address:             address             !== undefined ? address                 : ledger.address,
+      gstNumber:           gstNumber           !== undefined ? gstNumber               : ledger.gstNumber,
+      accountNumber:       accountNumber       !== undefined ? accountNumber           : ledger.accountNumber,
+      bankName:            bankName            !== undefined ? bankName                : ledger.bankName,
+      ifsc:                ifsc                !== undefined ? ifsc                    : ledger.ifsc,
+      accountCode:         accountCode         !== undefined ? accountCode             : ledger.accountCode,
+      // Contact fields
+      email:               email               !== undefined ? email                   : ledger.email,
+      mobile:              mobile              !== undefined ? mobile                  : ledger.mobile,
+      workPhone:           workPhone           !== undefined ? workPhone               : ledger.workPhone,
+      phone:               phone               !== undefined ? phone                   : ledger.phone,
+      website:             website             !== undefined ? website                 : ledger.website,
+      pan:                 pan                 !== undefined ? pan                     : ledger.pan,
+      creditLimit:         creditLimit         !== undefined ? creditLimit             : ledger.creditLimit,
+      language:            language            !== undefined ? language                : ledger.language,
+      state:               state               !== undefined ? state                   : ledger.state,
+      registrationType:    registrationType    !== undefined ? registrationType        : ledger.registrationType,
+      customerType:        customerType        !== undefined ? customerType            : ledger.customerType,
+      salutation:          salutation          !== undefined ? salutation              : ledger.salutation,
+      firstName:           firstName           !== undefined ? firstName               : ledger.firstName,
+      lastName:            lastName            !== undefined ? lastName                : ledger.lastName,
+      companyName:         companyName         !== undefined ? companyName             : ledger.companyName,
+      department:          department          !== undefined ? department              : ledger.department,
+      designation:         designation         !== undefined ? designation             : ledger.designation,
+      // Address JSON fields
+      billingAddress:      billingAddress      !== undefined ? billingAddress          : ledger.billingAddress,
+      shippingAddress:     shippingAddress     !== undefined ? shippingAddress         : ledger.shippingAddress,
+      billingAddressJson:  billingAddressJson  !== undefined ? billingAddressJson      : ledger.billingAddressJson,
+      shippingAddressJson: shippingAddressJson !== undefined ? shippingAddressJson     : ledger.shippingAddressJson,
+      contactPersonsJson:  contactPersonsJson  !== undefined ? contactPersonsJson      : ledger.contactPersonsJson,
+      bankDetailsJson:     bankDetailsJson     !== undefined ? bankDetailsJson         : ledger.bankDetailsJson,
+      // Tax compliance fields
+      tdsApplicable:       tdsApplicable       !== undefined ? tdsApplicable           : ledger.tdsApplicable,
+      tds_section:         tds_section         !== undefined ? tds_section             : ledger.tds_section,
+      tds_rate:            tds_rate            !== undefined ? tds_rate                : ledger.tds_rate
     });
 
     await AuditService.log({
@@ -301,20 +341,21 @@ exports.getLedgerTransactions = async (req, res, next) => {
   }
 };
 
-// Delete a Ledger (only if no transactions exist, unless it's the Account payable mistake)
+// Delete a Ledger (only if no transactions exist)
+// NOTE: Ledgers with transactions can NEVER be deleted to preserve accounting history.
+// Use soft-delete (paranoid: true) or deactivate the ledger instead.
 exports.deleteLedger = async (req, res, next) => {
   try {
     const ledger = await Ledger.findByPk(req.params.id);
     if (!ledger) return res.status(404).json({ error: 'Ledger not found' });
 
-    // Temporary fix: if the ledger is the erroneous "Account payable", forcefully delete its transactions first
-    if (ledger.name === 'Account payable') {
-      await Transaction.destroy({ where: { LedgerId: req.params.id } });
-    }
-
     const txCount = await Transaction.count({ where: { LedgerId: req.params.id } });
     if (txCount > 0) {
-      return res.status(400).json({ error: 'Cannot delete ledger with existing transactions.' });
+      return res.status(400).json({
+        error: `Cannot delete "${ledger.name}": it has ${txCount} transaction(s). ` +
+               `Deleting a ledger with history would corrupt your books. ` +
+               `If you no longer use this ledger, consider renaming it with a [INACTIVE] prefix instead.`
+      });
     }
 
     await Ledger.destroy({ where: { id: req.params.id } });

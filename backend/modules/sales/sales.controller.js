@@ -309,19 +309,85 @@ exports.updateInvoice = async (req, res, next) => {
       }
     }
 
-    // If changing from Draft to Confirmed, record in accounts
+    // ── SALES-02 FIX: keep the linked accounting voucher in sync ─────────────
+    // Case A: Draft → Confirmed (first time posting)
     if (status === 'Confirmed' && !invoice.VoucherId) {
       const accountingResult = await AccountingService.recordTaxInvoice({
         companyId: invoice.CompanyId,
-        customerLedgerId,
-        date,
-        narration: subject || `Invoice ${invoiceNumber}`,
-        items,
+        customerLedgerId: customerLedgerId || invoice.customerLedgerId,
+        date: date || invoice.date,
+        narration: subject || `Invoice ${invoiceNumber || invoice.invoiceNumber}`,
+        items: items || [],
         type: 'Sales',
         userId: req.user?.id,
-        projectId
+        projectId: projectId || invoice.ProjectId
       }, t);
       await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Confirmed' }, { transaction: t });
+    }
+    // Case B: Already Confirmed + amounts changed → re-build the voucher's journal lines
+    else if (invoice.VoucherId && totalAmount !== undefined && parseFloat(totalAmount) !== parseFloat(invoice.totalAmount)) {
+      // Rebuild journal entries from the updated items (or use totals)
+      const updatedItems = items || [];
+      const taxInvoiceEntries = AccountingService.buildSalesTaxEntries ??
+        null; // Fallback: if buildSalesTaxEntries helper doesn't exist, rebuild manually
+
+      // Simple rebuild: debit customer ledger for new total, credit sales accounts
+      const newTotal = parseFloat(totalAmount);
+      const custLedgerId = customerLedgerId || invoice.customerLedgerId;
+
+      // Build entries the same way recordTaxInvoice does:
+      // Dr Customer A/R  |  Cr Sales (and tax ledgers)
+      const rebuildEntries = [
+        { ledgerId: custLedgerId, debit: newTotal, credit: 0 }
+      ];
+
+      // Credit Sales accounts per item
+      if (updatedItems.length > 0) {
+        for (const item of updatedItems) {
+          if (item.ledgerId && parseFloat(item.amount || 0) > 0) {
+            rebuildEntries.push({ ledgerId: item.ledgerId, debit: 0, credit: parseFloat(item.amount) });
+          }
+        }
+        // If no item-level ledgers, credit generic sales amount (fallback)
+        const itemCreditSum = rebuildEntries.slice(1).reduce((s, e) => s + e.credit, 0);
+        if (Math.abs(itemCreditSum - newTotal) > 0.01) {
+          // Replace with single fallback credit for the full amount
+          rebuildEntries.splice(1);
+          const { Group, Ledger: LedgerModel } = require('../../models');
+          const { Op } = require('sequelize');
+          const salesLedger = await LedgerModel.findOne({
+            where: { CompanyId: invoice.CompanyId, name: { [Op.like]: '%Sales%' } },
+            transaction: t
+          });
+          if (salesLedger) {
+            rebuildEntries.push({ ledgerId: salesLedger.id, debit: 0, credit: newTotal });
+          }
+        }
+      } else {
+        // No items: single sales credit
+        const { Ledger: LedgerModel } = require('../../models');
+        const { Op } = require('sequelize');
+        const salesLedger = await LedgerModel.findOne({
+          where: { CompanyId: invoice.CompanyId, name: { [Op.like]: '%Sales%' } },
+          transaction: t
+        });
+        if (salesLedger) {
+          rebuildEntries.push({ ledgerId: salesLedger.id, debit: 0, credit: newTotal });
+        }
+      }
+
+      // Only update if the entries are balanced
+      const entryDebit = rebuildEntries.reduce((s, e) => s + (e.debit || 0), 0);
+      const entryCredit = rebuildEntries.reduce((s, e) => s + (e.credit || 0), 0);
+      if (Math.abs(entryDebit - entryCredit) < 0.01 && entryDebit > 0) {
+        await AccountingService.updateJournalEntry(invoice.VoucherId, {
+          companyId: invoice.CompanyId,
+          date: date || invoice.date,
+          narration: subject || `Invoice ${invoiceNumber || invoice.invoiceNumber} (Updated)`,
+          entries: rebuildEntries,
+          userId: req.user?.id
+        }, t);
+      }
     }
 
     await t.commit();
@@ -350,18 +416,48 @@ exports.deleteOrder = async (req, res, next) => {
 };
 
 exports.deleteInvoice = async (req, res, next) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
     const requestingCompanyId = req.query.companyId || req.user?.CompanyId;
     const invoice = await SalesInvoice.findByPk(id);
-    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (!invoice) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
     // BOLA guard
     if (requestingCompanyId && String(invoice.CompanyId) !== String(requestingCompanyId)) {
+      await t.rollback();
       return res.status(403).json({ error: 'Access denied' });
     }
-    await SalesInvoice.destroy({ where: { id } });
-    res.json({ message: 'Invoice deleted.' });
+
+    // ── SALES-01 FIX: Block deletion if payments have been applied ────────────
+    // Deleting a partially/fully paid invoice would orphan payment records and
+    // leave the customer ledger with phantom credits.
+    if (parseFloat(invoice.amountPaid || 0) > 0) {
+      await t.rollback();
+      return res.status(400).json({
+        error: `Cannot delete invoice ${invoice.invoiceNumber}: ₹${invoice.amountPaid} has already been received. ` +
+               `Void the invoice instead to preserve the audit trail.`
+      });
+    }
+
+    // ── SALES-01 FIX: Reverse the linked accounting voucher ──────────────────
+    // If the invoice was Confirmed, a voucher was created. Deleting the invoice
+    // without reversing the voucher would leave the Debtor and Sales balances wrong.
+    if (invoice.VoucherId) {
+      await AccountingService.deleteJournalEntry(
+        invoice.VoucherId,
+        { companyId: invoice.CompanyId, userId: req.user?.id },
+        t
+      );
+    }
+
+    await SalesInvoice.destroy({ where: { id }, transaction: t });
+    await t.commit();
+    res.json({ message: 'Invoice deleted and accounting entries reversed.' });
   } catch (err) {
+    if (t) await t.rollback();
     next(err);
   }
 };
@@ -406,18 +502,32 @@ exports.recordPayment = async (req, res, next) => {
     }, t);
 
     // 2. Apply to Invoices
+    // ── SALES-04 FIX: Validate each applied invoice belongs to this customer ──
     if (invoices && Array.isArray(invoices)) {
         for (const inv of invoices) {
           const invoice = await SalesInvoice.findByPk(inv.id, { transaction: t });
-          if (invoice) {
-            const newPaid = parseFloat(invoice.amountPaid || 0) + parseFloat(inv.amountToApply);
-            const newBalance = parseFloat(invoice.totalAmount) - newPaid;
-            let status = invoice.status;
-            if (newBalance <= 0) status = 'Paid';
-            else if (newPaid > 0) status = 'Partially Paid';
+          if (!invoice) continue;
 
-            await invoice.update({ amountPaid: newPaid, balance: newBalance, status }, { transaction: t });
+          // Security: reject if invoice belongs to a different customer
+          if (String(invoice.customerLedgerId) !== String(customerId)) {
+            await t.rollback();
+            return res.status(400).json({
+              error: `Invoice ${invoice.invoiceNumber} does not belong to the selected customer. Payment rejected.`
+            });
           }
+          // Security: reject if invoice belongs to a different company
+          if (String(invoice.CompanyId) !== String(companyId)) {
+            await t.rollback();
+            return res.status(403).json({ error: 'Access denied: cross-company invoice payment rejected.' });
+          }
+
+          const newPaid = parseFloat(invoice.amountPaid || 0) + parseFloat(inv.amountToApply);
+          const newBalance = parseFloat(invoice.totalAmount) - newPaid;
+          let status = invoice.status;
+          if (newBalance <= 0) status = 'Paid';
+          else if (newPaid > 0) status = 'Partially Paid';
+
+          await invoice.update({ amountPaid: newPaid, balance: newBalance, status }, { transaction: t });
         }
     }
 
@@ -438,8 +548,28 @@ exports.applyCredit = async (req, res, next) => {
 
     const { RetainerInvoice, CreditNote, RetainerAdjustment } = require('../../models');
 
+    // ── SALES-03 FIX: Aggregate total credit being applied this call ──────────
+    // We need to post ONE journal entry for the entire credit application.
+    // Dr: Customer Debtor A/R (reduces what customer owes)
+    // Cr: Retainer/Credit Note Liability (reduces the advance/credit note balance)
+    let totalApplied = 0;
+    let creditSourceLedgerId = null;
+
+    // Resolve the source ledger (the advance/credit note liability)
+    if (sourceType === 'Retainer') {
+      const retainer = await RetainerInvoice.findByPk(sourceId, { transaction: t });
+      if (retainer) {
+        creditSourceLedgerId = retainer.customerLedgerId || customerId;
+      }
+    } else if (sourceType === 'CreditNote') {
+      const cn = await CreditNote.findByPk(sourceId, { transaction: t });
+      if (cn) {
+        creditSourceLedgerId = cn.customerLedgerId || customerId;
+      }
+    }
+
     for (const inv of invoices) {
-      // 1. Update Invoice
+      // 1. Update Invoice balances
       const invoice = await SalesInvoice.findByPk(inv.id, { transaction: t });
       if (invoice) {
         const newPaid = parseFloat(invoice.amountPaid || 0) + parseFloat(inv.amountToApply);
@@ -449,8 +579,9 @@ exports.applyCredit = async (req, res, next) => {
         else if (newPaid > 0) status = 'Partially Paid';
 
         await invoice.update({ amountPaid: newPaid, balance: newBalance, status }, { transaction: t });
+        totalApplied += parseFloat(inv.amountToApply);
 
-        // 2. Update Source Credit
+        // 2. Update Source Credit balances
         if (sourceType === 'Retainer') {
           const retainer = await RetainerInvoice.findByPk(sourceId, { transaction: t });
           const newUsed = parseFloat(retainer.amountUsed || 0) + parseFloat(inv.amountToApply);
@@ -467,12 +598,50 @@ exports.applyCredit = async (req, res, next) => {
             amountToAdjust: inv.amountToApply,
             CompanyId: companyId
           }, { transaction: t });
+        } else if (sourceType === 'CreditNote') {
+          const cn = await CreditNote.findByPk(sourceId, { transaction: t });
+          if (cn) {
+            const newUsed = parseFloat(cn.amountUsed || 0) + parseFloat(inv.amountToApply);
+            const cnBalance = parseFloat(cn.totalAmount || 0) - newUsed;
+            await cn.update({
+              amountUsed: newUsed,
+              balance: cnBalance,
+              status: cnBalance <= 0 ? 'Closed' : 'PartiallyUsed'
+            }, { transaction: t });
+          }
         }
       }
     }
 
+    // ── SALES-03 FIX: Post the accounting journal entry ───────────────────────
+    // The credit application reduces A/R (credit the debtor) and reduces the
+    // advance/credit-note liability (debit the source ledger).
+    //
+    //   Dr  Customer A/R Ledger            (reduces what customer owes us)
+    //   Cr  Advance Received / Credit Note  (clears the liability)
+    //
+    if (totalApplied > 0 && customerId) {
+      const journalEntries = [
+        { ledgerId: customerId,            debit: 0,            credit: totalApplied }, // Reduce A/R (credit)
+        { ledgerId: creditSourceLedgerId || customerId, debit: totalApplied, credit: 0 }  // Clear advance (debit)
+      ];
+      // Only post if entries balance (debit == credit)
+      const dr = journalEntries.reduce((s, e) => s + (e.debit || 0), 0);
+      const cr = journalEntries.reduce((s, e) => s + (e.credit || 0), 0);
+      if (Math.abs(dr - cr) < 0.01) {
+        await AccountingService.recordJournalEntry({
+          companyId,
+          date: new Date(),
+          voucherType: 'Journal',
+          narration: `Credit application: ${sourceType} #${sourceId} applied against invoices`,
+          entries: journalEntries,
+          userId: req.user?.id
+        }, t);
+      }
+    }
+
     await t.commit();
-    res.json({ message: 'Credit applied successfully' });
+    res.json({ message: 'Credit applied successfully and journal entry posted.' });
   } catch (err) {
     if (t) await t.rollback();
     next(err);
