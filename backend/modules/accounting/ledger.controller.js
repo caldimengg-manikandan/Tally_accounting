@@ -252,7 +252,7 @@ exports.updateLedger = async (req, res, next) => {
     // This prevents mass-assignment of sensitive fields like CompanyId, GroupId chain, deletedAt.
     const { email, mobile, workPhone, phone, website, pan, creditLimit, language,
             billingAddress, shippingAddress, billingAddressJson, shippingAddressJson,
-            contactPersonsJson, bankDetailsJson, tdsApplicable, tds_section, tds_rate,
+            contactPersonsJson, bankDetailsJson,
             state, registrationType, customerType, salutation, firstName, lastName,
             companyName, department, designation } = req.body;
 
