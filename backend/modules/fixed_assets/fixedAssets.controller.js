@@ -2,6 +2,36 @@ const { FixedAsset, DepreciationLog, Ledger, Group, Voucher, Transaction, sequel
 const { Op } = require('sequelize');
 const AccountingService = require('../../services/AccountingService');
 
+// Helper to resolve or create the Depreciation Expense ledger for an asset
+const resolveDepreciationExpenseLedger = async (asset, transaction) => {
+  let depLedgerId = asset.depreciationLedgerId;
+  if (!depLedgerId) {
+    let depLedger = await Ledger.findOne({
+      where: { CompanyId: asset.CompanyId, name: 'Depreciation Expense' },
+      transaction
+    });
+    if (!depLedger) {
+      const expenseGroup = await Group.findOne({
+        where: { CompanyId: asset.CompanyId, name: { [Op.like]: '%Indirect%Expense%' } },
+        transaction
+      });
+      depLedger = await Ledger.create({
+        name: 'Depreciation Expense',
+        code: 'EXP-DEP-' + Date.now().toString().slice(-4),
+        category: 'Expense',
+        groupName: 'Indirect Expenses',
+        GroupId: expenseGroup ? expenseGroup.id : null,
+        CompanyId: asset.CompanyId,
+        currentBalance: 0
+      }, { transaction });
+    }
+    
+    await asset.update({ depreciationLedgerId: depLedger.id }, { transaction });
+    depLedgerId = depLedger.id;
+  }
+  return depLedgerId;
+};
+
 // Helper to resolve or create the Accumulated Depreciation ledger for an asset
 const resolveAccumulatedDepreciationLedger = async (asset, transaction) => {
   let accDepLedgerId = asset.accumulatedDepreciationLedgerId;
@@ -413,9 +443,10 @@ exports.depreciateBatch = async (req, res, next) => {
       const valueAfter = parseFloat((bookValue - depAmount).toFixed(2));
 
       const accDepLedgerId = await resolveAccumulatedDepreciationLedger(asset, t);
+      const depExpLedgerId = await resolveDepreciationExpenseLedger(asset, t);
 
       const journalEntries = [
-        { ledgerId: asset.depreciationLedgerId, debit: depAmount, credit: 0 },
+        { ledgerId: depExpLedgerId, debit: depAmount, credit: 0 },
         { ledgerId: accDepLedgerId, debit: 0, credit: depAmount }
       ];
 
