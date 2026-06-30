@@ -20,6 +20,7 @@ async function runTests() {
       booksBeginningFrom: new Date('2024-04-01')
     });
 
+    
     const cashLedger = await Ledger.create({ name: 'Cash', CompanyId: company.id, openingBalanceType: 'Dr', currentBalance: 0 });
     const salesLedger = await Ledger.create({ name: 'Sales', CompanyId: company.id, openingBalanceType: 'Cr', currentBalance: 0 });
 
