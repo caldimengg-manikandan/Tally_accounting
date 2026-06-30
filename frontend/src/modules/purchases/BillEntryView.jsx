@@ -665,6 +665,8 @@ const BillEntryView = ({ companyId }) => {
     const vendorId = queryParams.get('vendorId');
     if (backTo === 'vendors' && vendorId) {
       navigate(`/vendors/view/${vendorId}`);
+    } else if (backTo === 'dashboard') {
+      navigate('/dashboard');
     } else {
       navigate('/bills');
     }
