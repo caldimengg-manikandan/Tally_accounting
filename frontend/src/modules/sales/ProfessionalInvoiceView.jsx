@@ -339,6 +339,7 @@ export default function ProfessionalInvoiceView() {
   
   // Header Info
   const [customerId, setCustomerId] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [projectId,  setProjectId]  = useState('');
   const [invoiceNo,  setInvoiceNo]  = useState('INV-000001');
   const [orderNo,    setOrderNo]    = useState('');
@@ -528,6 +529,7 @@ export default function ProfessionalInvoiceView() {
               setAdjustment(inv.adjustment || 0);
               setDiscountPercent(inv.discountPercent || 0);
               setNotes(inv.customerNotes || '');
+              setDeliveryAddress(inv.deliveryAddress || '');
               if (inv.exchangeRate) {
                  setExchangeRate(parseFloat(inv.exchangeRate));
                  setTempExchangeRate(parseFloat(inv.exchangeRate));
@@ -592,6 +594,7 @@ export default function ProfessionalInvoiceView() {
                 if (parsed.tcsApplicable) setTcsApplicable(parsed.tcsApplicable);
                 if (parsed.tcsRate) setTcsRate(parsed.tcsRate);
                 if (parsed.notes) setNotes(parsed.notes);
+                if (parsed.deliveryAddress) setDeliveryAddress(parsed.deliveryAddress);
                 if (parsed.termsText) setTermsText(parsed.termsText);
                 if (parsed.currencyCode) setCurrencyCode(parsed.currencyCode);
                 if (parsed.currencySymbol) setCurrencySymbol(parsed.currencySymbol);
@@ -758,8 +761,10 @@ export default function ProfessionalInvoiceView() {
       const payload = {
         companyId, customerLedgerId: customerId, invoiceNumber: invoiceNo,
         date: invoiceDate, dueDate, orderNumber: orderNo, terms, salesperson, subject,
-        subTotal, discountAmount, gstAmount, adjustment, totalAmount: total,
+        subTotal, discountAmount, discountPercent, gstAmount, gstPercent, adjustment, totalAmount: total,
+        tcsApplicable, tcsRate, tcsAmount,
         customerNotes: notes, termsConditions: termsText,
+        deliveryAddress: deliveryAddress,
         status, // 'Draft' or 'Confirmed'
         currencyCode,
         exchangeRate,
@@ -778,31 +783,8 @@ export default function ProfessionalInvoiceView() {
          await salesAPI.updateInvoice(id, payload);
          if (status === 'Confirmed') {
              checkStockAlerts();
-             const customer = customers.find(c => String(c.id) === String(customerId));
-             setSavedInvoiceData({
-                  ...payload,
-                  id: id,
-                  CompanyId: companyId,
-                  number: invoiceNo,
-                  total: total,
-                  taxAmount: gstAmount,
-                  gstPercent: gstPercent,
-                  subTotal: subTotal,
-                  date: invoiceDate,
-                  dueDate: dueDate,
-                  Customer: { email: customer?.email },
-                  customerName: customer?.displayName || customer?.name,
-                  items: lineItems.filter(l => l.itemId).map(l => ({
-                      name: l.description || '',
-                      quantity: l.quantity,
-                      rate: l.rate,
-                      amount: l.amount
-                  }))
-              });
-             setShowEmailModal(true);
-         } else {
-             navigate(`/sales-invoices/${id}`);
          }
+         navigate(`/sales-invoices/${id}`);
       } else {
          const res = await salesAPI.createInvoice(payload);
          localStorage.removeItem('invoice_draft_new');
@@ -910,17 +892,16 @@ export default function ProfessionalInvoiceView() {
                       )}
                     </div>
 
-                    {/* Address Links - Image 2 */}
+                    {/* Delivery Address Field */}
                     {customerId && (
-                      <div className="flex gap-12 mt-4 ml-1">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Billing Address</p>
-                          <button className="text-[13px] font-bold text-blue-600 hover:underline">New Address</button>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Shipping Address</p>
-                          <button className="text-[13px] font-bold text-blue-600 hover:underline">New Address</button>
-                        </div>
+                      <div className="mt-4">
+                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Delivery Address</label>
+                         <textarea 
+                            value={deliveryAddress}
+                            onChange={(e) => setDeliveryAddress(e.target.value)}
+                            placeholder="Enter delivery address"
+                            className="w-full h-20 px-3 py-2 border border-slate-200 rounded text-[13px] font-medium outline-none focus:border-blue-500 bg-white transition-all resize-none"
+                         />
                       </div>
                     )}
 
@@ -998,73 +979,14 @@ export default function ProfessionalInvoiceView() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Order Number</label>
-                <input type="text" value={orderNo} onChange={e => setOrderNo(e.target.value)} className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" />
-              </div>
+              {/* Order Number removed per user request */}
 
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] font-bold text-red-500 uppercase tracking-widest">Invoice Date*</label>
                 <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)} className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm" />
               </div>
 
-              {/* Project Link */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Project</label>
-                <div className="relative" ref={projectDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => { setShowProjectDropdown(prev => !prev); setProjectSearch(''); }}
-                    className={`w-full h-11 px-4 pr-9 border rounded text-[13px] font-bold text-left shadow-sm flex items-center justify-between transition-colors
-                      ${showProjectDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 bg-slate-50'}
-                      ${projectId ? 'text-slate-800' : 'text-slate-600 font-medium'}`}
-                  >
-                    <span>{projects.find(p => p.id === projectId)?.name || 'Associate Project'}</span>
-                    <ChevronDown size={14} className={`absolute right-3 text-slate-600 transition-transform ${showProjectDropdown ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {showProjectDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in">
-                      <div className="p-2 border-b border-slate-100">
-                        <div className="relative">
-                          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
-                          <input
-                            autoFocus
-                            value={projectSearch}
-                            onChange={e => setProjectSearch(e.target.value)}
-                            placeholder="Search projects..."
-                            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all"
-                          />
-                        </div>
-                      </div>
-                      <div className="max-h-48 overflow-y-auto no-scrollbar">
-                        <div 
-                          onClick={() => { setProjectId(''); setShowProjectDropdown(false); }}
-                          className={`px-4 py-2.5 cursor-pointer text-xs font-bold uppercase tracking-widest hover:bg-slate-50 border-b border-slate-50 ${!projectId ? 'text-blue-600' : 'text-slate-600'}`}
-                        >
-                          No Project
-                        </div>
-                        {projects.filter(p => !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase())).length === 0 ? (
-                          <div className="py-6 text-center text-xs text-slate-600 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
-                        ) : (
-                          projects
-                            .filter(p => !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase()))
-                            .map(p => (
-                              <div
-                                key={p.id}
-                                onClick={() => { setProjectId(p.id); setShowProjectDropdown(false); }}
-                                className={`px-4 py-2.5 cursor-pointer text-sm font-medium hover:bg-blue-50 transition-colors
-                                  ${projectId === p.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
-                              >
-                                {p.name}
-                              </div>
-                            ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Project Link removed per user request */}
             </div>
 
             <div className="space-y-6">
@@ -1104,168 +1026,15 @@ export default function ProfessionalInvoiceView() {
                 </div>
               </div>
 
-              {/* Salesperson */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Salesperson</label>
-                <div className="relative" ref={salespersonDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => { setShowSalespersonDropdown(prev => !prev); setSalespersonSearch(''); }}
-                    className={`w-full h-11 px-4 pr-9 border rounded text-[13px] font-bold text-left shadow-sm flex items-center justify-between transition-colors
-                      ${showSalespersonDropdown ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200 bg-slate-50'}
-                      ${salesperson ? 'text-slate-800' : 'text-slate-600 font-medium'}`}
-                  >
-                    <span>{salesperson || 'Select or Add Salesperson'}</span>
-                    <ChevronDown size={14} className={`absolute right-3 text-slate-600 transition-transform ${showSalespersonDropdown ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {showSalespersonDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in">
-                      <div className="p-2 border-b border-slate-100">
-                        <div className="relative">
-                          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
-                          <input
-                            autoFocus
-                            value={salespersonSearch}
-                            onChange={e => setSalespersonSearch(e.target.value)}
-                            placeholder="Search"
-                            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium outline-none focus:border-blue-400 transition-all"
-                          />
-                        </div>
-                      </div>
-                      <div className="max-h-48 overflow-y-auto no-scrollbar">
-                        {salespersons.filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase())).length === 0 ? (
-                          <div className="py-6 text-center text-xs text-slate-600 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
-                        ) : (
-                          salespersons
-                            .filter(s => !salespersonSearch || s.name.toLowerCase().includes(salespersonSearch.toLowerCase()))
-                            .map(s => (
-                              <div
-                                key={s.id}
-                                onClick={() => { setSalesperson(s.name); setShowSalespersonDropdown(false); }}
-                                className={`px-4 py-2.5 cursor-pointer text-sm font-medium hover:bg-blue-50 transition-colors
-                                  ${salesperson === s.name ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
-                              >
-                                {s.name}
-                              </div>
-                            ))
-                        )}
-                      </div>
-                      <div className="border-t border-slate-100">
-                        <button
-                          onClick={() => { setShowSalespersonDropdown(false); setShowManageSalespersons(true); }}
-                          className="w-full flex items-center gap-2 px-4 py-3 text-[13px] font-bold text-[#1e61f0] hover:bg-blue-50 transition-colors"
-                        >
-                          <Plus size={14} /> Manage Salespersons
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Subject */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">Subject <Info size={14} className="text-slate-600" /></label>
-                <input 
-                  type="text"
-                  value={subject} 
-                  onChange={e => setSubject(e.target.value)} 
-                  placeholder="Let your customer know what this invoice is for"
-                  className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded text-[13px] font-bold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-all shadow-sm"
-                />
-              </div>
             </div>
           </div>
 
          {/* Item Table Section */}
          <div className="space-y-4">
-          {/* Exchange Rate Note - Image 3 */}
-          {currencyCode !== 'INR' && (
-            <div className="flex justify-end pr-2">
-              <div className="text-[11px] font-bold text-slate-600 flex items-center gap-1 relative">
-                (As on {invoiceDate}) 1 {currencyCode} = {exchangeRate} INR 
-                <button 
-                  onClick={() => { setTempExchangeRate(exchangeRate); setShowExchangeRatePopover(!showExchangeRatePopover); }}
-                  className="hover:bg-blue-50 p-1 rounded transition-colors"
-                >
-                  <Edit2 size={12} className="text-blue-500 cursor-pointer" />
-                </button>
-
-                {/* EDIT EXCHANGE RATE POPOVER */}
-                {showExchangeRatePopover && (
-                  <div 
-                    className="absolute top-full right-0 mt-2 w-72 bg-white rounded-lg border border-slate-200 shadow-xl z-[100] overflow-hidden animate-in fade-in zoom-in duration-200"
-                    style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))' }}
-                  >
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 border-b border-slate-100">
-                       <span className="text-[13px] font-bold text-slate-700">Edit Exchange Rate</span>
-                       <button onClick={() => setShowExchangeRatePopover(false)} className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors">
-                          <X size={16} />
-                       </button>
-                    </div>
-
-                    {/* Body */}
-                    <div className="p-5 space-y-4">
-                       <div className="space-y-2">
-                          <label className="text-[12px] font-bold text-red-500">Exchange Rate (in INR)*</label>
-                          <input 
-                             type="number"
-                             value={tempExchangeRate}
-                             onChange={(e) => setTempExchangeRate(parseFloat(e.target.value))}
-                             className="w-full px-3 py-2 border border-slate-200 rounded text-[13px] font-medium text-slate-700 outline-none focus:border-blue-500 transition-all"
-                          />
-                       </div>
-
-                       <label className="flex items-center gap-2 cursor-pointer group">
-                          <input 
-                             type="checkbox"
-                             checked={recalculatePrices}
-                             onChange={(e) => setRecalculatePrices(e.target.checked)}
-                             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-[12px] text-slate-600 font-medium group-hover:text-slate-900 transition-colors">Re-calculate item prices based on this rate</span>
-                       </label>
-
-                       <button 
-                          onClick={() => {
-                             const oldRate = exchangeRate;
-                             const newRate = tempExchangeRate;
-                             setExchangeRate(newRate);
-                             
-                             if (recalculatePrices && oldRate > 0 && newRate > 0) {
-                                setLineItems(prev => prev.map(line => {
-                                   const basePrice = (parseFloat(line.rate) * oldRate);
-                                   const convertedRate = parseFloat((basePrice / newRate).toFixed(2));
-                                   const amount = parseFloat(line.quantity || 0) * convertedRate;
-                                   const disc = line.discountType === '%' ? (amount * (line.discount / 100)) : parseFloat(line.discount);
-                                   return { ...line, rate: convertedRate, amount: amount - disc };
-                                }));
-                             }
-                             setShowExchangeRatePopover(false);
-                          }}
-                          className="px-6 py-2 bg-[#1e61f0] text-white text-[12px] font-bold rounded shadow-sm hover:bg-blue-600 transition-all"
-                       >
-                          Save
-                       </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Exchange Rate Note Removed per user request */}
           
           <div className="flex items-center justify-between">
             <h3 className="text-[14px] font-bold text-slate-800 tracking-tight">Item Table</h3>
-            <div className="flex items-center gap-6">
-              <button className="flex items-center gap-2 text-[#1e61f0] text-[12px] font-bold hover:underline">
-                <Scan size={16} /> Scan Item
-              </button>
-              <button className="flex items-center gap-2 text-[#1e61f0] text-[12px] font-bold hover:underline">
-                <ShieldCheck size={16} /> Bulk Actions
-              </button>
-            </div>
           </div>
 
           <div className="bg-white rounded border border-slate-200 overflow-visible">
@@ -1363,110 +1132,7 @@ export default function ProfessionalInvoiceView() {
                         </div>
                       </td>
                     </tr>
-                    {/* Bottom Helper Bar for each row */}
-                    <tr className="border-b border-slate-100 bg-slate-50/10">
-                      <td colSpan="5" className="px-4 py-2">
-                        <div className="flex items-center gap-4">
-                           <div className="relative flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-[#1e61f0] transition-colors cursor-pointer group">
-                              <Package size={14} className="text-orange-500" /> {accountName} <ChevronDown size={12} />
-                              <select 
-                                value={accountName !== 'Select an account' ? accountName : ''} 
-                                onChange={(e) => updateLine(line.id, 'salesAccountOverride', e.target.value)}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              >
-                                <option value="" disabled>Select an account</option>
-                                {Object.entries(ACCOUNT_OPTIONS).map(([groupName, options]) => (
-                                  <optgroup key={groupName} label={groupName}>
-                                    {options.map(opt => (
-                                      <option key={opt} value={opt}>{opt}</option>
-                                    ))}
-                                  </optgroup>
-                                ))}
-                              </select>
-                           </div>
-                           <div className="relative flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-[#1e61f0] transition-colors border-l border-slate-200 pl-4 cursor-pointer group">
-                              <RefreshCcw size={14} /> {discountAccountName} <ChevronDown size={12} />
-                              <select 
-                                value={discountAccountName !== 'Discount' ? discountAccountName : ''} 
-                                onChange={(e) => updateLine(line.id, 'discountAccountOverride', e.target.value)}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              >
-                                <option value="" disabled>Select Discount Account</option>
-                                {Object.entries(ACCOUNT_OPTIONS).map(([groupName, options]) => (
-                                  <optgroup key={groupName} label={groupName}>
-                                    {options.map(opt => (
-                                      <option key={opt} value={opt}>{opt}</option>
-                                    ))}
-                                  </optgroup>
-                                ))}
-                              </select>
-                           </div>
-                           <div className="relative border-l border-slate-200 pl-4 flex items-center">
-                               <button 
-                                 type="button"
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   setOpenProjectDropdownLineId(openProjectDropdownLineId === line.id ? null : line.id);
-                                   setProjectSearch('');
-                                 }}
-                                 className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-[#1e61f0] transition-colors"
-                               >
-                                  <FileText size={14} /> 
-                                  <span>{projects.find(p => p.id === line.projectId)?.name || 'Select a project'}</span>
-                                  <ChevronDown size={12} className={`transition-transform ${openProjectDropdownLineId === line.id ? 'rotate-180' : ''}`} />
-                               </button>
-
-                               {openProjectDropdownLineId === line.id && (
-                                 <>
-                                   <div className="fixed inset-0 z-[150]" onClick={() => setOpenProjectDropdownLineId(null)} />
-                                   <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 shadow-xl rounded-xl z-[200] overflow-hidden animate-fade-in text-left">
-                                     <div className="p-2 border-b border-slate-100">
-                                       <div className="relative">
-                                         <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                         <input
-                                           autoFocus
-                                           value={projectSearch}
-                                           onChange={e => setProjectSearch(e.target.value)}
-                                           placeholder="Search projects..."
-                                           className="w-full pl-7 pr-2 py-1 bg-slate-50 border border-slate-200 rounded text-[12px] font-medium outline-none focus:border-blue-400 transition-all text-slate-700"
-                                           onClick={(e) => e.stopPropagation()}
-                                         />
-                                       </div>
-                                     </div>
-                                     <div className="max-h-40 overflow-y-auto no-scrollbar">
-                                       <div 
-                                         onClick={() => { updateLine(line.id, 'projectId', ''); setOpenProjectDropdownLineId(null); }}
-                                         className={`px-3 py-2 cursor-pointer text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 border-b border-slate-50 ${!line.projectId ? 'text-blue-600' : 'text-slate-600'}`}
-                                       >
-                                         No Project
-                                       </div>
-                                       {projects.filter(p => !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase())).length === 0 ? (
-                                         <div className="py-4 text-center text-[11px] text-slate-400 font-medium uppercase tracking-widest opacity-60">No Match Found</div>
-                                       ) : (
-                                         projects
-                                           .filter(p => !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase()))
-                                           .map(p => (
-                                             <div
-                                               key={p.id}
-                                               onClick={() => { updateLine(line.id, 'projectId', p.id); setOpenProjectDropdownLineId(null); }}
-                                               className={`px-3 py-2 cursor-pointer text-[12px] font-medium hover:bg-blue-50 transition-colors
-                                                 ${line.projectId === p.id ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700'}`}
-                                             >
-                                               {p.name}
-                                             </div>
-                                           ))
-                                       )}
-                                     </div>
-                                   </div>
-                                 </>
-                               )}
-                           </div>
-                           <button className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-[#1e61f0] transition-colors border-l border-slate-200 pl-4">
-                               <ShieldCheck size={14} /> Reporting Tags
-                           </button>
-                        </div>
-                      </td>
-                    </tr>
+                    {/* Bottom Helper Bar for each row removed per user request */}
                   </React.Fragment>
                 )})}
               </tbody>
@@ -1482,9 +1148,6 @@ export default function ProfessionalInvoiceView() {
                  <ChevronDown size={14} />
                </button>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 text-[#1e61f0] text-[12px] font-bold hover:underline transition-all">
-              <Plus size={14} strokeWidth={3}/> Add Items in Bulk
-            </button>
           </div>
         </div>
 
@@ -1600,14 +1263,14 @@ export default function ProfessionalInvoiceView() {
                    disabled={isSaving}
                    className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded text-[13px] font-medium hover:bg-slate-50 transition-all shadow-sm"
                >
-                   {isSaving ? '...' : 'Save as Draft'}
+                   {isSaving ? '...' : (id ? 'Update as Draft' : 'Save as Draft')}
                </button>
                <button 
                    onClick={() => handleSave('Confirmed')}
                    disabled={isSaving}
                    className="px-6 py-2 bg-blue-600 text-white rounded font-bold text-[13px] hover:bg-blue-700 transition-all flex items-center gap-2 shadow-sm"
                >
-                   {isSaving ? <Loader2 size={16} className="animate-spin" /> : 'Save and Send'}
+                   {isSaving ? <Loader2 size={16} className="animate-spin" /> : (id ? 'Update' : 'Save and Send')}
                </button>
                <button 
                    onClick={() => navigate('/sales-invoices')}

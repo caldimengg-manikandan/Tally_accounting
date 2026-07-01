@@ -359,10 +359,10 @@ What would you like to do today?`,
 
 export const AI_SUGGESTION_CHIPS = [
   'Show unpaid vendor bills',
-  'View Statement',
   'Which products are low in stock?',
   'Why did profit decrease this month?',
   'Generate GSTR summary',
+  'Show top customers by sales',
   'Show P&L for this quarter',
 ];
 

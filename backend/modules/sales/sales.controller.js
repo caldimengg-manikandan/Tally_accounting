@@ -157,19 +157,21 @@ exports.createInvoice = async (req, res, next) => {
     const { 
       companyId, customerLedgerId, invoiceNumber, date, dueDate, 
       orderNumber, terms, salesperson, subject, subTotal, 
-      discountAmount, gstAmount, adjustment, totalAmount, 
+      discountAmount, discountPercent, gstAmount, adjustment, totalAmount, 
       tcsApplicable, tcsRate, tcsAmount,
-      customerNotes, termsConditions, status, items, projectId 
+      customerNotes, termsConditions, status, items, deliveryAddress, projectId 
     } = req.body;
 
     // 1. Create the persistent invoice record (Draft or Confirmed)
     const invoice = await SalesInvoice.create({
       CompanyId: companyId, customerLedgerId, invoiceNumber, date, dueDate,
       orderNumber, terms, salesperson, subject, subTotal, 
-      discountAmount, gstAmount, adjustment, totalAmount,
+      discountAmount, discountPercent, gstAmount, adjustment, totalAmount,
       tcsApplicable, tcsRate, tcsAmount,
       customerNotes, termsConditions, status: status || 'Draft',
+      deliveryAddress,
       balance: totalAmount, // Initialize balance
+      CreatedBy: req.user?.id,
       ProjectId: projectId || null
     }, { transaction: t });
 
@@ -201,7 +203,7 @@ exports.createInvoice = async (req, res, next) => {
         userId: req.user?.id,
         projectId
       }, t);
-      await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Confirmed' }, { transaction: t });
+      await invoice.update({ VoucherId: accountingResult.voucher.id, status: 'Confirmed' }, { transaction: t });
     }
 
     await t.commit();
@@ -253,9 +255,9 @@ exports.updateInvoice = async (req, res, next) => {
     const { 
       customerLedgerId, invoiceNumber, date, dueDate, 
       orderNumber, terms, salesperson, subject, subTotal, 
-      discountAmount, gstAmount, adjustment, totalAmount, 
+      discountAmount, discountPercent, gstAmount, gstPercent, adjustment, totalAmount, 
       tcsApplicable, tcsRate, tcsAmount,
-      customerNotes, termsConditions, status, items, projectId 
+      customerNotes, termsConditions, deliveryAddress, status, items, projectId 
     } = req.body;
 
     const invoice = await SalesInvoice.findByPk(id);
@@ -282,12 +284,18 @@ exports.updateInvoice = async (req, res, next) => {
       subject: subject !== undefined ? subject : invoice.subject,
       subTotal: subTotal !== undefined ? subTotal : invoice.subTotal,
       discountAmount: discountAmount !== undefined ? discountAmount : invoice.discountAmount,
+      discountPercent: discountPercent !== undefined ? discountPercent : invoice.discountPercent,
       gstAmount: gstAmount !== undefined ? gstAmount : invoice.gstAmount,
+      gstPercent: gstPercent !== undefined ? gstPercent : invoice.gstPercent,
       adjustment: adjustment !== undefined ? adjustment : invoice.adjustment,
       totalAmount: totalAmount !== undefined ? totalAmount : invoice.totalAmount,
+      tcsApplicable: tcsApplicable !== undefined ? tcsApplicable : invoice.tcsApplicable,
+      tcsRate: tcsRate !== undefined ? tcsRate : invoice.tcsRate,
+      tcsAmount: tcsAmount !== undefined ? tcsAmount : invoice.tcsAmount,
       status: status !== undefined ? status : invoice.status,
       customerNotes: customerNotes !== undefined ? customerNotes : invoice.customerNotes,
       termsConditions: termsConditions !== undefined ? termsConditions : invoice.termsConditions,
+      deliveryAddress: deliveryAddress !== undefined ? deliveryAddress : invoice.deliveryAddress,
       balance: totalAmount !== undefined ? (parseFloat(totalAmount) - parseFloat(invoice.amountPaid || 0)) : invoice.balance,
       ProjectId: projectId !== undefined ? (projectId || null) : invoice.ProjectId
     }, { transaction: t });
@@ -322,7 +330,7 @@ exports.updateInvoice = async (req, res, next) => {
         userId: req.user?.id,
         projectId: projectId || invoice.ProjectId
       }, t);
-      await invoice.update({ VoucherId: accountingResult.voucherId, status: 'Confirmed' }, { transaction: t });
+      await invoice.update({ VoucherId: accountingResult.voucher.id, status: 'Confirmed' }, { transaction: t });
     }
     // Case B: Already Confirmed + amounts changed → re-build the voucher's journal lines
     else if (invoice.VoucherId && totalAmount !== undefined && parseFloat(totalAmount) !== parseFloat(invoice.totalAmount)) {

@@ -10,6 +10,7 @@ import {
   Send, Loader2, ArrowLeft, DollarSign, Clock,
   Tag, Info, Paperclip, Sparkles, CreditCard
 } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import ConfirmModal from '../../components/ConfirmModal';
 import useNotificationStore from '../../store/notificationStore';
 import { getCurrencyDisplay } from '../../utils/currencies';
@@ -369,6 +370,30 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
     const [currentView, setCurrentView] = useState('detail'); // 'detail' or 'email'
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [generatingLink, setGeneratingLink] = useState(false);
+    const [showPrintDropdown, setShowPrintDropdown] = useState(false);
+
+    const handleDownloadPDF = async (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        try {
+            const element = document.getElementById('printable-invoice');
+            if (!element) return;
+            const opt = {
+              margin:       0.5,
+              filename:     `${invoice?.invoiceNumber || 'Invoice'}.pdf`,
+              image:        { type: 'jpeg', quality: 0.98 },
+              html2canvas:  { scale: 2 },
+              jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+            setShowPrintDropdown(false);
+        } catch (error) {
+            console.error('Failed to generate PDF', error);
+            addNotification('Failed to generate PDF', 'error');
+        }
+    };
 
     useEffect(() => {
         if (!id) return;
@@ -455,7 +480,15 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
             <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center gap-3 no-print">
                  {canEdit && <button onClick={() => navigate(`/sales-invoices/edit/${invoice.id}`)} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">Edit</button>}
                  <button onClick={() => setCurrentView('email')} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"><Send size={14}/> Send Email</button>
-                 <button onClick={() => window.print()} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">PDF/Print <ChevronDown size={14}/></button>
+                 <div className="relative">
+                     <button onClick={() => setShowPrintDropdown(!showPrintDropdown)} className="h-9 w-44 border border-slate-200 rounded text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">PDF/Print <ChevronDown size={14}/></button>
+                     {showPrintDropdown && (
+                         <div className="absolute top-full mt-1 w-44 bg-white border border-slate-200 rounded shadow-lg z-50">
+                             <button onClick={handleDownloadPDF} className="w-full text-left px-4 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest">Download PDF</button>
+                             <button onClick={() => { window.print(); setShowPrintDropdown(false); }} className="w-full text-left px-4 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-all uppercase tracking-widest">Print</button>
+                         </div>
+                     )}
+                 </div>
                  <button onClick={() => {
                      localStorage.setItem('payment_draft', JSON.stringify({
                          customerId: invoice.customerLedgerId || invoice.CustomerLedger?.id,
@@ -570,7 +603,7 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                         <div className="text-[13px] text-slate-800 leading-relaxed font-semibold">
                           <p className="font-extrabold text-slate-950 text-[14px]">{invoice.CustomerLedger?.displayName || invoice.CustomerLedger?.name}</p>
                           <p className="font-semibold text-slate-700">
-                            {formatAddress(invoice.CustomerLedger?.shippingAddress || invoice.CustomerLedger?.address) || 'No shipping address provided.'}
+                            {formatAddress(invoice.deliveryAddress || invoice.CustomerLedger?.shippingAddress || invoice.CustomerLedger?.address) || 'No shipping address provided.'}
                           </p>
                           {invoice.CustomerLedger?.gstNumber && <p className="text-[12px] mt-1">GSTIN: {invoice.CustomerLedger.gstNumber}</p>}
                           {invoice.CustomerLedger?.state && <p className="text-[12px] mt-1">State: {invoice.CustomerLedger.state}</p>}
@@ -639,10 +672,27 @@ const InvoiceDetail = ({ id, company, navigate, onRefresh }) => {
                           <span>Sub Total</span>
                           <span className="font-mono text-slate-800 whitespace-nowrap">{parseFloat(invoice.subTotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                         </div>
-                        {parseFloat(invoice.gstAmount || 0) > 0 && (
+                        {parseFloat(invoice.discountAmount || 0) > 0 && (
+                          <div className="flex justify-between items-center py-1 text-emerald-600">
+                            <span>Discount</span>
+                            <span className="font-mono whitespace-nowrap">- {parseFloat(invoice.discountAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center py-1">
+                          <span>GST</span>
+                          <span className="font-mono text-slate-800 whitespace-nowrap">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span>TCS</span>
+                          <span className="font-mono text-slate-800 whitespace-nowrap">+ {parseFloat(invoice.tcsAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                        </div>
+                        {parseFloat(invoice.adjustment || 0) !== 0 && (
                           <div className="flex justify-between items-center py-1">
-                            <span>GST (18%)</span>
-                            <span className="font-mono text-slate-800 whitespace-nowrap">+ {parseFloat(invoice.gstAmount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                            <span>Adjustment</span>
+                            <span className="font-mono text-slate-800 whitespace-nowrap">
+                              {parseFloat(invoice.adjustment) > 0 ? '+ ' : '- '}
+                              {Math.abs(parseFloat(invoice.adjustment || 0)).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                            </span>
                           </div>
                         )}
                         <div className="flex justify-between items-center border-t border-slate-200 py-3 text-[15px] text-slate-900 font-extrabold">

@@ -50,6 +50,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(5, 2),
       defaultValue: 0
     },
+    gstPercent: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 0
+    },
     gstAmount: {
       type: DataTypes.DECIMAL(20, 2),
       defaultValue: 0
@@ -76,6 +80,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     customerNotes: DataTypes.TEXT,
     termsConditions: DataTypes.TEXT,
+    deliveryAddress: DataTypes.TEXT,
     CompanyId: {
       type: DataTypes.UUID,
       allowNull: false

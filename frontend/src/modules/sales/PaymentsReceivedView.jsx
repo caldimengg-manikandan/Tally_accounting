@@ -680,10 +680,36 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
         if (selectedCustomer) {
             setLoadingInvoices(true);
             salesAPI.getOpenInvoices(selectedCustomer.id)
-                .then(res => setOpenInvoices(res.data))
+                .then(res => {
+                    const invoices = res.data || [];
+                    setOpenInvoices(invoices);
+                    
+                    let targetAmount = parseFloat(amount || 0);
+                    // If no amount was provided (or 0), default to the full balance
+                    if (targetAmount === 0) {
+                        targetAmount = invoices.reduce((sum, inv) => sum + parseFloat(inv.balance || 0), 0);
+                        if (targetAmount > 0) setAmount(targetAmount);
+                    }
+                    
+                    // Always auto-allocate the targetAmount over the fetched invoices
+                    if (targetAmount > 0) {
+                        let remaining = targetAmount;
+                        const newAlloc = {};
+                        for (const inv of invoices) {
+                            const canPay = Math.min(remaining, parseFloat(inv.balance || 0));
+                            if (canPay > 0) newAlloc[inv.id] = canPay;
+                            remaining -= canPay;
+                        }
+                        setAllocation(newAlloc);
+                    } else {
+                        setAllocation({});
+                    }
+                })
                 .finally(() => setLoadingInvoices(false));
         } else {
             setOpenInvoices([]);
+            setAllocation({});
+            setAmount(0);
         }
     }, [selectedCustomer]);
 
@@ -1047,21 +1073,7 @@ const PaymentEntryForm = ({ companyId, navigate, onRefresh }) => {
                               </div>
                             </div>
 
-                            <div className="pt-5 border-t border-slate-200/80 flex justify-between items-center mt-4">
-                              <div className="flex flex-col">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Excess Fund</span>
-                                <p className="text-[10px] text-slate-400 font-medium">To be kept as advance</p>
-                              </div>
-                              <motion.span 
-                                animate={excessFund > 0 ? { scale: [1, 1.04, 1] } : {}}
-                                transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                                className={`text-[24px] font-black tracking-tight font-mono transition-colors duration-300 ${
-                                  excessFund > 0 ? 'text-blue-600' : 'text-slate-800'
-                                }`}
-                              >
-                                {currency} {excessFund.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </motion.span>
-                            </div>
+
                           </div>
                         );
                      })()}

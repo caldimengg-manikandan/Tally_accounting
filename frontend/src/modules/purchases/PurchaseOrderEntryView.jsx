@@ -23,16 +23,6 @@ const PurchaseOrderEntryView = ({ companyId }) => {
   const { addNotification } = useNotificationStore();
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const handleCancel = () => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const backTo = queryParams.get('backTo');
-    if (backTo === 'dashboard') {
-      navigate('/dashboard');
-    } else {
-      window.history.back();
-    }
-  };
   // ── Form State ──────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     vendorName: '',

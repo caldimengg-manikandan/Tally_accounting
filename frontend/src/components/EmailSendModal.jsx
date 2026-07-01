@@ -82,8 +82,8 @@ ${companyName}</div>
 
     useEffect(() => {
         if (isOpen && documentData) {
-            const email = documentData.Customer?.email || documentData.customerEmail || '';
-            setCustomerEmail(email);
+            // User requested the 'To' field to be empty by default
+            setCustomerEmail('');
             setCcEmails([]);
             setCcInput('');
             const defaultSub = documentType === 'Quote'
@@ -268,13 +268,13 @@ ${companyName}</div>
                 <div className="border-b border-slate-100 divide-y divide-slate-50 shrink-0">
                     {/* From */}
                     <div className="flex items-center px-7 py-3 hover:bg-slate-50/50 transition-colors">
-                        <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">From</label>
+                        <label className="w-24 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">From</label>
                         <input readOnly value={`${userName} <${userEmail}>`} className="flex-1 bg-transparent border-none outline-none text-[13px] text-slate-500 cursor-default" />
                     </div>
 
                     {/* Send To */}
                     <div className="flex items-center px-7 py-3 hover:bg-slate-50/50 transition-colors">
-                        <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">To</label>
+                        <label className="w-24 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">To</label>
                         <input
                             value={customerEmail}
                             onChange={e => setCustomerEmail(e.target.value)}
@@ -288,7 +288,7 @@ ${companyName}</div>
                         className="flex items-start px-7 py-3 hover:bg-slate-50/50 transition-colors cursor-text"
                         onClick={() => ccInputRef.current?.focus()}
                     >
-                        <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0 mt-1.5">Cc</label>
+                        <label className="w-24 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0 mt-1.5">Cc</label>
                         <div className="flex-1 flex flex-wrap gap-1.5 items-center min-h-[28px]">
                             {ccEmails.map(email => (
                                 <div key={email} className="flex items-center gap-1 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full text-[12px] font-medium text-slate-700">
@@ -325,7 +325,7 @@ ${companyName}</div>
 
                     {/* Subject */}
                     <div className="flex items-center px-7 py-3 hover:bg-slate-50/50 transition-colors">
-                        <label className="w-16 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Subject</label>
+                        <label className="w-24 text-[11px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Subject</label>
                         <input
                             value={subject}
                             onChange={e => setSubject(e.target.value)}

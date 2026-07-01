@@ -1,0 +1,1 @@
+TEST QUERY ERROR: SequelizeDatabaseError: column SalesInvoice.lastReminderDate does not exist\nParent: column SalesInvoice.lastReminderDate does not exist\nSCHEMA PATCH SUCCESS\n

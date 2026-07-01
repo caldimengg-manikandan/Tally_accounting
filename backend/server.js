@@ -4,86 +4,16 @@ const helmet = require('helmet');
 const dotenv = require('dotenv');
 const passport = require('passport');
 const { sequelize } = require('./models');
-const path = require('path');
-const jwt = require('jsonwebtoken');
 
-// 1. Initial Config (Loaded from backend/.env)
-dotenv.config({ path: path.join(__dirname, '.env') });
-
-
-// Phase 2: Validate required env vars before any other code runs
-// If JWT_SECRET or other critical vars are missing, process.exit(1) is called.
-require('./config/env.validate')();
-
-console.log('--- DATABASE CONFIGURATION ENGINE ---');
-if (process.env.DATABASE_URL) {
-  console.log('Connecting to CLOUD POSTGRES via DATABASE_URL');
-} else {
-  console.log(`DATABASE_URL not found. Dialect: ${process.env.DB_DIALECT || 'sqlite'}`);
-}
+// 1. Initial Config
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// 🔐 SECURITY LAYER 1: Helmet Headers (blocks browser-level attacks)
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // Tighten after testing
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      fontSrc: ["'self'"],
-      connectSrc: ["'self'", process.env.CLIENT_URL || 'http://localhost:5173'],
-    }
-  },
-  hsts: {
-    maxAge: 31536000, // 1 year
-    includeSubDomains: true,
-    preload: true
-  },
-  noSniff: true,
-  xssFilter: true,
-  frameguard: { action: 'deny' }
-}));
-
-// 🔐 SECURITY LAYER 2: CORS (restrict to known origins)
-// Build allowed origins dynamically from env — never hardcode production domains here
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175'
-];
-if (process.env.ADDITIONAL_ALLOWED_ORIGINS) {
-  // Support comma-separated list in env: ADDITIONAL_ALLOWED_ORIGINS=https://app.example.com,https://www.example.com
-  allowedOrigins.push(...process.env.ADDITIONAL_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean));
-}
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman, server-to-server)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Auto-allow Render and Vercel preview environments only in development/staging configurations
-    if (process.env.NODE_ENV !== 'production' && (origin.endsWith('.onrender.com') || origin.endsWith('.vercel.app'))) {
-      return callback(null, true);
-    }
-    callback(new Error(`CORS: Origin '${origin}' not allowed`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id', 'X-CSRF-Token'],
-  exposedHeaders: ['X-CSRF-Token'],
-  optionsSuccessStatus: 200
-};
-
-if (!process.env.CLIENT_URL && process.env.NODE_ENV === 'production') {
-  console.warn('⚠️ WARNING: CLIENT_URL not set in production. Using fallback CORS rules.');
-}
-
 // 2. Middleware Strategy
 app.use(cors(corsOptions));
-app.use(express.json({ 
+app.use(express.json({
   limit: '10mb',
   verify: (req, res, buf) => {
     req.rawBody = buf.toString();
@@ -142,203 +72,20 @@ app.use('/api/sales', require('./modules/sales/sales.routes'));
 app.use('/api/quotes', require('./modules/sales/quote.routes'));
 app.use('/api/inventory', require('./modules/inventory/inventory.routes'));
 app.use('/api/reconciliation', require('./modules/reconciliation/reconciliation.routes'));
-app.use('/api/cost-centers', require('./modules/accounting/costCenter.routes'));
-app.use('/api/currencies', require('./modules/accounting/currency.routes'));
-app.use('/api/cost-categories', require('./modules/accounting/costCategory.routes'));
-app.use('/api/retainer-invoices', require('./modules/sales/retainerInvoice.routes'));
-app.use('/api/recurring-invoices', require('./modules/sales/recurringInvoice.routes'));
-app.use('/api/pricelists', require('./modules/inventory/pricelist.routes'));
-app.use('/api/:companyId/purchases', require('./modules/purchases/purchases.routes'));
-
-app.use('/api/mail', require('./modules/mail/mail.routes'));
-app.use('/api/tax/gst', require('./modules/tax/gst.routes'));
-app.use('/api/payroll', require('./modules/payroll/payroll.routes'));
-app.use('/api/attendances', require('./modules/payroll/attendance.routes'));
-app.use('/api/salary', require('./modules/payroll/salary.routes'));
-app.use('/api/fixed-assets', require('./modules/fixed_assets/fixedAssets.routes'));
-app.use('/api/manufacturing', require('./modules/manufacturing/manufacturing.routes'));
-app.use('/api/budgets', require('./modules/budgeting/budgeting.routes'));
-app.use('/api/delivery-challans', require('./modules/sales/deliveryChallan.routes'));
-app.use('/api/credit-notes', require('./modules/sales/creditNote.routes'));
-app.use('/api/projects', require('./modules/time_tracking/project.routes'));
-app.use('/api/timesheets', require('./modules/time_tracking/timesheet.routes'));
-
-// Debug endpoints removed
 
 // 5. Health Check
 app.get('/api/ping', (req, res) => res.json({ status: 'active', platform: 'Tally Replica' }));
 
 // 6. DB Sync & Boot Strategy
 const dialect = process.env.DB_DIALECT || 'sqlite';
-// Use alter:true only for local SQLite; disabled for cloud Postgres to prevent sync locks
-const syncOptions = { alter: false };
+const syncOptions = dialect === 'sqlite' ? {} : { alter: true };
 
-const cron = require('node-cron');
-const recurringController = require('./modules/sales/recurringInvoice.controller');
-const ReminderService = require('./services/ReminderService');
-
-// Run everyday at midnight — recurring invoice automation
-cron.schedule('0 0 * * *', async () => {
-  console.log('--- RUNNING RECURRING INVOICE AUTOMATION ---');
-  await recurringController.processDueInvoices({}, { json: (r) => console.log('Cron Result:', r), status: () => ({ json: (r) => console.error('Cron Error:', r) }) });
-});
-
-// Run everyday at 8:00 AM - Smart Payment Reminders
-cron.schedule('0 8 * * *', async () => {
-  console.log('--- TRIGGERING SMART PAYMENT REMINDERS CRON ---');
-  await ReminderService.processPaymentReminders();
-});
-
-// Run monthly on the 1st at 2:00 AM — automatic depreciation run for all companies
-cron.schedule('0 2 1 * *', async () => {
-  console.log('--- RUNNING AUTOMATIC MONTHLY DEPRECIATION CRON ---');
-  try {
-    const { Company } = require('./models');
-    const fixedAssetsController = require('./modules/fixed_assets/fixedAssets.controller');
-    const companies = await Company.findAll();
-    for (const company of companies) {
-      const mockReq = {
-        params: { companyId: company.id },
-        companyId: company.id,
-        body: { date: new Date() },
-        user: { id: null }
-      };
-      const mockRes = {
-        status: () => ({ json: (r) => console.log(`Auto-depreciation response for ${company.name}:`, r) }),
-        json: (r) => console.log(`Auto-depreciation response for ${company.name}:`, r)
-      };
-      try {
-        await fixedAssetsController.depreciateBatch(mockReq, mockRes, (err) => {
-          if (err) console.error(`Error in auto-depreciation for ${company.name}:`, err.message);
-        });
-      } catch (err) {
-        console.error(`Failed to auto-depreciate for ${company.name}:`, err.message);
-      }
-    }
-  } catch (err) {
-    console.error('Auto-depreciation cron failed:', err.message);
-  }
-});
-
-// Extra 1: Run every day at 1am — purge expired refresh tokens to prevent DB bloat
-cron.schedule('0 1 * * *', async () => {
-  try {
-    const { RefreshToken } = require('./models');
-    const { Op } = require('sequelize');
-    const deleted = await RefreshToken.destroy({
-      where: { expiresAt: { [Op.lt]: new Date() } }
-    });
-    console.log(`--- REFRESH TOKEN CLEANUP: removed ${deleted} expired rows ---`);
-  } catch (err) {
-    console.error('--- REFRESH TOKEN CLEANUP FAILED:', err.message);
-  }
-});
-
-// 🔐 SECURITY LAYER: Global Error Handler (never expose internal errors)
-app.use((err, req, res, next) => {
-  // Generate error tracking ID
-  const errorId = require('crypto').randomBytes(8).toString('hex');
-  
-  // Log full error server-side for debugging
-  console.error(`[ERROR-${errorId}]`, {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    user: req.user?.id || 'anonymous'
+sequelize.sync(syncOptions).then(() => {
+  console.log(`✅ Ledger Database Synced [${dialect}]`);
+  app.listen(PORT, () => {
+    console.log(`🚀 Tally Enterprise Hub online at PORT: ${PORT}`);
   });
-
-  // Return generic error to client (never expose internal details)
-  const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({
-    success: false,
-    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
-    errorId: errorId
-  });
+}).catch(err => {
+  console.error('❌ Critical Hub Entry Failure:', err.message);
+  process.exit(1);
 });
-
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Endpoint not found'
-  });
-});
-
-const startServer = async () => {
-  // Bind port immediately and wait for it to be ready
-  await new Promise((resolve, reject) => {
-    const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Tally Enterprise Hub online at PORT: ${PORT}`);
-      resolve(server);
-    }).on('error', (err) => {
-      console.error(`❌ Failed to bind to PORT: ${PORT}`, err);
-      reject(err);
-    });
-  });
-
-  let retries = 8;
-  while (retries > 0) {
-    try {
-      await sequelize.authenticate();
-      console.log('✅ Database connection authenticated.');
-      await sequelize.models.User.sync({ alter: process.env.NODE_ENV !== 'production' });
-      await sequelize.models.Company.sync({ alter: process.env.NODE_ENV !== 'production' });
-      
-      try {
-        await sequelize.models.CustomRole.sync({ alter: process.env.NODE_ENV !== 'production' });
-        await sequelize.query('ALTER TABLE "UserCompanies" ADD COLUMN IF NOT EXISTS "customRoleId" INTEGER;');
-      } catch(e) {
-        console.error('Safe Column Add Error:', e.message);
-      }
-      
-      await sequelize.sync(syncOptions);
-      const connectedTo = process.env.DATABASE_URL ? 'Cloud Postgres' : (process.env.DB_DIALECT || 'sqlite');
-      console.log(`✅ Ledger Database Synced [${connectedTo}]`);
-      
-      // Seed default SaaS roles
-      try {
-        const { Role, SubscriptionPlan } = require('./models');
-        const defaultRoles = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'ACCOUNTANT', 'EMPLOYEE'];
-        for (const roleName of defaultRoles) {
-          await Role.findOrCreate({ where: { name: roleName }, defaults: { description: `Default ${roleName} role` } });
-        }
-        console.log('✅ Default RBAC Roles seeded.');
-
-        // Seed default Subscription Plans
-        const defaultPlans = [
-          { name: 'Basic Plan', price: 0.00, description: 'Sales, Purchases, Ledgers', features: ['SALES', 'PURCHASES', 'LEDGERS'] },
-          { name: 'Pro Plan', price: 999.00, description: 'Basic + Inventory, Multi-Currency, Cost Centers', features: ['SALES', 'PURCHASES', 'LEDGERS', 'INVENTORY', 'MULTI_CURRENCY', 'COST_CENTERS'] },
-          { name: 'Enterprise Plan', price: 4999.00, description: 'Pro + Multi-Branch, API Access, Priority Support', features: ['SALES', 'PURCHASES', 'LEDGERS', 'INVENTORY', 'MULTI_CURRENCY', 'COST_CENTERS', 'MULTI_BRANCH', 'API_ACCESS', 'PRIORITY_SUPPORT'] }
-        ];
-        for (const plan of defaultPlans) {
-          await SubscriptionPlan.findOrCreate({ where: { name: plan.name }, defaults: plan });
-        }
-        console.log('✅ Default Subscription Plans seeded.');
-
-      } catch (seedErr) {
-        console.error('❌ Failed to seed RBAC roles:', seedErr.message);
-      }
-
-      break; // Success, exit retry loop
-    } catch (err) {
-      console.error('❌ Database connection/sync failed:', err.message);
-      retries -= 1;
-      console.log(`Retries left: ${retries}. Waiting 10 seconds before retrying...`);
-      if (retries === 0) {
-        console.error('❌ Critical Hub Entry Failure: Could not connect to database after multiple attempts.');
-        if (err.errors) {
-          err.errors.forEach(e => console.error(`  - Field: ${e.path}, Message: ${e.message}, Value: ${e.value}`));
-        } else {
-          console.error(err);
-        }
-        process.exit(1);
-      }
-      // Wait 10 seconds before retrying (handles Render DB cold-start delays)
-      await new Promise(resolve => setTimeout(resolve, 10000));
-    }
-  }
-};
-
-startServer();

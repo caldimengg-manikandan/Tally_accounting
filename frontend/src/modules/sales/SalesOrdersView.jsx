@@ -661,7 +661,7 @@ const SalesOrdersView = ({ companyId }) => {
                     <div className="flex items-center gap-3">
                         {canCreate && (
                             <button 
-                                onClick={() => navigate('/sales-orders/new')}
+                                onClick={() => { navigate('/sales-orders/new'); openForm(null); }}
                                 className="bg-[#1e61f0] hover:bg-[#1a54d1] text-white px-5 py-2.5 rounded-md font-bold text-[12px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm"
                             >
                                 <Plus size={18} strokeWidth={2.5} /> New Order

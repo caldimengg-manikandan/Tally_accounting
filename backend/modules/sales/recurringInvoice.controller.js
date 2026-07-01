@@ -238,8 +238,8 @@ exports.processDueInvoices = async (req, res, next) => {
             type: 'Sales',
             userId: null // System generated
           }, t);
-          if (accountingResult && accountingResult.voucherId) {
-            await createdInvoice.update({ VoucherId: accountingResult.voucherId }, { transaction: t });
+          if (accountingResult && accountingResult.voucher) {
+            await createdInvoice.update({ VoucherId: accountingResult.voucher.id }, { transaction: t });
           }
         }
       }
